@@ -1,4 +1,5 @@
 import { SignInPage, Testimonial } from "@/components/ui/sign-in";
+import { useNavigate } from "react-router-dom";
 import logo from "@/assets/logo_velara_preto.png";
 
 const sampleTestimonials: Testimonial[] = [
@@ -23,6 +24,8 @@ const sampleTestimonials: Testimonial[] = [
 ];
 
 const Index = () => {
+  const navigate = useNavigate();
+
   const handleSignIn = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -37,11 +40,11 @@ const Index = () => {
   };
   
   const handleResetPassword = () => {
-    alert("Redefinir Senha clicado");
+    navigate('/reset-password');
   };
 
   const handleCreateAccount = () => {
-    alert("Criar Conta clicado");
+    navigate('/signup');
   };
 
   return (
