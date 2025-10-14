@@ -1,4 +1,4 @@
-import { Settings as SettingsIcon } from "lucide-react";
+import { Settings as SettingsIcon, ArrowLeft } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSettings } from "@/hooks/use-settings";
 import { GeneralSettingsComponent } from "@/components/settings/GeneralSettings";
@@ -8,8 +8,11 @@ import { SecuritySettingsComponent } from "@/components/settings/SecuritySetting
 import { IntegrationsSettings } from "@/components/settings/IntegrationsSettings";
 import { AdvancedSettings } from "@/components/settings/AdvancedSettings";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 export default function Settings() {
+  const navigate = useNavigate();
   const { settings, loading, saving, saveSettings } = useSettings();
 
   if (loading) {
@@ -27,6 +30,15 @@ export default function Settings() {
   return (
     <div className="container mx-auto max-w-7xl space-y-6 p-6">
       <div className="space-y-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate("/dashboard")}
+          className="mb-2 gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Voltar para Dashboard
+        </Button>
         <div className="flex items-center gap-2">
           <SettingsIcon className="h-8 w-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
