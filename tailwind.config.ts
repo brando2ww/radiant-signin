@@ -80,10 +80,60 @@ export default {
             height: "0",
           },
         },
+        "fade-slide-in": {
+          from: {
+            opacity: "0",
+            filter: "blur(4px)",
+            transform: "translateY(20px)",
+          },
+          to: {
+            opacity: "1",
+            filter: "blur(0px)",
+            transform: "translateY(0px)",
+          },
+        },
+        "slide-right-in": {
+          from: {
+            opacity: "0",
+            filter: "blur(4px)",
+            transform: "translateX(-20px)",
+          },
+          to: {
+            opacity: "1",
+            filter: "blur(0px)",
+            transform: "translateX(0px)",
+          },
+        },
+        "testimonial-in": {
+          from: {
+            opacity: "0",
+            filter: "blur(4px)",
+            transform: "translateY(20px) scale(0.95)",
+          },
+          to: {
+            opacity: "1",
+            filter: "blur(0px)",
+            transform: "translateY(0px) scale(1)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+      },
+      animationDelay: {
+        '100': '100ms',
+        '200': '200ms',
+        '300': '300ms',
+        '400': '400ms',
+        '500': '500ms',
+        '600': '600ms',
+        '700': '700ms',
+        '800': '800ms',
+        '900': '900ms',
+        '1000': '1000ms',
+        '1200': '1200ms',
+        '1400': '1400ms',
       },
     },
   },
