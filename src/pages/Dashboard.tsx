@@ -1,61 +1,153 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { SessionNavBar } from '@/components/ui/sidebar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { User } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { DollarSign, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { useDashboardData } from '@/hooks/use-dashboard-data';
+import { StatsCard } from '@/components/dashboard/StatsCard';
+import { CashFlowChart } from '@/components/dashboard/CashFlowChart';
+import { UpcomingBills } from '@/components/dashboard/UpcomingBills';
+import { QuickActions } from '@/components/dashboard/QuickActions';
+import { MEIWidget } from '@/components/dashboard/MEIWidget';
+import { MonthlyGoals } from '@/components/dashboard/MonthlyGoals';
+import { AlertsWidget } from '@/components/dashboard/AlertsWidget';
+import { CreditCardsOverview } from '@/components/dashboard/CreditCardsOverview';
+import { RevenueByCategoryChart } from '@/components/dashboard/RevenueByCategoryChart';
 
 const Dashboard = () => {
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
+  const {
+    stats,
+    cashFlowData,
+    upcomingBills,
+    creditCards,
+    monthlyGoals,
+    alerts,
+    revenueByCategory,
+    meiInfo,
+    isLoading,
+  } = useDashboardData();
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      minimumFractionDigits: 0,
+    }).format(value);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full flex-row">
+        <SessionNavBar />
+        <main className="ml-[3.05rem] flex h-screen grow flex-col overflow-auto p-8">
+          <div className="max-w-7xl mx-auto w-full space-y-6">
+            <Skeleton className="h-20 w-full" />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+              <Skeleton className="h-32" />
+            </div>
+            <Skeleton className="h-96 w-full" />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-full flex-row">
       <SessionNavBar />
-      <main className="ml-[3.05rem] flex h-screen grow flex-col overflow-auto p-8">
-        <div className="max-w-6xl mx-auto w-full">
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold text-foreground mb-2">Dashboard</h1>
-            <p className="text-muted-foreground">Bem-vindo de volta!</p>
+      <main className="ml-[3.05rem] flex h-screen grow flex-col overflow-auto p-8 bg-gradient-to-br from-background via-background to-muted/20">
+        <div className="max-w-7xl mx-auto w-full">
+          {/* Header */}
+          <div className="mb-8 animate-fade-in">
+            <h1 className="text-4xl font-bold text-foreground mb-2">
+              Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}! 👋
+            </h1>
+            <p className="text-muted-foreground">
+              Aqui está um resumo das suas finanças em tempo real
+            </p>
           </div>
-          
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Informações do Perfil
-                </CardTitle>
-                <CardDescription>Seus dados cadastrados</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Nome</p>
-                  <p className="font-medium">{profile?.full_name || 'Não informado'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Email</p>
-                  <p className="font-medium">{user?.email}</p>
-                </div>
-                {profile?.document_type && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">
-                      {profile.document_type.toUpperCase()}
-                    </p>
-                    <p className="font-medium">{profile.document || 'Não informado'}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Início Rápido</CardTitle>
-                <CardDescription>Comece a usar a plataforma</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
-                  Você está autenticado e pronto para usar todas as funcionalidades da plataforma.
-                </p>
-              </CardContent>
-            </Card>
+          {/* KPIs Cards */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+            <StatsCard
+              title="Receitas"
+              value={formatCurrency(stats.totalRevenue)}
+              icon={<TrendingUp className="h-6 w-6" />}
+              trend={stats.revenueTrend}
+              delay={0}
+            />
+            <StatsCard
+              title="Despesas"
+              value={formatCurrency(stats.totalExpenses)}
+              icon={<TrendingDown className="h-6 w-6" />}
+              trend={stats.expensesTrend}
+              delay={100}
+            />
+            <StatsCard
+              title="Lucro"
+              value={formatCurrency(stats.profit)}
+              icon={<DollarSign className="h-6 w-6" />}
+              trend={stats.profitTrend}
+              delay={200}
+            />
+            <StatsCard
+              title="Saldo"
+              value={formatCurrency(stats.balance)}
+              icon={<Wallet className="h-6 w-6" />}
+              delay={300}
+            />
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid gap-6 md:grid-cols-3 mb-6">
+            {/* Cash Flow Chart - Spans 2 columns */}
+            <CashFlowChart data={cashFlowData} />
+            
+            {/* Upcoming Bills */}
+            <UpcomingBills bills={upcomingBills} />
+          </div>
+
+          {/* Second Row */}
+          <div className="grid gap-6 md:grid-cols-3 mb-6">
+            {/* Quick Actions */}
+            <QuickActions />
+            
+            {/* MEI Widget */}
+            <MEIWidget
+              dasValue={meiInfo.dasValue}
+              dasMonth={meiInfo.dasMonth}
+              dueDate={meiInfo.dueDate}
+              yearlyRevenue={meiInfo.yearlyRevenue}
+              yearlyLimit={meiInfo.yearlyLimit}
+            />
+            
+            {/* Monthly Goals */}
+            <MonthlyGoals
+              revenueGoal={monthlyGoals.revenueGoal}
+              currentRevenue={monthlyGoals.currentRevenue}
+              savingsGoal={monthlyGoals.savingsGoal}
+              currentSavings={monthlyGoals.currentSavings}
+              investmentGoal={monthlyGoals.investmentGoal}
+              currentInvestment={monthlyGoals.currentInvestment}
+            />
+          </div>
+
+          {/* Alerts Widget */}
+          <div className="mb-6">
+            <AlertsWidget alerts={alerts} />
+          </div>
+
+          {/* Credit Cards Overview */}
+          <div className="mb-6">
+            <CreditCardsOverview cards={creditCards} />
+          </div>
+
+          {/* Revenue by Category Chart */}
+          <div className="mb-6">
+            <RevenueByCategoryChart data={revenueByCategory} />
           </div>
         </div>
       </main>

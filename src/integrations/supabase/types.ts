@@ -14,6 +14,132 @@ export type Database = {
   }
   public: {
     Tables: {
+      bills: {
+        Row: {
+          amount: number
+          category: string | null
+          created_at: string | null
+          due_date: string
+          id: string
+          is_recurring: boolean | null
+          paid_at: string | null
+          status: string | null
+          title: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category?: string | null
+          created_at?: string | null
+          due_date: string
+          id?: string
+          is_recurring?: boolean | null
+          paid_at?: string | null
+          status?: string | null
+          title: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string | null
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          is_recurring?: boolean | null
+          paid_at?: string | null
+          status?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_cards: {
+        Row: {
+          brand: string | null
+          closing_day: number | null
+          color: string | null
+          created_at: string | null
+          credit_limit: number | null
+          current_balance: number | null
+          due_day: number | null
+          id: string
+          is_active: boolean | null
+          last_four_digits: string | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          brand?: string | null
+          closing_day?: number | null
+          color?: string | null
+          created_at?: string | null
+          credit_limit?: number | null
+          current_balance?: number | null
+          due_day?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_four_digits?: string | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          brand?: string | null
+          closing_day?: number | null
+          color?: string | null
+          created_at?: string | null
+          credit_limit?: number | null
+          current_balance?: number | null
+          due_day?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_four_digits?: string | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      monthly_goals: {
+        Row: {
+          created_at: string | null
+          id: string
+          investment_goal: number | null
+          month_year: string
+          revenue_goal: number | null
+          savings_goal: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          investment_goal?: number | null
+          month_year: string
+          revenue_goal?: number | null
+          savings_goal?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          investment_goal?: number | null
+          month_year?: string
+          revenue_goal?: number | null
+          savings_goal?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -47,6 +173,48 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_recurring: boolean | null
+          payment_method: string | null
+          transaction_date: string
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          payment_method?: string | null
+          transaction_date: string
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          payment_method?: string | null
+          transaction_date?: string
+          type?: string
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }
