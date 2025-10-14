@@ -7,6 +7,12 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
+import Reports from "./pages/Reports";
+import Plans from "./pages/Plans";
+import Calendar from "./pages/Calendar";
+import Tasks from "./pages/Tasks";
+import Transactions from "./pages/Transactions";
+import CreditCards from "./pages/CreditCards";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +31,54 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/reports" 
+              element={
+                <ProtectedRoute>
+                  <Reports />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/plans" 
+              element={
+                <ProtectedRoute>
+                  <Plans />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/calendar" 
+              element={
+                <ProtectedRoute>
+                  <Calendar />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/tasks" 
+              element={
+                <ProtectedRoute>
+                  <Tasks />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/transactions" 
+              element={
+                <ProtectedRoute>
+                  <Transactions />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/credit-cards" 
+              element={
+                <ProtectedRoute>
+                  <CreditCards />
                 </ProtectedRoute>
               } 
             />

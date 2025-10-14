@@ -5,18 +5,18 @@ import { Badge } from "@/components/ui/badge";
 import {
   Blocks,
   ChevronsUpDown,
-  FileClock,
-  GraduationCap,
-  Layout,
   LayoutDashboard,
   LogOut,
-  MessageSquareText,
-  MessagesSquare,
   Plus,
   Settings,
   UserCircle,
   UserCog,
-  UserSearch,
+  BarChart3,
+  Package,
+  Calendar,
+  CheckSquare,
+  TrendingUp,
+  CreditCard,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link, useLocation } from "react-router-dom";
@@ -163,8 +163,7 @@ export function SessionNavBar() {
                       to="/dashboard"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
-                        pathname.includes("dashboard") &&
-                          "bg-muted text-primary",
+                        pathname.includes("dashboard") && "bg-muted text-primary",
                       )}
                     >
                       <LayoutDashboard className="h-4 w-4" />
@@ -174,141 +173,97 @@ export function SessionNavBar() {
                         )}
                       </motion.li>
                     </Link>
+
                     <Link
                       to="/reports"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
-                        pathname.includes("reports") &&
-                          "bg-muted text-primary",
+                        pathname.includes("reports") && "bg-muted text-primary",
                       )}
                     >
-                      <FileClock className="h-4 w-4" />
+                      <BarChart3 className="h-4 w-4" />
                       <motion.li variants={variants}>
                         {!isCollapsed && (
-                          <div className="flex items-center gap-2">
-                            <p className="ml-2 text-sm font-medium">Relatórios</p>
-                          </div>
+                          <p className="ml-2 text-sm font-medium">Relatórios</p>
                         )}
                       </motion.li>
                     </Link>
+
                     <Link
-                      to="/chat"
-                      className={cn(
-                        "flex h-8 flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
-                        pathname.includes("chat") && "bg-muted text-primary",
-                      )}
-                    >
-                      <MessagesSquare className="h-4 w-4" />
-                      <motion.li variants={variants}>
-                        {!isCollapsed && (
-                          <div className="ml-2 flex items-center gap-2">
-                            <p className="text-sm font-medium">Chat</p>
-                            <Badge
-                              className={cn(
-                                "flex h-fit w-fit items-center gap-1.5 rounded border-none bg-primary/10 px-1.5 text-primary",
-                              )}
-                              variant="outline"
-                            >
-                              BETA
-                            </Badge>
-                          </div>
-                        )}
-                      </motion.li>
-                    </Link>
-                    <Separator className="w-full" />
-                    <Link
-                      to="/deals"
+                      to="/plans"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
-                        pathname.includes("deals") && "bg-muted text-primary",
+                        pathname.includes("plans") && "bg-muted text-primary",
                       )}
                     >
-                      <Layout className="h-4 w-4" />
+                      <Package className="h-4 w-4" />
                       <motion.li variants={variants}>
                         {!isCollapsed && (
-                          <p className="ml-2 text-sm font-medium">Negócios</p>
+                          <p className="ml-2 text-sm font-medium">Planos</p>
                         )}
                       </motion.li>
                     </Link>
+
+                    <Separator className="my-2" />
+
                     <Link
-                      to="/accounts"
+                      to="/calendar"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
-                        pathname.includes("accounts") &&
-                          "bg-muted text-primary",
+                        pathname.includes("calendar") && "bg-muted text-primary",
                       )}
                     >
-                      <UserCircle className="h-4 w-4" />
+                      <Calendar className="h-4 w-4" />
                       <motion.li variants={variants}>
                         {!isCollapsed && (
-                          <p className="ml-2 text-sm font-medium">Contas</p>
+                          <p className="ml-2 text-sm font-medium">Agenda</p>
                         )}
                       </motion.li>
                     </Link>
+
                     <Link
-                      to="/competitors"
+                      to="/tasks"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
-                        pathname.includes("competitors") &&
-                          "bg-muted text-primary",
+                        pathname.includes("tasks") && "bg-muted text-primary",
                       )}
                     >
-                      <UserSearch className="h-4 w-4" />
+                      <CheckSquare className="h-4 w-4" />
                       <motion.li variants={variants}>
                         {!isCollapsed && (
-                          <p className="ml-2 text-sm font-medium">
-                            Concorrentes
-                          </p>
+                          <p className="ml-2 text-sm font-medium">Tarefas</p>
                         )}
                       </motion.li>
                     </Link>
-                    <Separator className="w-full" />
+
+                    <Separator className="my-2" />
+
                     <Link
-                      to="/library"
+                      to="/transactions"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
-                        pathname.includes("library") &&
-                          "bg-muted text-primary",
+                        pathname.includes("transactions") && "bg-muted text-primary",
                       )}
                     >
-                      <GraduationCap className="h-4 w-4" />
+                      <TrendingUp className="h-4 w-4" />
                       <motion.li variants={variants}>
                         {!isCollapsed && (
-                          <p className="ml-2 text-sm font-medium">
-                            Base de Conhecimento
-                          </p>
+                          <p className="ml-2 text-sm font-medium">Receitas e Despesas</p>
                         )}
                       </motion.li>
                     </Link>
+
                     <Link
-                      to="/feedback"
+                      to="/credit-cards"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
-                        pathname.includes("feedback") &&
-                          "bg-muted text-primary",
+                        pathname.includes("credit-cards") && "bg-muted text-primary",
                       )}
                     >
-                      <MessageSquareText className="h-4 w-4" />
+                      <CreditCard className="h-4 w-4" />
                       <motion.li variants={variants}>
                         {!isCollapsed && (
-                          <p className="ml-2 text-sm font-medium">Feedback</p>
-                        )}
-                      </motion.li>
-                    </Link>
-                    <Link
-                      to="/review"
-                      className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
-                        pathname.includes("review") &&
-                          "bg-muted text-primary",
-                      )}
-                    >
-                      <FileClock className="h-4 w-4" />
-                      <motion.li variants={variants}>
-                        {!isCollapsed && (
-                          <p className="ml-2 text-sm font-medium">
-                            Revisão de Documentos
-                          </p>
+                          <p className="ml-2 text-sm font-medium">Cartões de Crédito</p>
                         )}
                       </motion.li>
                     </Link>
