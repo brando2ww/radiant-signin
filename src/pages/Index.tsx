@@ -1,8 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { AuthLayout, Testimonial } from "@/components/ui/auth-layout";
 import { LoginForm } from "@/components/ui/forms/login-form";
 import { SignUpForm } from "@/components/ui/forms/signup-form";
 import { ResetPasswordForm } from "@/components/ui/forms/reset-password-form";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 
 type FormType = 'login' | 'signup' | 'reset';
 
@@ -28,30 +32,106 @@ const sampleTestimonials: Testimonial[] = [
 ];
 
 const Index = () => {
+  const { signIn, signUp, resetPassword, signInWithGoogle, user, loading } = useAuth();
   const [currentForm, setCurrentForm] = useState<FormType>('login');
+  const navigate = useNavigate();
 
-  const handleSignIn = (event: React.FormEvent<HTMLFormElement>) => {
+  // Redirecionar se já estiver autenticado
+  useEffect(() => {
+    if (user && !loading) {
+      navigate('/dashboard');
+    }
+  }, [user, loading, navigate]);
+
+  const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const data = Object.fromEntries(formData.entries());
-    console.log("Login enviado:", data);
-    alert(`Login Enviado! Verifique o console do navegador para os dados do formulário.`);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      toast({
+        title: "Erro ao fazer login",
+        description: getAuthErrorMessage(error),
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Login realizado com sucesso!",
+      description: "Redirecionando...",
+    });
   };
 
-  const handleSignUp = (data: { documentType: string; document: string; name: string; email: string; password: string }) => {
-    console.log("Cadastro enviado:", data);
-    alert(`Cadastro Enviado! Verifique o console do navegador para os dados do formulário.`);
+  const handleSignUp = async (data: { documentType: string; document: string; name: string; email: string; password: string }) => {
+    const { error } = await signUp({
+      email: data.email,
+      password: data.password,
+      name: data.name,
+      documentType: data.documentType,
+      document: data.document,
+    });
+    
+    if (error) {
+      toast({
+        title: "Erro ao criar conta",
+        description: getAuthErrorMessage(error),
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Conta criada com sucesso!",
+      description: "Verifique seu email para confirmar o cadastro.",
+    });
+    setCurrentForm('login');
   };
 
-  const handleResetPassword = (email: string) => {
-    console.log('Reset password for:', email);
-    alert(`Link de redefinição enviado para: ${email}\n\nVerifique sua caixa de entrada!`);
+  const handleResetPassword = async (email: string) => {
+    const { error } = await resetPassword(email);
+    
+    if (error) {
+      toast({
+        title: "Erro ao enviar email",
+        description: getAuthErrorMessage(error),
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    toast({
+      title: "Email enviado!",
+      description: `Link de redefinição enviado para: ${email}`,
+    });
+    setCurrentForm('login');
   };
 
-  const handleGoogleSignIn = () => {
-    console.log("Continuar com Google clicado");
-    alert("Continuar com Google clicado");
+  const handleGoogleSignIn = async () => {
+    const { error } = await signInWithGoogle();
+    
+    if (error) {
+      toast({
+        title: "Erro ao fazer login com Google",
+        description: getAuthErrorMessage(error),
+        variant: "destructive",
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AuthLayout testimonials={sampleTestimonials}>
