@@ -48,7 +48,7 @@ const Index = () => {
     <SignInPage
       title={
         <div className="flex flex-col gap-4 items-start">
-          <img src={logo} alt="Velara" className="h-12 w-auto dark:invert" />
+          <img src={logo} alt="Velara" className="h-[63px] w-auto dark:invert" />
           <span className="font-light text-foreground tracking-tighter">Bem-vindo</span>
         </div>
       }
