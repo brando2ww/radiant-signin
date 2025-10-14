@@ -7,8 +7,18 @@ interface Profile {
   full_name: string | null;
   document_type: string | null;
   document: string | null;
+  avatar_url: string | null;
+  cover_image_url: string | null;
+  bio: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface UpdateProfileData {
+  full_name?: string;
+  bio?: string;
+  avatar_url?: string;
+  cover_image_url?: string;
 }
 
 interface SignUpData {
@@ -30,6 +40,8 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   resetPasswordByDocument: (documentType: string, document: string) => Promise<{ success: boolean; error: AuthError | null }>;
   signInWithGoogle: () => Promise<{ error: AuthError | null }>;
+  updateProfile: (data: UpdateProfileData) => Promise<{ error: Error | null }>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -160,6 +172,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error };
   };
 
+  const updateProfile = async (data: UpdateProfileData) => {
+    if (!user) {
+      return { error: new Error('Usuário não autenticado') };
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          ...data,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Atualizar estado local
+      await fetchProfile(user.id);
+
+      return { error: null };
+    } catch (error: any) {
+      console.error('Erro ao atualizar perfil:', error);
+      return { error };
+    }
+  };
+
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -173,6 +217,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         resetPassword,
         resetPasswordByDocument,
         signInWithGoogle,
+        updateProfile,
+        refreshProfile,
       }}
     >
       {children}

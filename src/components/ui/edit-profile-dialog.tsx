@@ -1,5 +1,6 @@
 import { useCharacterLimit } from "@/hooks/use-character-limit";
 import { useImageUpload } from "@/hooks/use-image-upload";
+import { useSupabaseUpload } from "@/hooks/use-supabase-upload";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Check, ImagePlus, X } from "lucide-react";
 import { useId, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface EditProfileDialogProps {
   open: boolean;
@@ -24,7 +26,13 @@ interface EditProfileDialogProps {
 
 export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps) {
   const id = useId();
-  const { user, profile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
+
+  const [firstName, setFirstName] = useState(profile?.full_name?.split(' ')[0] || '');
+  const [lastName, setLastName] = useState(profile?.full_name?.split(' ').slice(1).join(' ') || '');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const maxLength = 180;
   const {
@@ -34,8 +42,60 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
     maxLength: limit,
   } = useCharacterLimit({
     maxLength,
-    initialValue: "",
+    initialValue: profile?.bio || "",
   });
+
+  const { uploadFile: uploadAvatar, uploading: uploadingAvatar } = useSupabaseUpload({
+    bucket: 'avatars',
+    folder: user?.id,
+  });
+
+  const { uploadFile: uploadCover, uploading: uploadingCover } = useSupabaseUpload({
+    bucket: 'avatars',
+    folder: user?.id,
+  });
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    
+    try {
+      let avatarUrl = profile?.avatar_url;
+      let coverUrl = profile?.cover_image_url;
+
+      // Upload de avatar se houver
+      if (avatarFile) {
+        const url = await uploadAvatar(avatarFile, 'avatar');
+        if (url) avatarUrl = url;
+      }
+
+      // Upload de cover se houver
+      if (coverFile) {
+        const url = await uploadCover(coverFile, 'cover');
+        if (url) coverUrl = url;
+      }
+
+      // Atualizar perfil
+      const { error } = await updateProfile({
+        full_name: `${firstName} ${lastName}`.trim(),
+        bio: value,
+        avatar_url: avatarUrl,
+        cover_image_url: coverUrl,
+      });
+
+      if (error) {
+        toast.error('Erro ao salvar perfil');
+        return;
+      }
+
+      toast.success('Perfil atualizado com sucesso!');
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Erro ao salvar:', error);
+      toast.error('Erro ao salvar perfil');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -49,8 +109,14 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
           Faça alterações no seu perfil. Você pode alterar sua foto e definir suas informações.
         </DialogDescription>
         <div className="overflow-y-auto">
-          <ProfileBg />
-          <Avatar />
+          <ProfileBg 
+            defaultImage={profile?.cover_image_url || undefined} 
+            onFileSelect={setCoverFile}
+          />
+          <Avatar 
+            defaultImage={profile?.avatar_url || undefined}
+            onFileSelect={setAvatarFile}
+          />
           <div className="px-6 pb-6 pt-4">
             <form className="space-y-4">
               <div className="flex flex-col gap-4 sm:flex-row">
@@ -59,7 +125,8 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
                   <Input
                     id={`${id}-first-name`}
                     placeholder="Seu nome"
-                    defaultValue={profile?.full_name?.split(' ')[0] || ''}
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
                     type="text"
                     required
                   />
@@ -69,7 +136,8 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
                   <Input
                     id={`${id}-last-name`}
                     placeholder="Seu sobrenome"
-                    defaultValue={profile?.full_name?.split(' ').slice(1).join(' ') || ''}
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
                     type="text"
                     required
                   />
@@ -134,26 +202,28 @@ export function EditProfileDialog({ open, onOpenChange }: EditProfileDialogProps
           </div>
         </div>
         <DialogFooter className="border-t border-border px-6 py-4">
-          <DialogClose asChild>
-            <Button type="button" variant="outline">
-              Cancelar
-            </Button>
-          </DialogClose>
-          <DialogClose asChild>
-            <Button type="button">Salvar alterações</Button>
-          </DialogClose>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button 
+            type="button" 
+            onClick={handleSave}
+            disabled={isSaving || uploadingAvatar || uploadingCover}
+          >
+            {isSaving ? 'Salvando...' : 'Salvar alterações'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-function ProfileBg() {
+function ProfileBg({ defaultImage, onFileSelect }: { defaultImage?: string; onFileSelect?: (file: File) => void }) {
   const [hideDefault, setHideDefault] = useState(false);
   const { previewUrl, fileInputRef, handleThumbnailClick, handleFileChange, handleRemove } =
-    useImageUpload();
+    useImageUpload({ onFileSelect });
 
-  const currentImage = previewUrl || (!hideDefault ? "/placeholder.svg" : null);
+  const currentImage = previewUrl || (!hideDefault ? defaultImage : null);
 
   const handleImageRemove = () => {
     handleRemove();
@@ -205,11 +275,10 @@ function ProfileBg() {
   );
 }
 
-function Avatar() {
-  const { previewUrl, fileInputRef, handleThumbnailClick, handleFileChange } = useImageUpload();
-  const { user } = useAuth();
+function Avatar({ defaultImage, onFileSelect }: { defaultImage?: string; onFileSelect?: (file: File) => void }) {
+  const { previewUrl, fileInputRef, handleThumbnailClick, handleFileChange } = useImageUpload({ onFileSelect });
 
-  const currentImage = previewUrl || "/placeholder.svg";
+  const currentImage = previewUrl || defaultImage;
 
   return (
     <div className="-mt-10 px-6">

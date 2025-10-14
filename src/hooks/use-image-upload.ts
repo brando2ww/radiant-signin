@@ -2,9 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 interface UseImageUploadProps {
   onUpload?: (url: string) => void;
+  onFileSelect?: (file: File) => void;
 }
 
-export function useImageUpload({ onUpload }: UseImageUploadProps = {}) {
+export function useImageUpload({ onUpload, onFileSelect }: UseImageUploadProps = {}) {
   const previewRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -23,9 +24,10 @@ export function useImageUpload({ onUpload }: UseImageUploadProps = {}) {
         setPreviewUrl(url);
         previewRef.current = url;
         onUpload?.(url);
+        onFileSelect?.(file);
       }
     },
-    [onUpload],
+    [onUpload, onFileSelect],
   );
 
   const handleRemove = useCallback(() => {

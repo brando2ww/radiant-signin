@@ -18,7 +18,7 @@ import {
   UserCog,
   UserSearch,
 } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -80,7 +80,7 @@ export function SessionNavBar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   
   const pathname = location.pathname;
 
@@ -116,7 +116,13 @@ export function SessionNavBar() {
                       className="flex w-fit items-center gap-2 px-2"
                     >
                       <Avatar className="rounded size-4">
-                        <AvatarFallback>O</AvatarFallback>
+                        {profile?.avatar_url && (
+                          <AvatarImage src={profile.avatar_url} alt="Avatar" />
+                        )}
+                        <AvatarFallback>
+                          {profile?.full_name?.[0]?.toUpperCase() || 
+                           user?.email?.[0].toUpperCase() || "U"}
+                        </AvatarFallback>
                       </Avatar>
                       <motion.li
                         variants={variants}
@@ -326,8 +332,12 @@ export function SessionNavBar() {
                     <DropdownMenuTrigger className="w-full">
                       <div className="flex h-8 w-full flex-row items-center gap-2 rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary">
                         <Avatar className="size-4">
+                          {profile?.avatar_url && (
+                            <AvatarImage src={profile.avatar_url} alt="Avatar" />
+                          )}
                           <AvatarFallback>
-                            {user?.email?.[0].toUpperCase() || "U"}
+                            {profile?.full_name?.[0]?.toUpperCase() || 
+                             user?.email?.[0].toUpperCase() || "U"}
                           </AvatarFallback>
                         </Avatar>
                         <motion.li
@@ -346,14 +356,23 @@ export function SessionNavBar() {
                     <DropdownMenuContent sideOffset={5}>
                       <div className="flex flex-row items-center gap-2 p-2">
                         <Avatar className="size-6">
+                          {profile?.avatar_url && (
+                            <AvatarImage src={profile.avatar_url} alt="Avatar" />
+                          )}
                           <AvatarFallback>
-                            {user?.email?.[0].toUpperCase() || "U"}
+                            {profile?.full_name?.[0]?.toUpperCase() || 
+                             user?.email?.[0].toUpperCase() || "U"}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col text-left">
                           <span className="text-sm font-medium">
-                            {user?.email}
+                            {profile?.full_name || user?.email}
                           </span>
+                          {profile?.full_name && (
+                            <span className="line-clamp-1 text-xs text-muted-foreground">
+                              {user?.email}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <DropdownMenuSeparator />
