@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
+import { EditProfileDialog } from "@/components/ui/edit-profile-dialog";
 
 const sidebarVariants = {
   open: {
@@ -77,6 +78,7 @@ const staggerVariants = {
 
 export function SessionNavBar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const location = useLocation();
   const { user, signOut } = useAuth();
   
@@ -356,12 +358,10 @@ export function SessionNavBar() {
                       </div>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        asChild
                         className="flex items-center gap-2"
+                        onClick={() => setIsEditProfileOpen(true)}
                       >
-                        <Link to="/profile">
-                          <UserCircle className="h-4 w-4" /> Perfil
-                        </Link>
+                        <UserCircle className="h-4 w-4" /> Perfil
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="flex items-center gap-2"
@@ -377,6 +377,7 @@ export function SessionNavBar() {
           </div>
         </motion.ul>
       </motion.div>
+      <EditProfileDialog open={isEditProfileOpen} onOpenChange={setIsEditProfileOpen} />
     </motion.div>
   );
 }
