@@ -1,9 +1,7 @@
 import { useState } from "react";
-import { Testimonial } from "@/components/ui/sign-in";
-import { AuthLayout } from "@/components/ui/auth-layout";
-import { LoginForm } from "@/components/ui/forms/login-form";
-import { SignUpForm } from "@/components/ui/forms/signup-form";
-import { ResetPasswordForm } from "@/components/ui/forms/reset-password-form";
+import { SignInPage, Testimonial } from "@/components/ui/sign-in";
+import { SignUpPage } from "@/components/ui/sign-up";
+import { ResetPasswordPage } from "@/components/ui/reset-password";
 import logo from "@/assets/logo_velara_preto.png";
 
 type FormType = 'login' | 'signup' | 'reset';
@@ -56,37 +54,43 @@ const Index = () => {
   };
 
   return (
-    <AuthLayout 
-      logo={logo}
-      heroImage="https://images.unsplash.com/photo-1642615835477-d303d7dc9ee9?w=2160&q=80"
-      testimonials={sampleTestimonials}
-    >
-      <div className="animate-fade-in" key={currentForm}>
-        {currentForm === 'login' && (
-          <LoginForm
-            onSubmit={handleSignIn}
-            onGoogleSignIn={handleGoogleSignIn}
-            onResetPassword={() => setCurrentForm('reset')}
-            onCreateAccount={() => setCurrentForm('signup')}
-          />
-        )}
+    <div className="animate-fade-in">
+      {currentForm === 'login' && (
+        <SignInPage
+          title={
+            <div className="flex flex-col gap-4 items-start self-start">
+              <img src={logo} alt="Velara" className="h-[63px] w-auto dark:invert" />
+              <span className="font-light text-foreground tracking-tighter">Bem-vindo</span>
+            </div>
+          }
+          heroImageSrc="https://images.unsplash.com/photo-1642615835477-d303d7dc9ee9?w=2160&q=80"
+          testimonials={sampleTestimonials}
+          onSignIn={handleSignIn}
+          onGoogleSignIn={handleGoogleSignIn}
+          onResetPassword={() => setCurrentForm('reset')}
+          onCreateAccount={() => setCurrentForm('signup')}
+        />
+      )}
 
-        {currentForm === 'signup' && (
-          <SignUpForm
-            onSubmit={handleSignUp}
-            onGoogleSignUp={handleGoogleSignIn}
-            onBackToLogin={() => setCurrentForm('login')}
-          />
-        )}
+      {currentForm === 'signup' && (
+        <SignUpPage
+          logo={logo}
+          heroImage="https://images.unsplash.com/photo-1642615835477-d303d7dc9ee9?w=2160&q=80"
+          onSignUp={handleSignUp}
+          onGoogleSignUp={handleGoogleSignIn}
+          onBackToLogin={() => setCurrentForm('login')}
+        />
+      )}
 
-        {currentForm === 'reset' && (
-          <ResetPasswordForm
-            onSubmit={handleResetPassword}
-            onBackToLogin={() => setCurrentForm('login')}
-          />
-        )}
-      </div>
-    </AuthLayout>
+      {currentForm === 'reset' && (
+        <ResetPasswordPage
+          logo={logo}
+          heroImage="https://images.unsplash.com/photo-1649972904349-6e44c42644a7"
+          onResetPassword={handleResetPassword}
+          onBackToLogin={() => setCurrentForm('login')}
+        />
+      )}
+    </div>
   );
 };
 
