@@ -1,4 +1,5 @@
 import { SignInPage, Testimonial } from "@/components/ui/sign-in";
+import logo from "@/assets/logo_velara_preto.png";
 
 const sampleTestimonials: Testimonial[] = [
   {
@@ -45,6 +46,12 @@ const Index = () => {
 
   return (
     <SignInPage
+      title={
+        <div className="flex flex-col gap-4 items-start">
+          <img src={logo} alt="Velara" className="h-12 w-auto dark:invert" />
+          <span className="font-light text-foreground tracking-tighter">Bem-vindo</span>
+        </div>
+      }
       heroImageSrc="https://images.unsplash.com/photo-1642615835477-d303d7dc9ee9?w=2160&q=80"
       testimonials={sampleTestimonials}
       onSignIn={handleSignIn}
