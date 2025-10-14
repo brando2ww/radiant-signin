@@ -28,6 +28,7 @@ interface AuthContextType {
   signUp: (data: SignUpData) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
+  resetPasswordByDocument: (documentType: string, document: string) => Promise<{ success: boolean; error: AuthError | null }>;
   signInWithGoogle: () => Promise<{ error: AuthError | null }>;
 }
 
@@ -130,6 +131,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return { error };
   };
 
+  const resetPasswordByDocument = async (documentType: string, document: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('reset-password-by-document', {
+        body: { documentType, document }
+      });
+
+      if (error) {
+        console.error('Erro ao invocar função:', error);
+        return { success: false, error };
+      }
+
+      return { success: true, error: null };
+    } catch (error: any) {
+      console.error('Erro inesperado:', error);
+      return { success: false, error };
+    }
+  };
+
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -152,6 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp,
         signOut,
         resetPassword,
+        resetPasswordByDocument,
         signInWithGoogle,
       }}
     >

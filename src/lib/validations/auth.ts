@@ -42,6 +42,21 @@ export const resetPasswordSchema = z.object({
     .max(255, { message: 'Email muito longo' }),
 });
 
+export const resetPasswordByDocumentSchema = z.object({
+  documentType: z.enum(['cpf', 'cnpj'], {
+    errorMap: () => ({ message: 'Selecione o tipo de documento' })
+  }),
+  document: z.string()
+    .trim()
+    .min(11, { message: 'Documento inválido' })
+    .max(18, { message: 'Documento inválido' })
+    .refine((doc) => {
+      const cleanDoc = doc.replace(/\D/g, '');
+      return cleanDoc.length === 11 || cleanDoc.length === 14;
+    }, { message: 'CPF deve ter 11 dígitos ou CNPJ deve ter 14 dígitos' })
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type SignUpInput = z.infer<typeof signUpSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type ResetPasswordByDocumentInput = z.infer<typeof resetPasswordByDocumentSchema>;

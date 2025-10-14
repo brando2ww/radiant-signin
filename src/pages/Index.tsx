@@ -32,7 +32,7 @@ const sampleTestimonials: Testimonial[] = [
 ];
 
 const Index = () => {
-  const { signIn, signUp, resetPassword, signInWithGoogle, user, loading } = useAuth();
+  const { signIn, signUp, resetPassword, resetPasswordByDocument, signInWithGoogle, user, loading } = useAuth();
   const [currentForm, setCurrentForm] = useState<FormType>('login');
   const navigate = useNavigate();
 
@@ -77,16 +77,16 @@ const Index = () => {
     setCurrentForm('login');
   };
 
-  const handleResetPassword = async (email: string) => {
-    const { error } = await resetPassword(email);
+  const handleResetPassword = async (documentType: string, document: string) => {
+    const { success, error } = await resetPasswordByDocument(documentType, document);
     
-    if (error) {
-      toast.error(getAuthErrorMessage(error));
+    if (!success && error) {
+      toast.error('Ocorreu um erro. Tente novamente.');
       return;
     }
     
-    toast.success(`Link de redefinição enviado para: ${email}`);
-    setCurrentForm('login');
+    // Sempre mostra mensagem de sucesso por segurança
+    toast.success('Se este documento estiver cadastrado, você receberá um email com instruções.');
   };
 
   const handleGoogleSignIn = async () => {
