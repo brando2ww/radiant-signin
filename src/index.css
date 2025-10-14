@@ -147,7 +147,7 @@ All colors MUST be HSL.
 /* Custom Checkbox Styles */
 .custom-checkbox {
   @apply appearance-none h-5 w-5 border-2 border-border rounded-md bg-background cursor-pointer transition-all;
-  @apply checked:bg-violet-500 checked:border-violet-500;
+  @apply checked:bg-yellow-500 checked:border-yellow-500;
   @apply relative;
 }
 

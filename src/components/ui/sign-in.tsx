@@ -36,7 +36,7 @@ interface SignInPageProps {
 // --- SUB-COMPONENTS ---
 
 const GlassInputWrapper = ({ children }: { children: React.ReactNode }) => (
-  <div className="rounded-2xl border border-border bg-foreground/5 backdrop-blur-sm transition-colors focus-within:border-violet-400/70 focus-within:bg-violet-500/10">
+  <div className="rounded-2xl border border-border bg-foreground/5 backdrop-blur-sm transition-colors focus-within:border-yellow-400/70 focus-within:bg-yellow-500/10">
     {children}
   </div>
 );
@@ -100,7 +100,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
                   <input type="checkbox" name="rememberMe" className="custom-checkbox" />
                   <span className="text-foreground/90">Manter-me conectado</span>
                 </label>
-                <a href="#" onClick={(e) => { e.preventDefault(); onResetPassword?.(); }} className="hover:underline text-violet-400 transition-colors">Redefinir senha</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); onResetPassword?.(); }} className="hover:underline text-yellow-400 transition-colors">Redefinir senha</a>
               </div>
 
               <button type="submit" className="animate-[fade-slide-in_0.6s_ease-out_forwards] opacity-0 [animation-delay:600ms] w-full rounded-2xl bg-primary py-4 font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
@@ -119,7 +119,7 @@ export const SignInPage: React.FC<SignInPageProps> = ({
             </button>
 
             <p className="animate-[fade-slide-in_0.6s_ease-out_forwards] opacity-0 [animation-delay:900ms] text-center text-sm text-muted-foreground">
-              Novo em nossa plataforma? <a href="#" onClick={(e) => { e.preventDefault(); onCreateAccount?.(); }} className="text-violet-400 hover:underline transition-colors">Criar Conta</a>
+              Novo em nossa plataforma? <a href="#" onClick={(e) => { e.preventDefault(); onCreateAccount?.(); }} className="text-yellow-400 hover:underline transition-colors">Criar Conta</a>
             </p>
           </div>
         </div>
