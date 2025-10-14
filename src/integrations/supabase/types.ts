@@ -181,6 +181,7 @@ export type Database = {
           amount: number
           category: string
           created_at: string | null
+          credit_card_id: string | null
           description: string | null
           id: string
           is_recurring: boolean | null
@@ -194,6 +195,7 @@ export type Database = {
           amount: number
           category: string
           created_at?: string | null
+          credit_card_id?: string | null
           description?: string | null
           id?: string
           is_recurring?: boolean | null
@@ -207,6 +209,7 @@ export type Database = {
           amount?: number
           category?: string
           created_at?: string | null
+          credit_card_id?: string | null
           description?: string | null
           id?: string
           is_recurring?: boolean | null
@@ -216,7 +219,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transactions_credit_card_id_fkey"
+            columns: ["credit_card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_settings: {
         Row: {
