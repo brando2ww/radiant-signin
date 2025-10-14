@@ -176,6 +176,63 @@ export type Database = {
         }
         Relationships: []
       }
+      tasks: {
+        Row: {
+          category: string
+          color: string
+          created_at: string
+          description: string | null
+          end_time: string
+          id: string
+          location: string | null
+          priority: string
+          related_bill_id: string | null
+          related_transaction_id: string | null
+          start_time: string
+          status: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          end_time: string
+          id?: string
+          location?: string | null
+          priority?: string
+          related_bill_id?: string | null
+          related_transaction_id?: string | null
+          start_time: string
+          status?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          end_time?: string
+          id?: string
+          location?: string | null
+          priority?: string
+          related_bill_id?: string | null
+          related_transaction_id?: string | null
+          start_time?: string
+          status?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
