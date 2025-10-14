@@ -5,7 +5,7 @@ import { LoginForm } from "@/components/ui/forms/login-form";
 import { SignUpForm } from "@/components/ui/forms/signup-form";
 import { ResetPasswordForm } from "@/components/ui/forms/reset-password-form";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
 
 type FormType = 'login' | 'signup' | 'reset';
@@ -52,18 +52,11 @@ const Index = () => {
     const { error } = await signIn(email, password);
     
     if (error) {
-      toast({
-        title: "Erro ao fazer login",
-        description: getAuthErrorMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getAuthErrorMessage(error));
       return;
     }
     
-    toast({
-      title: "Login realizado com sucesso!",
-      description: "Redirecionando...",
-    });
+    toast.success('Login realizado com sucesso!');
   };
 
   const handleSignUp = async (data: { documentType: string; document: string; name: string; email: string; password: string }) => {
@@ -76,18 +69,11 @@ const Index = () => {
     });
     
     if (error) {
-      toast({
-        title: "Erro ao criar conta",
-        description: getAuthErrorMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getAuthErrorMessage(error));
       return;
     }
     
-    toast({
-      title: "Conta criada com sucesso!",
-      description: "Verifique seu email para confirmar o cadastro.",
-    });
+    toast.success('Cadastro realizado! Verifique seu email para confirmar.');
     setCurrentForm('login');
   };
 
@@ -95,18 +81,11 @@ const Index = () => {
     const { error } = await resetPassword(email);
     
     if (error) {
-      toast({
-        title: "Erro ao enviar email",
-        description: getAuthErrorMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getAuthErrorMessage(error));
       return;
     }
     
-    toast({
-      title: "Email enviado!",
-      description: `Link de redefinição enviado para: ${email}`,
-    });
+    toast.success(`Link de redefinição enviado para: ${email}`);
     setCurrentForm('login');
   };
 
@@ -114,11 +93,7 @@ const Index = () => {
     const { error } = await signInWithGoogle();
     
     if (error) {
-      toast({
-        title: "Erro ao fazer login com Google",
-        description: getAuthErrorMessage(error),
-        variant: "destructive",
-      });
+      toast.error(getAuthErrorMessage(error));
     }
   };
 
