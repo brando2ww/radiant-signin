@@ -5,19 +5,19 @@ const sampleTestimonials: Testimonial[] = [
     avatarSrc: "https://randomuser.me/api/portraits/women/57.jpg",
     name: "Sarah Chen",
     handle: "@sarahdigital",
-    text: "Amazing platform! The user experience is seamless and the features are exactly what I needed."
+    text: "Plataforma incrível! A experiência do usuário é perfeita e os recursos são exatamente o que eu precisava."
   },
   {
     avatarSrc: "https://randomuser.me/api/portraits/men/64.jpg",
     name: "Marcus Johnson",
     handle: "@marcustech",
-    text: "This service has transformed how I work. Clean design, powerful features, and excellent support."
+    text: "Este serviço transformou minha forma de trabalhar. Design limpo, recursos poderosos e excelente suporte."
   },
   {
     avatarSrc: "https://randomuser.me/api/portraits/men/32.jpg",
     name: "David Martinez",
     handle: "@davidcreates",
-    text: "I've tried many platforms, but this one stands out. Intuitive, reliable, and genuinely helpful for productivity."
+    text: "Já experimentei muitas plataformas, mas esta se destaca. Intuitiva, confiável e genuinamente útil para produtividade."
   },
 ];
 
@@ -26,21 +26,21 @@ const Index = () => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const data = Object.fromEntries(formData.entries());
-    console.log("Sign In submitted:", data);
-    alert(`Sign In Submitted! Check the browser console for form data.`);
+    console.log("Login enviado:", data);
+    alert(`Login Enviado! Verifique o console do navegador para os dados do formulário.`);
   };
 
   const handleGoogleSignIn = () => {
-    console.log("Continue with Google clicked");
-    alert("Continue with Google clicked");
+    console.log("Continuar com Google clicado");
+    alert("Continuar com Google clicado");
   };
   
   const handleResetPassword = () => {
-    alert("Reset Password clicked");
+    alert("Redefinir Senha clicado");
   };
 
   const handleCreateAccount = () => {
-    alert("Create Account clicked");
+    alert("Criar Conta clicado");
   };
 
   return (
