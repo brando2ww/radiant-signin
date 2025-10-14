@@ -50,6 +50,60 @@ export type Database = {
         }
         Relationships: []
       }
+      user_settings: {
+        Row: {
+          created_at: string | null
+          currency: string | null
+          date_format: string | null
+          density: string | null
+          financial_settings: Json | null
+          id: string
+          language: string | null
+          notifications: Json | null
+          security_settings: Json | null
+          sidebar_expanded: boolean | null
+          theme: string | null
+          time_format: string | null
+          timezone: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          currency?: string | null
+          date_format?: string | null
+          density?: string | null
+          financial_settings?: Json | null
+          id?: string
+          language?: string | null
+          notifications?: Json | null
+          security_settings?: Json | null
+          sidebar_expanded?: boolean | null
+          theme?: string | null
+          time_format?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          currency?: string | null
+          date_format?: string | null
+          density?: string | null
+          financial_settings?: Json | null
+          id?: string
+          language?: string | null
+          notifications?: Json | null
+          security_settings?: Json | null
+          sidebar_expanded?: boolean | null
+          theme?: string | null
+          time_format?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -13,6 +13,7 @@ import Calendar from "./pages/Calendar";
 import Tasks from "./pages/Tasks";
 import Transactions from "./pages/Transactions";
 import CreditCards from "./pages/CreditCards";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,6 +80,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CreditCards />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/settings" 
+              element={
+                <ProtectedRoute>
+                  <Settings />
                 </ProtectedRoute>
               } 
             />
