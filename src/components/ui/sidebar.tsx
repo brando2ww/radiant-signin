@@ -189,21 +189,6 @@ export function SessionNavBar() {
                       </motion.li>
                     </Link>
 
-                    <Link
-                      to="/plans"
-                      className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
-                        pathname.includes("plans") && "bg-muted text-primary",
-                      )}
-                    >
-                      <Package className="h-4 w-4" />
-                      <motion.li variants={variants}>
-                        {!isCollapsed && (
-                          <p className="ml-2 text-sm font-medium">Planos</p>
-                        )}
-                      </motion.li>
-                    </Link>
-
                     <Separator className="my-2" />
 
                     <Link
@@ -336,6 +321,11 @@ export function SessionNavBar() {
                         onClick={() => setIsEditProfileOpen(true)}
                       >
                         <UserCircle className="h-4 w-4" /> Perfil
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center gap-2" asChild>
+                        <Link to="/plans">
+                          <Package className="h-4 w-4" /> Planos
+                        </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         className="flex items-center gap-2"
