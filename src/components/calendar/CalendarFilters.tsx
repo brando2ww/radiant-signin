@@ -21,12 +21,12 @@ interface CalendarFiltersProps {
 
 export const CalendarFilters = ({ filters, onFiltersChange }: CalendarFiltersProps) => {
   return (
-    <Card className="p-4">
-      <h3 className="font-semibold mb-4">Filtros</h3>
+    <Card className="p-4 space-y-3">
+      <h4 className="font-medium text-sm">Filtros</h4>
       
-      <div className="space-y-4">
+      <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="show-bills" className="text-sm">
+          <Label htmlFor="show-bills" className="text-sm text-muted-foreground">
             Contas
           </Label>
           <Switch
@@ -39,7 +39,7 @@ export const CalendarFilters = ({ filters, onFiltersChange }: CalendarFiltersPro
         </div>
 
         <div className="flex items-center justify-between">
-          <Label htmlFor="show-transactions" className="text-sm">
+          <Label htmlFor="show-transactions" className="text-sm text-muted-foreground">
             Transações
           </Label>
           <Switch
@@ -52,7 +52,7 @@ export const CalendarFilters = ({ filters, onFiltersChange }: CalendarFiltersPro
         </div>
 
         <div className="flex items-center justify-between">
-          <Label htmlFor="show-cards" className="text-sm">
+          <Label htmlFor="show-cards" className="text-sm text-muted-foreground">
             Cartões
           </Label>
           <Switch
@@ -63,29 +63,29 @@ export const CalendarFilters = ({ filters, onFiltersChange }: CalendarFiltersPro
             }
           />
         </div>
+      </div>
 
-        <div className="pt-2 border-t">
-          <Label className="text-sm mb-2 block">Status</Label>
-          <Select
-            value={filters.status}
-            onValueChange={(value) =>
-              onFiltersChange({
-                ...filters,
-                status: value as 'all' | 'pending' | 'paid' | 'overdue',
-              })
-            }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="pending">Pendente</SelectItem>
-              <SelectItem value="paid">Pago</SelectItem>
-              <SelectItem value="overdue">Atrasado</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="space-y-2 pt-2 border-t">
+        <Label className="text-sm font-medium">Status</Label>
+        <Select
+          value={filters.status}
+          onValueChange={(value) =>
+            onFiltersChange({
+              ...filters,
+              status: value as 'all' | 'pending' | 'paid' | 'overdue',
+            })
+          }
+        >
+          <SelectTrigger className="h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="pending">Pendente</SelectItem>
+            <SelectItem value="paid">Pago</SelectItem>
+            <SelectItem value="overdue">Atrasado</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </Card>
   );

@@ -15,6 +15,7 @@ import { LucideIcon } from 'lucide-react';
 export interface CalendarEvent {
   id: string;
   date: Date;
+  time?: string;
   title: string;
   amount?: number;
   type: 'bill' | 'transaction' | 'card_due' | 'card_closing';
@@ -66,7 +67,8 @@ export const useCalendarEvents = (selectedMonth: Date, filters: {
             if (filters.status === 'all' || filters.status === status) {
               events.push({
                 id: bill.id,
-                date: dueDate,
+                date: new Date(dueDate.setHours(9, 0, 0, 0)),
+                time: '09:00',
                 title: bill.title,
                 amount: Number(bill.amount),
                 type: 'bill',
@@ -93,9 +95,11 @@ export const useCalendarEvents = (selectedMonth: Date, filters: {
         if (transactions) {
           transactions.forEach((transaction) => {
             if (filters.status === 'all' || filters.status === 'paid') {
+              const transactionDate = new Date(transaction.transaction_date);
               events.push({
                 id: transaction.id,
-                date: new Date(transaction.transaction_date),
+                date: transactionDate,
+                time: transactionDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
                 title: transaction.description || 'Transação',
                 amount: Number(transaction.amount),
                 type: 'transaction',
@@ -131,7 +135,8 @@ export const useCalendarEvents = (selectedMonth: Date, filters: {
                 if (filters.status === 'all' || filters.status === status) {
                   events.push({
                     id: `${card.id}-due`,
-                    date: dueDate,
+                    date: new Date(dueDate.setHours(9, 0, 0, 0)),
+                    time: '09:00',
                     title: `Vencimento ${card.name}`,
                     amount: Number(card.current_balance || 0),
                     type: 'card_due',
@@ -152,7 +157,8 @@ export const useCalendarEvents = (selectedMonth: Date, filters: {
                 if (filters.status === 'all' || filters.status === 'pending') {
                   events.push({
                     id: `${card.id}-closing`,
-                    date: closingDate,
+                    date: new Date(closingDate.setHours(23, 59, 0, 0)),
+                    time: '23:59',
                     title: `Fechamento ${card.name}`,
                     amount: Number(card.current_balance || 0),
                     type: 'card_closing',
@@ -169,7 +175,15 @@ export const useCalendarEvents = (selectedMonth: Date, filters: {
         }
       }
 
-      return events.sort((a, b) => a.date.getTime() - b.date.getTime());
+      return events.sort((a, b) => {
+        const dateCompare = a.date.getTime() - b.date.getTime();
+        if (dateCompare !== 0) return dateCompare;
+        
+        // If same date, sort by time
+        const timeA = a.time || '00:00';
+        const timeB = b.time || '00:00';
+        return timeA.localeCompare(timeB);
+      });
     },
     enabled: !!user,
   });

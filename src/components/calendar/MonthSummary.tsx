@@ -21,7 +21,7 @@ export const MonthSummary = ({ events }: MonthSummaryProps) => {
   const overdueCount = events.filter((e) => e.status === 'overdue').length;
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 gap-3">
       <Card className="p-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-success/10">
