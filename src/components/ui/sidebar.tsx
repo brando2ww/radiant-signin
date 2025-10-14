@@ -175,16 +175,16 @@ export function SessionNavBar() {
                     </Link>
 
                     <Link
-                      to="/reports"
+                      to="/transactions"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
-                        pathname.includes("reports") && "bg-muted text-primary",
+                        pathname.includes("transactions") && "bg-muted text-primary",
                       )}
                     >
-                      <BarChart3 className="h-4 w-4" />
+                      <TrendingUp className="h-4 w-4" />
                       <motion.li variants={variants}>
                         {!isCollapsed && (
-                          <p className="ml-2 text-sm font-medium">Relatórios</p>
+                          <p className="ml-2 text-sm font-medium">Receitas e Despesas</p>
                         )}
                       </motion.li>
                     </Link>
@@ -224,21 +224,6 @@ export function SessionNavBar() {
                     <Separator className="my-2" />
 
                     <Link
-                      to="/transactions"
-                      className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
-                        pathname.includes("transactions") && "bg-muted text-primary",
-                      )}
-                    >
-                      <TrendingUp className="h-4 w-4" />
-                      <motion.li variants={variants}>
-                        {!isCollapsed && (
-                          <p className="ml-2 text-sm font-medium">Receitas e Despesas</p>
-                        )}
-                      </motion.li>
-                    </Link>
-
-                    <Link
                       to="/credit-cards"
                       className={cn(
                         "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
@@ -249,6 +234,23 @@ export function SessionNavBar() {
                       <motion.li variants={variants}>
                         {!isCollapsed && (
                           <p className="ml-2 text-sm font-medium">Cartões de Crédito</p>
+                        )}
+                      </motion.li>
+                    </Link>
+
+                    <Separator className="my-2" />
+
+                    <Link
+                      to="/reports"
+                      className={cn(
+                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
+                        pathname.includes("reports") && "bg-muted text-primary",
+                      )}
+                    >
+                      <BarChart3 className="h-4 w-4" />
+                      <motion.li variants={variants}>
+                        {!isCollapsed && (
+                          <p className="ml-2 text-sm font-medium">Relatórios</p>
                         )}
                       </motion.li>
                     </Link>
