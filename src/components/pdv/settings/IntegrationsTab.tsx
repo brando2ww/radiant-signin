@@ -1,9 +1,34 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Link2, ExternalLink } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Link2, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react";
+import { useIFoodIntegration } from "@/hooks/use-ifood-integration";
+import { IFoodConnectionDialog } from "./IFoodConnectionDialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function IntegrationsTab() {
+  const [showConnectionDialog, setShowConnectionDialog] = useState(false);
+  const { settings, isLoading, isConnected, disconnectIFood, updateSettings } = useIFoodIntegration();
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-96" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-32 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -22,17 +47,69 @@ export function IntegrationsTab() {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-lg">iFood</h3>
-                  <Badge variant="secondary">Em Breve</Badge>
+                  {isConnected ? (
+                    <Badge variant="default" className="gap-1">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Conectado
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">Desconectado</Badge>
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground">
                   Receba pedidos do iFood diretamente no seu PDV
                 </p>
+                {isConnected && settings?.ifood_merchant_id && (
+                  <p className="text-xs text-muted-foreground">
+                    ID do Estabelecimento: {settings.ifood_merchant_id}
+                  </p>
+                )}
               </div>
-              <Button disabled>
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Conectar
-              </Button>
+              {isConnected ? (
+                <Button
+                  variant="outline"
+                  onClick={() => disconnectIFood.mutate()}
+                  disabled={disconnectIFood.isPending}
+                >
+                  {disconnectIFood.isPending ? "Desconectando..." : "Desconectar"}
+                </Button>
+              ) : (
+                <Button onClick={() => setShowConnectionDialog(true)}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Conectar
+                </Button>
+              )}
             </div>
+
+            {isConnected && (
+              <div className="space-y-3 pt-2 border-t">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="ifood-auto-accept" className="text-sm">
+                    Aceitar pedidos automaticamente
+                  </Label>
+                  <Switch
+                    id="ifood-auto-accept"
+                    checked={settings?.ifood_auto_accept || false}
+                    onCheckedChange={(checked) =>
+                      updateSettings.mutate({ ifood_auto_accept: checked })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="ifood-sync-menu" className="text-sm">
+                    Sincronizar cardápio automaticamente
+                  </Label>
+                  <Switch
+                    id="ifood-sync-menu"
+                    checked={settings?.ifood_sync_menu || false}
+                    onCheckedChange={(checked) =>
+                      updateSettings.mutate({ ifood_sync_menu: checked })
+                    }
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="text-xs text-muted-foreground">
               • Sincronização automática de cardápio<br />
               • Recebimento de pedidos em tempo real<br />
@@ -102,6 +179,11 @@ export function IntegrationsTab() {
           </div>
         </CardContent>
       </Card>
+
+      <IFoodConnectionDialog
+        open={showConnectionDialog}
+        onOpenChange={setShowConnectionDialog}
+      />
     </div>
   );
 }
