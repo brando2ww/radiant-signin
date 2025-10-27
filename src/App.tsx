@@ -20,6 +20,7 @@ import Evaluations from "./pages/Evaluations";
 import PublicEvaluation from "./pages/PublicEvaluation";
 import PublicMenu from "./pages/PublicMenu";
 import Delivery from "./pages/Delivery";
+import PDV from "./pages/PDV";
 import InstallApp from "./pages/InstallApp";
 import NotFound from "./pages/NotFound";
 
@@ -127,6 +128,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Delivery />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/pdv/*" 
+              element={
+                <ProtectedRoute>
+                  <PDV />
                 </ProtectedRoute>
               } 
             />
