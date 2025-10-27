@@ -55,17 +55,48 @@ export function LeadDialog({ open, onOpenChange, lead }: LeadDialogProps) {
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
 
+  // Função para formatar telefone brasileiro
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 10) {
+      return numbers.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '');
+    }
+    return numbers.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '');
+  };
+
+  // Função para formatar valor em Real
+  const formatCurrency = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    const amount = parseFloat(numbers) / 100;
+    if (isNaN(amount)) return '';
+    return amount.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  // Função para remover formatação do telefone
+  const unformatPhone = (value: string) => {
+    return value.replace(/\D/g, '');
+  };
+
+  // Função para remover formatação da moeda
+  const unformatCurrency = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    return (parseFloat(numbers) / 100).toString();
+  };
+
   const form = useForm<LeadFormValues>({
     resolver: zodResolver(leadSchema),
     defaultValues: {
       name: lead?.name || "",
       email: lead?.email || "",
-      phone: lead?.phone || "",
+      phone: lead?.phone ? formatPhone(lead.phone) : "",
       company: lead?.company || "",
       position: lead?.position || "",
       project_title: lead?.project_title || "",
       project_description: lead?.project_description || "",
-      estimated_value: lead?.estimated_value?.toString() || "",
+      estimated_value: lead?.estimated_value ? formatCurrency((lead.estimated_value * 100).toString()) : "",
       stage: lead?.stage || "incoming",
       priority: lead?.priority || "medium",
       source: lead?.source || "",
@@ -77,7 +108,8 @@ export function LeadDialog({ open, onOpenChange, lead }: LeadDialogProps) {
   const onSubmit = async (data: LeadFormValues) => {
     const leadData = {
       ...data,
-      estimated_value: data.estimated_value ? parseFloat(data.estimated_value) : undefined,
+      phone: data.phone ? unformatPhone(data.phone) : undefined,
+      estimated_value: data.estimated_value ? parseFloat(unformatCurrency(data.estimated_value)) : undefined,
       win_probability: data.win_probability ? parseInt(data.win_probability) : undefined,
     };
 
@@ -136,7 +168,15 @@ export function LeadDialog({ open, onOpenChange, lead }: LeadDialogProps) {
                   <FormItem>
                     <FormLabel>Telefone</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input 
+                        {...field}
+                        placeholder="(00) 00000-0000"
+                        onChange={(e) => {
+                          const formatted = formatPhone(e.target.value);
+                          field.onChange(formatted);
+                        }}
+                        maxLength={15}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -194,7 +234,14 @@ export function LeadDialog({ open, onOpenChange, lead }: LeadDialogProps) {
                   <FormItem>
                     <FormLabel>Valor Estimado (R$)</FormLabel>
                     <FormControl>
-                      <Input type="number" step="0.01" {...field} />
+                      <Input 
+                        {...field}
+                        placeholder="0,00"
+                        onChange={(e) => {
+                          const formatted = formatCurrency(e.target.value);
+                          field.onChange(formatted);
+                        }}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
