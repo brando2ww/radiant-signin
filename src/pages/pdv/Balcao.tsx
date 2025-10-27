@@ -1,10 +1,12 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, ShoppingBag } from "lucide-react";
+import { Plus, ShoppingBag, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { usePDVOrders } from "@/hooks/use-pdv-orders";
 import { OrderCard } from "@/components/pdv/OrderCard";
 import { OrderDetailsDialog } from "@/components/pdv/OrderDetailsDialog";
+import { NewOrderDialog } from "@/components/pdv/NewOrderDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -23,11 +25,25 @@ export default function PDVBalcao() {
 
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [newOrderOpen, setNewOrderOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Filtrar apenas pedidos do balcão
   const balcaoOrders = useMemo(() => {
-    return orders.filter((o) => o.source === "balcao");
-  }, [orders]);
+    let filtered = orders.filter((o) => o.source === "balcao");
+    
+    // Aplicar busca por número do pedido ou nome do cliente
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (o) =>
+          o.order_number?.toLowerCase().includes(query) ||
+          o.customer_name?.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
+  }, [orders, searchQuery]);
 
   const openOrders = useMemo(() => {
     return balcaoOrders.filter((o) => o.status === "aberta");
@@ -41,8 +57,11 @@ export default function PDVBalcao() {
     return orderItems.filter((item) => item.order_id === orderId);
   };
 
-  const handleCreateOrder = () => {
-    createOrder({ source: "balcao" });
+  const handleCreateOrder = (customerName?: string) => {
+    createOrder({ 
+      source: "balcao",
+      customer_name: customerName 
+    });
   };
 
   const handleViewOrder = (order: any) => {
@@ -88,17 +107,29 @@ export default function PDVBalcao() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Balcão</h1>
-          <p className="text-muted-foreground">
-            Pedidos para retirada no balcão
-          </p>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Balcão</h1>
+            <p className="text-muted-foreground">
+              Pedidos para retirada no balcão
+            </p>
+          </div>
+          <Button onClick={() => setNewOrderOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Pedido
+          </Button>
         </div>
-        <Button onClick={handleCreateOrder}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Pedido
-        </Button>
+
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por número do pedido ou nome do cliente..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
       </div>
 
       <Tabs defaultValue="open">
@@ -122,13 +153,17 @@ export default function PDVBalcao() {
                       Nenhum pedido aberto
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      Crie um novo pedido para começar
+                      {searchQuery
+                        ? "Nenhum pedido encontrado com os filtros aplicados"
+                        : "Crie um novo pedido para começar"}
                     </p>
                   </div>
-                  <Button onClick={handleCreateOrder}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Novo Pedido
-                  </Button>
+                  {!searchQuery && (
+                    <Button onClick={() => setNewOrderOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Novo Pedido
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -192,6 +227,13 @@ export default function PDVBalcao() {
         onAddItem={handleAddItem}
         onClose={handleCloseOrder}
         onCancel={handleCancelOrder}
+      />
+
+      <NewOrderDialog
+        open={newOrderOpen}
+        onOpenChange={setNewOrderOpen}
+        onCreateOrder={handleCreateOrder}
+        source="balcao"
       />
     </div>
   );
