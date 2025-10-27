@@ -12,9 +12,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Minus, Plus, Clock, Users } from "lucide-react";
 import { PublicProduct } from "@/hooks/use-public-menu";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CartItem } from "@/pages/PublicMenu";
 import { toast } from "sonner";
+import { useMarketingTracking } from "@/hooks/use-marketing-tracking";
 
 interface ProductDetailModalProps {
   open: boolean;
@@ -32,8 +33,20 @@ export const ProductDetailModal = ({
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string[]>>({});
+  const { trackViewItem } = useMarketingTracking();
 
   const basePrice = product.promotional_price || product.base_price;
+
+  // Track view when modal opens
+  useEffect(() => {
+    if (open) {
+      trackViewItem({
+        id: product.id,
+        name: product.name,
+        price: Number(basePrice),
+      });
+    }
+  }, [open, product.id, product.name, basePrice, trackViewItem]);
 
   const handleOptionChange = (optionId: string, itemId: string, type: "single" | "multiple") => {
     setSelectedOptions((prev) => {

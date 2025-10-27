@@ -21,7 +21,7 @@ interface OrderConfirmationProps {
   total: number;
   notes: string;
   onNotesChange: (notes: string) => void;
-  onConfirm: () => void;
+  onConfirm: (orderId: string) => void;
   onBack: () => void;
   selectedAddressId: string | null;
 }
@@ -88,8 +88,8 @@ export const OrderConfirmation = ({
     };
 
     createOrder.mutate(orderData, {
-      onSuccess: () => {
-        onConfirm();
+      onSuccess: (order) => {
+        onConfirm(order.id);
       },
     });
   };

@@ -913,9 +913,11 @@ export type Database = {
           default_delivery_fee: number | null
           delivery_zones: Json | null
           estimated_preparation_time: number | null
+          google_tag_id: string | null
           id: string
           is_open: boolean | null
           max_delivery_distance: number | null
+          meta_pixel_id: string | null
           min_order_value: number | null
           pix_key: string | null
           updated_at: string
@@ -934,9 +936,11 @@ export type Database = {
           default_delivery_fee?: number | null
           delivery_zones?: Json | null
           estimated_preparation_time?: number | null
+          google_tag_id?: string | null
           id?: string
           is_open?: boolean | null
           max_delivery_distance?: number | null
+          meta_pixel_id?: string | null
           min_order_value?: number | null
           pix_key?: string | null
           updated_at?: string
@@ -955,9 +959,11 @@ export type Database = {
           default_delivery_fee?: number | null
           delivery_zones?: Json | null
           estimated_preparation_time?: number | null
+          google_tag_id?: string | null
           id?: string
           is_open?: boolean | null
           max_delivery_distance?: number | null
+          meta_pixel_id?: string | null
           min_order_value?: number | null
           pix_key?: string | null
           updated_at?: string

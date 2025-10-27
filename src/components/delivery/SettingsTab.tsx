@@ -1,10 +1,12 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Truck, CreditCard, Bell, Smartphone } from "lucide-react";
+import { Clock, Truck, CreditCard, Bell, Smartphone, TrendingUp } from "lucide-react";
 import { BusinessHoursSettings } from "./settings/BusinessHoursSettings";
 import { DeliverySettings } from "./settings/DeliverySettings";
 import { PaymentSettings } from "./settings/PaymentSettings";
 import { NotificationPreferences } from "./settings/NotificationPreferences";
-import { InstallAppButton } from "./InstallAppButton";
+import { PublicMenuLink } from "./settings/PublicMenuLink";
+import { AppInstallGuide } from "./settings/AppInstallGuide";
+import { MarketingSettings } from "./settings/MarketingSettings";
 import { useState } from "react";
 
 export const SettingsTab = () => {
@@ -17,12 +19,12 @@ export const SettingsTab = () => {
       <div>
         <h2 className="text-2xl font-bold">Configurações do Delivery</h2>
         <p className="text-sm text-muted-foreground">
-          Configure horários, entrega, pagamentos e notificações
+          Configure horários, entrega, pagamentos, notificações e marketing
         </p>
       </div>
 
       <Tabs defaultValue="hours" className="w-full">
-        <TabsList className="grid w-full max-w-3xl grid-cols-5">
+        <TabsList className="grid w-full max-w-4xl grid-cols-6">
           <TabsTrigger value="hours" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span className="hidden sm:inline">Horários</span>
@@ -42,6 +44,10 @@ export const SettingsTab = () => {
           <TabsTrigger value="app" className="flex items-center gap-2">
             <Smartphone className="h-4 w-4" />
             <span className="hidden sm:inline">App Mobile</span>
+          </TabsTrigger>
+          <TabsTrigger value="marketing" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            <span className="hidden sm:inline">Marketing</span>
           </TabsTrigger>
         </TabsList>
 
@@ -69,7 +75,22 @@ export const SettingsTab = () => {
         </TabsContent>
 
         <TabsContent value="app" className="mt-6">
-          <InstallAppButton />
+          <Tabs defaultValue="link" className="w-full">
+            <TabsList>
+              <TabsTrigger value="link">Link Público</TabsTrigger>
+              <TabsTrigger value="install">Instalação App</TabsTrigger>
+            </TabsList>
+            <TabsContent value="link" className="mt-6">
+              <PublicMenuLink />
+            </TabsContent>
+            <TabsContent value="install" className="mt-6">
+              <AppInstallGuide />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
+
+        <TabsContent value="marketing" className="mt-6">
+          <MarketingSettings />
         </TabsContent>
       </Tabs>
     </div>

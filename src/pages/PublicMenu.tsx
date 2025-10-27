@@ -4,8 +4,11 @@ import { CategoryNav } from "@/components/public-menu/CategoryNav";
 import { ProductList } from "@/components/public-menu/ProductList";
 import { ShoppingCart } from "@/components/public-menu/ShoppingCart";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePublicCategories, usePublicProducts } from "@/hooks/use-public-menu";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useMarketingTracking } from "@/hooks/use-marketing-tracking";
 
 export interface CartItem {
   productId: string;
@@ -26,12 +29,101 @@ const PublicMenu = () => {
   const { userId } = useParams<{ userId: string }>();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const { trackPageView } = useMarketingTracking();
 
   const { data: categories = [] } = usePublicCategories(userId || "");
   const { data: products = [] } = usePublicProducts(
     userId || "",
     selectedCategory || undefined
   );
+
+  // Fetch marketing settings
+  const { data: settings } = useQuery({
+    queryKey: ["delivery-settings-public", userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data } = await supabase
+        .from("delivery_settings")
+        .select("meta_pixel_id, google_tag_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!userId,
+  });
+
+  // Inject Meta Pixel
+  useEffect(() => {
+    if (!settings?.meta_pixel_id) return;
+
+    const script = document.createElement("script");
+    script.innerHTML = `
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '${settings.meta_pixel_id}');
+    `;
+    document.head.appendChild(script);
+
+    return () => {
+      document.head.removeChild(script);
+    };
+  }, [settings?.meta_pixel_id]);
+
+  // Inject Google Tag
+  useEffect(() => {
+    if (!settings?.google_tag_id) return;
+
+    const tagId = settings.google_tag_id;
+    
+    if (tagId.startsWith('GTM-')) {
+      // Google Tag Manager
+      const script = document.createElement("script");
+      script.innerHTML = `
+        (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+        new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+        j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+        'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer','${tagId}');
+      `;
+      document.head.appendChild(script);
+      return () => {
+        document.head.removeChild(script);
+      };
+    } else if (tagId.startsWith('G-')) {
+      // Google Analytics 4
+      const script1 = document.createElement("script");
+      script1.src = `https://www.googletagmanager.com/gtag/js?id=${tagId}`;
+      script1.async = true;
+      document.head.appendChild(script1);
+
+      const script2 = document.createElement("script");
+      script2.innerHTML = `
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '${tagId}');
+      `;
+      document.head.appendChild(script2);
+
+      return () => {
+        document.head.removeChild(script1);
+        document.head.removeChild(script2);
+      };
+    }
+  }, [settings?.google_tag_id]);
+
+  // Track page view
+  useEffect(() => {
+    if (settings?.meta_pixel_id || settings?.google_tag_id) {
+      trackPageView();
+    }
+  }, [settings, trackPageView]);
 
   const addToCart = (item: CartItem) => {
     setCart((prev) => [...prev, item]);

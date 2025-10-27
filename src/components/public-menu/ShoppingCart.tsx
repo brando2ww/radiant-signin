@@ -9,6 +9,7 @@ import { useState } from "react";
 import { usePublicSettings } from "@/hooks/use-public-menu";
 import { useValidateCoupon } from "@/hooks/use-delivery-coupons";
 import { CheckoutFlow } from "./CheckoutFlow";
+import { useMarketingTracking } from "@/hooks/use-marketing-tracking";
 import {
   Sheet,
   SheetContent,
@@ -37,6 +38,7 @@ export const ShoppingCart = ({
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const { data: settings } = usePublicSettings(userId);
   const validateCoupon = useValidateCoupon();
+  const { trackBeginCheckout } = useMarketingTracking();
 
   const subtotal = cart.reduce((sum, item) => {
     const itemTotal = item.unitPrice + item.selectedOptions.reduce((s, opt) => s + opt.priceAdjustment, 0);
@@ -244,7 +246,14 @@ export const ShoppingCart = ({
                 </div>
               </div>
 
-              <Button size="lg" className="w-full" onClick={() => setIsCheckoutOpen(true)}>
+              <Button 
+                size="lg" 
+                className="w-full" 
+                onClick={() => {
+                  setIsCheckoutOpen(true);
+                  trackBeginCheckout(cart, total);
+                }}
+              >
                 Finalizar Pedido
               </Button>
             </div>

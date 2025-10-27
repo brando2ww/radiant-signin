@@ -12,6 +12,7 @@ import { PaymentMethod } from "./checkout/PaymentMethod";
 import { OrderConfirmation } from "./checkout/OrderConfirmation";
 import { CartItem } from "@/pages/PublicMenu";
 import { DeliveryCustomer } from "@/hooks/use-delivery-customers";
+import { useMarketingTracking } from "@/hooks/use-marketing-tracking";
 
 interface CheckoutFlowProps {
   open: boolean;
@@ -48,6 +49,7 @@ export const CheckoutFlow = ({
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [changeFor, setChangeFor] = useState<number | undefined>();
   const [notes, setNotes] = useState<string>("");
+  const { trackPurchase } = useMarketingTracking();
 
   const handlePhoneConfirmed = (confirmedCustomer: DeliveryCustomer) => {
     setCustomer(confirmedCustomer);
@@ -75,7 +77,17 @@ export const CheckoutFlow = ({
     setCurrentStep("confirmation");
   };
 
-  const handleOrderPlaced = () => {
+  const handleOrderPlaced = (orderId: string) => {
+    // Track purchase
+    trackPurchase({
+      orderId,
+      total,
+      subtotal,
+      deliveryFee,
+      discount,
+      cart,
+    });
+
     onOrderComplete();
     onOpenChange(false);
     // Reset

@@ -33,6 +33,8 @@ export interface DeliverySettings {
   business_hours: BusinessHours;
   blocked_dates: string[];
   whatsapp_notifications: boolean;
+  meta_pixel_id?: string | null;
+  google_tag_id?: string | null;
   created_at: string;
   updated_at: string;
 }
