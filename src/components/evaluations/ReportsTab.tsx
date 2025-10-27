@@ -31,13 +31,23 @@ export const ReportsTab = () => {
   const exportEvaluations = useExportEvaluations();
 
   const calculateAge = (birthDate: string) => {
+    if (!birthDate) return null;
+    
     const today = new Date();
     const birth = new Date(birthDate);
+    
+    // Validar se a data é válida
+    if (isNaN(birth.getTime())) return null;
+    
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
       age--;
     }
+    
+    // Retornar null se a idade for inválida (negativa ou maior que 120)
+    if (age < 0 || age > 120) return null;
+    
     return age;
   };
 
@@ -457,7 +467,12 @@ export const ReportsTab = () => {
                         {format(new Date(evaluation.evaluation_date), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                       </TableCell>
                       <TableCell>{evaluation.customer_name}</TableCell>
-                      <TableCell>{calculateAge(evaluation.customer_birth_date)} anos</TableCell>
+                      <TableCell>
+                        {(() => {
+                          const age = calculateAge(evaluation.customer_birth_date);
+                          return age !== null ? `${age} anos` : "N/A";
+                        })()}
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           {avgScore.toFixed(1)} <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />

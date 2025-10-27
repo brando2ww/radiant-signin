@@ -75,13 +75,23 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
 
   // Helper para calcular idade
   const calculateAge = (birthDate: string) => {
+    if (!birthDate) return null;
+    
     const today = new Date();
     const birth = new Date(birthDate);
+    
+    // Validar se a data é válida
+    if (isNaN(birth.getTime())) return null;
+    
     let age = today.getFullYear() - birth.getFullYear();
     const monthDiff = today.getMonth() - birth.getMonth();
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
       age--;
     }
+    
+    // Retornar null se a idade for inválida (negativa ou maior que 120)
+    if (age < 0 || age > 120) return null;
+    
     return age;
   };
 
@@ -104,18 +114,21 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     : 0;
 
   // Calcular idade média
-  const ages = evaluations.map(e => calculateAge(e.customer_birth_date));
+  const ages = evaluations
+    .map(e => calculateAge(e.customer_birth_date))
+    .filter((age): age is number => age !== null);
   const avgAge = ages.length > 0 
-    ? ages.reduce((sum, a) => sum + a, 0) / ages.length
+    ? Math.round(ages.reduce((sum, a) => sum + a, 0) / ages.length)
     : 0;
 
-  // Distribuição por faixa etária
+  // Distribuição por faixa etária (apenas idades válidas)
+  const validAges = ages.filter(a => a !== null && a >= 0);
   const ageDistribution = [
-    { ageGroup: '18-25', count: ages.filter(a => a >= 18 && a <= 25).length },
-    { ageGroup: '26-35', count: ages.filter(a => a >= 26 && a <= 35).length },
-    { ageGroup: '36-45', count: ages.filter(a => a >= 36 && a <= 45).length },
-    { ageGroup: '46-60', count: ages.filter(a => a >= 46 && a <= 60).length },
-    { ageGroup: '60+', count: ages.filter(a => a > 60).length },
+    { ageGroup: '18-25', count: validAges.filter(a => a >= 18 && a <= 25).length },
+    { ageGroup: '26-35', count: validAges.filter(a => a >= 26 && a <= 35).length },
+    { ageGroup: '36-45', count: validAges.filter(a => a >= 36 && a <= 45).length },
+    { ageGroup: '46-60', count: validAges.filter(a => a >= 46 && a <= 60).length },
+    { ageGroup: '60+', count: validAges.filter(a => a > 60).length },
   ];
 
   // Satisfação por faixa etária
@@ -129,6 +142,10 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
 
   evaluations.forEach(e => {
     const age = calculateAge(e.customer_birth_date);
+    
+    // Pular se idade inválida
+    if (age === null) return;
+    
     const avgScore = e.evaluation_answers.length > 0
       ? e.evaluation_answers.reduce((sum, a) => sum + a.score, 0) / e.evaluation_answers.length
       : 0;
