@@ -183,7 +183,7 @@ export function LeadDetailPanel({ open, onOpenChange, lead, onEdit }: LeadDetail
                 <div className="flex gap-3">
                   <Button
                     onClick={handleWin}
-                    className="flex-1 bg-success hover:bg-success/90"
+                    className="flex-1 bg-success hover:bg-success/90 text-white"
                     disabled={updateMutation.isPending}
                   >
                     <Trophy className="h-4 w-4 mr-2" />
