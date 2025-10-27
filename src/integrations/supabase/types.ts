@@ -1074,6 +1074,779 @@ export type Database = {
         }
         Relationships: []
       }
+      pdv_cash_closures: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          counted_cash: number | null
+          counted_credit: number | null
+          counted_debit: number | null
+          counted_meal_voucher: number | null
+          counted_pix: number | null
+          created_at: string | null
+          difference_cash: number | null
+          difference_credit: number | null
+          difference_debit: number | null
+          difference_meal_voucher: number | null
+          difference_pix: number | null
+          expected_cash: number | null
+          expected_credit: number | null
+          expected_debit: number | null
+          expected_meal_voucher: number | null
+          expected_pix: number | null
+          id: string
+          notes: string | null
+          shift: string
+          shift_date: string
+          user_id: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          counted_cash?: number | null
+          counted_credit?: number | null
+          counted_debit?: number | null
+          counted_meal_voucher?: number | null
+          counted_pix?: number | null
+          created_at?: string | null
+          difference_cash?: number | null
+          difference_credit?: number | null
+          difference_debit?: number | null
+          difference_meal_voucher?: number | null
+          difference_pix?: number | null
+          expected_cash?: number | null
+          expected_credit?: number | null
+          expected_debit?: number | null
+          expected_meal_voucher?: number | null
+          expected_pix?: number | null
+          id?: string
+          notes?: string | null
+          shift: string
+          shift_date: string
+          user_id: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          counted_cash?: number | null
+          counted_credit?: number | null
+          counted_debit?: number | null
+          counted_meal_voucher?: number | null
+          counted_pix?: number | null
+          created_at?: string | null
+          difference_cash?: number | null
+          difference_credit?: number | null
+          difference_debit?: number | null
+          difference_meal_voucher?: number | null
+          difference_pix?: number | null
+          expected_cash?: number | null
+          expected_credit?: number | null
+          expected_debit?: number | null
+          expected_meal_voucher?: number | null
+          expected_pix?: number | null
+          id?: string
+          notes?: string | null
+          shift?: string
+          shift_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pdv_cash_movements: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string | null
+          handled_at: string | null
+          handled_by: string | null
+          id: string
+          order_id: string | null
+          payment_id: string | null
+          payment_method: string | null
+          shift: string | null
+          shift_date: string
+          type: Database["public"]["Enums"]["pdv_cash_movement_type"]
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          order_id?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          shift?: string | null
+          shift_date: string
+          type: Database["public"]["Enums"]["pdv_cash_movement_type"]
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          handled_at?: string | null
+          handled_by?: string | null
+          id?: string
+          order_id?: string | null
+          payment_id?: string | null
+          payment_method?: string | null
+          shift?: string | null
+          shift_date?: string
+          type?: Database["public"]["Enums"]["pdv_cash_movement_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_cash_movements_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_cash_movements_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_cmv_reports: {
+        Row: {
+          cmv_percentage: number | null
+          created_at: string | null
+          generated_at: string | null
+          id: string
+          period_end: string
+          period_start: string
+          product_margins: Json | null
+          total_cmv: number | null
+          total_revenue: number | null
+          user_id: string
+        }
+        Insert: {
+          cmv_percentage?: number | null
+          created_at?: string | null
+          generated_at?: string | null
+          id?: string
+          period_end: string
+          period_start: string
+          product_margins?: Json | null
+          total_cmv?: number | null
+          total_revenue?: number | null
+          user_id: string
+        }
+        Update: {
+          cmv_percentage?: number | null
+          created_at?: string | null
+          generated_at?: string | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          product_margins?: Json | null
+          total_cmv?: number | null
+          total_revenue?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pdv_customers: {
+        Row: {
+          birth_date: string | null
+          cpf: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          last_visit: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          total_spent: number | null
+          updated_at: string | null
+          user_id: string
+          visit_count: number | null
+        }
+        Insert: {
+          birth_date?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          last_visit?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          total_spent?: number | null
+          updated_at?: string | null
+          user_id: string
+          visit_count?: number | null
+        }
+        Update: {
+          birth_date?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          last_visit?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          total_spent?: number | null
+          updated_at?: string | null
+          user_id?: string
+          visit_count?: number | null
+        }
+        Relationships: []
+      }
+      pdv_ingredients: {
+        Row: {
+          created_at: string | null
+          current_stock: number | null
+          expiration_date: string | null
+          id: string
+          min_stock: number | null
+          name: string
+          supplier: string | null
+          unit: string
+          unit_cost: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_stock?: number | null
+          expiration_date?: string | null
+          id?: string
+          min_stock?: number | null
+          name: string
+          supplier?: string | null
+          unit: string
+          unit_cost: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_stock?: number | null
+          expiration_date?: string | null
+          id?: string
+          min_stock?: number | null
+          name?: string
+          supplier?: string | null
+          unit?: string
+          unit_cost?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pdv_order_items: {
+        Row: {
+          added_at: string | null
+          added_by: string | null
+          assigned_to_person: number | null
+          created_at: string | null
+          id: string
+          kitchen_status: string | null
+          modifiers: Json | null
+          notes: string | null
+          order_id: string
+          product_id: string
+          product_name: string
+          quantity: number
+          ready_at: string | null
+          sent_to_kitchen_at: string | null
+          subtotal: number
+          unit_price: number
+          weight: number | null
+        }
+        Insert: {
+          added_at?: string | null
+          added_by?: string | null
+          assigned_to_person?: number | null
+          created_at?: string | null
+          id?: string
+          kitchen_status?: string | null
+          modifiers?: Json | null
+          notes?: string | null
+          order_id: string
+          product_id: string
+          product_name: string
+          quantity?: number
+          ready_at?: string | null
+          sent_to_kitchen_at?: string | null
+          subtotal: number
+          unit_price: number
+          weight?: number | null
+        }
+        Update: {
+          added_at?: string | null
+          added_by?: string | null
+          assigned_to_person?: number | null
+          created_at?: string | null
+          id?: string
+          kitchen_status?: string | null
+          modifiers?: Json | null
+          notes?: string | null
+          order_id?: string
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          ready_at?: string | null
+          sent_to_kitchen_at?: string | null
+          subtotal?: number
+          unit_price?: number
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_orders: {
+        Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          closed_at: string | null
+          created_at: string | null
+          customer_id: string | null
+          customer_name: string | null
+          delivery_order_id: string | null
+          discount: number | null
+          id: string
+          opened_at: string | null
+          opened_by: string | null
+          order_number: string
+          paid_at: string | null
+          service_fee: number | null
+          source: string
+          status: string
+          subtotal: number | null
+          table_id: string | null
+          total: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          closed_at?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          delivery_order_id?: string | null
+          discount?: number | null
+          id?: string
+          opened_at?: string | null
+          opened_by?: string | null
+          order_number: string
+          paid_at?: string | null
+          service_fee?: number | null
+          source: string
+          status?: string
+          subtotal?: number | null
+          table_id?: string | null
+          total?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          closed_at?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          customer_name?: string | null
+          delivery_order_id?: string | null
+          discount?: number | null
+          id?: string
+          opened_at?: string | null
+          opened_by?: string | null
+          order_number?: string
+          paid_at?: string | null
+          service_fee?: number | null
+          source?: string
+          status?: string
+          subtotal?: number | null
+          table_id?: string | null
+          total?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_orders_delivery_order_id_fkey"
+            columns: ["delivery_order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_orders_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_payments: {
+        Row: {
+          amount: number
+          authorization_code: string | null
+          cash_received: number | null
+          change_amount: number | null
+          created_at: string | null
+          id: string
+          installments: number | null
+          nsu: string | null
+          order_id: string
+          payment_method: string
+          pix_txid: string | null
+          processed_at: string | null
+          processed_by: string | null
+        }
+        Insert: {
+          amount: number
+          authorization_code?: string | null
+          cash_received?: number | null
+          change_amount?: number | null
+          created_at?: string | null
+          id?: string
+          installments?: number | null
+          nsu?: string | null
+          order_id: string
+          payment_method: string
+          pix_txid?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+        }
+        Update: {
+          amount?: number
+          authorization_code?: string | null
+          cash_received?: number | null
+          change_amount?: number | null
+          created_at?: string | null
+          id?: string
+          installments?: number | null
+          nsu?: string | null
+          order_id?: string
+          payment_method?: string
+          pix_txid?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_payments_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_product_modifiers: {
+        Row: {
+          affects_recipe: boolean | null
+          created_at: string | null
+          id: string
+          is_available: boolean | null
+          name: string
+          price_adjustment: number | null
+          product_id: string
+        }
+        Insert: {
+          affects_recipe?: boolean | null
+          created_at?: string | null
+          id?: string
+          is_available?: boolean | null
+          name: string
+          price_adjustment?: number | null
+          product_id: string
+        }
+        Update: {
+          affects_recipe?: boolean | null
+          created_at?: string | null
+          id?: string
+          is_available?: boolean | null
+          name?: string
+          price_adjustment?: number | null
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_product_modifiers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_product_recipes: {
+        Row: {
+          created_at: string | null
+          id: string
+          ingredient_id: string
+          product_id: string
+          quantity: number
+          unit: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ingredient_id: string
+          product_id: string
+          quantity: number
+          unit: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ingredient_id?: string
+          product_id?: string
+          quantity?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_product_recipes_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_product_recipes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_products: {
+        Row: {
+          available_times: Json | null
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_available: boolean | null
+          is_sold_by_weight: boolean | null
+          name: string
+          preparation_time: number | null
+          price_balcao: number | null
+          price_delivery: number | null
+          price_salon: number
+          serves: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          available_times?: Json | null
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          is_sold_by_weight?: boolean | null
+          name: string
+          preparation_time?: number | null
+          price_balcao?: number | null
+          price_delivery?: number | null
+          price_salon: number
+          serves?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          available_times?: Json | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          is_sold_by_weight?: boolean | null
+          name?: string
+          preparation_time?: number | null
+          price_balcao?: number | null
+          price_delivery?: number | null
+          price_salon?: number
+          serves?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pdv_settings: {
+        Row: {
+          allow_negative_balance: boolean | null
+          auto_print_to_kitchen: boolean | null
+          created_at: string | null
+          enable_service_fee: boolean | null
+          id: string
+          integrate_with_delivery: boolean | null
+          require_customer_identification: boolean | null
+          requires_opening_balance: boolean | null
+          salon_layout: Json | null
+          service_fee_percentage: number | null
+          shifts: Json | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          allow_negative_balance?: boolean | null
+          auto_print_to_kitchen?: boolean | null
+          created_at?: string | null
+          enable_service_fee?: boolean | null
+          id?: string
+          integrate_with_delivery?: boolean | null
+          require_customer_identification?: boolean | null
+          requires_opening_balance?: boolean | null
+          salon_layout?: Json | null
+          service_fee_percentage?: number | null
+          shifts?: Json | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          allow_negative_balance?: boolean | null
+          auto_print_to_kitchen?: boolean | null
+          created_at?: string | null
+          enable_service_fee?: boolean | null
+          id?: string
+          integrate_with_delivery?: boolean | null
+          require_customer_identification?: boolean | null
+          requires_opening_balance?: boolean | null
+          salon_layout?: Json | null
+          service_fee_percentage?: number | null
+          shifts?: Json | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pdv_stock_movements: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          ingredient_id: string
+          order_item_id: string | null
+          quantity: number
+          reason: string | null
+          type: Database["public"]["Enums"]["pdv_stock_movement_type"]
+          unit_cost: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          ingredient_id: string
+          order_item_id?: string | null
+          quantity: number
+          reason?: string | null
+          type: Database["public"]["Enums"]["pdv_stock_movement_type"]
+          unit_cost?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          ingredient_id?: string
+          order_item_id?: string | null
+          quantity?: number
+          reason?: string | null
+          type?: Database["public"]["Enums"]["pdv_stock_movement_type"]
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_stock_movements_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_stock_movements_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_tables: {
+        Row: {
+          capacity: number
+          created_at: string | null
+          current_order_id: string | null
+          id: string
+          position_x: number | null
+          position_y: number | null
+          shape: string | null
+          status: Database["public"]["Enums"]["pdv_table_status"] | null
+          table_number: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          capacity?: number
+          created_at?: string | null
+          current_order_id?: string | null
+          id?: string
+          position_x?: number | null
+          position_y?: number | null
+          shape?: string | null
+          status?: Database["public"]["Enums"]["pdv_table_status"] | null
+          table_number: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          capacity?: number
+          created_at?: string | null
+          current_order_id?: string | null
+          id?: string
+          position_x?: number | null
+          position_y?: number | null
+          shape?: string | null
+          status?: Database["public"]["Enums"]["pdv_table_status"] | null
+          table_number?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1220,6 +1993,42 @@ export type Database = {
           },
         ]
       }
+      user_modules: {
+        Row: {
+          acquired_at: string | null
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          module: Database["public"]["Enums"]["user_module"]
+          trial_ends_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          acquired_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          module: Database["public"]["Enums"]["user_module"]
+          trial_ends_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          acquired_at?: string | null
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          module?: Database["public"]["Enums"]["user_module"]
+          trial_ends_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           created_at: string | null
@@ -1282,10 +2091,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_module_access: {
+        Args: {
+          _module: Database["public"]["Enums"]["user_module"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      pdv_cash_movement_type:
+        | "abertura"
+        | "venda"
+        | "sangria"
+        | "suprimento"
+        | "fechamento"
+      pdv_stock_movement_type:
+        | "entrada"
+        | "saida_venda"
+        | "saida_perda"
+        | "ajuste"
+      pdv_table_status:
+        | "livre"
+        | "ocupada"
+        | "aguardando_pedido"
+        | "aguardando_cozinha"
+        | "pediu_conta"
+        | "pendente_pagamento"
+      user_module: "financeiro" | "crm" | "delivery" | "pdv" | "avaliacoes"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1412,6 +2245,29 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      pdv_cash_movement_type: [
+        "abertura",
+        "venda",
+        "sangria",
+        "suprimento",
+        "fechamento",
+      ],
+      pdv_stock_movement_type: [
+        "entrada",
+        "saida_venda",
+        "saida_perda",
+        "ajuste",
+      ],
+      pdv_table_status: [
+        "livre",
+        "ocupada",
+        "aguardando_pedido",
+        "aguardando_cozinha",
+        "pediu_conta",
+        "pendente_pagamento",
+      ],
+      user_module: ["financeiro", "crm", "delivery", "pdv", "avaliacoes"],
+    },
   },
 } as const
