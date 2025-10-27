@@ -8,6 +8,7 @@ import { CartItem } from "@/pages/PublicMenu";
 import { useState } from "react";
 import { usePublicSettings } from "@/hooks/use-public-menu";
 import { useValidateCoupon } from "@/hooks/use-delivery-coupons";
+import { CheckoutFlow } from "./CheckoutFlow";
 import {
   Sheet,
   SheetContent,
@@ -33,6 +34,7 @@ export const ShoppingCart = ({
 }: ShoppingCartProps) => {
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const { data: settings } = usePublicSettings(userId);
   const validateCoupon = useValidateCoupon();
 
@@ -66,9 +68,15 @@ export const ShoppingCart = ({
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  const handleOrderComplete = () => {
+    onClearCart();
+    setAppliedCoupon(null);
+  };
+
   return (
-    <Sheet>
-      <SheetTrigger asChild>
+    <>
+      <Sheet>
+        <SheetTrigger asChild>
         <Button
           size="lg"
           className="fixed bottom-4 right-4 z-50 shadow-lg h-14 px-6"
@@ -236,7 +244,7 @@ export const ShoppingCart = ({
                 </div>
               </div>
 
-              <Button size="lg" className="w-full" onClick={() => alert("Checkout em desenvolvimento!")}>
+              <Button size="lg" className="w-full" onClick={() => setIsCheckoutOpen(true)}>
                 Finalizar Pedido
               </Button>
             </div>
@@ -244,5 +252,19 @@ export const ShoppingCart = ({
         )}
       </SheetContent>
     </Sheet>
+
+    <CheckoutFlow
+      open={isCheckoutOpen}
+      onOpenChange={setIsCheckoutOpen}
+      cart={cart}
+      subtotal={subtotal}
+      deliveryFee={deliveryFee}
+      discount={discount}
+      couponCode={appliedCoupon?.code}
+      total={total}
+      userId={userId}
+      onOrderComplete={handleOrderComplete}
+    />
+    </>
   );
 };
