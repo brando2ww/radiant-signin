@@ -1,160 +1,99 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DollarSign, Users, ShoppingBag, TrendingUp, Clock, CreditCard } from "lucide-react";
+import { usePDVDashboard } from "@/hooks/use-pdv-dashboard";
+import { DashboardMetricCard } from "@/components/pdv/DashboardMetricCard";
+import { SalesChart } from "@/components/pdv/SalesChart";
+import { TopProductsList } from "@/components/pdv/TopProductsList";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  DollarSign,
+  ShoppingCart,
+  TrendingUp,
+  Wallet,
+  Calendar,
+  Lock,
+  Unlock,
+} from "lucide-react";
 
 export default function PDVDashboard() {
+  const { metrics, topProducts, salesByHour, isLoading } = usePDVDashboard();
+
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard PDV</h1>
-          <p className="text-muted-foreground">
-            Visão geral do seu ponto de venda
-          </p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard PDV</h1>
+        <p className="text-muted-foreground">
+          Visão geral do seu ponto de venda
+        </p>
       </div>
 
-      {/* Stats Cards */}
+      {metrics && !metrics.cashierOpen && (
+        <Alert>
+          <Lock className="h-4 w-4" />
+          <AlertDescription>
+            O caixa está fechado. Algumas informações podem estar limitadas.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Faturamento Hoje
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R$ 0,00</div>
-            <p className="text-xs text-muted-foreground">
-              +0% em relação a ontem
-            </p>
-          </CardContent>
-        </Card>
+        <DashboardMetricCard
+          title="Vendas Hoje"
+          value={`R$ ${(metrics?.todaySales || 0).toFixed(2)}`}
+          subtitle={`${metrics?.todayOrders || 0} pedidos finalizados`}
+          icon={DollarSign}
+          isLoading={isLoading}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Mesas Ativas
-            </CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">
-              0 mesas livres
-            </p>
-          </CardContent>
-        </Card>
+        <DashboardMetricCard
+          title="Pedidos Ativos"
+          value={metrics?.activeOrders || 0}
+          subtitle="Mesas e balcão"
+          icon={ShoppingCart}
+          isLoading={isLoading}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pedidos em Aberto
-            </CardTitle>
-            <ShoppingBag className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">
-              Nenhum pedido pendente
-            </p>
-          </CardContent>
-        </Card>
+        <DashboardMetricCard
+          title="Ticket Médio"
+          value={`R$ ${(metrics?.averageTicket || 0).toFixed(2)}`}
+          subtitle="Por pedido hoje"
+          icon={TrendingUp}
+          isLoading={isLoading}
+        />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Ticket Médio
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R$ 0,00</div>
-            <p className="text-xs text-muted-foreground">
-              Baseado em 0 vendas
-            </p>
-          </CardContent>
-        </Card>
+        <DashboardMetricCard
+          title={metrics?.cashierOpen ? "Saldo Caixa" : "Caixa Fechado"}
+          value={
+            metrics?.cashierOpen
+              ? `R$ ${(metrics?.cashierBalance || 0).toFixed(2)}`
+              : "-"
+          }
+          subtitle={metrics?.cashierOpen ? "Dinheiro em caixa" : "Abra o caixa"}
+          icon={metrics?.cashierOpen ? Unlock : Lock}
+          isLoading={isLoading}
+        />
       </div>
 
-      {/* Charts Section */}
-      <Tabs defaultValue="today" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="today">Hoje</TabsTrigger>
-          <TabsTrigger value="week">Semana</TabsTrigger>
-          <TabsTrigger value="month">Mês</TabsTrigger>
-        </TabsList>
+      <div className="grid gap-4 md:grid-cols-2">
+        <DashboardMetricCard
+          title="Vendas do Mês"
+          value={`R$ ${(metrics?.monthSales || 0).toFixed(2)}`}
+          subtitle={`${metrics?.monthOrders || 0} pedidos no mês`}
+          icon={Calendar}
+          isLoading={isLoading}
+        />
 
-        <TabsContent value="today" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Vendas por Hora</CardTitle>
-                <CardDescription>
-                  Picos de movimento ao longo do dia
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px] flex items-center justify-center text-muted-foreground">
-                Nenhuma venda registrada hoje
-              </CardContent>
-            </Card>
+        <DashboardMetricCard
+          title="Meta do Mês"
+          value="-"
+          subtitle="Configure suas metas"
+          icon={TrendingUp}
+          isLoading={isLoading}
+        />
+      </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Status do Caixa</CardTitle>
-                <CardDescription>
-                  Movimentação financeira atual
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Status</span>
-                  </div>
-                  <span className="text-sm font-medium text-destructive">Fechado</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Saldo Atual</span>
-                  </div>
-                  <span className="text-sm font-medium">R$ 0,00</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">Formas de Pagamento</span>
-                  </div>
-                  <span className="text-sm font-medium">0 métodos</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="week" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Vendas da Semana</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[300px] flex items-center justify-center text-muted-foreground">
-              Dados insuficientes para exibir gráfico
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="month" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Vendas do Mês</CardTitle>
-            </CardHeader>
-            <CardContent className="h-[300px] flex items-center justify-center text-muted-foreground">
-              Dados insuficientes para exibir gráfico
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <div className="grid gap-4 md:grid-cols-2">
+        <SalesChart data={salesByHour} isLoading={isLoading} />
+        <TopProductsList products={topProducts} isLoading={isLoading} />
+      </div>
     </div>
   );
 }
