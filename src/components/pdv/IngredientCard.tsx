@@ -1,0 +1,154 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Edit, MoreVertical, Trash2, AlertTriangle, Plus, Minus } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { PDVIngredient } from "@/hooks/use-pdv-ingredients";
+import { format, parseISO, differenceInDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Progress } from "@/components/ui/progress";
+
+interface IngredientCardProps {
+  ingredient: PDVIngredient;
+  onEdit: (ingredient: PDVIngredient) => void;
+  onDelete: (id: string) => void;
+  onAdjustStock: (id: string, adjustment: number) => void;
+}
+
+export function IngredientCard({ ingredient, onEdit, onDelete, onAdjustStock }: IngredientCardProps) {
+  const stockPercentage = ingredient.min_stock > 0 
+    ? (ingredient.current_stock / ingredient.min_stock) * 100 
+    : 100;
+  
+  const isLowStock = ingredient.current_stock <= ingredient.min_stock;
+  const isCriticalStock = ingredient.current_stock < ingredient.min_stock * 0.5;
+
+  const getExpirationStatus = () => {
+    if (!ingredient.expiration_date) return null;
+    
+    const daysUntilExpiration = differenceInDays(
+      parseISO(ingredient.expiration_date),
+      new Date()
+    );
+
+    if (daysUntilExpiration < 0) {
+      return { label: "Vencido", variant: "destructive" as const, days: daysUntilExpiration };
+    } else if (daysUntilExpiration <= 7) {
+      return { label: "Vence em breve", variant: "destructive" as const, days: daysUntilExpiration };
+    } else if (daysUntilExpiration <= 30) {
+      return { label: "Atenção", variant: "secondary" as const, days: daysUntilExpiration };
+    }
+    return null;
+  };
+
+  const expirationStatus = getExpirationStatus();
+
+  return (
+    <Card className={`overflow-hidden ${isCriticalStock ? 'border-destructive' : isLowStock ? 'border-yellow-500' : ''}`}>
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-lg truncate">{ingredient.name}</h3>
+              {ingredient.supplier && (
+                <p className="text-sm text-muted-foreground truncate">
+                  {ingredient.supplier}
+                </p>
+              )}
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onEdit(ingredient)}>
+                  <Edit className="mr-2 h-4 w-4" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onDelete(ingredient.id)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Estoque atual</span>
+              <span className="font-bold">
+                {ingredient.current_stock} {ingredient.unit}
+              </span>
+            </div>
+            
+            <Progress value={Math.min(stockPercentage, 100)} 
+              className={isCriticalStock ? 'bg-destructive/20' : isLowStock ? 'bg-yellow-500/20' : ''} 
+            />
+            
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Mínimo: {ingredient.min_stock} {ingredient.unit}</span>
+              <span>Custo: R$ {ingredient.unit_cost.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {isCriticalStock && (
+              <Badge variant="destructive" className="gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Crítico
+              </Badge>
+            )}
+            {isLowStock && !isCriticalStock && (
+              <Badge variant="secondary" className="gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Baixo
+              </Badge>
+            )}
+            {expirationStatus && (
+              <Badge variant={expirationStatus.variant}>
+                {expirationStatus.label}
+                {expirationStatus.days >= 0 && ` (${expirationStatus.days}d)`}
+              </Badge>
+            )}
+            {ingredient.expiration_date && !expirationStatus && (
+              <Badge variant="outline">
+                Validade: {format(parseISO(ingredient.expiration_date), "dd/MM/yyyy", { locale: ptBR })}
+              </Badge>
+            )}
+          </div>
+        </div>
+      </CardContent>
+      <CardFooter className="p-4 pt-0 flex items-center justify-between border-t">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onAdjustStock(ingredient.id, -1)}
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onAdjustStock(ingredient.id, 1)}
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => onEdit(ingredient)}>
+          Ajustar
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
