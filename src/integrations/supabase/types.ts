@@ -1797,47 +1797,104 @@ export type Database = {
       }
       pdv_settings: {
         Row: {
+          accept_tips: boolean | null
+          accepted_payment_methods: Json | null
           allow_negative_balance: boolean | null
           auto_print_to_kitchen: boolean | null
+          business_address: string | null
+          business_cnpj: string | null
+          business_hours: Json | null
+          business_name: string | null
+          business_phone: string | null
           created_at: string | null
+          default_preparation_time: number | null
+          delivery_fee: number | null
+          enable_desktop_notifications: boolean | null
+          enable_multiple_payments: boolean | null
           enable_service_fee: boolean | null
+          enable_sound_notifications: boolean | null
           id: string
           integrate_with_delivery: boolean | null
+          max_tables_per_order: number | null
+          min_order_value: number | null
+          new_order_sound: string | null
+          order_ready_sound: string | null
+          printers: Json | null
           require_customer_identification: boolean | null
           requires_opening_balance: boolean | null
           salon_layout: Json | null
           service_fee_percentage: number | null
           shifts: Json | null
+          state_registration: string | null
+          tax_regime: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          accept_tips?: boolean | null
+          accepted_payment_methods?: Json | null
           allow_negative_balance?: boolean | null
           auto_print_to_kitchen?: boolean | null
+          business_address?: string | null
+          business_cnpj?: string | null
+          business_hours?: Json | null
+          business_name?: string | null
+          business_phone?: string | null
           created_at?: string | null
+          default_preparation_time?: number | null
+          delivery_fee?: number | null
+          enable_desktop_notifications?: boolean | null
+          enable_multiple_payments?: boolean | null
           enable_service_fee?: boolean | null
+          enable_sound_notifications?: boolean | null
           id?: string
           integrate_with_delivery?: boolean | null
+          max_tables_per_order?: number | null
+          min_order_value?: number | null
+          new_order_sound?: string | null
+          order_ready_sound?: string | null
+          printers?: Json | null
           require_customer_identification?: boolean | null
           requires_opening_balance?: boolean | null
           salon_layout?: Json | null
           service_fee_percentage?: number | null
           shifts?: Json | null
+          state_registration?: string | null
+          tax_regime?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          accept_tips?: boolean | null
+          accepted_payment_methods?: Json | null
           allow_negative_balance?: boolean | null
           auto_print_to_kitchen?: boolean | null
+          business_address?: string | null
+          business_cnpj?: string | null
+          business_hours?: Json | null
+          business_name?: string | null
+          business_phone?: string | null
           created_at?: string | null
+          default_preparation_time?: number | null
+          delivery_fee?: number | null
+          enable_desktop_notifications?: boolean | null
+          enable_multiple_payments?: boolean | null
           enable_service_fee?: boolean | null
+          enable_sound_notifications?: boolean | null
           id?: string
           integrate_with_delivery?: boolean | null
+          max_tables_per_order?: number | null
+          min_order_value?: number | null
+          new_order_sound?: string | null
+          order_ready_sound?: string | null
+          printers?: Json | null
           require_customer_identification?: boolean | null
           requires_opening_balance?: boolean | null
           salon_layout?: Json | null
           service_fee_percentage?: number | null
           shifts?: Json | null
+          state_registration?: string | null
+          tax_regime?: string | null
           updated_at?: string | null
           user_id?: string
         }

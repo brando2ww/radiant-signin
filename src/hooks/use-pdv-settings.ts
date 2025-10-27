@@ -17,6 +17,26 @@ export interface PDVSettings {
   integrate_with_delivery: boolean;
   created_at: string;
   updated_at: string;
+  // Novos campos
+  business_name?: string;
+  business_phone?: string;
+  business_address?: string;
+  business_cnpj?: string;
+  state_registration?: string;
+  tax_regime?: string;
+  business_hours?: any;
+  default_preparation_time?: number;
+  accept_tips?: boolean;
+  min_order_value?: number;
+  max_tables_per_order?: number;
+  accepted_payment_methods?: any;
+  delivery_fee?: number;
+  enable_multiple_payments?: boolean;
+  printers?: any;
+  enable_sound_notifications?: boolean;
+  new_order_sound?: string;
+  order_ready_sound?: string;
+  enable_desktop_notifications?: boolean;
 }
 
 export function usePDVSettings() {

@@ -1,8 +1,13 @@
 import { usePDVSettings } from "@/hooks/use-pdv-settings";
-import { SettingsForm } from "@/components/pdv/SettingsForm";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Settings as SettingsIcon } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { GeneralTab } from "@/components/pdv/settings/GeneralTab";
+import { FinancialTab } from "@/components/pdv/settings/FinancialTab";
+import { OrdersTab } from "@/components/pdv/settings/OrdersTab";
+import { NotificationsTab } from "@/components/pdv/settings/NotificationsTab";
+import { IntegrationsTab } from "@/components/pdv/settings/IntegrationsTab";
 
 export default function PDVSettings() {
   const { settings, isLoading, updateSettings, isUpdating } = usePDVSettings();
@@ -31,32 +36,60 @@ export default function PDVSettings() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Configurações do PDV</h1>
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <SettingsIcon className="h-8 w-8" />
+          Configurações do PDV
+        </h1>
         <p className="text-muted-foreground">
           Gerencie as configurações do seu ponto de venda
         </p>
       </div>
 
-      {settings ? (
-        <SettingsForm
-          defaultValues={settings}
-          onSubmit={handleSubmit}
-          isSubmitting={isUpdating}
-        />
-      ) : (
-        <Card>
-          <CardContent className="min-h-[400px] flex flex-col items-center justify-center gap-4">
-            <SettingsIcon className="h-16 w-16 text-muted-foreground" />
-            <div className="text-center space-y-2">
-              <h3 className="text-lg font-medium">Configure seu PDV</h3>
-              <p className="text-sm text-muted-foreground">
-                Configure as informações do seu estabelecimento para começar
-              </p>
-            </div>
-            <SettingsForm onSubmit={handleSubmit} isSubmitting={isUpdating} />
-          </CardContent>
-        </Card>
-      )}
+      <Tabs defaultValue="general" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
+          <TabsTrigger value="general">Geral</TabsTrigger>
+          <TabsTrigger value="financial">Financeiro</TabsTrigger>
+          <TabsTrigger value="orders">Pedidos</TabsTrigger>
+          <TabsTrigger value="notifications">Notificações</TabsTrigger>
+          <TabsTrigger value="integrations">Integrações</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="general">
+          <GeneralTab
+            defaultValues={settings || {}}
+            onSave={handleSubmit}
+            isSubmitting={isUpdating}
+          />
+        </TabsContent>
+
+        <TabsContent value="financial">
+          <FinancialTab
+            defaultValues={settings || {}}
+            onSave={handleSubmit}
+            isSubmitting={isUpdating}
+          />
+        </TabsContent>
+
+        <TabsContent value="orders">
+          <OrdersTab
+            defaultValues={settings || {}}
+            onSave={handleSubmit}
+            isSubmitting={isUpdating}
+          />
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <NotificationsTab
+            defaultValues={settings || {}}
+            onSave={handleSubmit}
+            isSubmitting={isUpdating}
+          />
+        </TabsContent>
+
+        <TabsContent value="integrations">
+          <IntegrationsTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
