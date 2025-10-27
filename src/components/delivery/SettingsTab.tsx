@@ -3,9 +3,14 @@ import { Clock, Truck, CreditCard, Bell } from "lucide-react";
 import { BusinessHoursSettings } from "./settings/BusinessHoursSettings";
 import { DeliverySettings } from "./settings/DeliverySettings";
 import { PaymentSettings } from "./settings/PaymentSettings";
-import { NotificationSettings } from "./settings/NotificationSettings";
+import { NotificationPreferences } from "./settings/NotificationPreferences";
+import { useState } from "react";
 
 export const SettingsTab = () => {
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  const [whatsappEnabled, setWhatsappEnabled] = useState(true);
+
   return (
     <div className="space-y-6">
       <div>
@@ -48,7 +53,14 @@ export const SettingsTab = () => {
         </TabsContent>
 
         <TabsContent value="notifications" className="mt-6">
-          <NotificationSettings />
+          <NotificationPreferences
+            soundEnabled={soundEnabled}
+            onSoundToggle={setSoundEnabled}
+            emailEnabled={emailEnabled}
+            onEmailToggle={setEmailEnabled}
+            whatsappEnabled={whatsappEnabled}
+            onWhatsappToggle={setWhatsappEnabled}
+          />
         </TabsContent>
       </Tabs>
     </div>
