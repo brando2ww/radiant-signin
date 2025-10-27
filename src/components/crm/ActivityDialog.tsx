@@ -80,11 +80,11 @@ export function ActivityDialog({ open, onOpenChange, leadId, activity, onSave }:
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="call">📞 Ligação</SelectItem>
-                  <SelectItem value="email">📧 Email</SelectItem>
-                  <SelectItem value="meeting">🤝 Reunião</SelectItem>
-                  <SelectItem value="task">✅ Tarefa</SelectItem>
-                  <SelectItem value="proposal">📄 Proposta</SelectItem>
+                  <SelectItem value="call">Ligação</SelectItem>
+                  <SelectItem value="email">Email</SelectItem>
+                  <SelectItem value="meeting">Reunião</SelectItem>
+                  <SelectItem value="task">Tarefa</SelectItem>
+                  <SelectItem value="proposal">Proposta</SelectItem>
                 </SelectContent>
               </Select>
             </div>
