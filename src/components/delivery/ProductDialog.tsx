@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { useState, useEffect } from "react";
 import {
   DeliveryProduct,
@@ -18,6 +19,8 @@ import {
   useUpdateProduct,
 } from "@/hooks/use-delivery-products";
 import { DeliveryCategory } from "@/hooks/use-delivery-categories";
+import { useProductImageUpload } from "@/hooks/use-product-image-upload";
+import { toast } from "sonner";
 
 interface ProductDialogProps {
   open: boolean;
@@ -41,9 +44,12 @@ export const ProductDialog = ({
   const [serves, setServes] = useState("1");
   const [isAvailable, setIsAvailable] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
 
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
+  const { uploadImage, deleteImage, isUploading } = useProductImageUpload();
 
   useEffect(() => {
     if (product) {
@@ -56,6 +62,8 @@ export const ProductDialog = ({
       setServes(product.serves.toString());
       setIsAvailable(product.is_available);
       setIsFeatured(product.is_featured);
+      setCurrentImageUrl(product.image_url || null);
+      setImageFile(null);
     } else {
       setCategoryId(categories[0]?.id || "");
       setName("");
@@ -66,11 +74,30 @@ export const ProductDialog = ({
       setServes("1");
       setIsAvailable(true);
       setIsFeatured(false);
+      setCurrentImageUrl(null);
+      setImageFile(null);
     }
   }, [product, categories, open]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    let imageUrl = currentImageUrl;
+
+    // Upload new image if selected
+    if (imageFile) {
+      const uploadedUrl = await uploadImage(imageFile);
+      if (uploadedUrl) {
+        imageUrl = uploadedUrl;
+        // Delete old image if exists and is different
+        if (currentImageUrl && currentImageUrl !== uploadedUrl) {
+          await deleteImage(currentImageUrl);
+        }
+      } else {
+        toast.error("Erro ao fazer upload da imagem");
+        return;
+      }
+    }
 
     const productData = {
       category_id: categoryId,
@@ -82,7 +109,7 @@ export const ProductDialog = ({
       serves: Number(serves),
       is_available: isAvailable,
       is_featured: isFeatured,
-      image_url: null,
+      image_url: imageUrl,
       order_position: 0,
     };
 
@@ -93,14 +120,36 @@ export const ProductDialog = ({
           updates: productData,
         },
         {
-          onSuccess: () => onOpenChange(false),
+          onSuccess: () => {
+            onOpenChange(false);
+            setImageFile(null);
+          },
         }
       );
     } else {
       createProduct.mutate(productData, {
-        onSuccess: () => onOpenChange(false),
+        onSuccess: () => {
+          onOpenChange(false);
+          setImageFile(null);
+        },
       });
     }
+  };
+
+  const handleRemoveImage = async () => {
+    if (currentImageUrl) {
+      const success = await deleteImage(currentImageUrl);
+      if (success) {
+        setCurrentImageUrl(null);
+        if (product) {
+          updateProduct.mutate({
+            id: product.id,
+            updates: { image_url: null },
+          });
+        }
+      }
+    }
+    setImageFile(null);
   };
 
   return (
@@ -112,6 +161,16 @@ export const ProductDialog = ({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Imagem do Produto</Label>
+            <ImageUpload
+              value={currentImageUrl || undefined}
+              onChange={setImageFile}
+              onRemove={handleRemoveImage}
+              disabled={isUploading}
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="category">Categoria *</Label>
             <Select value={categoryId} onValueChange={setCategoryId} required>
@@ -231,9 +290,9 @@ export const ProductDialog = ({
             </Button>
             <Button
               type="submit"
-              disabled={createProduct.isPending || updateProduct.isPending}
+              disabled={createProduct.isPending || updateProduct.isPending || isUploading}
             >
-              {product ? "Salvar" : "Criar"}
+              {isUploading ? "Enviando..." : product ? "Salvar" : "Criar"}
             </Button>
           </div>
         </form>
