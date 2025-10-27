@@ -1,6 +1,9 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ModuleGuard } from "@/components/ModuleGuard";
-import { PDVNavBar } from "@/components/pdv/PDVNavBar";
+import { PDVSidebar } from "@/components/pdv/PDVSidebar";
+import { PDVUserMenu } from "@/components/pdv/PDVUserMenu";
+import { PDVNotifications } from "@/components/pdv/PDVNotifications";
+import { CashierStatus } from "@/components/pdv/CashierStatus";
 import PDVDashboard from "./pdv/Dashboard";
 import PDVSalon from "./pdv/Salon";
 import PDVBalcao from "./pdv/Balcao";
@@ -14,21 +17,39 @@ import PDVSettings from "./pdv/Settings";
 export default function PDV() {
   return (
     <ModuleGuard module="pdv">
-      <div className="flex flex-col h-screen w-full">
-        <PDVNavBar />
-        <div className="flex-1 overflow-auto">
-          <Routes>
-            <Route index element={<Navigate to="/pdv/dashboard" replace />} />
-            <Route path="dashboard" element={<PDVDashboard />} />
-            <Route path="salao" element={<PDVSalon />} />
-            <Route path="balcao" element={<PDVBalcao />} />
-            <Route path="caixa" element={<PDVCashier />} />
-            <Route path="cozinha" element={<PDVKitchen />} />
-            <Route path="produtos" element={<PDVProducts />} />
-            <Route path="estoque" element={<PDVStock />} />
-            <Route path="relatorios" element={<PDVReports />} />
-            <Route path="configuracoes" element={<PDVSettings />} />
-          </Routes>
+      <div className="flex min-h-screen w-full">
+        <PDVSidebar />
+        
+        <div className="flex flex-col flex-1 w-full ml-14">
+          {/* Header */}
+          <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex h-14 items-center px-4 gap-4">
+              <div className="flex-1" />
+              
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+                <CashierStatus />
+                <PDVNotifications />
+                <PDVUserMenu />
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content */}
+          <main className="flex-1 overflow-auto">
+            <Routes>
+              <Route index element={<Navigate to="/pdv/dashboard" replace />} />
+              <Route path="dashboard" element={<PDVDashboard />} />
+              <Route path="salao" element={<PDVSalon />} />
+              <Route path="balcao" element={<PDVBalcao />} />
+              <Route path="caixa" element={<PDVCashier />} />
+              <Route path="cozinha" element={<PDVKitchen />} />
+              <Route path="produtos" element={<PDVProducts />} />
+              <Route path="estoque" element={<PDVStock />} />
+              <Route path="relatorios" element={<PDVReports />} />
+              <Route path="configuracoes" element={<PDVSettings />} />
+            </Routes>
+          </main>
         </div>
       </div>
     </ModuleGuard>
