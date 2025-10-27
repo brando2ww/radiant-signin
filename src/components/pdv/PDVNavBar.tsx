@@ -7,7 +7,8 @@ import {
   ChefHat, 
   Package, 
   Warehouse, 
-  BarChart3 
+  BarChart3,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PDVUserMenu } from "./PDVUserMenu";
@@ -54,6 +55,11 @@ const navItems = [
     title: "Relatórios", 
     url: "/pdv/relatorios", 
     icon: BarChart3 
+  },
+  { 
+    title: "Configurações", 
+    url: "/pdv/configuracoes", 
+    icon: Settings 
   },
 ];
 
