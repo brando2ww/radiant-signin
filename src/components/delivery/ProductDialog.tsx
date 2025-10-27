@@ -1,4 +1,12 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,14 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ImageUpload } from "@/components/ui/image-upload";
-import { useState, useEffect } from "react";
-import {
-  DeliveryProduct,
-  useCreateProduct,
-  useUpdateProduct,
-} from "@/hooks/use-delivery-products";
+import { DeliveryProduct, useCreateProduct, useUpdateProduct } from "@/hooks/use-delivery-products";
 import { DeliveryCategory } from "@/hooks/use-delivery-categories";
 import { useProductImageUpload } from "@/hooks/use-product-image-upload";
+import { ProductOptionsManager } from "./ProductOptionsManager";
 import { toast } from "sonner";
 
 interface ProductDialogProps {
@@ -84,12 +88,10 @@ export const ProductDialog = ({
 
     let imageUrl = currentImageUrl;
 
-    // Upload new image if selected
     if (imageFile) {
       const uploadedUrl = await uploadImage(imageFile);
       if (uploadedUrl) {
         imageUrl = uploadedUrl;
-        // Delete old image if exists and is different
         if (currentImageUrl && currentImageUrl !== uploadedUrl) {
           await deleteImage(currentImageUrl);
         }
@@ -115,23 +117,12 @@ export const ProductDialog = ({
 
     if (product) {
       updateProduct.mutate(
-        {
-          id: product.id,
-          updates: productData,
-        },
-        {
-          onSuccess: () => {
-            onOpenChange(false);
-            setImageFile(null);
-          },
-        }
+        { id: product.id, updates: productData },
+        { onSuccess: () => { onOpenChange(false); setImageFile(null); } }
       );
     } else {
       createProduct.mutate(productData, {
-        onSuccess: () => {
-          onOpenChange(false);
-          setImageFile(null);
-        },
+        onSuccess: () => { onOpenChange(false); setImageFile(null); },
       });
     }
   };
@@ -142,10 +133,7 @@ export const ProductDialog = ({
       if (success) {
         setCurrentImageUrl(null);
         if (product) {
-          updateProduct.mutate({
-            id: product.id,
-            updates: { image_url: null },
-          });
+          updateProduct.mutate({ id: product.id, updates: { image_url: null } });
         }
       }
     }
@@ -154,148 +142,89 @@ export const ProductDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            {product ? "Editar Produto" : "Novo Produto"}
-          </DialogTitle>
+          <DialogTitle>{product ? "Editar Produto" : "Novo Produto"}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>Imagem do Produto</Label>
-            <ImageUpload
-              value={currentImageUrl || undefined}
-              onChange={setImageFile}
-              onRemove={handleRemoveImage}
-              disabled={isUploading}
-            />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="category">Categoria *</Label>
-            <Select value={categoryId} onValueChange={setCategoryId} required>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione a categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <Tabs defaultValue="details" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="details">Detalhes</TabsTrigger>
+            <TabsTrigger value="options" disabled={!product}>
+              Opções e Complementos
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="space-y-2">
-            <Label htmlFor="name">Nome *</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Pizza Margherita"
-              required
-            />
-          </div>
+          <TabsContent value="details" className="space-y-4 mt-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <ImageUpload value={currentImageUrl || undefined} onChange={setImageFile} onRemove={handleRemoveImage} disabled={isUploading} />
+              
+              <div className="space-y-2">
+                <Label>Categoria *</Label>
+                <Select value={categoryId} onValueChange={setCategoryId} required>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Descrição do produto"
-              rows={3}
-            />
-          </div>
+              <div className="space-y-2">
+                <Label>Nome *</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} required />
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="basePrice">Preço Base * (R$)</Label>
-              <Input
-                id="basePrice"
-                type="number"
-                step="0.01"
-                min="0"
-                value={basePrice}
-                onChange={(e) => setBasePrice(e.target.value)}
-                placeholder="0.00"
-                required
-              />
-            </div>
+              <div className="space-y-2">
+                <Label>Descrição</Label>
+                <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="promotionalPrice">Preço Promocional (R$)</Label>
-              <Input
-                id="promotionalPrice"
-                type="number"
-                step="0.01"
-                min="0"
-                value={promotionalPrice}
-                onChange={(e) => setPromotionalPrice(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Preço Base * (R$)</Label>
+                  <Input type="number" step="0.01" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Preço Promocional (R$)</Label>
+                  <Input type="number" step="0.01" value={promotionalPrice} onChange={(e) => setPromotionalPrice(e.target.value)} />
+                </div>
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="preparationTime">Tempo de Preparo (min)</Label>
-              <Input
-                id="preparationTime"
-                type="number"
-                min="1"
-                value={preparationTime}
-                onChange={(e) => setPreparationTime(e.target.value)}
-                required
-              />
-            </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tempo de Preparo (min)</Label>
+                  <Input type="number" value={preparationTime} onChange={(e) => setPreparationTime(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Serve (pessoas)</Label>
+                  <Input type="number" value={serves} onChange={(e) => setServes(e.target.value)} required />
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="serves">Serve (pessoas)</Label>
-              <Input
-                id="serves"
-                type="number"
-                min="1"
-                value={serves}
-                onChange={(e) => setServes(e.target.value)}
-                required
-              />
-            </div>
-          </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Disponível</Label>
+                  <Switch checked={isAvailable} onCheckedChange={setIsAvailable} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Produto em destaque</Label>
+                  <Switch checked={isFeatured} onCheckedChange={setIsFeatured} />
+                </div>
+              </div>
 
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="isAvailable">Disponível</Label>
-              <Switch
-                id="isAvailable"
-                checked={isAvailable}
-                onCheckedChange={setIsAvailable}
-              />
-            </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                <Button type="submit" disabled={createProduct.isPending || updateProduct.isPending || isUploading}>
+                  {isUploading ? "Enviando..." : product ? "Salvar" : "Criar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </TabsContent>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="isFeatured">Produto em destaque</Label>
-              <Switch
-                id="isFeatured"
-                checked={isFeatured}
-                onCheckedChange={setIsFeatured}
-              />
-            </div>
-          </div>
-
-          <div className="flex gap-2 justify-end pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={createProduct.isPending || updateProduct.isPending || isUploading}
-            >
-              {isUploading ? "Enviando..." : product ? "Salvar" : "Criar"}
-            </Button>
-          </div>
-        </form>
+          <TabsContent value="options" className="mt-4">
+            <ProductOptionsManager productId={product?.id} />
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

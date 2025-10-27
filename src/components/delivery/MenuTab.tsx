@@ -7,6 +7,7 @@ import { CategoryDialog } from "./CategoryDialog";
 import { ProductDialog } from "./ProductDialog";
 import { useDeliveryCategories } from "@/hooks/use-delivery-categories";
 import { useDeliveryProducts } from "@/hooks/use-delivery-products";
+import { SeedDemoButton } from "./SeedDemoButton";
 
 export const MenuTab = () => {
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
@@ -25,7 +26,8 @@ export const MenuTab = () => {
             Organize categorias e produtos do seu delivery
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {products.length === 0 && categories.length === 0 && <SeedDemoButton />}
           <Button onClick={() => setIsCategoryDialogOpen(true)} size="sm">
             <Plus className="h-4 w-4 mr-2" />
             Nova Categoria

@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Eye, EyeOff, Star } from "lucide-react";
+import { Edit, Trash2, Eye, EyeOff, Star, Settings2 } from "lucide-react";
 import { DeliveryProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/use-delivery-products";
+import { useProductOptions } from "@/hooks/use-product-options";
 import { useState } from "react";
 import { ProductDialog } from "./ProductDialog";
 import { useDeliveryCategories } from "@/hooks/use-delivery-categories";
@@ -22,19 +23,109 @@ interface ProductListProps {
   categoryId: string | null;
 }
 
-export const ProductList = ({ products, categoryId }: ProductListProps) => {
-  const [editingProduct, setEditingProduct] = useState<DeliveryProduct | null>(null);
-  const [deletingProduct, setDeletingProduct] = useState<DeliveryProduct | null>(null);
-  const { data: categories = [] } = useDeliveryCategories();
+const ProductListItem = ({ product, onEdit }: { product: DeliveryProduct; onEdit: () => void }) => {
+  const { data: options = [] } = useProductOptions(product.id);
   const updateProduct = useUpdateProduct();
-  const deleteProduct = useDeleteProduct();
 
-  const handleToggleAvailability = (product: DeliveryProduct) => {
+  const handleToggleAvailability = () => {
     updateProduct.mutate({
       id: product.id,
       updates: { is_available: !product.is_available },
     });
   };
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex gap-4 p-4">
+        {product.image_url ? (
+          <img
+            src={product.image_url}
+            alt={product.name}
+            className="h-24 w-24 rounded-md object-cover"
+          />
+        ) : (
+          <div className="h-24 w-24 rounded-md bg-muted flex items-center justify-center text-muted-foreground">
+            Sem imagem
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold truncate">{product.name}</h3>
+              {product.description && (
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {product.description}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-1 shrink-0">
+              {product.is_featured && (
+                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+              )}
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
+                onClick={handleToggleAvailability}
+              >
+                {product.is_available ? (
+                  <Eye className="h-4 w-4" />
+                ) : (
+                  <EyeOff className="h-4 w-4" />
+                )}
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
+                onClick={onEdit}
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            {product.promotional_price ? (
+              <>
+                <span className="text-sm line-through text-muted-foreground">
+                  R$ {Number(product.base_price).toFixed(2)}
+                </span>
+                <span className="text-lg font-bold text-primary">
+                  R$ {Number(product.promotional_price).toFixed(2)}
+                </span>
+              </>
+            ) : (
+              <span className="text-lg font-bold">
+                R$ {Number(product.base_price).toFixed(2)}
+              </span>
+            )}
+            {!product.is_available && (
+              <Badge variant="outline">Indisponível</Badge>
+            )}
+            <Badge variant="secondary" className="text-xs">
+              {product.preparation_time} min
+            </Badge>
+            <Badge variant="secondary" className="text-xs">
+              Serve {product.serves}
+            </Badge>
+            {options.length > 0 && (
+              <Badge variant="outline" className="text-xs gap-1">
+                <Settings2 className="h-3 w-3" />
+                {options.length} {options.length === 1 ? "opção" : "opções"}
+              </Badge>
+            )}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+export const ProductList = ({ products, categoryId }: ProductListProps) => {
+  const [editingProduct, setEditingProduct] = useState<DeliveryProduct | null>(null);
+  const [deletingProduct, setDeletingProduct] = useState<DeliveryProduct | null>(null);
+  const { data: categories = [] } = useDeliveryCategories();
+  const deleteProduct = useDeleteProduct();
 
   const handleDelete = () => {
     if (deletingProduct) {
@@ -54,91 +145,11 @@ export const ProductList = ({ products, categoryId }: ProductListProps) => {
         </CardHeader>
         <CardContent className="space-y-4">
           {products.map((product) => (
-            <Card key={product.id} className="overflow-hidden">
-              <div className="flex gap-4 p-4">
-                {product.image_url ? (
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="h-24 w-24 rounded-md object-cover"
-                  />
-                ) : (
-                  <div className="h-24 w-24 rounded-md bg-muted flex items-center justify-center text-muted-foreground">
-                    Sem imagem
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold truncate">{product.name}</h3>
-                      {product.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {product.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      {product.is_featured && (
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      )}
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => handleToggleAvailability(product)}
-                      >
-                        {product.is_available ? (
-                          <Eye className="h-4 w-4" />
-                        ) : (
-                          <EyeOff className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => setEditingProduct(product)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-destructive"
-                        onClick={() => setDeletingProduct(product)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    {product.promotional_price ? (
-                      <>
-                        <span className="text-sm line-through text-muted-foreground">
-                          R$ {Number(product.base_price).toFixed(2)}
-                        </span>
-                        <span className="text-lg font-bold text-primary">
-                          R$ {Number(product.promotional_price).toFixed(2)}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-lg font-bold">
-                        R$ {Number(product.base_price).toFixed(2)}
-                      </span>
-                    )}
-                    {!product.is_available && (
-                      <Badge variant="outline">Indisponível</Badge>
-                    )}
-                    <Badge variant="secondary" className="text-xs">
-                      {product.preparation_time} min
-                    </Badge>
-                    <Badge variant="secondary" className="text-xs">
-                      Serve {product.serves}
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-            </Card>
+            <ProductListItem
+              key={product.id}
+              product={product}
+              onEdit={() => setEditingProduct(product)}
+            />
           ))}
           {products.length === 0 && (
             <p className="text-center text-sm text-muted-foreground py-8">
