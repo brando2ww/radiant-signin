@@ -4,6 +4,7 @@ import { MenuTab } from "@/components/delivery/MenuTab";
 import { OrdersTab } from "@/components/delivery/OrdersTab";
 import { CouponsTab } from "@/components/delivery/CouponsTab";
 import { SettingsTab } from "@/components/delivery/SettingsTab";
+import { ReportsTab } from "@/components/delivery/ReportsTab";
 import { Package, ShoppingBag, Tag, Settings, BarChart3 } from "lucide-react";
 
 const Delivery = () => {
@@ -60,9 +61,7 @@ const Delivery = () => {
             </TabsContent>
 
             <TabsContent value="reports" className="mt-6">
-              <div className="text-center text-muted-foreground py-8">
-                Funcionalidade de Relatórios em breve...
-              </div>
+              <ReportsTab />
             </TabsContent>
           </Tabs>
         </div>
