@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
+import { useNavigate } from "react-router-dom";
 
 interface LeadCardProps {
   lead: Lead;
@@ -23,6 +24,7 @@ interface LeadCardProps {
 }
 
 export function LeadCard({ lead, onEdit, onDelete, onViewDetails, isDragging }: LeadCardProps) {
+  const navigate = useNavigate();
   const { attributes, listeners, setNodeRef, transform } = useDraggable({
     id: lead.id,
   });
@@ -68,9 +70,9 @@ export function LeadCard({ lead, onEdit, onDelete, onViewDetails, isDragging }: 
         isDragging ? 'opacity-90' : (transform ? 'opacity-0' : '')
       }`}
       onClick={(e) => {
-        // Only trigger onViewDetails if not clicking on dropdown trigger
+        // Only navigate if not clicking on dropdown trigger
         if (!(e.target as HTMLElement).closest('[role="button"]')) {
-          onViewDetails();
+          navigate(`/crm/lead/${lead.id}`);
         }
       }}
     >
@@ -96,7 +98,7 @@ export function LeadCard({ lead, onEdit, onDelete, onViewDetails, isDragging }: 
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
-                onViewDetails();
+                navigate(`/crm/lead/${lead.id}`);
               }}
             >
               <ArrowRight className="mr-2 h-4 w-4" />

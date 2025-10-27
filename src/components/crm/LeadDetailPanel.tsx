@@ -14,6 +14,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import confetti from "canvas-confetti";
 import { ActivityTimeline } from "./ActivityTimeline";
+import { useNavigate } from "react-router-dom";
 
 interface LeadDetailPanelProps {
   open: boolean;
@@ -25,6 +26,7 @@ interface LeadDetailPanelProps {
 export function LeadDetailPanel({ open, onOpenChange, lead, onEdit }: LeadDetailPanelProps) {
   if (!lead) return null;
 
+  const navigate = useNavigate();
   const updateMutation = useUpdateLead();
 
   const formatCurrency = (value: number) => {
@@ -79,7 +81,7 @@ export function LeadDetailPanel({ open, onOpenChange, lead, onEdit }: LeadDetail
         <SheetHeader>
           <SheetTitle className="flex items-center justify-between">
             <span>Detalhes do Lead</span>
-            <Button variant="outline" size="sm" onClick={onEdit}>
+            <Button variant="outline" size="sm" onClick={() => navigate(`/crm/lead/${lead.id}`)}>
               <Edit className="h-4 w-4 mr-2" />
               Editar
             </Button>

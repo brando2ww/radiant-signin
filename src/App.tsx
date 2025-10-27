@@ -14,6 +14,7 @@ import Tasks from "./pages/Tasks";
 import Transactions from "./pages/Transactions";
 import CreditCards from "./pages/CreditCards";
 import CRM from "./pages/CRM";
+import LeadDetail from "./pages/LeadDetail";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -89,6 +90,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CRM />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/crm/lead/:id" 
+              element={
+                <ProtectedRoute>
+                  <LeadDetail />
                 </ProtectedRoute>
               } 
             />
