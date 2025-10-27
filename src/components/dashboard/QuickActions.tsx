@@ -35,7 +35,7 @@ export const QuickActions = () => {
     <Card className="animate-fade-in" style={{ animationDelay: '400ms' }}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          📋 Ações Rápidas
+          Ações Rápidas
         </CardTitle>
       </CardHeader>
       <CardContent>

@@ -46,7 +46,7 @@ export const AlertsWidget = ({ alerts }: AlertsWidgetProps) => {
     <Card className="animate-fade-in" style={{ animationDelay: '700ms' }}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          ⚠️ Alertas
+          Alertas
         </CardTitle>
       </CardHeader>
       <CardContent>

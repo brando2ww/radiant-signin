@@ -28,7 +28,7 @@ export const MEIWidget = ({ dasValue, dasMonth, dueDate, yearlyRevenue, yearlyLi
     <Card className="animate-fade-in" style={{ animationDelay: '500ms' }}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          📅 MEI - {dasMonth}
+          MEI - {dasMonth}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

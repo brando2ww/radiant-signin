@@ -63,7 +63,7 @@ const Dashboard = () => {
           {/* Header */}
           <div className="mb-8 animate-fade-in">
             <h1 className="text-4xl font-bold text-foreground mb-2">
-              Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}! 👋
+              Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}!
             </h1>
             <p className="text-muted-foreground">
               Aqui está um resumo das suas finanças em tempo real
