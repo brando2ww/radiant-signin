@@ -5,9 +5,9 @@ import { SessionNavBar } from "@/components/ui/sidebar";
 
 const Evaluations = () => {
   return (
-    <div className="flex min-h-screen w-full">
+    <div className="flex h-screen w-full">
       <SessionNavBar />
-      <main className="flex-1 overflow-auto">
+      <main className="ml-[3.05rem] flex h-screen grow flex-col overflow-auto">
         <div className="container mx-auto py-6 px-4 space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Avaliações</h1>
