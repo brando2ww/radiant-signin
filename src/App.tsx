@@ -18,6 +18,7 @@ import LeadDetail from "./pages/LeadDetail";
 import Settings from "./pages/Settings";
 import Evaluations from "./pages/Evaluations";
 import PublicEvaluation from "./pages/PublicEvaluation";
+import Delivery from "./pages/Delivery";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -116,6 +117,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Evaluations />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/delivery" 
+              element={
+                <ProtectedRoute>
+                  <Delivery />
                 </ProtectedRoute>
               } 
             />

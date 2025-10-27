@@ -362,6 +362,610 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_addresses: {
+        Row: {
+          city: string
+          complement: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          is_default: boolean | null
+          label: string | null
+          neighborhood: string
+          number: string
+          reference: string | null
+          state: string
+          street: string
+          zip_code: string | null
+        }
+        Insert: {
+          city: string
+          complement?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          is_default?: boolean | null
+          label?: string | null
+          neighborhood: string
+          number: string
+          reference?: string | null
+          state: string
+          street: string
+          zip_code?: string | null
+        }
+        Update: {
+          city?: string
+          complement?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          is_default?: boolean | null
+          label?: string | null
+          neighborhood?: string
+          number?: string
+          reference?: string | null
+          state?: string
+          street?: string
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_addresses_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          name: string
+          order_position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name: string
+          order_position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string
+          order_position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      delivery_coupons: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          max_discount: number | null
+          min_order_value: number | null
+          type: string
+          usage_count: number | null
+          usage_limit: number | null
+          user_id: string
+          valid_from: string
+          valid_until: string
+          value: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          max_discount?: number | null
+          min_order_value?: number | null
+          type?: string
+          usage_count?: number | null
+          usage_limit?: number | null
+          user_id: string
+          valid_from?: string
+          valid_until: string
+          value: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          max_discount?: number | null
+          min_order_value?: number | null
+          type?: string
+          usage_count?: number | null
+          usage_limit?: number | null
+          user_id?: string
+          valid_from?: string
+          valid_until?: string
+          value?: number
+        }
+        Relationships: []
+      }
+      delivery_customers: {
+        Row: {
+          birth_date: string | null
+          cpf: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      delivery_order_item_options: {
+        Row: {
+          id: string
+          item_name: string
+          option_name: string
+          order_item_id: string
+          price_adjustment: number | null
+        }
+        Insert: {
+          id?: string
+          item_name: string
+          option_name: string
+          order_item_id: string
+          price_adjustment?: number | null
+        }
+        Update: {
+          id?: string
+          item_name?: string
+          option_name?: string
+          order_item_id?: string
+          price_adjustment?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_order_item_options_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_order_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_order_items: {
+        Row: {
+          id: string
+          notes: string | null
+          order_id: string
+          product_id: string
+          product_name: string
+          quantity: number
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          id?: string
+          notes?: string | null
+          order_id: string
+          product_id: string
+          product_name: string
+          quantity?: number
+          subtotal: number
+          unit_price: number
+        }
+        Update: {
+          id?: string
+          notes?: string | null
+          order_id?: string
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_orders: {
+        Row: {
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          change_for: number | null
+          confirmed_at: string | null
+          coupon_code: string | null
+          created_at: string
+          customer_id: string
+          customer_name: string
+          customer_phone: string
+          delivered_at: string | null
+          delivery_address_id: string | null
+          delivery_address_text: string | null
+          delivery_fee: number | null
+          discount: number | null
+          estimated_time: number | null
+          id: string
+          notes: string | null
+          order_number: string
+          order_type: string
+          payment_method: string
+          payment_status: string | null
+          ready_at: string | null
+          status: string
+          subtotal: number
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          change_for?: number | null
+          confirmed_at?: string | null
+          coupon_code?: string | null
+          created_at?: string
+          customer_id: string
+          customer_name: string
+          customer_phone: string
+          delivered_at?: string | null
+          delivery_address_id?: string | null
+          delivery_address_text?: string | null
+          delivery_fee?: number | null
+          discount?: number | null
+          estimated_time?: number | null
+          id?: string
+          notes?: string | null
+          order_number: string
+          order_type?: string
+          payment_method: string
+          payment_status?: string | null
+          ready_at?: string | null
+          status?: string
+          subtotal: number
+          total: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          change_for?: number | null
+          confirmed_at?: string | null
+          coupon_code?: string | null
+          created_at?: string
+          customer_id?: string
+          customer_name?: string
+          customer_phone?: string
+          delivered_at?: string | null
+          delivery_address_id?: string | null
+          delivery_address_text?: string | null
+          delivery_fee?: number | null
+          discount?: number | null
+          estimated_time?: number | null
+          id?: string
+          notes?: string | null
+          order_number?: string
+          order_type?: string
+          payment_method?: string
+          payment_status?: string | null
+          ready_at?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_orders_delivery_address_id_fkey"
+            columns: ["delivery_address_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_addresses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_product_option_items: {
+        Row: {
+          id: string
+          is_available: boolean | null
+          name: string
+          option_id: string
+          order_position: number
+          price_adjustment: number | null
+        }
+        Insert: {
+          id?: string
+          is_available?: boolean | null
+          name: string
+          option_id: string
+          order_position?: number
+          price_adjustment?: number | null
+        }
+        Update: {
+          id?: string
+          is_available?: boolean | null
+          name?: string
+          option_id?: string
+          order_position?: number
+          price_adjustment?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_product_option_items_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_product_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_product_options: {
+        Row: {
+          id: string
+          is_required: boolean | null
+          max_selections: number | null
+          min_selections: number | null
+          name: string
+          order_position: number
+          product_id: string
+          type: string
+        }
+        Insert: {
+          id?: string
+          is_required?: boolean | null
+          max_selections?: number | null
+          min_selections?: number | null
+          name: string
+          order_position?: number
+          product_id: string
+          type?: string
+        }
+        Update: {
+          id?: string
+          is_required?: boolean | null
+          max_selections?: number | null
+          min_selections?: number | null
+          name?: string
+          order_position?: number
+          product_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_product_options_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_products: {
+        Row: {
+          base_price: number
+          category_id: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_available: boolean | null
+          is_featured: boolean | null
+          name: string
+          order_position: number
+          preparation_time: number | null
+          promotional_price: number | null
+          serves: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          base_price: number
+          category_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          is_featured?: boolean | null
+          name: string
+          order_position?: number
+          preparation_time?: number | null
+          promotional_price?: number | null
+          serves?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          base_price?: number
+          category_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          is_featured?: boolean | null
+          name?: string
+          order_position?: number
+          preparation_time?: number | null
+          promotional_price?: number | null
+          serves?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          order_id: string
+          rating: number
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          order_id: string
+          rating: number
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          order_id?: string
+          rating?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_reviews_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_reviews_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "delivery_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_settings: {
+        Row: {
+          accepts_cash: boolean | null
+          accepts_credit: boolean | null
+          accepts_debit: boolean | null
+          accepts_pix: boolean | null
+          auto_accept_orders: boolean | null
+          blocked_dates: Json | null
+          business_hours: Json | null
+          created_at: string
+          default_delivery_fee: number | null
+          delivery_zones: Json | null
+          estimated_preparation_time: number | null
+          id: string
+          is_open: boolean | null
+          max_delivery_distance: number | null
+          min_order_value: number | null
+          pix_key: string | null
+          updated_at: string
+          user_id: string
+          whatsapp_notifications: boolean | null
+        }
+        Insert: {
+          accepts_cash?: boolean | null
+          accepts_credit?: boolean | null
+          accepts_debit?: boolean | null
+          accepts_pix?: boolean | null
+          auto_accept_orders?: boolean | null
+          blocked_dates?: Json | null
+          business_hours?: Json | null
+          created_at?: string
+          default_delivery_fee?: number | null
+          delivery_zones?: Json | null
+          estimated_preparation_time?: number | null
+          id?: string
+          is_open?: boolean | null
+          max_delivery_distance?: number | null
+          min_order_value?: number | null
+          pix_key?: string | null
+          updated_at?: string
+          user_id: string
+          whatsapp_notifications?: boolean | null
+        }
+        Update: {
+          accepts_cash?: boolean | null
+          accepts_credit?: boolean | null
+          accepts_debit?: boolean | null
+          accepts_pix?: boolean | null
+          auto_accept_orders?: boolean | null
+          blocked_dates?: Json | null
+          business_hours?: Json | null
+          created_at?: string
+          default_delivery_fee?: number | null
+          delivery_zones?: Json | null
+          estimated_preparation_time?: number | null
+          id?: string
+          is_open?: boolean | null
+          max_delivery_distance?: number | null
+          min_order_value?: number | null
+          pix_key?: string | null
+          updated_at?: string
+          user_id?: string
+          whatsapp_notifications?: boolean | null
+        }
+        Relationships: []
+      }
       evaluation_answers: {
         Row: {
           created_at: string
