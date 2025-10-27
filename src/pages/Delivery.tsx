@@ -2,6 +2,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SessionNavBar } from "@/components/ui/sidebar";
 import { MenuTab } from "@/components/delivery/MenuTab";
 import { OrdersTab } from "@/components/delivery/OrdersTab";
+import { CouponsTab } from "@/components/delivery/CouponsTab";
+import { SettingsTab } from "@/components/delivery/SettingsTab";
 import { Package, ShoppingBag, Tag, Settings, BarChart3 } from "lucide-react";
 
 const Delivery = () => {
@@ -50,15 +52,11 @@ const Delivery = () => {
             </TabsContent>
 
             <TabsContent value="coupons" className="mt-6">
-              <div className="text-center text-muted-foreground py-8">
-                Funcionalidade de Cupons em breve...
-              </div>
+              <CouponsTab />
             </TabsContent>
 
             <TabsContent value="settings" className="mt-6">
-              <div className="text-center text-muted-foreground py-8">
-                Funcionalidade de Configurações em breve...
-              </div>
+              <SettingsTab />
             </TabsContent>
 
             <TabsContent value="reports" className="mt-6">
