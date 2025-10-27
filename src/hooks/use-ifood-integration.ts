@@ -23,9 +23,21 @@ export function useIFoodIntegration() {
         .from("pdv_settings")
         .select("ifood_merchant_id, ifood_enabled, ifood_auto_accept, ifood_sync_menu, ifood_token_expires_at")
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      
+      // Return default values if no settings exist yet
+      if (!data) {
+        return {
+          ifood_merchant_id: null,
+          ifood_enabled: false,
+          ifood_auto_accept: false,
+          ifood_sync_menu: true,
+          ifood_token_expires_at: null,
+        } as IFoodSettings;
+      }
+      
       return data as IFoodSettings;
     },
   });
