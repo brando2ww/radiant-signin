@@ -9,6 +9,7 @@ import PDVKitchen from "./pdv/Kitchen";
 import PDVProducts from "./pdv/Products";
 import PDVStock from "./pdv/Stock";
 import PDVReports from "./pdv/Reports";
+import PDVSettings from "./pdv/Settings";
 
 export default function PDV() {
   return (
@@ -26,6 +27,7 @@ export default function PDV() {
             <Route path="produtos" element={<PDVProducts />} />
             <Route path="estoque" element={<PDVStock />} />
             <Route path="relatorios" element={<PDVReports />} />
+            <Route path="configuracoes" element={<PDVSettings />} />
           </Routes>
         </div>
       </div>
