@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { PDVProduct } from "@/hooks/use-pdv-products";
 import { useProductImageUpload } from "@/hooks/use-product-image-upload";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState, useEffect } from "react";
 import { Image as ImageIcon, Upload, X } from "lucide-react";
 import { ProductRecipeManager } from "./ProductRecipeManager";
@@ -120,9 +121,20 @@ export function ProductDialog({
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="basic">Informações Básicas</TabsTrigger>
                 <TabsTrigger value="pricing">Preços e Disponibilidade</TabsTrigger>
-                <TabsTrigger value="recipe" disabled={!product}>
-                  Receita/Ficha Técnica
-                </TabsTrigger>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <TabsTrigger value="recipe" disabled={!product}>
+                        Receita/Ficha Técnica
+                      </TabsTrigger>
+                    </TooltipTrigger>
+                    {!product && (
+                      <TooltipContent>
+                        <p>Salve o produto primeiro para configurar a receita</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4 mt-4">
