@@ -73,6 +73,18 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
 
   const totalEvaluations = evaluations.length;
 
+  // Helper para calcular idade
+  const calculateAge = (birthDate: string) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
   // Calcular média geral de satisfação (1-5)
   const allScores = evaluations.flatMap(e => e.evaluation_answers.map(a => a.score));
   const avgSatisfaction = allScores.length > 0 
@@ -90,6 +102,137 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
   const avgNps = npsScores.length > 0
     ? npsScores.reduce((sum, score) => sum + score, 0) / npsScores.length
     : 0;
+
+  // Calcular idade média
+  const ages = evaluations.map(e => calculateAge(e.customer_birth_date));
+  const avgAge = ages.length > 0 
+    ? ages.reduce((sum, a) => sum + a, 0) / ages.length
+    : 0;
+
+  // Distribuição por faixa etária
+  const ageDistribution = [
+    { ageGroup: '18-25', count: ages.filter(a => a >= 18 && a <= 25).length },
+    { ageGroup: '26-35', count: ages.filter(a => a >= 26 && a <= 35).length },
+    { ageGroup: '36-45', count: ages.filter(a => a >= 36 && a <= 45).length },
+    { ageGroup: '46-60', count: ages.filter(a => a >= 46 && a <= 60).length },
+    { ageGroup: '60+', count: ages.filter(a => a > 60).length },
+  ];
+
+  // Satisfação por faixa etária
+  const satisfactionByAge = [
+    { ageGroup: '18-25', avgScore: 0, count: 0 },
+    { ageGroup: '26-35', avgScore: 0, count: 0 },
+    { ageGroup: '36-45', avgScore: 0, count: 0 },
+    { ageGroup: '46-60', avgScore: 0, count: 0 },
+    { ageGroup: '60+', avgScore: 0, count: 0 },
+  ];
+
+  evaluations.forEach(e => {
+    const age = calculateAge(e.customer_birth_date);
+    const avgScore = e.evaluation_answers.length > 0
+      ? e.evaluation_answers.reduce((sum, a) => sum + a.score, 0) / e.evaluation_answers.length
+      : 0;
+    
+    let index = -1;
+    if (age >= 18 && age <= 25) index = 0;
+    else if (age >= 26 && age <= 35) index = 1;
+    else if (age >= 36 && age <= 45) index = 2;
+    else if (age >= 46 && age <= 60) index = 3;
+    else if (age > 60) index = 4;
+
+    if (index >= 0) {
+      satisfactionByAge[index].avgScore += avgScore;
+      satisfactionByAge[index].count += 1;
+    }
+  });
+
+  satisfactionByAge.forEach(group => {
+    if (group.count > 0) {
+      group.avgScore = group.avgScore / group.count;
+    }
+  });
+
+  // Horários de pico
+  const hourlyData = new Map<number, number>();
+  evaluations.forEach(e => {
+    const hour = new Date(e.evaluation_date).getHours();
+    hourlyData.set(hour, (hourlyData.get(hour) || 0) + 1);
+  });
+  const peakHours = Array.from(hourlyData.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([hour, count]) => ({ hour, count }));
+
+  // Avaliações por dia da semana
+  const weekdayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+  const weekdayData = Array.from({ length: 7 }, (_, i) => ({ 
+    day: weekdayNames[i], 
+    count: 0, 
+    totalScore: 0 
+  }));
+  
+  evaluations.forEach(e => {
+    const day = new Date(e.evaluation_date).getDay();
+    weekdayData[day].count++;
+    const avgScore = e.evaluation_answers.length > 0
+      ? e.evaluation_answers.reduce((sum, a) => sum + a.score, 0) / e.evaluation_answers.length
+      : 0;
+    weekdayData[day].totalScore += avgScore;
+  });
+
+  const weekdayStats = weekdayData.map(d => ({
+    day: d.day,
+    count: d.count,
+    avgScore: d.count > 0 ? d.totalScore / d.count : 0,
+  }));
+
+  // Avaliações negativas recentes (últimas 24h com nota < 3)
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const recentNegative = evaluations.filter(e => {
+    const evalDate = new Date(e.evaluation_date);
+    const avgScore = e.evaluation_answers.length > 0
+      ? e.evaluation_answers.reduce((sum, a) => sum + a.score, 0) / e.evaluation_answers.length
+      : 0;
+    return evalDate >= yesterday && avgScore < 3;
+  }).map(e => ({
+    ...e,
+    avgScore: e.evaluation_answers.length > 0
+      ? e.evaluation_answers.reduce((sum, a) => sum + a.score, 0) / e.evaluation_answers.length
+      : 0,
+  }));
+
+  // Clientes VIP (recorrentes)
+  const customerFrequency = new Map<string, { count: number; evaluations: any[] }>();
+  evaluations.forEach(e => {
+    const key = e.customer_whatsapp;
+    if (!customerFrequency.has(key)) {
+      customerFrequency.set(key, { count: 0, evaluations: [] });
+    }
+    const data = customerFrequency.get(key)!;
+    data.count++;
+    data.evaluations.push(e);
+  });
+
+  const vipCustomers = Array.from(customerFrequency.entries())
+    .filter(([_, data]) => data.count > 1)
+    .map(([phone, data]) => {
+      const allScores = data.evaluations.flatMap(e => 
+        e.evaluation_answers.map((a: any) => a.score)
+      );
+      const avgScore = allScores.length > 0
+        ? allScores.reduce((sum: number, s: number) => sum + s, 0) / allScores.length
+        : 0;
+      
+      return {
+        customer_name: data.evaluations[0].customer_name,
+        customer_whatsapp: phone,
+        evaluation_count: data.count,
+        avgScore,
+        last_evaluation: data.evaluations[0].evaluation_date,
+      };
+    })
+    .sort((a, b) => b.evaluation_count - a.evaluation_count);
 
   // Calcular média por pergunta
   const questionStats = new Map<string, { text: string; scores: number[] }>();
@@ -149,6 +292,13 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     avgSatisfaction,
     nps,
     avgNps,
+    avgAge,
+    ageDistribution,
+    satisfactionByAge,
+    peakHours,
+    weekdayStats,
+    recentNegative,
+    vipCustomers,
     questionAverages,
     evolutionData,
     npsDistribution,
