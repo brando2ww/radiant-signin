@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle } from "lucide-react";
 import { StarRating } from "@/components/evaluations/StarRating";
 import { usePublicQuestions, useNpsEnabled, useSubmitEvaluation } from "@/hooks/use-public-evaluation";
+import { usePublicBusinessSettings } from "@/hooks/use-business-settings";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -18,6 +19,7 @@ const PublicEvaluation = () => {
   const { userId } = useParams<{ userId: string }>();
   const { data: questions, isLoading: questionsLoading } = usePublicQuestions(userId!);
   const { data: npsEnabled, isLoading: npsLoading } = useNpsEnabled(userId!);
+  const { settings: businessSettings, loading: businessLoading } = usePublicBusinessSettings(userId!);
   const submitEvaluation = useSubmitEvaluation();
 
   const [step, setStep] = useState<Step>("welcome");
@@ -141,18 +143,51 @@ const PublicEvaluation = () => {
   const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 to-background p-4">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        background: businessSettings 
+          ? `linear-gradient(135deg, ${businessSettings.primary_color}15 0%, ${businessSettings.secondary_color}15 100%)`
+          : "linear-gradient(135deg, hsl(var(--primary) / 0.1) 0%, hsl(var(--background)) 100%)"
+      }}
+    >
       <div className="max-w-lg w-full">
+        {/* Logo e nome do estabelecimento */}
+        {businessSettings && (
+          <div className="text-center mb-6">
+            {businessSettings.logo_url && (
+              <img 
+                src={businessSettings.logo_url} 
+                alt={businessSettings.business_name}
+                className="w-24 h-24 mx-auto mb-4 object-contain"
+              />
+            )}
+            <h2 className="text-2xl font-bold">{businessSettings.business_name}</h2>
+            {businessSettings.business_slogan && (
+              <p className="text-muted-foreground">{businessSettings.business_slogan}</p>
+            )}
+          </div>
+        )}
+
         {step === "welcome" && (
           <Card>
             <CardHeader className="text-center">
-              <CardTitle className="text-3xl">Olá! Queremos ouvir você 😊</CardTitle>
+              <CardTitle className="text-3xl">
+                {businessSettings?.welcome_message || "Olá! Queremos ouvir você 😊"}
+              </CardTitle>
               <CardDescription className="text-base">
-                Sua opinião é muito importante para nós. Leva apenas alguns minutos!
+                {businessSettings?.business_description || "Sua opinião é muito importante para nós. Leva apenas alguns minutos!"}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleStartEvaluation} className="w-full" size="lg">
+              <Button 
+                onClick={handleStartEvaluation} 
+                className="w-full" 
+                size="lg"
+                style={businessSettings ? {
+                  backgroundColor: businessSettings.primary_color
+                } : undefined}
+              >
                 Começar Avaliação
               </Button>
             </CardContent>
@@ -273,14 +308,16 @@ const PublicEvaluation = () => {
         {step === "thanks" && (
           <Card>
             <CardContent className="pt-6 text-center space-y-4">
-              <CheckCircle className="w-20 h-20 text-green-500 mx-auto" />
+              <CheckCircle 
+                className="w-20 h-20 mx-auto" 
+                style={{
+                  color: businessSettings?.primary_color || "hsl(var(--primary))"
+                }}
+              />
               <div>
                 <h1 className="text-3xl font-bold">Obrigado! 🎉</h1>
                 <p className="text-muted-foreground mt-2">
-                  Sua avaliação foi registrada com sucesso.
-                </p>
-                <p className="text-sm mt-4">
-                  Esperamos vê-lo novamente em breve!
+                  {businessSettings?.thank_you_message || "Sua avaliação foi registrada com sucesso. Esperamos vê-lo novamente em breve!"}
                 </p>
               </div>
             </CardContent>

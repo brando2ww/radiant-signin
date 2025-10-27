@@ -59,6 +59,51 @@ export type Database = {
         }
         Relationships: []
       }
+      business_settings: {
+        Row: {
+          business_description: string | null
+          business_name: string
+          business_slogan: string | null
+          created_at: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          thank_you_message: string | null
+          updated_at: string | null
+          user_id: string
+          welcome_message: string | null
+        }
+        Insert: {
+          business_description?: string | null
+          business_name: string
+          business_slogan?: string | null
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          thank_you_message?: string | null
+          updated_at?: string | null
+          user_id: string
+          welcome_message?: string | null
+        }
+        Update: {
+          business_description?: string | null
+          business_name?: string
+          business_slogan?: string | null
+          created_at?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          thank_you_message?: string | null
+          updated_at?: string | null
+          user_id?: string
+          welcome_message?: string | null
+        }
+        Relationships: []
+      }
       credit_cards: {
         Row: {
           brand: string | null
