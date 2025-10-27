@@ -9,6 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PDVProduct } from "@/hooks/use-pdv-products";
+import { usePDVRecipes } from "@/hooks/use-pdv-recipes";
+import { CMVBadge } from "./CMVBadge";
 
 interface ProductCardProps {
   product: PDVProduct;
@@ -17,6 +19,9 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
+  const { recipes, calculateCMV } = usePDVRecipes(product.id);
+  const cmv = calculateCMV(recipes);
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative aspect-video bg-muted">
@@ -69,7 +74,10 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
               {product.description}
             </p>
           )}
-          <Badge variant="outline">{product.category}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">{product.category}</Badge>
+            {cmv > 0 && <CMVBadge cmv={cmv} price={product.price_salon} showMargin />}
+          </div>
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0 flex items-center justify-between">

@@ -23,8 +23,10 @@ import { Switch } from "@/components/ui/switch";
 import { PDVProduct } from "@/hooks/use-pdv-products";
 import { useProductImageUpload } from "@/hooks/use-product-image-upload";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Image as ImageIcon, Upload, X } from "lucide-react";
+import { ProductRecipeManager } from "./ProductRecipeManager";
+import { usePDVRecipes } from "@/hooks/use-pdv-recipes";
 
 interface ProductDialogProps {
   open: boolean;
@@ -43,6 +45,7 @@ export function ProductDialog({
 }: ProductDialogProps) {
   const { uploadImage, isUploading } = useProductImageUpload();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const { calculateCMV, recipes } = usePDVRecipes(product?.id);
 
   const form = useForm({
     defaultValues: {
@@ -59,6 +62,27 @@ export function ProductDialog({
       is_sold_by_weight: product?.is_sold_by_weight ?? false,
     },
   });
+
+  const currentPrice = form.watch("price_salon") || 0;
+  const cmv = calculateCMV(recipes);
+
+  useEffect(() => {
+    if (product) {
+      form.reset({
+        name: product.name,
+        description: product.description || "",
+        category: product.category,
+        image_url: product.image_url || "",
+        price_salon: product.price_salon,
+        price_balcao: product.price_balcao || 0,
+        price_delivery: product.price_delivery || 0,
+        preparation_time: product.preparation_time,
+        serves: product.serves,
+        is_available: product.is_available,
+        is_sold_by_weight: product.is_sold_by_weight,
+      });
+    }
+  }, [product, form]);
 
   const handleSubmit = form.handleSubmit((data) => {
     onSubmit(data);
@@ -93,9 +117,12 @@ export function ProductDialog({
         <Form {...form}>
           <form onSubmit={handleSubmit} className="space-y-6">
             <Tabs defaultValue="basic">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="basic">Informações Básicas</TabsTrigger>
                 <TabsTrigger value="pricing">Preços e Disponibilidade</TabsTrigger>
+                <TabsTrigger value="recipe" disabled={!product}>
+                  Receita/Ficha Técnica
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4 mt-4">
@@ -358,6 +385,19 @@ export function ProductDialog({
                     </FormItem>
                   )}
                 />
+              </TabsContent>
+
+              <TabsContent value="recipe" className="space-y-4 mt-4">
+                {product ? (
+                  <ProductRecipeManager 
+                    productId={product.id} 
+                    productPrice={currentPrice}
+                  />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Salve o produto primeiro para configurar a receita
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
 
