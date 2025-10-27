@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { SessionNavBar } from "@/components/ui/sidebar";
 import { ModuleGuard } from "@/components/ModuleGuard";
+import { PDVNavBar } from "@/components/pdv/PDVNavBar";
 import PDVDashboard from "./pdv/Dashboard";
 import PDVSalon from "./pdv/Salon";
 import PDVBalcao from "./pdv/Balcao";
@@ -13,9 +13,9 @@ import PDVReports from "./pdv/Reports";
 export default function PDV() {
   return (
     <ModuleGuard module="pdv">
-      <div className="flex h-screen">
-        <SessionNavBar />
-        <div className="flex-1 pl-[3.05rem] overflow-auto">
+      <div className="flex flex-col h-screen w-full">
+        <PDVNavBar />
+        <div className="flex-1 overflow-auto">
           <Routes>
             <Route index element={<Navigate to="/pdv/dashboard" replace />} />
             <Route path="dashboard" element={<PDVDashboard />} />
