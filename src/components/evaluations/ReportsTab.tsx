@@ -143,7 +143,7 @@ export const ReportsTab = () => {
             <CardDescription>Detratores, Neutros e Promotores</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={350}>
               <PieChart>
                 <Pie
                   data={[
@@ -152,10 +152,15 @@ export const ReportsTab = () => {
                     { name: "Promotores (9-10)", value: stats?.promoters || 0 },
                   ]}
                   cx="50%"
-                  cy="50%"
+                  cy="45%"
                   labelLine={false}
-                  label={(entry) => `${entry.name}: ${entry.value}`}
-                  outerRadius={80}
+                  label={(entry) => {
+                    const total = (stats?.detractors || 0) + (stats?.neutrals || 0) + (stats?.promoters || 0);
+                    if (entry.value === 0 || total === 0) return null;
+                    const percentage = ((entry.value / total) * 100).toFixed(1);
+                    return `${percentage}%`;
+                  }}
+                  outerRadius={90}
                   fill="#8884d8"
                   dataKey="value"
                 >
@@ -163,7 +168,18 @@ export const ReportsTab = () => {
                     <Cell key={`cell-${index}`} fill={color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  formatter={(value: number) => {
+                    const total = (stats?.detractors || 0) + (stats?.neutrals || 0) + (stats?.promoters || 0);
+                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+                    return `${value} (${percentage}%)`;
+                  }}
+                />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  formatter={(value) => value}
+                />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
