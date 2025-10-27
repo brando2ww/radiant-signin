@@ -1215,6 +1215,95 @@ export type Database = {
           },
         ]
       }
+      pdv_cashier_movements: {
+        Row: {
+          amount: number
+          cashier_session_id: string
+          created_at: string
+          description: string | null
+          id: string
+          payment_method: string | null
+          type: string
+        }
+        Insert: {
+          amount: number
+          cashier_session_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          payment_method?: string | null
+          type: string
+        }
+        Update: {
+          amount?: number
+          cashier_session_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          payment_method?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_cashier_movements_cashier_session_id_fkey"
+            columns: ["cashier_session_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_cashier_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_cashier_sessions: {
+        Row: {
+          closed_at: string | null
+          closing_balance: number | null
+          created_at: string
+          id: string
+          notes: string | null
+          opened_at: string
+          opening_balance: number
+          total_card: number
+          total_cash: number
+          total_pix: number
+          total_sales: number
+          total_withdrawals: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closing_balance?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opening_balance?: number
+          total_card?: number
+          total_cash?: number
+          total_pix?: number
+          total_sales?: number
+          total_withdrawals?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          closed_at?: string | null
+          closing_balance?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opening_balance?: number
+          total_card?: number
+          total_cash?: number
+          total_pix?: number
+          total_sales?: number
+          total_withdrawals?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pdv_cmv_reports: {
         Row: {
           cmv_percentage: number | null
