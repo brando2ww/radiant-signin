@@ -27,7 +27,7 @@ export function LeadCard({ lead, onEdit, onDelete, onViewDetails, isDragging }: 
     id: lead.id,
   });
 
-  const style = transform ? {
+  const style = !isDragging && transform ? {
     transform: CSS.Transform.toString(transform),
   } : undefined;
 
@@ -60,12 +60,12 @@ export function LeadCard({ lead, onEdit, onDelete, onViewDetails, isDragging }: 
 
   return (
     <Card
-      ref={setNodeRef}
+      ref={isDragging ? undefined : setNodeRef}
       style={style}
-      {...listeners}
-      {...attributes}
-      className={`p-3 cursor-move hover:shadow-lg transition-all border-l-4 ${getPriorityColor(lead.priority)} ${
-        isDragging ? 'opacity-50' : ''
+      {...(!isDragging ? listeners : {})}
+      {...(!isDragging ? attributes : {})}
+      className={`p-3 cursor-move hover:shadow-lg transition-shadow border-l-4 ${getPriorityColor(lead.priority)} ${
+        isDragging ? 'opacity-90' : (transform ? 'opacity-0' : '')
       }`}
       onClick={(e) => {
         // Only trigger onViewDetails if not clicking on dropdown trigger

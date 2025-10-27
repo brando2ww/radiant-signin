@@ -80,7 +80,7 @@ export function PipelineKanban({
 
       <DragOverlay dropAnimation={null}>
         {activeLead && (
-          <div className="opacity-90">
+          <div className="w-[320px]">
             <LeadCard
               lead={activeLead}
               onEdit={() => {}}
