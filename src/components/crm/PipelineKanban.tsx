@@ -78,9 +78,9 @@ export function PipelineKanban({
         ))}
       </div>
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {activeLead && (
-          <div className="rotate-3">
+          <div className="opacity-90">
             <LeadCard
               lead={activeLead}
               onEdit={() => {}}
