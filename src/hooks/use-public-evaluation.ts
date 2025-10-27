@@ -53,24 +53,26 @@ export interface SubmitEvaluationData {
 export const useSubmitEvaluation = () => {
   return useMutation({
     mutationFn: async (data: SubmitEvaluationData) => {
-      // Inserir a avaliação
-      const { data: evaluation, error: evalError } = await supabase
+      // Gerar ID no cliente para evitar SELECT após INSERT
+      const evaluationId = crypto.randomUUID();
+
+      // Inserir a avaliação sem SELECT
+      const { error: evalError } = await supabase
         .from("customer_evaluations")
         .insert({
+          id: evaluationId,
           user_id: data.userId,
           customer_name: data.customerName,
           customer_whatsapp: data.customerWhatsapp,
           customer_birth_date: data.customerBirthDate,
           nps_score: data.npsScore,
-        })
-        .select()
-        .single();
+        });
 
       if (evalError) throw evalError;
 
-      // Inserir as respostas
+      // Inserir as respostas usando o ID gerado
       const answers = data.answers.map(answer => ({
-        evaluation_id: evaluation.id,
+        evaluation_id: evaluationId,
         question_id: answer.questionId,
         score: answer.score,
       }));
@@ -81,7 +83,7 @@ export const useSubmitEvaluation = () => {
 
       if (answersError) throw answersError;
 
-      return evaluation;
+      return { id: evaluationId };
     },
     onSuccess: () => {
       toast.success("Avaliação enviada com sucesso!");
