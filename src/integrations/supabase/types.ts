@@ -284,6 +284,108 @@ export type Database = {
           },
         ]
       }
+      customer_evaluations: {
+        Row: {
+          created_at: string
+          customer_birth_date: string
+          customer_name: string
+          customer_whatsapp: string
+          evaluation_date: string
+          id: string
+          nps_score: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_birth_date: string
+          customer_name: string
+          customer_whatsapp: string
+          evaluation_date?: string
+          id?: string
+          nps_score?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_birth_date?: string
+          customer_name?: string
+          customer_whatsapp?: string
+          evaluation_date?: string
+          id?: string
+          nps_score?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      evaluation_answers: {
+        Row: {
+          created_at: string
+          evaluation_id: string
+          id: string
+          question_id: string
+          score: number
+        }
+        Insert: {
+          created_at?: string
+          evaluation_id: string
+          id?: string
+          question_id: string
+          score: number
+        }
+        Update: {
+          created_at?: string
+          evaluation_id?: string
+          id?: string
+          question_id?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_answers_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: false
+            referencedRelation: "customer_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "evaluation_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_questions: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          order_position: number
+          question_text: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          order_position?: number
+          question_text: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          order_position?: number
+          question_text?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       monthly_goals: {
         Row: {
           created_at: string | null
@@ -473,6 +575,7 @@ export type Database = {
           id: string
           language: string | null
           notifications: Json | null
+          nps_enabled: boolean | null
           security_settings: Json | null
           sidebar_expanded: boolean | null
           theme: string | null
@@ -490,6 +593,7 @@ export type Database = {
           id?: string
           language?: string | null
           notifications?: Json | null
+          nps_enabled?: boolean | null
           security_settings?: Json | null
           sidebar_expanded?: boolean | null
           theme?: string | null
@@ -507,6 +611,7 @@ export type Database = {
           id?: string
           language?: string | null
           notifications?: Json | null
+          nps_enabled?: boolean | null
           security_settings?: Json | null
           sidebar_expanded?: boolean | null
           theme?: string | null

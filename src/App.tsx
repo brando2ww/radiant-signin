@@ -16,6 +16,8 @@ import CreditCards from "./pages/CreditCards";
 import CRM from "./pages/CRM";
 import LeadDetail from "./pages/LeadDetail";
 import Settings from "./pages/Settings";
+import Evaluations from "./pages/Evaluations";
+import PublicEvaluation from "./pages/PublicEvaluation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -109,6 +111,16 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            <Route 
+              path="/avaliacoes" 
+              element={
+                <ProtectedRoute>
+                  <Evaluations />
+                </ProtectedRoute>
+              } 
+            />
+            {/* Public route for evaluations - no authentication required */}
+            <Route path="/avaliar/:userId" element={<PublicEvaluation />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
