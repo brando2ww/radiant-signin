@@ -13,6 +13,7 @@ import Calendar from "./pages/Calendar";
 import Tasks from "./pages/Tasks";
 import Transactions from "./pages/Transactions";
 import CreditCards from "./pages/CreditCards";
+import CRM from "./pages/CRM";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -80,6 +81,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CreditCards />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/crm" 
+              element={
+                <ProtectedRoute>
+                  <CRM />
                 </ProtectedRoute>
               } 
             />

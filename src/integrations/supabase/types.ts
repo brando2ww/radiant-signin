@@ -107,6 +107,183 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_activities: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_completed: boolean | null
+          lead_id: string
+          scheduled_at: string | null
+          title: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_completed?: boolean | null
+          lead_id: string
+          scheduled_at?: string | null
+          title: string
+          type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_completed?: boolean | null
+          lead_id?: string
+          scheduled_at?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_leads: {
+        Row: {
+          avatar_url: string | null
+          closed_date: string | null
+          company: string | null
+          converted_to_transaction_id: string | null
+          created_at: string
+          email: string | null
+          estimated_value: number | null
+          expected_close_date: string | null
+          first_contact_date: string | null
+          id: string
+          last_contact_date: string | null
+          name: string
+          phone: string | null
+          position: string | null
+          priority: string | null
+          project_description: string | null
+          project_title: string
+          source: string | null
+          stage: string
+          status: string | null
+          tags: string[] | null
+          updated_at: string
+          user_id: string
+          win_probability: number | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          closed_date?: string | null
+          company?: string | null
+          converted_to_transaction_id?: string | null
+          created_at?: string
+          email?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
+          first_contact_date?: string | null
+          id?: string
+          last_contact_date?: string | null
+          name: string
+          phone?: string | null
+          position?: string | null
+          priority?: string | null
+          project_description?: string | null
+          project_title: string
+          source?: string | null
+          stage?: string
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          user_id: string
+          win_probability?: number | null
+        }
+        Update: {
+          avatar_url?: string | null
+          closed_date?: string | null
+          company?: string | null
+          converted_to_transaction_id?: string | null
+          created_at?: string
+          email?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
+          first_contact_date?: string | null
+          id?: string
+          last_contact_date?: string | null
+          name?: string
+          phone?: string | null
+          position?: string | null
+          priority?: string | null
+          project_description?: string | null
+          project_title?: string
+          source?: string | null
+          stage?: string
+          status?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          user_id?: string
+          win_probability?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_leads_converted_to_transaction_id_fkey"
+            columns: ["converted_to_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_notes: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_pinned: boolean | null
+          lead_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean | null
+          lead_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean | null
+          lead_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_notes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monthly_goals: {
         Row: {
           created_at: string | null

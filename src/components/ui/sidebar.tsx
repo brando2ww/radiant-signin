@@ -17,6 +17,7 @@ import {
   CheckSquare,
   TrendingUp,
   CreditCard,
+  Users,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link, useLocation } from "react-router-dom";
@@ -232,6 +233,21 @@ export function SessionNavBar() {
                       <motion.li variants={variants}>
                         {!isCollapsed && (
                           <p className="ml-2 text-sm font-medium">Tarefas</p>
+                        )}
+                      </motion.li>
+                    </Link>
+
+                    <Link
+                      to="/crm"
+                      className={cn(
+                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
+                        pathname.includes("crm") && "bg-muted text-primary",
+                      )}
+                    >
+                      <Users className="h-4 w-4" />
+                      <motion.li variants={variants}>
+                        {!isCollapsed && (
+                          <p className="ml-2 text-sm font-medium">CRM</p>
                         )}
                       </motion.li>
                     </Link>
