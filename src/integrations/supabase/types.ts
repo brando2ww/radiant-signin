@@ -1391,6 +1391,133 @@ export type Database = {
         }
         Relationships: []
       }
+      pdv_ifood_products: {
+        Row: {
+          created_at: string | null
+          id: string
+          ifood_product_id: string | null
+          ifood_sku: string | null
+          last_synced_at: string | null
+          pdv_product_id: string | null
+          sync_enabled: boolean | null
+          sync_error: string | null
+          sync_status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ifood_product_id?: string | null
+          ifood_sku?: string | null
+          last_synced_at?: string | null
+          pdv_product_id?: string | null
+          sync_enabled?: boolean | null
+          sync_error?: string | null
+          sync_status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ifood_product_id?: string | null
+          ifood_sku?: string | null
+          last_synced_at?: string | null
+          pdv_product_id?: string | null
+          sync_enabled?: boolean | null
+          sync_error?: string | null
+          sync_status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_ifood_products_pdv_product_id_fkey"
+            columns: ["pdv_product_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_ifood_sync_logs: {
+        Row: {
+          created_at: string | null
+          details: Json | null
+          error_message: string | null
+          id: string
+          status: string
+          sync_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json | null
+          error_message?: string | null
+          id?: string
+          status: string
+          sync_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json | null
+          error_message?: string | null
+          id?: string
+          status?: string
+          sync_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pdv_ifood_webhooks: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          event_id: string | null
+          event_type: string
+          id: string
+          payload: Json
+          pdv_order_id: string | null
+          processed: boolean | null
+          processed_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          event_id?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          pdv_order_id?: string | null
+          processed?: boolean | null
+          processed_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          event_id?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          pdv_order_id?: string | null
+          processed?: boolean | null
+          processed_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_ifood_webhooks_pdv_order_id_fkey"
+            columns: ["pdv_order_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_ingredients: {
         Row: {
           created_at: string | null
@@ -1814,6 +1941,13 @@ export type Database = {
           enable_service_fee: boolean | null
           enable_sound_notifications: boolean | null
           id: string
+          ifood_access_token: string | null
+          ifood_auto_accept: boolean | null
+          ifood_enabled: boolean | null
+          ifood_merchant_id: string | null
+          ifood_refresh_token: string | null
+          ifood_sync_menu: boolean | null
+          ifood_token_expires_at: string | null
           integrate_with_delivery: boolean | null
           max_tables_per_order: number | null
           min_order_value: number | null
@@ -1848,6 +1982,13 @@ export type Database = {
           enable_service_fee?: boolean | null
           enable_sound_notifications?: boolean | null
           id?: string
+          ifood_access_token?: string | null
+          ifood_auto_accept?: boolean | null
+          ifood_enabled?: boolean | null
+          ifood_merchant_id?: string | null
+          ifood_refresh_token?: string | null
+          ifood_sync_menu?: boolean | null
+          ifood_token_expires_at?: string | null
           integrate_with_delivery?: boolean | null
           max_tables_per_order?: number | null
           min_order_value?: number | null
@@ -1882,6 +2023,13 @@ export type Database = {
           enable_service_fee?: boolean | null
           enable_sound_notifications?: boolean | null
           id?: string
+          ifood_access_token?: string | null
+          ifood_auto_accept?: boolean | null
+          ifood_enabled?: boolean | null
+          ifood_merchant_id?: string | null
+          ifood_refresh_token?: string | null
+          ifood_sync_menu?: boolean | null
+          ifood_token_expires_at?: string | null
           integrate_with_delivery?: boolean | null
           max_tables_per_order?: number | null
           min_order_value?: number | null
