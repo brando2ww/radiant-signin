@@ -18,6 +18,7 @@ import LeadDetail from "./pages/LeadDetail";
 import Settings from "./pages/Settings";
 import Evaluations from "./pages/Evaluations";
 import PublicEvaluation from "./pages/PublicEvaluation";
+import PublicMenu from "./pages/PublicMenu";
 import Delivery from "./pages/Delivery";
 import NotFound from "./pages/NotFound";
 
@@ -128,8 +129,9 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            {/* Public route for evaluations - no authentication required */}
+            {/* Public routes - no authentication required */}
             <Route path="/avaliar/:userId" element={<PublicEvaluation />} />
+            <Route path="/cardapio/:userId" element={<PublicMenu />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

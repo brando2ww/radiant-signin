@@ -1,0 +1,248 @@
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ShoppingBag, Trash2, Plus, Minus, Tag, X } from "lucide-react";
+import { CartItem } from "@/pages/PublicMenu";
+import { useState } from "react";
+import { usePublicSettings } from "@/hooks/use-public-menu";
+import { useValidateCoupon } from "@/hooks/use-delivery-coupons";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+
+interface ShoppingCartProps {
+  cart: CartItem[];
+  onRemoveItem: (index: number) => void;
+  onUpdateQuantity: (index: number, quantity: number) => void;
+  onClearCart: () => void;
+  userId: string;
+}
+
+export const ShoppingCart = ({
+  cart,
+  onRemoveItem,
+  onUpdateQuantity,
+  onClearCart,
+  userId,
+}: ShoppingCartProps) => {
+  const [couponCode, setCouponCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const { data: settings } = usePublicSettings(userId);
+  const validateCoupon = useValidateCoupon();
+
+  const subtotal = cart.reduce((sum, item) => {
+    const itemTotal = item.unitPrice + item.selectedOptions.reduce((s, opt) => s + opt.priceAdjustment, 0);
+    return sum + itemTotal * item.quantity;
+  }, 0);
+
+  const deliveryFee = Number(settings?.default_delivery_fee || 0);
+  const discount = appliedCoupon?.discount || 0;
+  const total = subtotal + deliveryFee - discount;
+
+  const handleApplyCoupon = () => {
+    validateCoupon.mutate(
+      { code: couponCode, orderValue: subtotal },
+      {
+        onSuccess: (data) => {
+          setAppliedCoupon({
+            code: couponCode,
+            discount: data.discount,
+          });
+          setCouponCode("");
+        },
+      }
+    );
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+  };
+
+  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button
+          size="lg"
+          className="fixed bottom-4 right-4 z-50 shadow-lg h-14 px-6"
+          disabled={cart.length === 0}
+        >
+          <ShoppingBag className="h-5 w-5 mr-2" />
+          Ver Carrinho
+          {totalItems > 0 && (
+            <Badge className="ml-2" variant="secondary">
+              {totalItems}
+            </Badge>
+          )}
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="w-full sm:max-w-lg p-0 flex flex-col">
+        <SheetHeader className="p-6 pb-4 border-b">
+          <SheetTitle className="flex items-center justify-between">
+            <span>Seu Pedido</span>
+            {cart.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClearCart}
+                className="text-destructive"
+              >
+                Limpar
+              </Button>
+            )}
+          </SheetTitle>
+        </SheetHeader>
+
+        {cart.length === 0 ? (
+          <div className="flex flex-col items-center justify-center flex-1 text-muted-foreground">
+            <ShoppingBag className="h-16 w-16 mb-4 opacity-20" />
+            <p>Seu carrinho está vazio</p>
+          </div>
+        ) : (
+          <>
+            <ScrollArea className="flex-1 px-6">
+              <div className="space-y-4 py-4">
+                {cart.map((item, index) => {
+                  const itemPrice = item.unitPrice + item.selectedOptions.reduce((s, opt) => s + opt.priceAdjustment, 0);
+                  
+                  return (
+                    <Card key={index}>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex-1">
+                            <h4 className="font-semibold">{item.name}</h4>
+                            {item.selectedOptions.length > 0 && (
+                              <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                                {item.selectedOptions.map((opt, i) => (
+                                  <div key={i}>
+                                    • {opt.itemName}
+                                    {opt.priceAdjustment !== 0 && ` (+R$ ${opt.priceAdjustment.toFixed(2)})`}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {item.notes && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Obs: {item.notes}
+                              </p>
+                            )}
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-destructive"
+                            onClick={() => onRemoveItem(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-7 w-7"
+                              onClick={() => onUpdateQuantity(index, item.quantity - 1)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center font-medium">{item.quantity}</span>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-7 w-7"
+                              onClick={() => onUpdateQuantity(index, item.quantity + 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <span className="font-semibold">
+                            R$ {(itemPrice * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+
+            <div className="border-t p-6 space-y-4">
+              {/* Coupon */}
+              <div className="space-y-2">
+                {!appliedCoupon ? (
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Código do cupom"
+                      value={couponCode}
+                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={handleApplyCoupon}
+                      disabled={!couponCode || validateCoupon.isPending}
+                      variant="outline"
+                    >
+                      <Tag className="h-4 w-4 mr-2" />
+                      Aplicar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-md">
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-600">
+                        {appliedCoupon.code}
+                      </span>
+                    </div>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={handleRemoveCoupon}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Totals */}
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Subtotal:</span>
+                  <span>R$ {subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Taxa de entrega:</span>
+                  <span>R$ {deliveryFee.toFixed(2)}</span>
+                </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Desconto:</span>
+                    <span>-R$ {discount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-lg font-bold pt-2 border-t">
+                  <span>Total:</span>
+                  <span>R$ {total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <Button size="lg" className="w-full" onClick={() => alert("Checkout em desenvolvimento!")}>
+                Finalizar Pedido
+              </Button>
+            </div>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+};
