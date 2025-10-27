@@ -1,56 +1,110 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ChefHat, Clock } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { ChefHat } from "lucide-react";
+import { usePDVKitchen } from "@/hooks/use-pdv-kitchen";
+import { KitchenItemCard } from "@/components/pdv/KitchenItemCard";
+import { KitchenFilters } from "@/components/pdv/KitchenFilters";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PDVKitchen() {
+  const { items, isLoading, updateItemStatus } = usePDVKitchen();
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+
+  const handleUpdateStatus = (itemId: string, status: "preparando" | "pronto" | "entregue") => {
+    updateItemStatus({ itemId, status });
+  };
+
+  // Filtrar itens
+  const filteredItems = useMemo(() => {
+    if (!selectedStatus) return items;
+    return items.filter((item) => item.kitchen_status === selectedStatus);
+  }, [items, selectedStatus]);
+
+  // Contar por status
+  const counts = useMemo(() => {
+    return {
+      total: items.length,
+      pendente: items.filter((i) => i.kitchen_status === "pendente").length,
+      preparando: items.filter((i) => i.kitchen_status === "preparando").length,
+      pronto: items.filter((i) => i.kitchen_status === "pronto").length,
+    };
+  }, [items]);
+
+  // Agrupar por pedido
+  const groupedItems = useMemo(() => {
+    const groups: Record<string, typeof filteredItems> = {};
+    filteredItems.forEach((item) => {
+      const orderId = item.order_id;
+      if (!groups[orderId]) {
+        groups[orderId] = [];
+      }
+      groups[orderId].push(item);
+    });
+    return Object.values(groups);
+  }, [filteredItems]);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6 space-y-6">
+        <Skeleton className="h-9 w-48" />
+        <Skeleton className="h-20" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-64" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Cozinha</h1>
-          <p className="text-muted-foreground">
-            Acompanhamento de pedidos em tempo real
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Badge variant="outline">
-            <Clock className="h-3 w-3 mr-1" />
-            0 pendentes
-          </Badge>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Cozinha</h1>
+        <p className="text-muted-foreground">
+          Acompanhe e gerencie o preparo dos pedidos
+        </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Pendentes</CardTitle>
-            <CardDescription>Novos pedidos</CardDescription>
-          </CardHeader>
-          <CardContent className="min-h-[500px] flex items-center justify-center">
-            <p className="text-sm text-muted-foreground">Nenhum pedido</p>
-          </CardContent>
-        </Card>
+      <KitchenFilters
+        selectedStatus={selectedStatus}
+        onStatusChange={setSelectedStatus}
+        counts={counts}
+      />
 
+      {filteredItems.length === 0 ? (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Em Preparo</CardTitle>
-            <CardDescription>Sendo preparados</CardDescription>
-          </CardHeader>
-          <CardContent className="min-h-[500px] flex items-center justify-center">
-            <p className="text-sm text-muted-foreground">Nenhum pedido</p>
+          <CardContent className="min-h-[400px] flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <ChefHat className="h-16 w-16 mx-auto text-muted-foreground" />
+              <div>
+                <h3 className="text-lg font-medium">
+                  {selectedStatus
+                    ? "Nenhum item encontrado"
+                    : "Nenhum item na cozinha"}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  {selectedStatus
+                    ? "Tente outro filtro"
+                    : "Novos pedidos aparecerão aqui automaticamente"}
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Prontos</CardTitle>
-            <CardDescription>Aguardando entrega</CardDescription>
-          </CardHeader>
-          <CardContent className="min-h-[500px] flex items-center justify-center">
-            <p className="text-sm text-muted-foreground">Nenhum pedido</p>
-          </CardContent>
-        </Card>
-      </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {groupedItems.map((orderItems) =>
+            orderItems.map((item) => (
+              <KitchenItemCard
+                key={item.id}
+                item={item}
+                onUpdateStatus={handleUpdateStatus}
+              />
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }
