@@ -7,8 +7,8 @@ const Evaluations = () => {
   return (
     <div className="flex min-h-screen w-full">
       <SessionNavBar />
-      <main className="flex-1">
-        <div className="container mx-auto py-6 space-y-6">
+      <main className="flex-1 overflow-auto">
+        <div className="container mx-auto py-6 px-4 space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Avaliações</h1>
         <p className="text-muted-foreground">
