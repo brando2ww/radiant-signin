@@ -183,7 +183,7 @@ export function LeadDetailPanel({ open, onOpenChange, lead, onEdit }: LeadDetail
                 <div className="flex gap-3">
                   <Button
                     onClick={handleWin}
-                    className="flex-1 bg-success hover:bg-success/90 text-white"
+                    className="flex-1 bg-success text-success-foreground hover:bg-success/90"
                     disabled={updateMutation.isPending}
                   >
                     <Trophy className="h-4 w-4 mr-2" />
@@ -208,7 +208,7 @@ export function LeadDetailPanel({ open, onOpenChange, lead, onEdit }: LeadDetail
               <Separator />
               <div>
                 <p className="text-sm text-muted-foreground mb-2">Status Final</p>
-                <Badge variant={lead.stage === 'won' ? 'default' : 'secondary'} className={lead.stage === 'won' ? 'bg-success' : ''}>
+                <Badge variant={lead.stage === 'won' ? 'default' : 'secondary'} className={lead.stage === 'won' ? 'bg-success text-success-foreground' : ''}>
                   {lead.stage === 'won' ? '🏆 Ganho' : '❌ Perdido'}
                 </Badge>
                 {lead.closed_date && (
