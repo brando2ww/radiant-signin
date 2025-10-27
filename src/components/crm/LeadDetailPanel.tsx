@@ -4,14 +4,15 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Lead } from "@/hooks/use-crm-leads";
+import { Lead, useUpdateLead } from "@/hooks/use-crm-leads";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Phone, Building, Calendar, DollarSign, Edit } from "lucide-react";
+import { Mail, Phone, Building, Calendar, DollarSign, Edit, Trophy, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import confetti from "canvas-confetti";
 import { ActivityTimeline } from "./ActivityTimeline";
 
 interface LeadDetailPanelProps {
@@ -23,6 +24,8 @@ interface LeadDetailPanelProps {
 
 export function LeadDetailPanel({ open, onOpenChange, lead, onEdit }: LeadDetailPanelProps) {
   if (!lead) return null;
+
+  const updateMutation = useUpdateLead();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -39,6 +42,35 @@ export function LeadDetailPanel({ open, onOpenChange, lead, onEdit }: LeadDetail
       urgent: 'destructive' as const,
     };
     return variants[priority as keyof typeof variants] || 'outline';
+  };
+
+  const fireConfetti = () => {
+    confetti({
+      particleCount: 100,
+      spread: 70,
+      origin: { y: 0.6 }
+    });
+  };
+
+  const handleWin = async () => {
+    await updateMutation.mutateAsync({
+      id: lead.id,
+      stage: 'won',
+      status: 'converted',
+      closed_date: new Date().toISOString(),
+    });
+    fireConfetti();
+    setTimeout(() => onOpenChange(false), 1000);
+  };
+
+  const handleLoss = async () => {
+    await updateMutation.mutateAsync({
+      id: lead.id,
+      stage: 'lost',
+      status: 'archived',
+      closed_date: new Date().toISOString(),
+    });
+    onOpenChange(false);
   };
 
   return (
@@ -142,6 +174,51 @@ export function LeadDetailPanel({ open, onOpenChange, lead, onEdit }: LeadDetail
               </div>
             )}
           </div>
+
+          {lead.stage !== 'won' && lead.stage !== 'lost' && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">Decisão Final</h4>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleWin}
+                    className="flex-1 bg-success hover:bg-success/90"
+                    disabled={updateMutation.isPending}
+                  >
+                    <Trophy className="h-4 w-4 mr-2" />
+                    Ganho
+                  </Button>
+                  <Button
+                    onClick={handleLoss}
+                    variant="destructive"
+                    className="flex-1"
+                    disabled={updateMutation.isPending}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Perdido
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {(lead.stage === 'won' || lead.stage === 'lost') && (
+            <>
+              <Separator />
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Status Final</p>
+                <Badge variant={lead.stage === 'won' ? 'default' : 'secondary'} className={lead.stage === 'won' ? 'bg-success' : ''}>
+                  {lead.stage === 'won' ? '🏆 Ganho' : '❌ Perdido'}
+                </Badge>
+                {lead.closed_date && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Fechado em {format(new Date(lead.closed_date), "dd/MM/yyyy", { locale: ptBR })}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
 
           {lead.source && (
             <div>
