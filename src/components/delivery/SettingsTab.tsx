@@ -1,9 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Clock, Truck, CreditCard, Bell } from "lucide-react";
+import { Clock, Truck, CreditCard, Bell, Smartphone } from "lucide-react";
 import { BusinessHoursSettings } from "./settings/BusinessHoursSettings";
 import { DeliverySettings } from "./settings/DeliverySettings";
 import { PaymentSettings } from "./settings/PaymentSettings";
 import { NotificationPreferences } from "./settings/NotificationPreferences";
+import { InstallAppButton } from "./InstallAppButton";
 import { useState } from "react";
 
 export const SettingsTab = () => {
@@ -21,7 +22,7 @@ export const SettingsTab = () => {
       </div>
 
       <Tabs defaultValue="hours" className="w-full">
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
+        <TabsList className="grid w-full max-w-3xl grid-cols-5">
           <TabsTrigger value="hours" className="flex items-center gap-2">
             <Clock className="h-4 w-4" />
             <span className="hidden sm:inline">Horários</span>
@@ -37,6 +38,10 @@ export const SettingsTab = () => {
           <TabsTrigger value="notifications" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
             <span className="hidden sm:inline">Notificações</span>
+          </TabsTrigger>
+          <TabsTrigger value="app" className="flex items-center gap-2">
+            <Smartphone className="h-4 w-4" />
+            <span className="hidden sm:inline">App Mobile</span>
           </TabsTrigger>
         </TabsList>
 
@@ -61,6 +66,10 @@ export const SettingsTab = () => {
             whatsappEnabled={whatsappEnabled}
             onWhatsappToggle={setWhatsappEnabled}
           />
+        </TabsContent>
+
+        <TabsContent value="app" className="mt-6">
+          <InstallAppButton />
         </TabsContent>
       </Tabs>
     </div>

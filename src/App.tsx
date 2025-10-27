@@ -20,6 +20,7 @@ import Evaluations from "./pages/Evaluations";
 import PublicEvaluation from "./pages/PublicEvaluation";
 import PublicMenu from "./pages/PublicMenu";
 import Delivery from "./pages/Delivery";
+import InstallApp from "./pages/InstallApp";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -132,6 +133,7 @@ const App = () => (
             {/* Public routes - no authentication required */}
             <Route path="/avaliar/:userId" element={<PublicEvaluation />} />
             <Route path="/cardapio/:userId" element={<PublicMenu />} />
+            <Route path="/instalar-app" element={<InstallApp />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
