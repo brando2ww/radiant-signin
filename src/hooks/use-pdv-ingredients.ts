@@ -11,7 +11,11 @@ export interface PDVIngredient {
   current_stock: number;
   min_stock: number;
   unit_cost: number;
-  supplier: string | null;
+  supplier_id?: string | null;
+  supplier?: {
+    id: string;
+    name: string;
+  } | null;
   expiration_date: string | null;
   created_at: string;
   updated_at: string;
@@ -28,7 +32,10 @@ export function usePDVIngredients() {
 
       const { data, error } = await supabase
         .from("pdv_ingredients")
-        .select("*")
+        .select(`
+          *,
+          supplier:pdv_suppliers(id, name)
+        `)
         .eq("user_id", user.id)
         .order("name");
 

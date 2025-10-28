@@ -6,7 +6,8 @@ import {
   DollarSign, 
   ChefHat, 
   Package, 
-  Warehouse, 
+  Warehouse,
+  Truck,
   BarChart3,
   Settings
 } from "lucide-react";
@@ -93,6 +94,11 @@ const navItems = [
     title: "Estoque", 
     url: "/pdv/estoque", 
     icon: Warehouse 
+  },
+  { 
+    title: "Fornecedores", 
+    url: "/pdv/fornecedores", 
+    icon: Truck 
   },
   { 
     title: "Relatórios", 

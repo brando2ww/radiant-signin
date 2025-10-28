@@ -55,9 +55,9 @@ export function IngredientCard({ ingredient, onEdit, onDelete, onAdjustStock }: 
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-lg truncate">{ingredient.name}</h3>
-              {ingredient.supplier && (
+              {ingredient.supplier?.name && (
                 <p className="text-sm text-muted-foreground truncate">
-                  {ingredient.supplier}
+                  {ingredient.supplier.name}
                 </p>
               )}
             </div>

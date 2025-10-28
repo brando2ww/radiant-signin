@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { PDVIngredient } from "@/hooks/use-pdv-ingredients";
+import { usePDVSuppliers } from "@/hooks/use-pdv-suppliers";
 import {
   Select,
   SelectContent,
@@ -26,6 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Plus } from "lucide-react";
+import { SupplierDialog } from "./SupplierDialog";
+import { useCreateSupplier } from "@/hooks/use-pdv-suppliers";
 
 interface IngredientDialogProps {
   open: boolean;
@@ -53,6 +58,12 @@ export function IngredientDialog({
   onSubmit,
   isSubmitting,
 }: IngredientDialogProps) {
+  const { data: suppliers = [] } = usePDVSuppliers();
+  const { mutate: createSupplier, isPending: isCreatingSupplier } = useCreateSupplier();
+  const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
+
+  const activeSuppliers = suppliers.filter(s => s.is_active);
+
   const form = useForm({
     defaultValues: {
       name: ingredient?.name || "",
@@ -60,10 +71,19 @@ export function IngredientDialog({
       current_stock: ingredient?.current_stock || 0,
       min_stock: ingredient?.min_stock || 0,
       unit_cost: ingredient?.unit_cost || 0,
-      supplier: ingredient?.supplier || "",
+      supplier_id: ingredient?.supplier_id || "",
       expiration_date: ingredient?.expiration_date || "",
     },
   });
+
+  const handleCreateSupplier = (data: any) => {
+    createSupplier(data, {
+      onSuccess: (newSupplier) => {
+        form.setValue("supplier_id", newSupplier.id);
+        setSupplierDialogOpen(false);
+      },
+    });
+  };
 
   const handleSubmit = form.handleSubmit((data) => {
     onSubmit(data);
@@ -223,19 +243,40 @@ export function IngredientDialog({
 
             <FormField
               control={form.control}
-              name="supplier"
+              name="supplier_id"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Fornecedor</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="Nome do fornecedor"
-                      {...field}
+                  <div className="flex gap-2">
+                    <Select
+                      onValueChange={field.onChange}
                       value={field.value || ""}
-                    />
-                  </FormControl>
+                    >
+                      <FormControl>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Selecione um fornecedor" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">Nenhum</SelectItem>
+                        {activeSuppliers.map((supplier) => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setSupplierDialogOpen(true)}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <FormDescription>
-                    Opcional - para controle de fornecedores
+                    Opcional - vincule a um fornecedor cadastrado
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -257,6 +298,14 @@ export function IngredientDialog({
           </form>
         </Form>
       </DialogContent>
+
+      <SupplierDialog
+        open={supplierDialogOpen}
+        onOpenChange={setSupplierDialogOpen}
+        supplier={null}
+        onSubmit={handleCreateSupplier}
+        isSubmitting={isCreatingSupplier}
+      />
     </Dialog>
   );
 }

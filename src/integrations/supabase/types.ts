@@ -1526,7 +1526,7 @@ export type Database = {
           id: string
           min_stock: number | null
           name: string
-          supplier: string | null
+          supplier_id: string | null
           unit: string
           unit_cost: number
           updated_at: string | null
@@ -1539,7 +1539,7 @@ export type Database = {
           id?: string
           min_stock?: number | null
           name: string
-          supplier?: string | null
+          supplier_id?: string | null
           unit: string
           unit_cost: number
           updated_at?: string | null
@@ -1552,13 +1552,21 @@ export type Database = {
           id?: string
           min_stock?: number | null
           name?: string
-          supplier?: string | null
+          supplier_id?: string | null
           unit?: string
           unit_cost?: number
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pdv_ingredients_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pdv_order_items: {
         Row: {
@@ -2098,6 +2106,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pdv_suppliers: {
+        Row: {
+          address: string | null
+          city: string | null
+          cnpj: string | null
+          contact_name: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          phone: string | null
+          state: string | null
+          updated_at: string | null
+          user_id: string
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string | null
+          user_id: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          cnpj?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string | null
+          user_id?: string
+          zip_code?: string | null
+        }
+        Relationships: []
       }
       pdv_tables: {
         Row: {

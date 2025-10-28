@@ -61,7 +61,7 @@ export default function PDVStock() {
     return ingredients.filter((ingredient) => {
       const matchesSearch =
         ingredient.name.toLowerCase().includes(search.toLowerCase()) ||
-        ingredient.supplier?.toLowerCase().includes(search.toLowerCase());
+        ingredient.supplier?.name?.toLowerCase().includes(search.toLowerCase());
 
       const isLowStock = ingredient.current_stock <= ingredient.min_stock;
       const isCritical = ingredient.current_stock < ingredient.min_stock * 0.5;
