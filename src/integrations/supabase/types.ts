@@ -2110,53 +2110,104 @@ export type Database = {
       pdv_suppliers: {
         Row: {
           address: string | null
+          address_complement: string | null
           city: string | null
           cnpj: string | null
+          commercial_notes: string | null
+          company_name: string | null
           contact_name: string | null
+          contacts: Json | null
+          cpf: string | null
           created_at: string | null
+          credit_limit: number | null
+          delivery_time: number | null
+          delivery_time_unit: string | null
           email: string | null
+          financial_notes: string | null
+          ibge_code: string | null
           id: string
           is_active: boolean | null
+          is_billing_address: boolean | null
+          municipal_registration: string | null
           name: string
+          neighborhood: string | null
           notes: string | null
+          payment_terms: string | null
           phone: string | null
+          preferred_payment_method: string | null
           state: string | null
+          state_registration: string | null
           updated_at: string | null
           user_id: string
+          whatsapp: string | null
           zip_code: string | null
         }
         Insert: {
           address?: string | null
+          address_complement?: string | null
           city?: string | null
           cnpj?: string | null
+          commercial_notes?: string | null
+          company_name?: string | null
           contact_name?: string | null
+          contacts?: Json | null
+          cpf?: string | null
           created_at?: string | null
+          credit_limit?: number | null
+          delivery_time?: number | null
+          delivery_time_unit?: string | null
           email?: string | null
+          financial_notes?: string | null
+          ibge_code?: string | null
           id?: string
           is_active?: boolean | null
+          is_billing_address?: boolean | null
+          municipal_registration?: string | null
           name: string
+          neighborhood?: string | null
           notes?: string | null
+          payment_terms?: string | null
           phone?: string | null
+          preferred_payment_method?: string | null
           state?: string | null
+          state_registration?: string | null
           updated_at?: string | null
           user_id: string
+          whatsapp?: string | null
           zip_code?: string | null
         }
         Update: {
           address?: string | null
+          address_complement?: string | null
           city?: string | null
           cnpj?: string | null
+          commercial_notes?: string | null
+          company_name?: string | null
           contact_name?: string | null
+          contacts?: Json | null
+          cpf?: string | null
           created_at?: string | null
+          credit_limit?: number | null
+          delivery_time?: number | null
+          delivery_time_unit?: string | null
           email?: string | null
+          financial_notes?: string | null
+          ibge_code?: string | null
           id?: string
           is_active?: boolean | null
+          is_billing_address?: boolean | null
+          municipal_registration?: string | null
           name?: string
+          neighborhood?: string | null
           notes?: string | null
+          payment_terms?: string | null
           phone?: string | null
+          preferred_payment_method?: string | null
           state?: string | null
+          state_registration?: string | null
           updated_at?: string | null
           user_id?: string
+          whatsapp?: string | null
           zip_code?: string | null
         }
         Relationships: []

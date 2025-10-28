@@ -16,15 +16,38 @@ export function SupplierCard({ supplier, onEdit, onDelete }: SupplierCardProps) 
       <CardHeader className="flex flex-row items-start justify-between space-y-0">
         <div className="space-y-1">
           <CardTitle className="text-lg">{supplier.name}</CardTitle>
+          {supplier.company_name && (
+            <p className="text-xs text-muted-foreground">
+              {supplier.company_name}
+            </p>
+          )}
           {supplier.cnpj && (
             <p className="text-sm text-muted-foreground">
               CNPJ: {supplier.cnpj}
             </p>
           )}
+          {!supplier.cnpj && supplier.cpf && (
+            <p className="text-sm text-muted-foreground">
+              CPF: {supplier.cpf}
+            </p>
+          )}
+          {(supplier.state_registration || supplier.municipal_registration) && (
+            <div className="flex gap-2 text-xs text-muted-foreground">
+              {supplier.state_registration && <span>IE: {supplier.state_registration}</span>}
+              {supplier.municipal_registration && <span>IM: {supplier.municipal_registration}</span>}
+            </div>
+          )}
         </div>
-        <Badge variant={supplier.is_active ? "default" : "secondary"}>
-          {supplier.is_active ? "Ativo" : "Inativo"}
-        </Badge>
+        <div className="flex flex-col items-end gap-1">
+          <Badge variant={supplier.is_active ? "default" : "secondary"}>
+            {supplier.is_active ? "Ativo" : "Inativo"}
+          </Badge>
+          {supplier.is_billing_address && (
+            <Badge variant="outline" className="text-xs">
+              Endereço de cobrança
+            </Badge>
+          )}
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -53,15 +76,36 @@ export function SupplierCard({ supplier, onEdit, onDelete }: SupplierCardProps) 
           {(supplier.city || supplier.state) && (
             <div className="flex items-center gap-2 text-muted-foreground">
               <MapPin className="h-4 w-4" />
-              <span>
+              <span className="font-medium">
                 {[supplier.city, supplier.state].filter(Boolean).join(" - ")}
               </span>
             </div>
           )}
+
+          {supplier.neighborhood && (
+            <div className="text-xs text-muted-foreground ml-6">
+              {supplier.neighborhood}
+            </div>
+          )}
         </div>
 
+        {(supplier.payment_terms || supplier.delivery_time) && (
+          <div className="border-t pt-3 space-y-1 text-xs text-muted-foreground">
+            {supplier.payment_terms && (
+              <div>
+                <span className="font-medium">Pagamento:</span> {supplier.payment_terms.replace(/_/g, ' ')}
+              </div>
+            )}
+            {supplier.delivery_time && (
+              <div>
+                <span className="font-medium">Entrega:</span> {supplier.delivery_time} {supplier.delivery_time_unit === 'hours' ? 'horas' : 'dias'}
+              </div>
+            )}
+          </div>
+        )}
+
         {supplier.notes && (
-          <p className="text-sm text-muted-foreground border-t pt-3">
+          <p className="text-sm text-muted-foreground border-t pt-3 line-clamp-2">
             {supplier.notes}
           </p>
         )}
