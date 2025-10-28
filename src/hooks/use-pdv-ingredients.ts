@@ -17,6 +17,34 @@ export interface PDVIngredient {
     name: string;
   } | null;
   expiration_date: string | null;
+  
+  // Novos campos básicos
+  code?: string;
+  category?: string;
+  loss_percentage: number;
+  selling_price: number;
+  icms_rate: number;
+  origin: string;
+  
+  // Controle de saída
+  automatic_output: 'none' | 'sale' | 'entry';
+  sector?: string;
+  cost_center?: string;
+  
+  // Controles de estoque avançados
+  max_stock: number;
+  real_cost: number;
+  average_cost: number;
+  last_entry_date?: string;
+  purchase_lot: number;
+  current_balance: number;
+  
+  // Códigos e identificação
+  ean?: string;
+  ean_quantity: number;
+  factory_code?: string;
+  observations?: string;
+  
   created_at: string;
   updated_at: string;
 }

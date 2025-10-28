@@ -1343,6 +1343,30 @@ export type Database = {
         }
         Relationships: []
       }
+      pdv_cost_centers: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pdv_customers: {
         Row: {
           birth_date: string | null
@@ -1518,14 +1542,57 @@ export type Database = {
           },
         ]
       }
-      pdv_ingredients: {
+      pdv_ingredient_categories: {
         Row: {
           created_at: string | null
-          current_stock: number | null
-          expiration_date: string | null
           id: string
+          is_active: boolean | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pdv_ingredients: {
+        Row: {
+          automatic_output: string | null
+          average_cost: number | null
+          category: string | null
+          code: string | null
+          cost_center: string | null
+          created_at: string | null
+          current_balance: number | null
+          current_stock: number | null
+          ean: string | null
+          ean_quantity: number | null
+          expiration_date: string | null
+          factory_code: string | null
+          icms_rate: number | null
+          id: string
+          last_entry_date: string | null
+          loss_percentage: number | null
+          max_stock: number | null
           min_stock: number | null
           name: string
+          observations: string | null
+          origin: string | null
+          purchase_lot: number | null
+          real_cost: number | null
+          sector: string | null
+          selling_price: number | null
           supplier_id: string | null
           unit: string
           unit_cost: number
@@ -1533,12 +1600,31 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          automatic_output?: string | null
+          average_cost?: number | null
+          category?: string | null
+          code?: string | null
+          cost_center?: string | null
           created_at?: string | null
+          current_balance?: number | null
           current_stock?: number | null
+          ean?: string | null
+          ean_quantity?: number | null
           expiration_date?: string | null
+          factory_code?: string | null
+          icms_rate?: number | null
           id?: string
+          last_entry_date?: string | null
+          loss_percentage?: number | null
+          max_stock?: number | null
           min_stock?: number | null
           name: string
+          observations?: string | null
+          origin?: string | null
+          purchase_lot?: number | null
+          real_cost?: number | null
+          sector?: string | null
+          selling_price?: number | null
           supplier_id?: string | null
           unit: string
           unit_cost: number
@@ -1546,12 +1632,31 @@ export type Database = {
           user_id: string
         }
         Update: {
+          automatic_output?: string | null
+          average_cost?: number | null
+          category?: string | null
+          code?: string | null
+          cost_center?: string | null
           created_at?: string | null
+          current_balance?: number | null
           current_stock?: number | null
+          ean?: string | null
+          ean_quantity?: number | null
           expiration_date?: string | null
+          factory_code?: string | null
+          icms_rate?: number | null
           id?: string
+          last_entry_date?: string | null
+          loss_percentage?: number | null
+          max_stock?: number | null
           min_stock?: number | null
           name?: string
+          observations?: string | null
+          origin?: string | null
+          purchase_lot?: number | null
+          real_cost?: number | null
+          sector?: string | null
+          selling_price?: number | null
           supplier_id?: string | null
           unit?: string
           unit_cost?: number
@@ -1926,6 +2031,30 @@ export type Database = {
           price_salon?: number
           serves?: number | null
           updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pdv_sectors: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
           user_id?: string
         }
         Relationships: []

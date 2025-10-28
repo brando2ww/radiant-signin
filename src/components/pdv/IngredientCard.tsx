@@ -27,6 +27,8 @@ export function IngredientCard({ ingredient, onEdit, onDelete, onAdjustStock }: 
   
   const isLowStock = ingredient.current_stock <= ingredient.min_stock;
   const isCriticalStock = ingredient.current_stock < ingredient.min_stock * 0.5;
+  
+  const lossImpact = ingredient.unit_cost * (ingredient.loss_percentage / 100);
 
   const getExpirationStatus = () => {
     if (!ingredient.expiration_date) return null;
@@ -54,12 +56,23 @@ export function IngredientCard({ ingredient, onEdit, onDelete, onAdjustStock }: 
         <div className="space-y-3">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg truncate">{ingredient.name}</h3>
-              {ingredient.supplier?.name && (
-                <p className="text-sm text-muted-foreground truncate">
-                  {ingredient.supplier.name}
-                </p>
-              )}
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-lg truncate">{ingredient.name}</h3>
+                {ingredient.code && (
+                  <Badge variant="outline" className="text-xs">
+                    #{ingredient.code}
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {ingredient.category && <span>{ingredient.category}</span>}
+                {ingredient.supplier?.name && (
+                  <>
+                    {ingredient.category && <span>•</span>}
+                    <span className="truncate">{ingredient.supplier.name}</span>
+                  </>
+                )}
+              </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -97,8 +110,13 @@ export function IngredientCard({ ingredient, onEdit, onDelete, onAdjustStock }: 
             
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Mínimo: {ingredient.min_stock} {ingredient.unit}</span>
-              <span>Custo: R$ {ingredient.unit_cost.toFixed(2)}</span>
+              <span>Custo Médio: R$ {ingredient.average_cost.toFixed(2)}</span>
             </div>
+            {ingredient.current_balance > 0 && (
+              <div className="text-xs text-muted-foreground">
+                Saldo: R$ {ingredient.current_balance.toFixed(2)}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -123,6 +141,21 @@ export function IngredientCard({ ingredient, onEdit, onDelete, onAdjustStock }: 
             {ingredient.expiration_date && !expirationStatus && (
               <Badge variant="outline">
                 Validade: {format(parseISO(ingredient.expiration_date), "dd/MM/yyyy", { locale: ptBR })}
+              </Badge>
+            )}
+            {ingredient.loss_percentage > 0 && (
+              <Badge variant="secondary">
+                Perda: {ingredient.loss_percentage}%
+              </Badge>
+            )}
+            {ingredient.sector && (
+              <Badge variant="outline">
+                {ingredient.sector}
+              </Badge>
+            )}
+            {ingredient.ean && (
+              <Badge variant="outline" className="font-mono text-xs">
+                EAN: {ingredient.ean}
               </Badge>
             )}
           </div>

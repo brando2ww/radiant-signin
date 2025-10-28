@@ -18,6 +18,9 @@ interface IngredientFiltersProps {
   filteredCount: number;
   lowStockCount: number;
   criticalStockCount: number;
+  categories?: string[];
+  selectedCategory?: string;
+  onCategoryChange?: (value: string) => void;
 }
 
 export function IngredientFilters({
@@ -29,6 +32,9 @@ export function IngredientFilters({
   filteredCount,
   lowStockCount,
   criticalStockCount,
+  categories = [],
+  selectedCategory,
+  onCategoryChange,
 }: IngredientFiltersProps) {
   return (
     <div className="space-y-4">
@@ -36,12 +42,27 @@ export function IngredientFilters({
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar insumos..."
+            placeholder="Buscar por nome, codigo ou EAN..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-10"
           />
         </div>
+        {categories.length > 0 && onCategoryChange && (
+          <Select value={selectedCategory} onValueChange={onCategoryChange}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
         <Select value={stockStatus} onValueChange={onStockStatusChange}>
           <SelectTrigger className="w-full sm:w-[200px]">
             <SelectValue placeholder="Status do estoque" />
@@ -50,7 +71,7 @@ export function IngredientFilters({
             <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="ok">Estoque OK</SelectItem>
             <SelectItem value="low">Estoque Baixo</SelectItem>
-            <SelectItem value="critical">Crítico</SelectItem>
+            <SelectItem value="critical">Critico</SelectItem>
           </SelectContent>
         </Select>
       </div>
