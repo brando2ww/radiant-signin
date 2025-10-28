@@ -98,7 +98,7 @@ export function IngredientDialog({
       name: ingredient?.name || "",
       category: ingredient?.category || "",
       unit: ingredient?.unit || "un",
-      supplier_id: ingredient?.supplier_id || "",
+      supplier_id: ingredient?.supplier_id || "none",
       current_stock: ingredient?.current_stock || 0,
       min_stock: ingredient?.min_stock || 0,
       max_stock: ingredient?.max_stock || 0,
@@ -128,7 +128,7 @@ export function IngredientDialog({
           name: ingredient.name || "",
           category: ingredient.category || "",
           unit: ingredient.unit || "un",
-          supplier_id: ingredient.supplier_id || "",
+          supplier_id: ingredient.supplier_id || "none",
           current_stock: ingredient.current_stock || 0,
           min_stock: ingredient.min_stock || 0,
           max_stock: ingredient.max_stock || 0,
@@ -154,7 +154,7 @@ export function IngredientDialog({
           name: "",
           category: "",
           unit: "un",
-          supplier_id: "",
+          supplier_id: "none",
           current_stock: 0,
           min_stock: 0,
           max_stock: 0,
@@ -184,6 +184,10 @@ export function IngredientDialog({
     
     onSubmit({
       ...data,
+      supplier_id: data.supplier_id === "none" ? null : data.supplier_id,
+      category: data.category || null,
+      sector: data.sector || null,
+      cost_center: data.cost_center || null,
       average_cost: avgCost,
       current_balance: currentBalance,
     });
@@ -352,7 +356,7 @@ export function IngredientDialog({
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">Nenhum</SelectItem>
+                              <SelectItem value="none">Nenhum</SelectItem>
                               {activeSuppliers.map((supplier) => (
                                 <SelectItem key={supplier.id} value={supplier.id}>
                                   {supplier.name}
