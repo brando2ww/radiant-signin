@@ -34,13 +34,13 @@ export const PricingSection = () => {
 
             <div className="mt-4 mb-6">
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-5xl font-bold">R$ 97</span>
+                <span className="text-5xl font-bold">R$ 29,90</span>
                 <span className="text-muted-foreground">/mês</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground line-through">De R$ 197/mês</span>
+                <span className="text-muted-foreground line-through">De R$ 79,90/mês</span>
                 <span className="bg-green-500/10 text-green-500 px-2 py-1 rounded text-sm font-semibold">
-                  50% OFF
+                  62% OFF
                 </span>
               </div>
             </div>

@@ -92,7 +92,7 @@ const Vendas = () => {
       <section className="py-20 bg-gradient-to-br from-primary/10 to-primary/5">
         <div className="container text-center">
           <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            Não perca o desconto de 50%
+            Não perca o desconto de 62%
           </h2>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
             Vagas limitadas para garantir um lançamento de qualidade e suporte excepcional
