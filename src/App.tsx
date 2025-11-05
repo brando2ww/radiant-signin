@@ -22,6 +22,7 @@ import PublicMenu from "./pages/PublicMenu";
 import Delivery from "./pages/Delivery";
 import PDV from "./pages/PDV";
 import InstallApp from "./pages/InstallApp";
+import Vendas from "./pages/Vendas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -143,6 +144,7 @@ const App = () => (
             <Route path="/avaliar/:userId" element={<PublicEvaluation />} />
             <Route path="/cardapio/:userId" element={<PublicMenu />} />
             <Route path="/instalar-app" element={<InstallApp />} />
+            <Route path="/vendas" element={<Vendas />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

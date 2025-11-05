@@ -2622,6 +2622,66 @@ export type Database = {
         }
         Relationships: []
       }
+      waitlist: {
+        Row: {
+          company_name: string | null
+          created_at: string | null
+          email: string
+          id: string
+          main_challenge: string | null
+          monthly_revenue: string | null
+          name: string
+          notes: string | null
+          phone: string
+          position: number | null
+          referral_code: string | null
+          referred_by: string | null
+          status: string | null
+          updated_at: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          main_challenge?: string | null
+          monthly_revenue?: string | null
+          name: string
+          notes?: string | null
+          phone: string
+          position?: number | null
+          referral_code?: string | null
+          referred_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          main_challenge?: string | null
+          monthly_revenue?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string
+          position?: number | null
+          referral_code?: string | null
+          referred_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
