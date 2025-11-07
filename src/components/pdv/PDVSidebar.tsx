@@ -59,57 +59,31 @@ const staggerVariants = {
   },
 };
 
-const navItems = [
-  { 
-    title: "Dashboard", 
-    url: "/pdv/dashboard", 
-    icon: LayoutDashboard 
+const sectionItems = [
+  {
+    title: "Financeiro",
+    items: [] // Reservado para futuras páginas financeiras
   },
-  { 
-    title: "Salão", 
-    url: "/pdv/salao", 
-    icon: Armchair 
+  {
+    title: "Frente de Caixa",
+    items: [
+      { title: "Salão", url: "/pdv/salao", icon: Armchair },
+      { title: "Balcão", url: "/pdv/balcao", icon: ShoppingBag },
+      { title: "Caixa", url: "/pdv/caixa", icon: DollarSign },
+      { title: "Cozinha", url: "/pdv/cozinha", icon: ChefHat },
+    ]
   },
-  { 
-    title: "Balcão", 
-    url: "/pdv/balcao", 
-    icon: ShoppingBag 
-  },
-  { 
-    title: "Caixa", 
-    url: "/pdv/caixa", 
-    icon: DollarSign 
-  },
-  { 
-    title: "Cozinha", 
-    url: "/pdv/cozinha", 
-    icon: ChefHat 
-  },
-  { 
-    title: "Produtos", 
-    url: "/pdv/produtos", 
-    icon: Package 
-  },
-  { 
-    title: "Estoque", 
-    url: "/pdv/estoque", 
-    icon: Warehouse 
-  },
-  { 
-    title: "Fornecedores", 
-    url: "/pdv/fornecedores", 
-    icon: Truck 
-  },
-  { 
-    title: "Relatórios", 
-    url: "/pdv/relatorios", 
-    icon: BarChart3 
-  },
-  { 
-    title: "Configurações", 
-    url: "/pdv/configuracoes", 
-    icon: Settings 
-  },
+  {
+    title: "Administrador",
+    items: [
+      { title: "Dashboard", url: "/pdv/dashboard", icon: LayoutDashboard },
+      { title: "Produtos", url: "/pdv/produtos", icon: Package },
+      { title: "Estoque", url: "/pdv/estoque", icon: Warehouse },
+      { title: "Fornecedores", url: "/pdv/fornecedores", icon: Truck },
+      { title: "Relatórios", url: "/pdv/relatorios", icon: BarChart3 },
+      { title: "Configurações", url: "/pdv/configuracoes", icon: Settings },
+    ]
+  }
 ];
 
 export function PDVSidebar() {
@@ -155,23 +129,36 @@ export function PDVSidebar() {
             <div className="flex h-full w-full flex-col">
               <div className="flex grow flex-col">
                 <ScrollArea className="h-16 grow p-2">
-                  <div className={cn("flex w-full flex-col gap-1")}>
-                    {navItems.map((item) => (
-                      <NavLink
-                        key={item.url}
-                        to={item.url}
-                        className={cn(
-                          "flex h-9 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-accent-foreground",
-                          pathname === item.url && "bg-accent text-accent-foreground font-medium"
-                        )}
-                      >
-                        <item.icon className="h-4 w-4" />
-                        <motion.li variants={variants}>
+                  <div className={cn("flex w-full flex-col")}>
+                    {sectionItems.map((section, sectionIndex) => (
+                      section.items.length > 0 && (
+                        <div key={section.title} className={sectionIndex > 0 ? "mt-4" : ""}>
                           {!isCollapsed && (
-                            <p className="ml-2 text-sm font-medium">{item.title}</p>
+                            <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                              {section.title}
+                            </div>
                           )}
-                        </motion.li>
-                      </NavLink>
+                          <div className="flex flex-col gap-1">
+                            {section.items.map((item) => (
+                              <NavLink
+                                key={item.url}
+                                to={item.url}
+                                className={cn(
+                                  "flex h-9 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-accent-foreground",
+                                  pathname === item.url && "bg-accent text-accent-foreground font-medium"
+                                )}
+                              >
+                                <item.icon className="h-4 w-4" />
+                                <motion.li variants={variants}>
+                                  {!isCollapsed && (
+                                    <p className="ml-2 text-sm font-medium">{item.title}</p>
+                                  )}
+                                </motion.li>
+                              </NavLink>
+                            ))}
+                          </div>
+                        </div>
+                      )
                     ))}
                   </div>
                 </ScrollArea>
