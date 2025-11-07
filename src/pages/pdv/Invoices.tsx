@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Upload, FileText, Download } from "lucide-react";
 import { InvoiceUploadDialog } from "@/components/pdv/invoices/InvoiceUploadDialog";
-import { InvoiceReviewDialog } from "@/components/pdv/invoices/InvoiceReviewDialog";
+import { InvoiceReviewWizard } from "@/components/pdv/invoices/InvoiceReviewWizard";
 import { InvoiceCard } from "@/components/pdv/invoices/InvoiceCard";
 import { InvoiceFilters } from "@/components/pdv/invoices/InvoiceFilters";
 import { usePDVInvoices, useDeleteInvoice, PDVInvoice } from "@/hooks/use-pdv-invoices";
@@ -187,7 +187,7 @@ export default function Invoices() {
         onParsed={handleParsed}
       />
 
-      <InvoiceReviewDialog
+      <InvoiceReviewWizard
         open={reviewOpen}
         onOpenChange={setReviewOpen}
         invoice={parsedInvoice}
