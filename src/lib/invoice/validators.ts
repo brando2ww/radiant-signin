@@ -1,4 +1,5 @@
-export function validateCNPJ(cnpj: string): boolean {
+export function validateCNPJ(cnpj: string | null | undefined): boolean {
+  if (!cnpj) return false;
   const cleanCNPJ = cnpj.replace(/\D/g, '');
   
   if (cleanCNPJ.length !== 14) return false;
@@ -27,15 +28,18 @@ export function validateCNPJ(cnpj: string): boolean {
   return result === parseInt(cleanCNPJ.charAt(13));
 }
 
-export function formatCNPJ(cnpj: string): string {
+export function formatCNPJ(cnpj: string | null | undefined): string {
+  if (!cnpj) return '';
   const clean = cnpj.replace(/\D/g, '');
   return clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
 }
 
-export function validateNFeKey(key: string): boolean {
+export function validateNFeKey(key: string | null | undefined): boolean {
+  if (!key) return false;
   return /^\d{44}$/.test(key);
 }
 
-export function formatNFeKey(key: string): string {
+export function formatNFeKey(key: string | null | undefined): string {
+  if (!key) return '';
   return key.replace(/(\d{4})(?=\d)/g, '$1 ');
 }
