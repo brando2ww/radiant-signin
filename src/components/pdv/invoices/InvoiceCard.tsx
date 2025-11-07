@@ -51,7 +51,7 @@ export function InvoiceCard({ invoice, onView, onDelete }: InvoiceCardProps) {
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <div>
-                <span className="font-medium">CNPJ:</span> {formatCNPJ(invoice.supplier_cnpj)}
+                <span className="font-medium">CNPJ:</span> {formatCNPJ(String(invoice.supplier_cnpj || ''))}
               </div>
               <div>
                 <span className="font-medium">Emissão:</span>{' '}

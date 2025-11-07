@@ -225,7 +225,7 @@ export function InvoiceReviewDialog({
                 </div>
                 <div>
                   <Label>CNPJ</Label>
-                  <p className="mt-1">{formatCNPJ(invoice.supplier.cnpj)}</p>
+                  <p className="mt-1">{formatCNPJ(String(invoice.supplier.cnpj || ''))}</p>
                 </div>
               </div>
             </div>
