@@ -9,7 +9,16 @@ import {
   Warehouse,
   Truck,
   BarChart3,
-  Settings
+  Settings,
+  FileText,
+  TrendingDown,
+  TrendingUp,
+  ArrowLeftRight,
+  FolderTree,
+  Target,
+  FileBarChart,
+  PackageSearch,
+  PieChart
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -62,7 +71,17 @@ const staggerVariants = {
 const sectionItems = [
   {
     title: "Financeiro",
-    items: [] // Reservado para futuras páginas financeiras
+    items: [
+      { title: "Lançamentos", url: "/pdv/financeiro/lancamentos", icon: FileText },
+      { title: "Contas a Pagar", url: "/pdv/financeiro/contas-pagar", icon: TrendingDown },
+      { title: "Contas a Receber", url: "/pdv/financeiro/contas-receber", icon: TrendingUp },
+      { title: "Fluxo de Caixa", url: "/pdv/financeiro/fluxo-caixa", icon: ArrowLeftRight },
+      { title: "Plano de Contas", url: "/pdv/financeiro/plano-contas", icon: FolderTree },
+      { title: "Centros de Custo", url: "/pdv/financeiro/centros-custo", icon: Target },
+      { title: "DRE", url: "/pdv/financeiro/dre", icon: FileBarChart },
+      { title: "CMV Produtos", url: "/pdv/financeiro/cmv-produtos", icon: PackageSearch },
+      { title: "CMV Geral", url: "/pdv/financeiro/cmv-geral", icon: PieChart },
+    ]
   },
   {
     title: "Frente de Caixa",

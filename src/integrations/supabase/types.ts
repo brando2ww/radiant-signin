@@ -1074,6 +1074,45 @@ export type Database = {
         }
         Relationships: []
       }
+      pdv_bank_accounts: {
+        Row: {
+          account_number: string | null
+          bank_name: string | null
+          created_at: string | null
+          current_balance: number | null
+          id: string
+          initial_balance: number | null
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_number?: string | null
+          bank_name?: string | null
+          created_at?: string | null
+          current_balance?: number | null
+          id?: string
+          initial_balance?: number | null
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_number?: string | null
+          bank_name?: string | null
+          created_at?: string | null
+          current_balance?: number | null
+          id?: string
+          initial_balance?: number | null
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       pdv_cash_closures: {
         Row: {
           closed_at: string | null
@@ -1304,6 +1343,50 @@ export type Database = {
         }
         Relationships: []
       }
+      pdv_chart_of_accounts: {
+        Row: {
+          account_type: string
+          code: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          parent_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_type: string
+          code: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          parent_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_type?: string
+          code?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          parent_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_chart_of_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_cmv_reports: {
         Row: {
           cmv_percentage: number | null
@@ -1414,6 +1497,105 @@ export type Database = {
           visit_count?: number | null
         }
         Relationships: []
+      }
+      pdv_financial_transactions: {
+        Row: {
+          amount: number
+          bank_account_id: string | null
+          chart_account_id: string | null
+          cost_center_id: string | null
+          created_at: string | null
+          customer_id: string | null
+          description: string
+          document_number: string | null
+          due_date: string
+          id: string
+          notes: string | null
+          payment_date: string | null
+          payment_method: string | null
+          status: string | null
+          supplier_id: string | null
+          transaction_type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bank_account_id?: string | null
+          chart_account_id?: string | null
+          cost_center_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          description: string
+          document_number?: string | null
+          due_date: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          status?: string | null
+          supplier_id?: string | null
+          transaction_type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string | null
+          chart_account_id?: string | null
+          cost_center_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          description?: string
+          document_number?: string | null
+          due_date?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string | null
+          payment_method?: string | null
+          status?: string | null
+          supplier_id?: string | null
+          transaction_type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_financial_transactions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_financial_transactions_chart_account_id_fkey"
+            columns: ["chart_account_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_financial_transactions_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_financial_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_financial_transactions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pdv_ifood_products: {
         Row: {
