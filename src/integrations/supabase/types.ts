@@ -1855,6 +1855,214 @@ export type Database = {
           },
         ]
       }
+      pdv_invoice_items: {
+        Row: {
+          cfop: string | null
+          cofins_value: number | null
+          created_at: string
+          discount_value: number | null
+          freight_value: number | null
+          icms_value: number | null
+          id: string
+          ingredient_id: string | null
+          insurance_value: number | null
+          invoice_id: string
+          ipi_value: number | null
+          item_number: number
+          match_status: string
+          ncm: string | null
+          other_expenses: number | null
+          pis_value: number | null
+          product_code: string | null
+          product_ean: string | null
+          product_name: string
+          quantity: number
+          suggested_ingredient_id: string | null
+          total_value: number
+          unit: string
+          unit_value: number
+        }
+        Insert: {
+          cfop?: string | null
+          cofins_value?: number | null
+          created_at?: string
+          discount_value?: number | null
+          freight_value?: number | null
+          icms_value?: number | null
+          id?: string
+          ingredient_id?: string | null
+          insurance_value?: number | null
+          invoice_id: string
+          ipi_value?: number | null
+          item_number: number
+          match_status?: string
+          ncm?: string | null
+          other_expenses?: number | null
+          pis_value?: number | null
+          product_code?: string | null
+          product_ean?: string | null
+          product_name: string
+          quantity: number
+          suggested_ingredient_id?: string | null
+          total_value: number
+          unit: string
+          unit_value: number
+        }
+        Update: {
+          cfop?: string | null
+          cofins_value?: number | null
+          created_at?: string
+          discount_value?: number | null
+          freight_value?: number | null
+          icms_value?: number | null
+          id?: string
+          ingredient_id?: string | null
+          insurance_value?: number | null
+          invoice_id?: string
+          ipi_value?: number | null
+          item_number?: number
+          match_status?: string
+          ncm?: string | null
+          other_expenses?: number | null
+          pis_value?: number | null
+          product_code?: string | null
+          product_ean?: string | null
+          product_name?: string
+          quantity?: number
+          suggested_ingredient_id?: string | null
+          total_value?: number
+          unit?: string
+          unit_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_invoice_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_invoice_items_suggested_ingredient_id_fkey"
+            columns: ["suggested_ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_ingredients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_invoices: {
+        Row: {
+          created_at: string
+          discount_value: number | null
+          emission_date: string
+          entry_date: string | null
+          financial_transaction_id: string | null
+          freight_value: number | null
+          id: string
+          import_errors: Json | null
+          insurance_value: number | null
+          invoice_key: string
+          invoice_number: string
+          invoice_type: string
+          notes: string | null
+          operation_type: string
+          other_expenses: number | null
+          pdf_url: string | null
+          series: string | null
+          status: string
+          supplier_cnpj: string
+          supplier_id: string | null
+          supplier_name: string
+          total_invoice: number
+          total_products: number
+          total_tax: number
+          updated_at: string
+          user_id: string
+          xml_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          discount_value?: number | null
+          emission_date: string
+          entry_date?: string | null
+          financial_transaction_id?: string | null
+          freight_value?: number | null
+          id?: string
+          import_errors?: Json | null
+          insurance_value?: number | null
+          invoice_key: string
+          invoice_number: string
+          invoice_type: string
+          notes?: string | null
+          operation_type: string
+          other_expenses?: number | null
+          pdf_url?: string | null
+          series?: string | null
+          status?: string
+          supplier_cnpj: string
+          supplier_id?: string | null
+          supplier_name: string
+          total_invoice?: number
+          total_products?: number
+          total_tax?: number
+          updated_at?: string
+          user_id: string
+          xml_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          discount_value?: number | null
+          emission_date?: string
+          entry_date?: string | null
+          financial_transaction_id?: string | null
+          freight_value?: number | null
+          id?: string
+          import_errors?: Json | null
+          insurance_value?: number | null
+          invoice_key?: string
+          invoice_number?: string
+          invoice_type?: string
+          notes?: string | null
+          operation_type?: string
+          other_expenses?: number | null
+          pdf_url?: string | null
+          series?: string | null
+          status?: string
+          supplier_cnpj?: string
+          supplier_id?: string | null
+          supplier_name?: string
+          total_invoice?: number
+          total_products?: number
+          total_tax?: number
+          updated_at?: string
+          user_id?: string
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_invoices_financial_transaction_id_fkey"
+            columns: ["financial_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_order_items: {
         Row: {
           added_at: string | null
