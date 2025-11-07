@@ -84,7 +84,7 @@ export function Step4ProductsData({ data, onUpdate }: Step4ProductsDataProps) {
       </div>
 
       {/* Lista de produtos */}
-      <ScrollArea className="h-[400px] pr-4">
+      <ScrollArea className="max-h-[450px] pr-4">
         <div className="space-y-4">
           {data.items.map((item, index) => (
             <ProductItemEditor

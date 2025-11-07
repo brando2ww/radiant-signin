@@ -277,7 +277,7 @@ export function InvoiceReviewWizard({
         </div>
 
         {/* Step Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-y-auto px-1">
           {currentStep === 1 && (
             <Step1InvoiceData data={editableData} onUpdate={handleUpdate} />
           )}

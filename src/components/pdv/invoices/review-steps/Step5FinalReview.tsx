@@ -37,7 +37,7 @@ export function Step5FinalReview({ data }: Step5FinalReviewProps) {
         </Alert>
       )}
 
-      <ScrollArea className="h-[500px] pr-4">
+      <ScrollArea className="max-h-[500px] pr-4">
         <div className="space-y-6">
           {/* Dados da Nota */}
           <div className="space-y-3">
