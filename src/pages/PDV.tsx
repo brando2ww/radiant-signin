@@ -14,6 +14,7 @@ import PDVStock from "./pdv/Stock";
 import PDVSuppliers from "./pdv/Suppliers";
 import PDVReports from "./pdv/Reports";
 import PDVSettings from "./pdv/Settings";
+import Invoices from "./pdv/Invoices";
 import FinancialTransactions from "./pdv/financial/FinancialTransactions";
 import AccountsPayable from "./pdv/financial/AccountsPayable";
 import AccountsReceivable from "./pdv/financial/AccountsReceivable";
@@ -72,6 +73,7 @@ export default function PDV() {
               <Route path="produtos" element={<PDVProducts />} />
               <Route path="estoque" element={<PDVStock />} />
               <Route path="fornecedores" element={<PDVSuppliers />} />
+              <Route path="notas-fiscais" element={<Invoices />} />
               <Route path="relatorios" element={<PDVReports />} />
               <Route path="configuracoes" element={<PDVSettings />} />
             </Routes>

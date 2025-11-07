@@ -18,7 +18,8 @@ import {
   Target,
   FileBarChart,
   PackageSearch,
-  PieChart
+  PieChart,
+  Receipt
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -99,6 +100,7 @@ const sectionItems = [
       { title: "Produtos", url: "/pdv/produtos", icon: Package },
       { title: "Estoque", url: "/pdv/estoque", icon: Warehouse },
       { title: "Fornecedores", url: "/pdv/fornecedores", icon: Truck },
+      { title: "Notas Fiscais", url: "/pdv/notas-fiscais", icon: Receipt },
       { title: "Relatórios", url: "/pdv/relatorios", icon: BarChart3 },
       { title: "Configurações", url: "/pdv/configuracoes", icon: Settings },
     ]
