@@ -41,7 +41,7 @@ export interface PDVSupplier {
 export function usePDVSuppliers() {
   const { user } = useAuth();
 
-  return useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['pdv-suppliers', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
@@ -57,6 +57,11 @@ export function usePDVSuppliers() {
     },
     enabled: !!user?.id,
   });
+
+  return {
+    suppliers: data || [],
+    isLoading,
+  };
 }
 
 export function useCreateSupplier() {

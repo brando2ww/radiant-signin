@@ -79,7 +79,7 @@ export function IngredientDialog({
   onSubmit,
   isSubmitting,
 }: IngredientDialogProps) {
-  const { data: suppliers = [] } = usePDVSuppliers();
+  const { suppliers } = usePDVSuppliers();
   const { mutate: createSupplier, isPending: isCreatingSupplier } = useCreateSupplier();
   const { categories, createCategory, isCreating: isCreatingCategory } = useIngredientCategories();
   const { sectors, createSector, isCreating: isCreatingSector } = usePDVSectors();

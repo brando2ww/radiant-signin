@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function PDVSuppliers() {
-  const { data: suppliers = [], isLoading } = usePDVSuppliers();
+  const { suppliers, isLoading } = usePDVSuppliers();
   const { mutate: createSupplier, isPending: isCreating } = useCreateSupplier();
   const { mutate: updateSupplier, isPending: isUpdating } = useUpdateSupplier();
   const { mutate: deleteSupplier, isPending: isDeleting } = useDeleteSupplier();

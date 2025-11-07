@@ -1,8 +1,73 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePDVFinancialTransactions, type TransactionFilters } from "@/hooks/use-pdv-financial-transactions";
+import { FinancialStatsCards } from "@/components/pdv/financial/FinancialStatsCards";
+import { PDVTransactionFilters } from "@/components/pdv/financial/PDVTransactionFilters";
+import { PDVTransactionList } from "@/components/pdv/financial/PDVTransactionList";
+import { PDVTransactionDialog } from "@/components/pdv/financial/PDVTransactionDialog";
+import { MarkAsPaidDialog } from "@/components/pdv/financial/MarkAsPaidDialog";
+import type { PDVFinancialTransaction } from "@/hooks/use-pdv-financial-transactions";
 
 export default function FinancialTransactions() {
+  const [filters, setFilters] = useState<TransactionFilters>({});
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [markAsPaidOpen, setMarkAsPaidOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<PDVFinancialTransaction | undefined>();
+  const [activeTab, setActiveTab] = useState('all');
+
+  const {
+    transactions,
+    stats,
+    isLoading,
+    createTransaction,
+    updateTransaction,
+    deleteTransaction,
+    markAsPaid,
+  } = usePDVFinancialTransactions(filters);
+
+  const handleEdit = (transaction: PDVFinancialTransaction) => {
+    setSelectedTransaction(transaction);
+    setDialogOpen(true);
+  };
+
+  const handleMarkAsPaid = (transaction: PDVFinancialTransaction) => {
+    setSelectedTransaction(transaction);
+    setMarkAsPaidOpen(true);
+  };
+
+  const handleSubmit = async (data: any) => {
+    if (selectedTransaction) {
+      await updateTransaction(data);
+    } else {
+      await createTransaction(data);
+    }
+  };
+
+  const handleMarkAsPaidSubmit = async (data: any) => {
+    await markAsPaid(data);
+  };
+
+  const handleDelete = async (id: string) => {
+    await deleteTransaction(id);
+  };
+
+  const handleNewTransaction = () => {
+    setSelectedTransaction(undefined);
+    setDialogOpen(true);
+  };
+
+  // Filter transactions based on active tab
+  const filteredTransactions = transactions.filter((t) => {
+    if (activeTab === 'payable') return t.transaction_type === 'payable' && t.status === 'pending';
+    if (activeTab === 'receivable') return t.transaction_type === 'receivable' && t.status === 'pending';
+    if (activeTab === 'overdue') return t.status === 'overdue' || (t.status === 'pending' && new Date(t.due_date) < new Date());
+    if (activeTab === 'paid') return t.status === 'paid';
+    return true;
+  });
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -12,56 +77,80 @@ export default function FinancialTransactions() {
             Registre e gerencie todas as transações financeiras
           </p>
         </div>
-        <Button>
+        <Button onClick={handleNewTransaction}>
           <Plus className="mr-2 h-4 w-4" />
           Novo Lançamento
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Total a Pagar</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">R$ 0,00</div>
-            <p className="text-xs text-muted-foreground mt-1">0 contas pendentes</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Total a Receber</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-success">R$ 0,00</div>
-            <p className="text-xs text-muted-foreground mt-1">0 contas pendentes</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Saldo Previsto</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">R$ 0,00</div>
-            <p className="text-xs text-muted-foreground mt-1">Para este mês</p>
-          </CardContent>
-        </Card>
-      </div>
+      <FinancialStatsCards stats={stats} />
 
       <Card>
         <CardHeader>
-          <CardTitle>Transações Recentes</CardTitle>
-          <CardDescription>Últimos lançamentos financeiros registrados</CardDescription>
+          <CardTitle>Filtros</CardTitle>
+          <CardDescription>Refine sua busca de lançamentos</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            <p>Nenhum lançamento registrado ainda</p>
-            <p className="text-sm mt-2">Clique em "Novo Lançamento" para começar</p>
-          </div>
+          <PDVTransactionFilters filters={filters} onFiltersChange={setFilters} />
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Transações</CardTitle>
+          <CardDescription>Visualize e gerencie seus lançamentos</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="all">
+                Todas ({transactions.length})
+              </TabsTrigger>
+              <TabsTrigger value="payable">
+                A Pagar ({stats.pendingPayableCount})
+              </TabsTrigger>
+              <TabsTrigger value="receivable">
+                A Receber ({stats.pendingReceivableCount})
+              </TabsTrigger>
+              <TabsTrigger value="overdue">
+                Vencidas ({stats.overdueCount})
+              </TabsTrigger>
+              <TabsTrigger value="paid">
+                Pagas
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value={activeTab}>
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">Carregando...</p>
+                </div>
+              ) : (
+                <PDVTransactionList
+                  transactions={filteredTransactions}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onMarkAsPaid={handleMarkAsPaid}
+                />
+              )}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      <PDVTransactionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        transaction={selectedTransaction}
+        onSubmit={handleSubmit}
+      />
+
+      <MarkAsPaidDialog
+        open={markAsPaidOpen}
+        onOpenChange={setMarkAsPaidOpen}
+        transaction={selectedTransaction}
+        onSubmit={handleMarkAsPaidSubmit}
+      />
     </div>
   );
 }
