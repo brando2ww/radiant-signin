@@ -20,6 +20,7 @@ import {
   Users,
   Star,
   UtensilsCrossed,
+  DollarSign,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link, useLocation } from "react-router-dom";
@@ -35,6 +36,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { EditProfileDialog } from "@/components/ui/edit-profile-dialog";
+import { useUserModules } from "@/hooks/use-user-modules";
 
 const sidebarVariants = {
   open: {
@@ -84,6 +86,7 @@ export function SessionNavBar() {
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const location = useLocation();
   const { user, profile, signOut } = useAuth();
+  const { hasModule } = useUserModules();
   
   const pathname = location.pathname;
 
@@ -283,6 +286,23 @@ export function SessionNavBar() {
                         )}
                       </motion.li>
                     </Link>
+
+                    {hasModule('pdv') && (
+                      <Link
+                        to="/pdv/dashboard"
+                        className={cn(
+                          "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
+                          pathname.includes("/pdv") && "bg-muted text-primary",
+                        )}
+                      >
+                        <DollarSign className="h-4 w-4" />
+                        <motion.li variants={variants}>
+                          {!isCollapsed && (
+                            <p className="ml-2 text-sm font-medium">PDV</p>
+                          )}
+                        </motion.li>
+                      </Link>
+                    )}
 
                     <Separator className="my-2" />
 
