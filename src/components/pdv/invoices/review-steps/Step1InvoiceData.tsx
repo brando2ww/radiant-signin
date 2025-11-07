@@ -7,7 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { EditableInvoiceData } from "@/types/invoice";
 import { formatNFeKey } from "@/lib/invoice/validators";
 
@@ -134,68 +134,74 @@ export function Step1InvoiceData({ data, onUpdate }: Step1InvoiceDataProps) {
         
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="total-products">Total de Produtos</Label>
+            <Label htmlFor="total-products">Total de Produtos (R$)</Label>
             <Input
               id="total-products"
               type="number"
               step="0.01"
               value={data.totals.products}
               onChange={(e) => handleTotalChange('products', parseFloat(e.target.value))}
+              placeholder="0,00"
             />
           </div>
 
           <div>
-            <Label htmlFor="total-tax">Total de Impostos</Label>
+            <Label htmlFor="total-tax">Total de Impostos (R$)</Label>
             <Input
               id="total-tax"
               type="number"
               step="0.01"
               value={data.totals.tax}
               onChange={(e) => handleTotalChange('tax', parseFloat(e.target.value))}
+              placeholder="0,00"
             />
           </div>
 
           <div>
-            <Label htmlFor="freight">Frete</Label>
+            <Label htmlFor="freight">Frete (R$)</Label>
             <Input
               id="freight"
               type="number"
               step="0.01"
               value={data.totals.freight}
               onChange={(e) => handleTotalChange('freight', parseFloat(e.target.value))}
+              placeholder="0,00"
             />
           </div>
 
           <div>
-            <Label htmlFor="insurance">Seguro</Label>
+            <Label htmlFor="insurance">Seguro (R$)</Label>
             <Input
               id="insurance"
               type="number"
               step="0.01"
               value={data.totals.insurance}
               onChange={(e) => handleTotalChange('insurance', parseFloat(e.target.value))}
+              placeholder="0,00"
             />
           </div>
 
           <div>
-            <Label htmlFor="other-expenses">Outras Despesas</Label>
+            <Label htmlFor="other-expenses">Outras Despesas (R$)</Label>
             <Input
               id="other-expenses"
               type="number"
               step="0.01"
               value={data.totals.otherExpenses}
               onChange={(e) => handleTotalChange('otherExpenses', parseFloat(e.target.value))}
+              placeholder="0,00"
             />
           </div>
 
           <div>
-            <Label htmlFor="discount">Desconto</Label>
+            <Label htmlFor="discount">Desconto (R$)</Label>
             <Input
               id="discount"
               type="number"
               step="0.01"
               value={data.totals.discount}
               onChange={(e) => handleTotalChange('discount', parseFloat(e.target.value))}
+              placeholder="0,00"
             />
           </div>
         </div>
@@ -203,13 +209,9 @@ export function Step1InvoiceData({ data, onUpdate }: Step1InvoiceDataProps) {
         <div className="bg-primary/10 p-4 rounded-lg">
           <div className="flex justify-between items-center">
             <Label className="text-base">Total da Nota</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={data.totals.invoice}
-              onChange={(e) => handleTotalChange('invoice', parseFloat(e.target.value))}
-              className="w-40 text-right font-semibold"
-            />
+            <span className="text-2xl font-bold">
+              {formatCurrency(data.totals.invoice)}
+            </span>
           </div>
         </div>
       </div>

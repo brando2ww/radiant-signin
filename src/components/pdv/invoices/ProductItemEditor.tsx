@@ -122,7 +122,7 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
           </div>
 
           <div>
-            <Label htmlFor={`unit-value-${item.itemNumber}`} className="text-xs">Valor Unitário</Label>
+            <Label htmlFor={`unit-value-${item.itemNumber}`} className="text-xs">Valor Unitário (R$)</Label>
             <Input
               id={`unit-value-${item.itemNumber}`}
               type="number"
@@ -130,11 +130,12 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
               value={item.unitValue}
               onChange={(e) => handleFieldChange('unitValue', parseFloat(e.target.value))}
               className="h-8"
+              placeholder="0,00"
             />
           </div>
 
           <div>
-            <Label htmlFor={`total-value-${item.itemNumber}`} className="text-xs">Valor Total</Label>
+            <Label htmlFor={`total-value-${item.itemNumber}`} className="text-xs">Valor Total (R$)</Label>
             <Input
               id={`total-value-${item.itemNumber}`}
               type="number"
@@ -142,6 +143,7 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
               value={item.totalValue}
               onChange={(e) => handleFieldChange('totalValue', parseFloat(e.target.value))}
               className="h-8"
+              placeholder="0,00"
             />
           </div>
         </div>
@@ -153,7 +155,7 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
           <Label className="text-xs mb-2 block">Impostos</Label>
           <div className="grid grid-cols-4 gap-3">
             <div>
-              <Label htmlFor={`icms-${item.itemNumber}`} className="text-xs text-muted-foreground">ICMS</Label>
+              <Label htmlFor={`icms-${item.itemNumber}`} className="text-xs text-muted-foreground">ICMS (R$)</Label>
               <Input
                 id={`icms-${item.itemNumber}`}
                 type="number"
@@ -161,11 +163,12 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
                 value={item.taxes.icms || 0}
                 onChange={(e) => handleTaxChange('icms', parseFloat(e.target.value))}
                 className="h-8"
+                placeholder="0,00"
               />
             </div>
 
             <div>
-              <Label htmlFor={`ipi-${item.itemNumber}`} className="text-xs text-muted-foreground">IPI</Label>
+              <Label htmlFor={`ipi-${item.itemNumber}`} className="text-xs text-muted-foreground">IPI (R$)</Label>
               <Input
                 id={`ipi-${item.itemNumber}`}
                 type="number"
@@ -173,11 +176,12 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
                 value={item.taxes.ipi || 0}
                 onChange={(e) => handleTaxChange('ipi', parseFloat(e.target.value))}
                 className="h-8"
+                placeholder="0,00"
               />
             </div>
 
             <div>
-              <Label htmlFor={`pis-${item.itemNumber}`} className="text-xs text-muted-foreground">PIS</Label>
+              <Label htmlFor={`pis-${item.itemNumber}`} className="text-xs text-muted-foreground">PIS (R$)</Label>
               <Input
                 id={`pis-${item.itemNumber}`}
                 type="number"
@@ -185,11 +189,12 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
                 value={item.taxes.pis || 0}
                 onChange={(e) => handleTaxChange('pis', parseFloat(e.target.value))}
                 className="h-8"
+                placeholder="0,00"
               />
             </div>
 
             <div>
-              <Label htmlFor={`cofins-${item.itemNumber}`} className="text-xs text-muted-foreground">COFINS</Label>
+              <Label htmlFor={`cofins-${item.itemNumber}`} className="text-xs text-muted-foreground">COFINS (R$)</Label>
               <Input
                 id={`cofins-${item.itemNumber}`}
                 type="number"
@@ -197,6 +202,7 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
                 value={item.taxes.cofins || 0}
                 onChange={(e) => handleTaxChange('cofins', parseFloat(e.target.value))}
                 className="h-8"
+                placeholder="0,00"
               />
             </div>
           </div>

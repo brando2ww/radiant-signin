@@ -7,6 +7,7 @@ import { AlertCircle, Check, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { EditableInvoiceData } from "@/types/invoice";
 import { formatNFeKey, formatCNPJ } from "@/lib/invoice/validators";
+import { formatCurrency } from "@/lib/utils";
 
 interface Step5FinalReviewProps {
   data: EditableInvoiceData;
@@ -75,7 +76,7 @@ export function Step5FinalReview({ data }: Step5FinalReviewProps) {
               </div>
               <div>
                 <Label className="text-xs text-muted-foreground">Total da Nota</Label>
-                <p className="text-lg font-semibold">R$ {data.totals.invoice.toFixed(2)}</p>
+                <p className="text-lg font-semibold">{formatCurrency(data.totals.invoice)}</p>
               </div>
             </div>
           </div>
@@ -125,7 +126,7 @@ export function Step5FinalReview({ data }: Step5FinalReviewProps) {
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label className="text-xs text-muted-foreground">Valor</Label>
-                  <p className="font-semibold">R$ {data.financial.amount.toFixed(2)}</p>
+                  <p className="font-semibold">{formatCurrency(data.financial.amount)}</p>
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground">Vencimento</Label>
@@ -135,7 +136,10 @@ export function Step5FinalReview({ data }: Step5FinalReviewProps) {
               {data.financial.installments > 1 && (
                 <div>
                   <Label className="text-xs text-muted-foreground">Parcelamento</Label>
-                  <p>{data.financial.installments}x de R$ {(data.financial.amount / data.financial.installments).toFixed(2)}</p>
+                  <p>
+                    {data.financial.installments}x de{' '}
+                    {formatCurrency(data.financial.amount / data.financial.installments)}
+                  </p>
                 </div>
               )}
               <div>
@@ -178,7 +182,8 @@ export function Step5FinalReview({ data }: Step5FinalReviewProps) {
                     <div className="flex-1">
                       <p className="font-medium">{item.productName}</p>
                       <p className="text-xs text-muted-foreground">
-                        {item.quantity} {item.unit} × R$ {item.unitValue.toFixed(2)} = R$ {item.totalValue.toFixed(2)}
+                        {item.quantity} {item.unit} × {formatCurrency(item.unitValue)} ={' '}
+                        {formatCurrency(item.totalValue)}
                       </p>
                     </div>
                     {item.linkAction.type === 'link' && (

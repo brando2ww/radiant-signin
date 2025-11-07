@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { EditableInvoiceData, EditableFinancialData } from "@/types/invoice";
 
 interface Step3FinancialDataProps {
@@ -48,13 +48,14 @@ export function Step3FinancialData({ data, onUpdate }: Step3FinancialDataProps) 
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="financial-amount">Valor *</Label>
+            <Label htmlFor="financial-amount">Valor (R$) *</Label>
             <Input
               id="financial-amount"
               type="number"
               step="0.01"
               value={data.financial.amount}
               onChange={(e) => handleFinancialChange('amount', parseFloat(e.target.value))}
+              placeholder="0,00"
             />
           </div>
 
@@ -185,8 +186,8 @@ export function Step3FinancialData({ data, onUpdate }: Step3FinancialDataProps) 
           <div className="bg-muted/50 p-4 rounded-lg">
             <p className="text-sm font-medium mb-2">Parcelamento</p>
             <p className="text-sm text-muted-foreground">
-              Serão criadas {data.financial.installments} parcelas de R${' '}
-              {(data.financial.amount / data.financial.installments).toFixed(2)} cada.
+              Serão criadas {data.financial.installments} parcelas de{' '}
+              {formatCurrency(data.financial.amount / data.financial.installments)} cada.
             </p>
           </div>
         )}

@@ -5,6 +5,7 @@ import { PDVInvoice } from "@/hooks/use-pdv-invoices";
 import { FileText, MoreVertical, Trash2, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { formatCNPJ } from "@/lib/invoice/validators";
+import { formatCurrency } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -66,7 +67,7 @@ export function InvoiceCard({ invoice, onView, onDelete }: InvoiceCardProps) {
               <div className="flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Total</span>
                 <span className="text-lg font-semibold">
-                  R$ {invoice.total_invoice.toFixed(2)}
+                  {formatCurrency(invoice.total_invoice)}
                 </span>
               </div>
             </div>
