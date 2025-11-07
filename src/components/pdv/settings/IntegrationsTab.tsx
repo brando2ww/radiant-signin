@@ -164,11 +164,9 @@ export function IntegrationsTab() {
                   Sistema de delivery integrado da Velara
                 </p>
               </div>
-              <Button variant="outline" asChild>
-                <a href="/delivery" target="_blank">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Configurar
-                </a>
+              <Button variant="outline" disabled>
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Configurar
               </Button>
             </div>
             <div className="text-xs text-muted-foreground">
