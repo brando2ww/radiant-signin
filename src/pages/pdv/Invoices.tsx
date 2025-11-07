@@ -35,6 +35,7 @@ export default function Invoices() {
   const deleteInvoice = useDeleteInvoice();
 
   const handleParsed = (invoice: ParsedInvoice) => {
+    console.log('✅ Nota fiscal parseada com sucesso:', invoice);
     setParsedInvoice(invoice);
     setReviewOpen(true);
   };

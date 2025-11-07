@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -46,11 +46,13 @@ export function InvoiceReviewWizard({
   const { createIngredient } = usePDVIngredients();
 
   // Initialize editable data when invoice changes
-  useState(() => {
-    if (invoice && !editableData) {
+  useEffect(() => {
+    if (invoice && open) {
+      console.log('✅ Inicializando wizard com dados da nota:', invoice);
       setEditableData(parseInvoiceToEditable(invoice));
+      setCurrentStep(1);
     }
-  });
+  }, [invoice, open]);
 
   const handleUpdate = (updates: Partial<EditableInvoiceData>) => {
     if (editableData) {
@@ -226,12 +228,32 @@ export function InvoiceReviewWizard({
     }
   };
 
+  const handleOpenChange = (open: boolean) => {
+    onOpenChange(open);
+    if (!open) {
+      setEditableData(null);
+      setCurrentStep(1);
+      setIsSubmitting(false);
+    }
+  };
+
   const progress = (currentStep / STEPS.length) * 100;
 
-  if (!invoice || !editableData) return null;
+  // Guard clause: Show loading if data not ready
+  if (!editableData) {
+    return (
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent className="sm:max-w-[800px]">
+          <div className="flex items-center justify-center p-8">
+            <p className="text-muted-foreground">Carregando dados da nota fiscal...</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Importar Nota Fiscal - {STEPS[currentStep - 1].title}</DialogTitle>
