@@ -1,5 +1,6 @@
 import React from 'react';
 import logo from "@/assets/logo_velara_preto.png";
+import heroImage from "@/assets/auth-hero.png";
 
 // --- TYPE DEFINITIONS ---
 
@@ -31,7 +32,6 @@ const TestimonialCard = ({ testimonial, delay }: { testimonial: Testimonial, del
 // --- MAIN COMPONENT ---
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, testimonials = [] }) => {
-  const heroImageSrc = "https://images.unsplash.com/photo-1642615835477-d303d7dc9ee9?w=2160&q=80";
 
   return (
     <div className="h-[100dvh] flex flex-col md:flex-row w-[100dvw]">
@@ -49,7 +49,7 @@ export const AuthLayout: React.FC<AuthLayoutProps> = ({ children, testimonials =
 
       {/* Right column: hero image + testimonials (FIXED) */}
       <section className="hidden md:block flex-1 relative p-4">
-        <div className="animate-[slide-right-in_0.8s_ease-out_forwards] opacity-0 [animation-delay:300ms] absolute inset-4 rounded-3xl bg-cover bg-center" style={{ backgroundImage: `url(${heroImageSrc})` }}></div>
+        <div className="animate-[slide-right-in_0.8s_ease-out_forwards] opacity-0 [animation-delay:300ms] absolute inset-4 rounded-3xl bg-cover bg-center" style={{ backgroundImage: `url(${heroImage})` }}></div>
         {testimonials.length > 0 && (
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4 px-8 w-full justify-center">
             <TestimonialCard testimonial={testimonials[0]} delay="[animation-delay:1000ms]" />
