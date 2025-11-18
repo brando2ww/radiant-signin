@@ -15,6 +15,7 @@ import {
   Package,
   Calendar,
   CheckSquare,
+  Target,
   TrendingUp,
   CreditCard,
   Wallet,
@@ -254,6 +255,21 @@ export function SessionNavBar() {
                       <motion.li variants={variants}>
                         {!isCollapsed && (
                           <p className="ml-2 text-sm font-medium">Tarefas</p>
+                        )}
+                      </motion.li>
+                    </Link>
+
+                    <Link
+                      to="/goals"
+                      className={cn(
+                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
+                        pathname.includes("goals") && "bg-muted text-primary",
+                      )}
+                    >
+                      <Target className="h-4 w-4" />
+                      <motion.li variants={variants}>
+                        {!isCollapsed && (
+                          <p className="ml-2 text-sm font-medium">Metas</p>
                         )}
                       </motion.li>
                     </Link>
