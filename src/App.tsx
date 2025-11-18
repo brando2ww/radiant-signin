@@ -11,6 +11,7 @@ import Reports from "./pages/Reports";
 import Plans from "./pages/Plans";
 import Calendar from "./pages/Calendar";
 import Tasks from "./pages/Tasks";
+import Goals from "./pages/Goals";
 import Transactions from "./pages/Transactions";
 import CreditCards from "./pages/CreditCards";
 import BankAccounts from "./pages/BankAccounts";
@@ -78,6 +79,14 @@ const App = () => (
               } 
             />
             <Route 
+              path="/goals" 
+              element={
+                <ProtectedRoute>
+                  <Goals />
+                </ProtectedRoute>
+              } 
+            />
+            <Route
               path="/transactions" 
               element={
                 <ProtectedRoute>
