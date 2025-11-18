@@ -13,6 +13,7 @@ import Calendar from "./pages/Calendar";
 import Tasks from "./pages/Tasks";
 import Transactions from "./pages/Transactions";
 import CreditCards from "./pages/CreditCards";
+import BankAccounts from "./pages/BankAccounts";
 import CRM from "./pages/CRM";
 import LeadDetail from "./pages/LeadDetail";
 import Settings from "./pages/Settings";
@@ -89,6 +90,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CreditCards />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/bank-accounts" 
+              element={
+                <ProtectedRoute>
+                  <BankAccounts />
                 </ProtectedRoute>
               } 
             />

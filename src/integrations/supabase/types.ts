@@ -14,9 +14,108 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_movements: {
+        Row: {
+          amount: number
+          balance_after: number
+          bank_account_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          bank_account_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          bank_account_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_movements_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_accounts: {
+        Row: {
+          account_number: string | null
+          account_type: string | null
+          agency: string | null
+          bank_name: string | null
+          color: string | null
+          created_at: string | null
+          current_balance: number | null
+          icon: string | null
+          id: string
+          initial_balance: number | null
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_number?: string | null
+          account_type?: string | null
+          agency?: string | null
+          bank_name?: string | null
+          color?: string | null
+          created_at?: string | null
+          current_balance?: number | null
+          icon?: string | null
+          id?: string
+          initial_balance?: number | null
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_number?: string | null
+          account_type?: string | null
+          agency?: string | null
+          bank_name?: string | null
+          color?: string | null
+          created_at?: string | null
+          current_balance?: number | null
+          icon?: string | null
+          id?: string
+          initial_balance?: number | null
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       bills: {
         Row: {
           amount: number
+          bank_account_id: string | null
           category: string | null
           created_at: string | null
           due_date: string
@@ -31,6 +130,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bank_account_id?: string | null
           category?: string | null
           created_at?: string | null
           due_date: string
@@ -45,6 +145,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bank_account_id?: string | null
           category?: string | null
           created_at?: string | null
           due_date?: string
@@ -57,7 +158,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bills_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       business_settings: {
         Row: {
@@ -2869,6 +2978,7 @@ export type Database = {
       transactions: {
         Row: {
           amount: number
+          bank_account_id: string | null
           category: string
           created_at: string | null
           credit_card_id: string | null
@@ -2883,6 +2993,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          bank_account_id?: string | null
           category: string
           created_at?: string | null
           credit_card_id?: string | null
@@ -2897,6 +3008,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          bank_account_id?: string | null
           category?: string
           created_at?: string | null
           credit_card_id?: string | null
@@ -2910,6 +3022,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "transactions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_credit_card_id_fkey"
             columns: ["credit_card_id"]
