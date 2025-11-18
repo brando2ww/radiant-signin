@@ -1,9 +1,13 @@
 import { KPICard } from '../KPICard';
 import { TrendChart } from '../TrendChart';
 import { CategoryDistributionChart } from '../CategoryDistributionChart';
+import { BillsAnalysis } from '../BillsAnalysis';
+import { CreditCardsAnalysis } from '../CreditCardsAnalysis';
+import { CashFlowAnalysis } from '../CashFlowAnalysis';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, TrendingDown, TrendingUp, Activity } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DollarSign, TrendingDown, TrendingUp, Activity, FileText, CreditCard, Wallet } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -135,6 +139,50 @@ export const OverviewTab = ({ reportData }: OverviewTabProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Additional Analysis Tabs */}
+      <Tabs defaultValue="bills" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="bills" className="gap-2">
+            <FileText className="h-4 w-4" />
+            Contas
+          </TabsTrigger>
+          <TabsTrigger value="credit-cards" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Cartões
+          </TabsTrigger>
+          <TabsTrigger value="cash-flow" className="gap-2">
+            <Wallet className="h-4 w-4" />
+            Fluxo de Caixa
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="bills">
+          <BillsAnalysis bills={reportData.bills} />
+        </TabsContent>
+
+        <TabsContent value="credit-cards">
+          <CreditCardsAnalysis 
+            creditCards={reportData.creditCards} 
+            summary={{
+              totalCreditCardDebt: summary.totalCreditCardDebt || 0,
+              totalCreditLimit: summary.totalCreditLimit || 0,
+              creditUsagePercentage: summary.creditUsagePercentage || 0,
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="cash-flow">
+          <CashFlowAnalysis 
+            bankAccounts={reportData.bankAccounts}
+            summary={{
+              totalBankBalance: summary.totalBankBalance || 0,
+              totalCreditCardDebt: summary.totalCreditCardDebt || 0,
+              cashFlow: summary.cashFlow || 0,
+            }}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

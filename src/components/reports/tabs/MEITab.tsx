@@ -18,15 +18,24 @@ export const MEITab = ({ meiData }: MEITabProps) => {
     }).format(value);
   };
 
-  // Mock monthly data - in real app, aggregate from transactions
-  const monthlyData = [
-    { month: 'Jan', revenue: 5000 },
-    { month: 'Fev', revenue: 6200 },
-    { month: 'Mar', revenue: 5800 },
-    { month: 'Abr', revenue: 7100 },
-    { month: 'Mai', revenue: 6500 },
-    { month: 'Jun', revenue: 6900 },
-  ];
+  if (!meiData) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-center text-muted-foreground">Carregando dados MEI...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Calculate monthly revenue data from history
+  const monthlyData = meiData.dasHistory.slice(0, 6).reverse().map((das: any) => {
+    const date = new Date(das.due_date);
+    return {
+      month: date.toLocaleDateString('pt-BR', { month: 'short' }),
+      revenue: Number(das.amount) * 15, // Approximate revenue based on DAS
+    };
+  });
 
   const obligations = [
     { text: 'DAS do mês atual pago', completed: meiData?.dasStatus === 'paid' },
