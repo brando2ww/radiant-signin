@@ -24,7 +24,7 @@ const TestimonialCard = ({ testimonial, delay }: { testimonial: Testimonial, del
     <div className="text-sm leading-snug">
       <p className="flex items-center gap-1 font-medium">{testimonial.name}</p>
       <p className="text-white">{testimonial.handle}</p>
-      <p className="mt-1 text-foreground/80">{testimonial.text}</p>
+      <p className="mt-1 text-white">{testimonial.text}</p>
     </div>
   </div>
 );
