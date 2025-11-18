@@ -17,6 +17,7 @@ import {
   CheckSquare,
   TrendingUp,
   CreditCard,
+  Wallet,
   Users,
   Star,
   UtensilsCrossed,
@@ -206,6 +207,21 @@ export function SessionNavBar() {
                       <motion.li variants={variants}>
                         {!isCollapsed && (
                           <p className="ml-2 text-sm font-medium">Cartões de Crédito</p>
+                        )}
+                      </motion.li>
+                    </Link>
+
+                    <Link
+                      to="/bank-accounts"
+                      className={cn(
+                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
+                        pathname.includes("bank-accounts") && "bg-muted text-primary",
+                      )}
+                    >
+                      <Wallet className="h-4 w-4" />
+                      <motion.li variants={variants}>
+                        {!isCollapsed && (
+                          <p className="ml-2 text-sm font-medium">Contas Bancárias</p>
                         )}
                       </motion.li>
                     </Link>
