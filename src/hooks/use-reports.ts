@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { startOfMonth, endOfMonth, format, subMonths } from 'date-fns';
+import { startOfMonth, endOfMonth, format, subMonths, startOfYear } from 'date-fns';
 
 export interface PeriodFilter {
   startDate: Date;
@@ -67,15 +67,99 @@ export const useReports = (period: PeriodFilter, compare: boolean = false) => {
     enabled: !!user && compare,
   });
 
+  // Fetch bills for the period
+  const { data: bills } = useQuery({
+    queryKey: ['report-bills', user?.id, period.startDate, period.endDate],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('bills')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('due_date', format(period.startDate, 'yyyy-MM-dd'))
+        .lte('due_date', format(period.endDate, 'yyyy-MM-dd'));
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  // Fetch credit cards
+  const { data: creditCards } = useQuery({
+    queryKey: ['report-credit-cards', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('credit_cards')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  // Fetch bank accounts
+  const { data: bankAccounts } = useQuery({
+    queryKey: ['report-bank-accounts', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
   const reportData = useMemo(() => {
     if (!transactions) return null;
 
     const revenues = transactions.filter(t => t.type === 'income');
     const expenses = transactions.filter(t => t.type === 'expense');
 
-    const totalRevenue = revenues.reduce((sum, t) => sum + Number(t.amount), 0);
-    const totalExpense = expenses.reduce((sum, t) => sum + Number(t.amount), 0);
+    // Include bills in calculations
+    const paidBills = bills?.filter(b => b.paid_at) || [];
+    const pendingBills = bills?.filter(b => !b.paid_at) || [];
+    
+    const billRevenue = paidBills
+      .filter(b => b.type === 'income')
+      .reduce((sum, b) => sum + Number(b.amount), 0);
+    
+    const billExpense = paidBills
+      .filter(b => b.type === 'expense')
+      .reduce((sum, b) => sum + Number(b.amount), 0);
+
+    const pendingRevenue = pendingBills
+      .filter(b => b.type === 'income')
+      .reduce((sum, b) => sum + Number(b.amount), 0);
+    
+    const pendingExpense = pendingBills
+      .filter(b => b.type === 'expense')
+      .reduce((sum, b) => sum + Number(b.amount), 0);
+
+    const totalRevenue = revenues.reduce((sum, t) => sum + Number(t.amount), 0) + billRevenue;
+    const totalExpense = expenses.reduce((sum, t) => sum + Number(t.amount), 0) + billExpense;
     const profit = totalRevenue - totalExpense;
+
+    // Credit card analysis
+    const totalCreditCardDebt = creditCards?.reduce((sum, c) => sum + Number(c.current_balance || 0), 0) || 0;
+    const totalCreditLimit = creditCards?.reduce((sum, c) => sum + Number(c.credit_limit || 0), 0) || 0;
+    const creditUsagePercentage = totalCreditLimit > 0 ? (totalCreditCardDebt / totalCreditLimit) * 100 : 0;
+
+    // Bank accounts analysis
+    const totalBankBalance = bankAccounts?.reduce((sum, b) => sum + Number(b.current_balance || 0), 0) || 0;
+    const cashFlow = totalBankBalance - totalCreditCardDebt;
 
     // Revenue by category
     const revenueByCat = revenues.reduce((acc, t) => {
@@ -161,6 +245,13 @@ export const useReports = (period: PeriodFilter, compare: boolean = false) => {
         profitMargin: totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0,
         transactionCount: transactions.length,
         averageTicket: revenues.length > 0 ? totalRevenue / revenues.length : 0,
+        pendingRevenue,
+        pendingExpense,
+        totalBankBalance,
+        totalCreditCardDebt,
+        totalCreditLimit,
+        creditUsagePercentage,
+        cashFlow,
       },
       revenueByCategory,
       expenseByCategory,
@@ -170,8 +261,16 @@ export const useReports = (period: PeriodFilter, compare: boolean = false) => {
         expenses: topExpenses,
       },
       comparison,
+      bills: {
+        paid: paidBills,
+        pending: pendingBills,
+        pendingRevenue,
+        pendingExpense,
+      },
+      creditCards: creditCards || [],
+      bankAccounts: bankAccounts || [],
     };
-  }, [transactions, previousTransactions, compare]);
+  }, [transactions, previousTransactions, compare, bills, creditCards, bankAccounts]);
 
   return {
     reportData,
