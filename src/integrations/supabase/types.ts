@@ -115,13 +115,19 @@ export type Database = {
       bills: {
         Row: {
           amount: number
+          attachment_url: string | null
           bank_account_id: string | null
           category: string | null
           created_at: string | null
+          current_installment: number | null
           due_date: string
           id: string
+          installments: number | null
           is_recurring: boolean | null
+          notes: string | null
           paid_at: string | null
+          parent_bill_id: string | null
+          payment_method: string | null
           status: string | null
           title: string
           type: string
@@ -130,13 +136,19 @@ export type Database = {
         }
         Insert: {
           amount: number
+          attachment_url?: string | null
           bank_account_id?: string | null
           category?: string | null
           created_at?: string | null
+          current_installment?: number | null
           due_date: string
           id?: string
+          installments?: number | null
           is_recurring?: boolean | null
+          notes?: string | null
           paid_at?: string | null
+          parent_bill_id?: string | null
+          payment_method?: string | null
           status?: string | null
           title: string
           type: string
@@ -145,13 +157,19 @@ export type Database = {
         }
         Update: {
           amount?: number
+          attachment_url?: string | null
           bank_account_id?: string | null
           category?: string | null
           created_at?: string | null
+          current_installment?: number | null
           due_date?: string
           id?: string
+          installments?: number | null
           is_recurring?: boolean | null
+          notes?: string | null
           paid_at?: string | null
+          parent_bill_id?: string | null
+          payment_method?: string | null
           status?: string | null
           title?: string
           type?: string
@@ -164,6 +182,13 @@ export type Database = {
             columns: ["bank_account_id"]
             isOneToOne: false
             referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bills_parent_bill_id_fkey"
+            columns: ["parent_bill_id"]
+            isOneToOne: false
+            referencedRelation: "bills"
             referencedColumns: ["id"]
           },
         ]
