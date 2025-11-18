@@ -22,7 +22,7 @@ const TestimonialCard = ({ testimonial, delay }: { testimonial: Testimonial, del
   <div className={`animate-[testimonial-in_0.6s_ease-out_forwards] opacity-0 ${delay} flex items-start gap-3 rounded-3xl bg-card/40 dark:bg-zinc-800/40 backdrop-blur-xl border border-white/10 p-5 w-64`}>
     <img src={testimonial.avatarSrc} className="h-10 w-10 object-cover rounded-2xl" alt="avatar" />
     <div className="text-sm leading-snug">
-      <p className="flex items-center gap-1 font-medium">{testimonial.name}</p>
+      <p className="flex items-center gap-1 font-medium text-yellow-400">{testimonial.name}</p>
       <p className="text-white">{testimonial.handle}</p>
       <p className="mt-1 text-white">{testimonial.text}</p>
     </div>
