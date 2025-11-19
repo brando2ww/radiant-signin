@@ -26,8 +26,17 @@ export default function Reports() {
   return (
     <div className="flex h-screen w-full">
       <SessionNavBar />
-      <main className="flex-1 overflow-y-auto p-8 ml-12">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 ml-0 md:ml-12">
         <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6 md:mb-8">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold">Relatórios Financeiros</h1>
+              <p className="text-sm md:text-base text-muted-foreground mt-1">
+                Análise detalhada das suas finanças
+              </p>
+            </div>
+          </div>
+
           <ReportHeader
             period={period}
             onPeriodChange={setPeriod}
@@ -36,8 +45,8 @@ export default function Reports() {
           />
 
           {isLoading ? (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-4 md:space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[1, 2, 3, 4].map((i) => (
                   <Skeleton key={i} className="h-32" />
                 ))}
@@ -45,13 +54,13 @@ export default function Reports() {
               <Skeleton className="h-96" />
             </div>
           ) : reportData ? (
-            <Tabs defaultValue="overview" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-                <TabsTrigger value="revenue">Receitas</TabsTrigger>
-                <TabsTrigger value="expense">Despesas</TabsTrigger>
-                <TabsTrigger value="mei">MEI</TabsTrigger>
-                <TabsTrigger value="dre">DRE</TabsTrigger>
+            <Tabs defaultValue="overview" className="space-y-4 md:space-y-6">
+              <TabsList className="grid w-full grid-cols-5 h-auto">
+                <TabsTrigger value="overview" className="text-xs md:text-sm">Visão Geral</TabsTrigger>
+                <TabsTrigger value="revenue" className="text-xs md:text-sm">Receitas</TabsTrigger>
+                <TabsTrigger value="expense" className="text-xs md:text-sm">Despesas</TabsTrigger>
+                <TabsTrigger value="mei" className="text-xs md:text-sm">MEI</TabsTrigger>
+                <TabsTrigger value="dre" className="text-xs md:text-sm">DRE</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview">

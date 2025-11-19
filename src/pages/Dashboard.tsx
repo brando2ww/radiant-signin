@@ -39,10 +39,10 @@ const Dashboard = () => {
     return (
       <div className="flex h-screen w-full flex-row">
         <SessionNavBar />
-        <main className="ml-[3.05rem] flex h-screen grow flex-col overflow-auto p-8">
-          <div className="max-w-7xl mx-auto w-full space-y-6">
+        <main className="ml-0 md:ml-[3.05rem] flex h-screen grow flex-col overflow-auto p-4 md:p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto w-full space-y-4 md:space-y-6">
             <Skeleton className="h-20 w-full" />
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
               <Skeleton className="h-32" />
               <Skeleton className="h-32" />
               <Skeleton className="h-32" />
@@ -58,20 +58,20 @@ const Dashboard = () => {
   return (
     <div className="flex h-screen w-full flex-row">
       <SessionNavBar />
-      <main className="ml-[3.05rem] flex h-screen grow flex-col overflow-auto p-8 bg-gradient-to-br from-background via-background to-muted/20">
+      <main className="ml-0 md:ml-[3.05rem] flex h-screen grow flex-col overflow-auto p-4 md:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted/20">
         <div className="max-w-7xl mx-auto w-full">
           {/* Header */}
-          <div className="mb-8 animate-fade-in">
-            <h1 className="text-4xl font-bold text-foreground mb-2">
+          <div className="mb-6 md:mb-8 animate-fade-in">
+            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-1 md:mb-2">
               Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}!
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm md:text-base text-muted-foreground">
               Aqui está um resumo das suas finanças em tempo real
             </p>
           </div>
 
           {/* KPIs Cards */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-4 md:mb-6">
             <StatsCard
               title="Receitas"
               value={formatCurrency(stats.totalRevenue)}
@@ -102,7 +102,7 @@ const Dashboard = () => {
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid gap-6 md:grid-cols-3 mb-6">
+          <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-3 mb-4 md:mb-6">
             {/* Cash Flow Chart - Spans 2 columns */}
             <CashFlowChart data={cashFlowData} />
             

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SessionNavBar } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import { ResponsivePageHeader } from '@/components/ui/responsive-page-header';
 import { TransactionStats } from '@/components/transactions/TransactionStats';
 import { TransactionFilters } from '@/components/transactions/TransactionFilters';
 import { TransactionList } from '@/components/transactions/TransactionList';
@@ -69,21 +70,19 @@ export default function Transactions() {
   return (
     <div className="flex h-screen w-full">
       <SessionNavBar />
-      <main className="flex-1 overflow-y-auto p-8 ml-12 bg-gradient-to-br from-background via-background to-muted/20">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 ml-0 md:ml-12 bg-gradient-to-br from-background via-background to-muted/20">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8 animate-fade-in">
-            <div>
-              <h1 className="text-3xl font-bold mb-2">Receitas e Despesas</h1>
-              <p className="text-muted-foreground">
-                Registre e acompanhe todas as transações do seu MEI
-              </p>
-            </div>
-            <Button onClick={handleNewTransaction}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Transação
-            </Button>
-          </div>
+          <ResponsivePageHeader
+            title="Receitas e Despesas"
+            description="Registre e acompanhe todas as transações do seu MEI"
+            action={
+              <Button onClick={handleNewTransaction} className="w-full md:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Transação
+              </Button>
+            }
+          />
 
           {/* Stats Cards */}
           <TransactionStats

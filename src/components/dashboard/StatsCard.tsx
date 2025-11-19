@@ -23,11 +23,11 @@ export const StatsCard = ({ title, value, icon, trend, className, delay = 0 }: S
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
-      <CardContent className="p-6">
+      <CardContent className="p-4 md:p-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
-            <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>
-            <p className="text-3xl font-bold text-foreground">{value}</p>
+            <p className="text-xs md:text-sm font-medium text-muted-foreground mb-1">{title}</p>
+            <p className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">{value}</p>
             {trend && (
               <div className={cn(
                 "flex items-center gap-1 mt-2 text-sm font-medium",
@@ -42,7 +42,7 @@ export const StatsCard = ({ title, value, icon, trend, className, delay = 0 }: S
               </div>
             )}
           </div>
-          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+          <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
             {icon}
           </div>
         </div>
