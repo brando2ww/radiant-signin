@@ -56,7 +56,7 @@ export const TransactionFilters = ({ filters, onFilterChange }: TransactionFilte
     : [...incomeCategories, ...expenseCategories];
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 mb-6 animate-fade-in">
+    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 md:mb-6 animate-fade-in">
       {/* Search */}
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -70,7 +70,7 @@ export const TransactionFilters = ({ filters, onFilterChange }: TransactionFilte
 
       {/* Type Filter */}
       <Select value={localFilters.type} onValueChange={handleTypeChange}>
-        <SelectTrigger className="w-full md:w-[180px]">
+        <SelectTrigger className="w-full sm:w-[180px]">
           <SelectValue placeholder="Tipo" />
         </SelectTrigger>
         <SelectContent>
@@ -86,7 +86,7 @@ export const TransactionFilters = ({ filters, onFilterChange }: TransactionFilte
         onValueChange={handleCategoryChange}
         disabled={localFilters.type === 'all'}
       >
-        <SelectTrigger className="w-full md:w-[220px]">
+        <SelectTrigger className="w-full sm:w-[220px]">
           <SelectValue placeholder="Categoria" />
         </SelectTrigger>
         <SelectContent>
@@ -102,7 +102,7 @@ export const TransactionFilters = ({ filters, onFilterChange }: TransactionFilte
       {/* Date Range */}
       <Popover>
         <PopoverTrigger asChild>
-          <Button variant="outline" className="w-full md:w-[240px] justify-start text-left font-normal">
+          <Button variant="outline" className="w-full sm:w-[240px] justify-start text-left font-normal">
             <CalendarIcon className="mr-2 h-4 w-4" />
             {localFilters.startDate && localFilters.endDate ? (
               <>
@@ -138,8 +138,9 @@ export const TransactionFilters = ({ filters, onFilterChange }: TransactionFilte
       </Popover>
 
       {/* Reset Button */}
-      <Button variant="outline" size="icon" onClick={handleReset}>
-        <RotateCcw className="h-4 w-4" />
+      <Button variant="outline" onClick={handleReset} className="w-full sm:w-auto">
+        <RotateCcw className="h-4 w-4 mr-2" />
+        Limpar
       </Button>
     </div>
   );
