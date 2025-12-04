@@ -21,7 +21,7 @@ import {
   Wallet,
   Users,
   Star,
-  UtensilsCrossed,
+  
   DollarSign,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -304,20 +304,6 @@ export function SessionNavBar() {
                       </motion.li>
                     </Link>
 
-                    <Link
-                      to="/delivery"
-                      className={cn(
-                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
-                        pathname.includes("delivery") && "bg-muted text-primary",
-                      )}
-                    >
-                      <UtensilsCrossed className="h-4 w-4" />
-                      <motion.li variants={variants}>
-                        {!isCollapsed && (
-                          <p className="ml-2 text-sm font-medium">Delivery</p>
-                        )}
-                      </motion.li>
-                    </Link>
 
                     {hasModule('pdv') && (
                       <Link

@@ -19,7 +19,9 @@ import {
   PackageSearch,
   PieChart,
   Receipt,
-  DollarSign
+  DollarSign,
+  UtensilsCrossed,
+  Tag
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -92,6 +94,16 @@ const sectionItems = [
       { title: "Balcão", url: "/pdv/balcao", icon: ShoppingBag },
       { title: "Caixa", url: "/pdv/caixa", icon: DollarSign },
       { title: "Cozinha", url: "/pdv/cozinha", icon: ChefHat },
+    ]
+  },
+  {
+    title: "Delivery",
+    items: [
+      { title: "Pedidos", url: "/pdv/delivery/pedidos", icon: ShoppingBag },
+      { title: "Cardápio", url: "/pdv/delivery/cardapio", icon: UtensilsCrossed },
+      { title: "Cupons", url: "/pdv/delivery/cupons", icon: Tag },
+      { title: "Configurações", url: "/pdv/delivery/configuracoes", icon: Settings },
+      { title: "Relatórios", url: "/pdv/delivery/relatorios", icon: BarChart3 },
     ]
   },
   {

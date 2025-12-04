@@ -24,6 +24,11 @@ import CostCenters from "./pdv/financial/CostCenters";
 import DRE from "./pdv/financial/DRE";
 import ProductCMV from "./pdv/financial/ProductCMV";
 import GeneralCMV from "./pdv/financial/GeneralCMV";
+import DeliveryOrders from "./pdv/delivery/Orders";
+import DeliveryMenu from "./pdv/delivery/Menu";
+import DeliveryCoupons from "./pdv/delivery/Coupons";
+import DeliverySettings from "./pdv/delivery/Settings";
+import DeliveryReports from "./pdv/delivery/Reports";
 
 export default function PDV() {
   return (
@@ -67,6 +72,13 @@ export default function PDV() {
               <Route path="balcao" element={<PDVBalcao />} />
               <Route path="caixa" element={<PDVCashier />} />
               <Route path="cozinha" element={<PDVKitchen />} />
+              
+              {/* Delivery */}
+              <Route path="delivery/pedidos" element={<DeliveryOrders />} />
+              <Route path="delivery/cardapio" element={<DeliveryMenu />} />
+              <Route path="delivery/cupons" element={<DeliveryCoupons />} />
+              <Route path="delivery/configuracoes" element={<DeliverySettings />} />
+              <Route path="delivery/relatorios" element={<DeliveryReports />} />
               
               {/* Administrador */}
               <Route path="dashboard" element={<PDVDashboard />} />
