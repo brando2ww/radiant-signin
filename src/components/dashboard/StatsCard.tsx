@@ -12,13 +12,37 @@ interface StatsCardProps {
   };
   className?: string;
   delay?: number;
+  variant?: 'default' | 'success' | 'danger' | 'warning';
 }
 
-export const StatsCard = ({ title, value, icon, trend, className, delay = 0 }: StatsCardProps) => {
+const variantStyles = {
+  default: 'bg-card',
+  success: 'bg-green-500/10 border-green-500/20',
+  danger: 'bg-red-500/10 border-red-500/20',
+  warning: 'bg-yellow-500/10 border-yellow-500/20',
+};
+
+const variantIconStyles = {
+  default: 'bg-primary/10 text-primary',
+  success: 'bg-green-500/20 text-green-600',
+  danger: 'bg-red-500/20 text-red-600',
+  warning: 'bg-yellow-500/20 text-yellow-600',
+};
+
+export const StatsCard = ({ 
+  title, 
+  value, 
+  icon, 
+  trend, 
+  className, 
+  delay = 0,
+  variant = 'default'
+}: StatsCardProps) => {
   return (
     <Card 
       className={cn(
-        "hover:shadow-lg transition-all duration-300 hover:scale-105 animate-fade-in",
+        "hover:shadow-lg transition-all duration-300 hover:scale-105 animate-fade-in border",
+        variantStyles[variant],
         className
       )}
       style={{ animationDelay: `${delay}ms` }}
@@ -42,7 +66,10 @@ export const StatsCard = ({ title, value, icon, trend, className, delay = 0 }: S
               </div>
             )}
           </div>
-          <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+          <div className={cn(
+            "h-10 w-10 md:h-12 md:w-12 rounded-full flex items-center justify-center",
+            variantIconStyles[variant]
+          )}>
             {icon}
           </div>
         </div>
