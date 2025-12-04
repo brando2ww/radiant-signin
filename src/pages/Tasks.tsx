@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { startOfWeek, isSameWeek } from "date-fns";
 import { SessionNavBar } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -49,6 +50,12 @@ export default function Tasks() {
       updateTask({ id: selectedTask.id, ...taskData });
     } else {
       createTask(taskData);
+    }
+    
+    // Navegar para a semana da tarefa criada/editada
+    const taskWeekStart = startOfWeek(taskData.startTime, { weekStartsOn: 0 });
+    if (!isSameWeek(taskWeekStart, currentWeek, { weekStartsOn: 0 })) {
+      setCurrentWeek(taskWeekStart);
     }
   };
 
