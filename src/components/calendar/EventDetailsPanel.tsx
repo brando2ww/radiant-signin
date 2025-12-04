@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Calendar, CreditCard, Receipt, Pencil, Trash2, Check } from 'lucide-react';
+import { Calendar, CreditCard, Receipt, Pencil, Trash2, Check, Clock, Flag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface EventDetailsPanelProps {
@@ -48,6 +48,8 @@ export const EventDetailsPanel = ({ event }: EventDetailsPanelProps) => {
         return 'bg-purple-500/10 text-purple-700 border-purple-200';
       case 'card_closing':
         return 'bg-orange-500/10 text-orange-700 border-orange-200';
+      case 'task':
+        return 'bg-indigo-500/10 text-indigo-700 border-indigo-200';
       default:
         return 'bg-muted text-muted-foreground border-border';
     }
@@ -63,8 +65,30 @@ export const EventDetailsPanel = ({ event }: EventDetailsPanelProps) => {
         return 'Vencimento Cartão';
       case 'card_closing':
         return 'Fechamento Fatura';
+      case 'task':
+        return 'Tarefa';
       default:
         return type;
+    }
+  };
+
+  const getPriorityLabel = (priority?: string) => {
+    switch (priority) {
+      case 'low': return 'Baixa';
+      case 'medium': return 'Média';
+      case 'high': return 'Alta';
+      case 'urgent': return 'Urgente';
+      default: return null;
+    }
+  };
+
+  const getPriorityColor = (priority?: string) => {
+    switch (priority) {
+      case 'low': return 'bg-slate-500/10 text-slate-700 border-slate-200';
+      case 'medium': return 'bg-blue-500/10 text-blue-700 border-blue-200';
+      case 'high': return 'bg-orange-500/10 text-orange-700 border-orange-200';
+      case 'urgent': return 'bg-red-500/10 text-red-700 border-red-200';
+      default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -126,10 +150,34 @@ export const EventDetailsPanel = ({ event }: EventDetailsPanelProps) => {
             <div>
               <p className="text-sm font-medium">Status</p>
               <Badge variant="outline" className={cn('text-xs mt-1', getStatusColor(event.status))}>
-                {event.status === 'paid' && 'Pago'}
+                {event.status === 'paid' && (event.type === 'task' ? 'Concluída' : 'Pago')}
                 {event.status === 'pending' && 'Pendente'}
-                {event.status === 'overdue' && 'Atrasado'}
+                {event.status === 'overdue' && (event.type === 'task' ? 'Cancelada' : 'Atrasado')}
               </Badge>
+            </div>
+          </div>
+        )}
+
+        {event.type === 'task' && event.priority && (
+          <div className="flex items-center gap-3">
+            <Flag className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">Prioridade</p>
+              <Badge variant="outline" className={cn('text-xs mt-1', getPriorityColor(event.priority))}>
+                {getPriorityLabel(event.priority)}
+              </Badge>
+            </div>
+          </div>
+        )}
+
+        {event.type === 'task' && event.endDate && (
+          <div className="flex items-center gap-3">
+            <Clock className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm font-medium">Término</p>
+              <p className="text-sm text-muted-foreground">
+                {format(event.endDate, "HH:mm", { locale: ptBR })}
+              </p>
             </div>
           </div>
         )}
@@ -139,7 +187,7 @@ export const EventDetailsPanel = ({ event }: EventDetailsPanelProps) => {
         {event.status === 'pending' && (
           <Button className="flex-1" size="sm">
             <Check className="h-4 w-4 mr-2" />
-            Marcar como Pago
+            {event.type === 'task' ? 'Concluir' : 'Marcar como Pago'}
           </Button>
         )}
         <Button variant="outline" size="sm" className="flex-1">

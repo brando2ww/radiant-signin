@@ -18,6 +18,7 @@ export default function Calendar() {
     showBills: true,
     showTransactions: true,
     showCards: true,
+    showTasks: true,
     status: 'all' as 'all' | 'pending' | 'paid' | 'overdue',
   });
 

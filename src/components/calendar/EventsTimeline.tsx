@@ -56,6 +56,8 @@ export const EventsTimeline = ({
         return 'Vencimento Cartão';
       case 'card_closing':
         return 'Fechamento Fatura';
+      case 'task':
+        return 'Tarefa';
       default:
         return type;
     }
