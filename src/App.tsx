@@ -21,7 +21,7 @@ import Settings from "./pages/Settings";
 import Evaluations from "./pages/Evaluations";
 import PublicEvaluation from "./pages/PublicEvaluation";
 import PublicMenu from "./pages/PublicMenu";
-import Delivery from "./pages/Delivery";
+
 import PDV from "./pages/PDV";
 import InstallApp from "./pages/InstallApp";
 import Vendas from "./pages/Vendas";
@@ -139,14 +139,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Evaluations />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/delivery" 
-              element={
-                <ProtectedRoute>
-                  <Delivery />
                 </ProtectedRoute>
               } 
             />
