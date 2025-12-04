@@ -6,29 +6,18 @@ interface TransactionStatsProps {
   totalIncome: number;
   totalExpense: number;
   balance: number;
-  incomeTrend: number;
-  expenseTrend: number;
-  balanceTrend: number;
 }
 
 export const TransactionStats = ({
   totalIncome,
   totalExpense,
   balance,
-  incomeTrend,
-  expenseTrend,
-  balanceTrend,
 }: TransactionStatsProps) => {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
     }).format(value);
-  };
-
-  const formatTrend = (value: number) => {
-    const formatted = Math.abs(value).toFixed(1);
-    return value >= 0 ? `+${formatted}%` : `-${formatted}%`;
   };
 
   return (
@@ -40,13 +29,6 @@ export const TransactionStats = ({
             <div className="flex-1">
               <p className="text-xs md:text-sm font-medium text-muted-foreground">Receitas</p>
               <p className="text-xl md:text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</p>
-              <p className={cn(
-                "text-xs flex items-center gap-1 mt-1",
-                incomeTrend >= 0 ? "text-green-600" : "text-red-600"
-              )}>
-                {incomeTrend >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                {formatTrend(incomeTrend)} vs mês anterior
-              </p>
             </div>
             <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center shrink-0">
               <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-green-600" />
@@ -62,13 +44,6 @@ export const TransactionStats = ({
             <div className="flex-1">
               <p className="text-xs md:text-sm font-medium text-muted-foreground">Despesas</p>
               <p className="text-xl md:text-2xl font-bold text-red-600">{formatCurrency(totalExpense)}</p>
-              <p className={cn(
-                "text-xs flex items-center gap-1 mt-1",
-                expenseTrend <= 0 ? "text-green-600" : "text-red-600"
-              )}>
-                {expenseTrend <= 0 ? <TrendingDown className="h-3 w-3" /> : <TrendingUp className="h-3 w-3" />}
-                {formatTrend(expenseTrend)} vs mês anterior
-              </p>
             </div>
             <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-red-100 dark:bg-red-900/20 flex items-center justify-center shrink-0">
               <TrendingDown className="h-5 w-5 md:h-6 md:w-6 text-red-600" />
@@ -88,13 +63,6 @@ export const TransactionStats = ({
                 balance >= 0 ? "text-green-600" : "text-red-600"
               )}>
                 {formatCurrency(balance)}
-              </p>
-              <p className={cn(
-                "text-xs flex items-center gap-1 mt-1",
-                balanceTrend >= 0 ? "text-green-600" : "text-red-600"
-              )}>
-                {balanceTrend >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                {formatTrend(balanceTrend)} vs mês anterior
               </p>
             </div>
             <div className="h-10 w-10 md:h-12 md:w-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">

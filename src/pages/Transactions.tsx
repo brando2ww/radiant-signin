@@ -89,9 +89,6 @@ export default function Transactions() {
             totalIncome={stats.totalIncome}
             totalExpense={stats.totalExpense}
             balance={stats.balance}
-            incomeTrend={stats.incomeTrend}
-            expenseTrend={stats.expenseTrend}
-            balanceTrend={stats.balanceTrend}
           />
 
           {/* Filters */}
