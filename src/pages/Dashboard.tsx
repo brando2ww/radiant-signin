@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { SessionNavBar } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DollarSign, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { CashFlowChart } from '@/components/dashboard/CashFlowChart';
@@ -42,8 +42,7 @@ const Dashboard = () => {
         <main className="ml-0 md:ml-[3.05rem] flex h-screen grow flex-col overflow-auto p-4 md:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto w-full space-y-4 md:space-y-6">
             <Skeleton className="h-20 w-full" />
-            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-              <Skeleton className="h-32" />
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               <Skeleton className="h-32" />
               <Skeleton className="h-32" />
               <Skeleton className="h-32" />
@@ -71,7 +70,7 @@ const Dashboard = () => {
           </div>
 
           {/* KPIs Cards */}
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-4 md:mb-6">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-4 md:mb-6">
             <StatsCard
               title="Receitas"
               value={formatCurrency(stats.totalRevenue)}
@@ -92,12 +91,6 @@ const Dashboard = () => {
               icon={<DollarSign className="h-6 w-6" />}
               trend={stats.profitTrend}
               delay={200}
-            />
-            <StatsCard
-              title="Saldo"
-              value={formatCurrency(stats.balance)}
-              icon={<Wallet className="h-6 w-6" />}
-              delay={300}
             />
           </div>
 
