@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -195,12 +196,9 @@ export const ProductOptionDialog = ({
                       onChange={(e) => handleItemChange(index, "name", e.target.value)}
                     />
                     <div className="flex gap-2 items-center">
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="Ajuste de preço"
+                      <CurrencyInput
                         value={item.price_adjustment}
-                        onChange={(e) => handleItemChange(index, "price_adjustment", Number(e.target.value))}
+                        onChange={(v) => handleItemChange(index, "price_adjustment", Number(v) || 0)}
                         className="flex-1"
                       />
                       <Label className="flex items-center gap-2 whitespace-nowrap">

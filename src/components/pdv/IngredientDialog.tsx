@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -486,12 +487,9 @@ export function IngredientDialog({
                         <FormItem>
                           <FormLabel>Custo Unitario *</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                              required
+                            <CurrencyInput
+                              value={field.value || ''}
+                              onChange={(v) => field.onChange(v ? parseFloat(v) : 0)}
                             />
                           </FormControl>
                           <FormMessage />
@@ -506,11 +504,9 @@ export function IngredientDialog({
                         <FormItem>
                           <FormLabel>Custo Real</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              {...field}
-                              onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                            <CurrencyInput
+                              value={field.value || ''}
+                              onChange={(v) => field.onChange(v ? parseFloat(v) : 0)}
                             />
                           </FormControl>
                           <FormMessage />
@@ -526,11 +522,9 @@ export function IngredientDialog({
                       <FormItem>
                         <FormLabel>Valor de Venda</FormLabel>
                         <FormControl>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                          <CurrencyInput
+                            value={field.value || ''}
+                            onChange={(v) => field.onChange(v ? parseFloat(v) : 0)}
                           />
                         </FormControl>
                         <FormMessage />

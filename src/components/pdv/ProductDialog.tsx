@@ -18,6 +18,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { PDVProduct } from "@/hooks/use-pdv-products";
@@ -292,12 +293,9 @@ export function ProductDialog({
                     <FormItem>
                       <FormLabel>Preço Salão *</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
+                        <CurrencyInput
+                          value={field.value || ''}
+                          onChange={(v) => field.onChange(v ? Number(v) : 0)}
                         />
                       </FormControl>
                       <FormDescription>
@@ -315,13 +313,9 @@ export function ProductDialog({
                     <FormItem>
                       <FormLabel>Preço Balcão</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          {...field}
-                          value={field.value || ""}
-                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        <CurrencyInput
+                          value={field.value || ''}
+                          onChange={(v) => field.onChange(v ? Number(v) : null)}
                         />
                       </FormControl>
                       <FormDescription>
@@ -339,13 +333,9 @@ export function ProductDialog({
                     <FormItem>
                       <FormLabel>Preço Delivery</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00"
-                          {...field}
-                          value={field.value || ""}
-                          onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : null)}
+                        <CurrencyInput
+                          value={field.value || ''}
+                          onChange={(v) => field.onChange(v ? Number(v) : null)}
                         />
                       </FormControl>
                       <FormDescription>

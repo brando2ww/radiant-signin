@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -496,12 +497,9 @@ export function SupplierDialog({
 
                 <div>
                   <Label htmlFor="credit_limit">Limite de Crédito</Label>
-                  <Input
-                    id="credit_limit"
-                    type="number"
-                    step="0.01"
-                    {...register("credit_limit")}
-                    placeholder="0.00"
+                  <CurrencyInput
+                    value={watch("credit_limit")}
+                    onChange={(v) => setValue("credit_limit", v)}
                   />
                 </div>
 
