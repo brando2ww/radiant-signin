@@ -1,15 +1,14 @@
-import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Transaction } from '@/hooks/use-transactions';
-import { TransactionRow } from './TransactionRow';
-import { FileText, Edit, Trash } from 'lucide-react';
+import { FileText, Edit, Trash, TrendingUp, TrendingDown, History } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { incomeCategories, expenseCategories } from '@/data/transaction-categories';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -19,6 +18,8 @@ interface TransactionListProps {
 }
 
 export const TransactionList = ({ transactions, isLoading, onEdit, onDelete }: TransactionListProps) => {
+  const isMobile = useIsMobile();
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -33,14 +34,14 @@ export const TransactionList = ({ transactions, isLoading, onEdit, onDelete }: T
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="glass-bg border-border/20">
         <CardHeader>
           <Skeleton className="h-6 w-48" />
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full" />
+              <Skeleton key={i} className="h-20 w-full" />
             ))}
           </div>
         </CardContent>
@@ -50,7 +51,7 @@ export const TransactionList = ({ transactions, isLoading, onEdit, onDelete }: T
 
   if (transactions.length === 0) {
     return (
-      <Card>
+      <Card className="glass-bg border-border/20">
         <CardContent className="flex flex-col items-center justify-center py-16">
           <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
             <FileText className="h-8 w-8 text-muted-foreground" />
@@ -64,84 +65,152 @@ export const TransactionList = ({ transactions, isLoading, onEdit, onDelete }: T
     );
   }
 
-  return (
-    <Card className="animate-fade-in">
-      <CardHeader>
-        <CardTitle className="text-lg md:text-xl">Transações ({transactions.length})</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {/* Desktop Table */}
-        <div className="hidden md:block rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactions.map((transaction) => (
-                <TransactionRow
-                  key={transaction.id}
-                  transaction={transaction}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                />
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+  // Mobile layout
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        {transactions.map((transaction) => (
+          <Card key={transaction.id} className="glass-bg border-border/20 animate-fade-in">
+            <CardContent className="p-5">
+              <div className="space-y-4">
+                {/* Header with date and amount */}
+                <div className="flex justify-between items-start">
+                  <div className="space-y-2 flex-1 mr-4">
+                    <p className="text-xs text-muted-foreground font-medium">
+                      {format(new Date(transaction.transaction_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
+                    </p>
+                    <h3 className="font-semibold text-lg leading-tight">
+                      {transaction.description}
+                    </h3>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className={cn(
+                      "text-xl font-bold",
+                      transaction.type === 'income' ? "text-green-600" : "text-destructive"
+                    )}>
+                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                    </p>
+                  </div>
+                </div>
 
-        {/* Mobile Cards */}
-        <div className="md:hidden space-y-3">
-          {transactions.map((transaction) => (
-            <Card key={transaction.id} className="border-l-4" style={{
-              borderLeftColor: transaction.type === 'income' ? 'hsl(var(--chart-2))' : 'hsl(var(--destructive))'
-            }}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <p className="font-semibold text-sm mb-1">{transaction.description}</p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{format(new Date(transaction.transaction_date + 'T12:00:00'), "dd MMM yyyy", { locale: ptBR })}</span>
-                      <span>•</span>
-                      <Badge variant="outline" className="text-xs">
-                        {getCategoryLabel(transaction.type, transaction.category)}
-                      </Badge>
+                <div className="border-t border-border/20 my-4"></div>
+
+                {/* Details */}
+                <div className="space-y-3">
+                  <div className="flex items-center">
+                    <Badge variant="secondary" className="text-xs">
+                      {getCategoryLabel(transaction.type, transaction.category)}
+                    </Badge>
+                  </div>
+                  <div className="flex gap-2 flex-wrap items-center">
+                    <Badge variant="outline" className="text-xs">
+                      {transaction.type === 'income' ? 'Receita' : 'Despesa'}
+                    </Badge>
+                    <div className="flex gap-1 ml-auto">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onEdit(transaction)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onDelete(transaction)}
+                      >
+                        <Trash className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  // Desktop layout
+  return (
+    <Card className="glass-bg border-border/20 animate-fade-in">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <History className="w-5 h-5" />
+              Transações
+            </CardTitle>
+            <CardDescription>
+              Visualize todas as suas transações em um só lugar
+            </CardDescription>
+          </div>
+          <Badge variant="secondary">
+            {transactions.length} transações
+          </Badge>
+        </div>
+      </CardHeader>
+      
+      <CardContent>
+        <div className="space-y-2">
+          {transactions.map((transaction) => (
+            <div
+              key={transaction.id}
+              className="group flex items-center justify-between p-4 border border-border/20 rounded-lg hover:bg-muted/50 transition-all duration-200"
+            >
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  "p-2 rounded-full transition-transform group-hover:scale-110",
+                  transaction.type === 'income' 
+                    ? "bg-green-500/10 text-green-500"
+                    : "bg-destructive/10 text-destructive"
+                )}>
+                  {transaction.type === 'income' ? (
+                    <TrendingUp className="w-4 h-4" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4" />
+                  )}
+                </div>
+                
+                <div className="flex-1">
+                  <p className="font-medium">{transaction.description}</p>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>{getCategoryLabel(transaction.type, transaction.category)}</span>
+                    <span>•</span>
+                    <span>{format(new Date(transaction.transaction_date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <div className="text-right">
                   <p className={cn(
-                    "font-bold text-base shrink-0 ml-2",
-                    transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                    "font-semibold text-lg",
+                    transaction.type === 'income' ? "text-green-600" : "text-destructive"
                   )}>
-                    {formatCurrency(transaction.amount)}
+                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                   </p>
                 </div>
-                <div className="flex gap-2 pt-3 border-t">
+                
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => onEdit(transaction)}
-                    className="flex-1"
                   >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Editar
+                    <Edit className="w-4 h-4" />
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={() => onDelete(transaction)}
-                    className="flex-1"
                   >
-                    <Trash className="h-3 w-3 mr-1" />
-                    Excluir
+                    <Trash className="w-4 h-4" />
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       </CardContent>
