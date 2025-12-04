@@ -61,19 +61,6 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        highlight: {
-          DEFAULT: "hsl(var(--highlight))",
-          foreground: "hsl(var(--highlight-foreground))",
-        },
-        yellow: {
-          50: "hsl(var(--yellow-50))",
-          100: "hsl(var(--yellow-100))",
-          200: "hsl(var(--yellow-200))",
-          300: "hsl(var(--yellow-300))",
-          400: "hsl(var(--yellow-400))",
-          500: "hsl(var(--yellow-500))",
-          600: "hsl(var(--yellow-600))",
-        },
       },
       borderRadius: {
         lg: "var(--radius)",
