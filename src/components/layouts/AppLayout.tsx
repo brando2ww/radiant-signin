@@ -11,7 +11,7 @@ interface AppLayoutProps {
 export function AppLayout({ children, className = "" }: AppLayoutProps) {
   return (
     <div className="flex h-screen w-full flex-col lg:flex-row">
-      <MobileHeader />
+      <MobileHeader showNotifications={true} />
       <SessionNavBar />
       <main className={`ml-0 lg:ml-[3.05rem] flex h-screen grow flex-col overflow-auto pb-24 lg:pb-0 pt-16 lg:pt-0 ${className}`}>
         {children}

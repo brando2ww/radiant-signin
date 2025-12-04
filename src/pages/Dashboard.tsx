@@ -1,8 +1,23 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { 
+  DollarSign, 
+  TrendingUp, 
+  TrendingDown,
+  CreditCard,
+  Receipt,
+  Building2,
+  Target,
+  BarChart3,
+  Calendar,
+  CheckSquare,
+  Settings
+} from 'lucide-react';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { StatsCard } from '@/components/dashboard/StatsCard';
+import { ShortcutCard } from '@/components/dashboard/ShortcutCard';
 import { CashFlowChart } from '@/components/dashboard/CashFlowChart';
 import { UpcomingBills } from '@/components/dashboard/UpcomingBills';
 import { QuickActions } from '@/components/dashboard/QuickActions';
@@ -31,19 +46,23 @@ const Dashboard = () => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-      minimumFractionDigits: 0,
+      minimumFractionDigits: 2,
     }).format(value);
   };
 
   if (isLoading) {
     return (
       <AppLayout className="p-4 md:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto w-full space-y-4 md:space-y-6">
+        <div className="max-w-7xl mx-auto w-full space-y-6">
           <Skeleton className="h-20 w-full" />
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
+          </div>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
+            {[...Array(8)].map((_, i) => (
+              <Skeleton key={i} className="h-24" />
+            ))}
           </div>
           <Skeleton className="h-96 w-full" />
         </div>
@@ -52,86 +71,185 @@ const Dashboard = () => {
   }
 
   return (
-    <AppLayout className="p-4 md:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="max-w-7xl mx-auto w-full">
-        {/* Header */}
-        <div className="mb-6 md:mb-8 animate-fade-in">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-1 md:mb-2">
-            Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}!
+    <AppLayout className="p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto w-full space-y-6">
+        
+        {/* Header Simplificado */}
+        <div className="animate-fade-in">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+            Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}! 👋
           </h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Aqui está um resumo das suas finanças em tempo real
+          <p className="text-sm text-muted-foreground">
+            Seu painel financeiro
           </p>
         </div>
 
-        {/* KPIs Cards */}
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 mb-4 md:mb-6">
-          <StatsCard
-            title="Receitas"
-            value={formatCurrency(stats.totalRevenue)}
-            icon={<TrendingUp className="h-6 w-6" />}
-            delay={0}
-          />
-          <StatsCard
-            title="Despesas"
-            value={formatCurrency(stats.totalExpenses)}
-            icon={<TrendingDown className="h-6 w-6" />}
-            delay={100}
-          />
-          <StatsCard
-            title="Lucro"
-            value={formatCurrency(stats.profit)}
-            icon={<DollarSign className="h-6 w-6" />}
-            delay={200}
-          />
+        {/* Cards Principais - Estilo Bancário */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+          {/* Card Receitas - Verde */}
+          <Card className="bg-green-500/10 border-green-500/20 hover:shadow-lg transition-all">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-green-500/20">
+                  <TrendingUp className="h-6 w-6 text-green-600" />
+                </div>
+                <CardTitle className="text-base lg:text-lg font-semibold">Receitas</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1">Total do Mês</p>
+                <div className="font-bold text-2xl lg:text-3xl text-green-600">
+                  {formatCurrency(stats.totalRevenue)}
+                </div>
+              </div>
+              <Separator orientation="vertical" className="hidden sm:block h-16" />
+              <Separator className="block sm:hidden w-full" />
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1">Lucro</p>
+                <div className={`font-bold text-2xl lg:text-3xl ${stats.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(stats.profit)}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card Despesas - Amarelo */}
+          <Card className="bg-yellow-500/10 border-yellow-500/20 hover:shadow-lg transition-all">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-yellow-500/20">
+                  <TrendingDown className="h-6 w-6 text-yellow-600" />
+                </div>
+                <CardTitle className="text-base lg:text-lg font-semibold">Despesas</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1">Total do Mês</p>
+                <div className="font-bold text-2xl lg:text-3xl text-foreground">
+                  {formatCurrency(stats.totalExpenses)}
+                </div>
+              </div>
+              <Separator orientation="vertical" className="hidden sm:block h-16" />
+              <Separator className="block sm:hidden w-full" />
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground mb-1">Saldo</p>
+                <div className={`font-bold text-2xl lg:text-3xl ${stats.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {formatCurrency(stats.balance)}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Main Content Grid */}
-        <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-3 mb-4 md:mb-6">
-          {/* Cash Flow Chart - Spans 2 columns */}
-          <CashFlowChart data={cashFlowData} />
-          
-          {/* Upcoming Bills */}
-          <UpcomingBills bills={upcomingBills} />
+        {/* Atalhos Rápidos - Estilo App Bancário */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Atalhos Rápidos</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <ShortcutCard
+              title="Cartões"
+              description="Gerenciar"
+              icon={CreditCard}
+              iconColor="text-purple-500"
+              href="/credit-cards"
+            />
+            <ShortcutCard
+              title="Extrato"
+              description="Movimentações"
+              icon={Receipt}
+              iconColor="text-blue-500"
+              href="/transactions"
+            />
+            <ShortcutCard
+              title="Contas"
+              description="Bancárias"
+              icon={Building2}
+              iconColor="text-indigo-500"
+              href="/bank-accounts"
+            />
+            <ShortcutCard
+              title="Metas"
+              description="Objetivos"
+              icon={Target}
+              iconColor="text-green-500"
+              href="/goals"
+            />
+            <ShortcutCard
+              title="Relatórios"
+              description="Análises"
+              icon={BarChart3}
+              iconColor="text-orange-500"
+              href="/reports"
+            />
+            <ShortcutCard
+              title="Calendário"
+              description="Agenda"
+              icon={Calendar}
+              iconColor="text-cyan-500"
+              href="/calendar"
+            />
+            <ShortcutCard
+              title="Tarefas"
+              description="Pendências"
+              icon={CheckSquare}
+              iconColor="text-pink-500"
+              href="/tasks"
+            />
+            <ShortcutCard
+              title="Configurações"
+              description="Preferências"
+              icon={Settings}
+              iconColor="text-gray-500"
+              href="/settings"
+            />
+          </div>
         </div>
 
-        {/* Second Row */}
-        <div className="grid gap-6 md:grid-cols-3 mb-6">
-          {/* Quick Actions */}
-          <QuickActions />
-          
-          {/* MEI Widget */}
-          <MEIWidget
-            dasValue={meiInfo.dasValue}
-            dasMonth={meiInfo.dasMonth}
-            dueDate={meiInfo.dueDate}
-            yearlyRevenue={meiInfo.yearlyRevenue}
-            yearlyLimit={meiInfo.yearlyLimit}
-          />
-          
-          {/* Monthly Goals */}
-          <MonthlyGoals
-            revenueGoal={monthlyGoals.revenueGoal}
-            currentRevenue={monthlyGoals.currentRevenue}
-            savingsGoal={monthlyGoals.savingsGoal}
-            currentSavings={monthlyGoals.currentSavings}
-            investmentGoal={monthlyGoals.investmentGoal}
-            currentInvestment={monthlyGoals.currentInvestment}
-          />
+        {/* Visão Geral */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Visão Geral</h2>
+          <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-3">
+            <CashFlowChart data={cashFlowData} />
+            <UpcomingBills bills={upcomingBills} />
+          </div>
         </div>
 
-        {/* Alerts Widget */}
-        <div className="mb-6">
-          <AlertsWidget alerts={alerts} />
+        {/* Resumo */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Resumo</h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            <QuickActions />
+            <MEIWidget
+              dasValue={meiInfo.dasValue}
+              dasMonth={meiInfo.dasMonth}
+              dueDate={meiInfo.dueDate}
+              yearlyRevenue={meiInfo.yearlyRevenue}
+              yearlyLimit={meiInfo.yearlyLimit}
+            />
+            <MonthlyGoals
+              revenueGoal={monthlyGoals.revenueGoal}
+              currentRevenue={monthlyGoals.currentRevenue}
+              savingsGoal={monthlyGoals.savingsGoal}
+              currentSavings={monthlyGoals.currentSavings}
+              investmentGoal={monthlyGoals.investmentGoal}
+              currentInvestment={monthlyGoals.currentInvestment}
+            />
+          </div>
         </div>
 
-        {/* Credit Cards Overview */}
-        <div className="mb-6">
+        {/* Alertas */}
+        <AlertsWidget alerts={alerts} />
+
+        {/* Cartões de Crédito */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Cartões de Crédito</h2>
           <CreditCardsOverview cards={creditCards} />
         </div>
 
-        {/* Revenue by Category Chart */}
-        <div className="mb-6">
+        {/* Receitas por Categoria */}
+        <div>
+          <h2 className="text-lg font-semibold mb-4">Receitas por Categoria</h2>
           <RevenueByCategoryChart data={revenueByCategory} />
         </div>
       </div>
