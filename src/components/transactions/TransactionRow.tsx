@@ -35,7 +35,7 @@ export const TransactionRow = ({ transaction, onEdit, onDelete }: TransactionRow
   return (
     <TableRow className="hover:bg-muted/50 transition-colors">
       <TableCell className="font-medium">
-        {format(new Date(transaction.transaction_date), 'dd/MM/yyyy', { locale: ptBR })}
+        {format(new Date(transaction.transaction_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
