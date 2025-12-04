@@ -8,8 +8,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { MonthlyGoal } from '@/hooks/use-monthly-goals';
 
 interface GoalDialogProps {
@@ -81,15 +81,11 @@ export function GoalDialog({
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="revenue">Meta de Receita (R$)</Label>
-              <Input
+              <Label htmlFor="revenue">Meta de Receita</Label>
+              <CurrencyInput
                 id="revenue"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="R$ 0,00"
                 value={revenueGoal}
-                onChange={(e) => setRevenueGoal(e.target.value)}
+                onChange={setRevenueGoal}
               />
               <p className="text-xs text-muted-foreground">
                 Quanto você pretende faturar neste mês?
@@ -97,15 +93,11 @@ export function GoalDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="savings">Meta de Economia (R$)</Label>
-              <Input
+              <Label htmlFor="savings">Meta de Economia</Label>
+              <CurrencyInput
                 id="savings"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="R$ 0,00"
                 value={savingsGoal}
-                onChange={(e) => setSavingsGoal(e.target.value)}
+                onChange={setSavingsGoal}
               />
               <p className="text-xs text-muted-foreground">
                 Quanto você pretende economizar neste mês?
@@ -113,15 +105,11 @@ export function GoalDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="investment">Meta de Investimento (R$)</Label>
-              <Input
+              <Label htmlFor="investment">Meta de Investimento</Label>
+              <CurrencyInput
                 id="investment"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="R$ 0,00"
                 value={investmentGoal}
-                onChange={(e) => setInvestmentGoal(e.target.value)}
+                onChange={setInvestmentGoal}
               />
               <p className="text-xs text-muted-foreground">
                 Quanto você pretende investir neste mês?

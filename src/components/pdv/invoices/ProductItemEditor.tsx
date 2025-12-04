@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { EditableInvoiceItem, LinkActionType, NewIngredientData } from "@/types/invoice";
 import { IngredientLinker } from "./IngredientLinker";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface ProductItemEditorProps {
   item: EditableInvoiceItem;
@@ -15,11 +16,11 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
     onUpdate({ [field]: value });
   };
 
-  const handleTaxChange = (taxField: keyof EditableInvoiceItem['taxes'], value: number) => {
+  const handleTaxChange = (taxField: keyof EditableInvoiceItem['taxes'], value: string) => {
     onUpdate({
       taxes: {
         ...item.taxes,
-        [taxField]: value,
+        [taxField]: parseFloat(value) || 0,
       },
     });
   };
@@ -122,28 +123,22 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
           </div>
 
           <div>
-            <Label htmlFor={`unit-value-${item.itemNumber}`} className="text-xs">Valor Unitário (R$)</Label>
-            <Input
+            <Label htmlFor={`unit-value-${item.itemNumber}`} className="text-xs">Valor Unitário</Label>
+            <CurrencyInput
               id={`unit-value-${item.itemNumber}`}
-              type="number"
-              step="0.01"
-              value={item.unitValue}
-              onChange={(e) => handleFieldChange('unitValue', parseFloat(e.target.value))}
+              value={item.unitValue.toString()}
+              onChange={(value) => handleFieldChange('unitValue', parseFloat(value) || 0)}
               className="h-8"
-              placeholder="R$ 0,00"
             />
           </div>
 
           <div>
-            <Label htmlFor={`total-value-${item.itemNumber}`} className="text-xs">Valor Total (R$)</Label>
-            <Input
+            <Label htmlFor={`total-value-${item.itemNumber}`} className="text-xs">Valor Total</Label>
+            <CurrencyInput
               id={`total-value-${item.itemNumber}`}
-              type="number"
-              step="0.01"
-              value={item.totalValue}
-              onChange={(e) => handleFieldChange('totalValue', parseFloat(e.target.value))}
+              value={item.totalValue.toString()}
+              onChange={(value) => handleFieldChange('totalValue', parseFloat(value) || 0)}
               className="h-8"
-              placeholder="R$ 0,00"
             />
           </div>
         </div>
@@ -155,54 +150,42 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
           <Label className="text-xs mb-2 block">Impostos</Label>
           <div className="grid grid-cols-4 gap-3">
             <div>
-              <Label htmlFor={`icms-${item.itemNumber}`} className="text-xs text-muted-foreground">ICMS (R$)</Label>
-              <Input
+              <Label htmlFor={`icms-${item.itemNumber}`} className="text-xs text-muted-foreground">ICMS</Label>
+              <CurrencyInput
                 id={`icms-${item.itemNumber}`}
-                type="number"
-                step="0.01"
-                value={item.taxes.icms || 0}
-                onChange={(e) => handleTaxChange('icms', parseFloat(e.target.value))}
+                value={(item.taxes.icms || 0).toString()}
+                onChange={(value) => handleTaxChange('icms', value)}
                 className="h-8"
-                placeholder="R$ 0,00"
               />
             </div>
 
             <div>
-              <Label htmlFor={`ipi-${item.itemNumber}`} className="text-xs text-muted-foreground">IPI (R$)</Label>
-              <Input
+              <Label htmlFor={`ipi-${item.itemNumber}`} className="text-xs text-muted-foreground">IPI</Label>
+              <CurrencyInput
                 id={`ipi-${item.itemNumber}`}
-                type="number"
-                step="0.01"
-                value={item.taxes.ipi || 0}
-                onChange={(e) => handleTaxChange('ipi', parseFloat(e.target.value))}
+                value={(item.taxes.ipi || 0).toString()}
+                onChange={(value) => handleTaxChange('ipi', value)}
                 className="h-8"
-                placeholder="R$ 0,00"
               />
             </div>
 
             <div>
-              <Label htmlFor={`pis-${item.itemNumber}`} className="text-xs text-muted-foreground">PIS (R$)</Label>
-              <Input
+              <Label htmlFor={`pis-${item.itemNumber}`} className="text-xs text-muted-foreground">PIS</Label>
+              <CurrencyInput
                 id={`pis-${item.itemNumber}`}
-                type="number"
-                step="0.01"
-                value={item.taxes.pis || 0}
-                onChange={(e) => handleTaxChange('pis', parseFloat(e.target.value))}
+                value={(item.taxes.pis || 0).toString()}
+                onChange={(value) => handleTaxChange('pis', value)}
                 className="h-8"
-                placeholder="R$ 0,00"
               />
             </div>
 
             <div>
-              <Label htmlFor={`cofins-${item.itemNumber}`} className="text-xs text-muted-foreground">COFINS (R$)</Label>
-              <Input
+              <Label htmlFor={`cofins-${item.itemNumber}`} className="text-xs text-muted-foreground">COFINS</Label>
+              <CurrencyInput
                 id={`cofins-${item.itemNumber}`}
-                type="number"
-                step="0.01"
-                value={item.taxes.cofins || 0}
-                onChange={(e) => handleTaxChange('cofins', parseFloat(e.target.value))}
+                value={(item.taxes.cofins || 0).toString()}
+                onChange={(value) => handleTaxChange('cofins', value)}
                 className="h-8"
-                placeholder="R$ 0,00"
               />
             </div>
           </div>

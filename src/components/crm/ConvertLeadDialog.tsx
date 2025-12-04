@@ -31,6 +31,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Trophy, Percent } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import confetti from "canvas-confetti";
 
 interface ConvertLeadDialogProps {
@@ -43,7 +44,7 @@ export function ConvertLeadDialog({ open, onOpenChange, lead }: ConvertLeadDialo
   const convertLead = useConvertLead();
   const markAsWon = useMarkLeadAsWon();
 
-  const [saleValue, setSaleValue] = useState(0);
+  const [saleValue, setSaleValue] = useState("");
   const [commissionPercentage, setCommissionPercentage] = useState(100);
   const [transactionDate, setTransactionDate] = useState<Date>(new Date());
   const [paymentMethod, setPaymentMethod] = useState("pix");
@@ -51,11 +52,12 @@ export function ConvertLeadDialog({ open, onOpenChange, lead }: ConvertLeadDialo
   const [bankAccountId, setBankAccountId] = useState<string | undefined>();
   const [description, setDescription] = useState("");
 
-  const revenueValue = (saleValue * commissionPercentage) / 100;
+  const saleValueNumber = parseFloat(saleValue) || 0;
+  const revenueValue = (saleValueNumber * commissionPercentage) / 100;
 
   useEffect(() => {
     if (lead && open) {
-      setSaleValue(lead.estimated_value || 0);
+      setSaleValue(lead.estimated_value?.toString() || "");
       setDescription(`Comissão - ${lead.project_title} (${lead.name})`);
     }
   }, [lead, open]);
@@ -73,7 +75,7 @@ export function ConvertLeadDialog({ open, onOpenChange, lead }: ConvertLeadDialo
 
     await convertLead.mutateAsync({
       leadId: lead.id,
-      saleValue,
+      saleValue: saleValueNumber,
       commissionPercentage,
       revenueValue,
       transactionDate,
@@ -122,18 +124,10 @@ export function ConvertLeadDialog({ open, onOpenChange, lead }: ConvertLeadDialo
           {/* Sale Value */}
           <div className="space-y-2">
             <Label>Valor Total da Venda</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                R$
-              </span>
-              <Input
-                type="number"
-                value={saleValue}
-                onChange={(e) => setSaleValue(Number(e.target.value))}
-                className="pl-10"
-                placeholder="R$ 0,00"
-              />
-            </div>
+            <CurrencyInput
+              value={saleValue}
+              onChange={setSaleValue}
+            />
           </div>
 
           {/* Commission Percentage */}

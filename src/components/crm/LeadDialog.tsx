@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Lead, useCreateLead, useUpdateLead } from "@/hooks/use-crm-leads";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 const leadSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -64,26 +65,9 @@ export function LeadDialog({ open, onOpenChange, lead }: LeadDialogProps) {
     return numbers.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '');
   };
 
-  // Função para formatar valor em Real
-  const formatCurrency = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    const amount = parseFloat(numbers) / 100;
-    if (isNaN(amount)) return '';
-    return amount.toLocaleString('pt-BR', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  };
-
   // Função para remover formatação do telefone
   const unformatPhone = (value: string) => {
     return value.replace(/\D/g, '');
-  };
-
-  // Função para remover formatação da moeda
-  const unformatCurrency = (value: string) => {
-    const numbers = value.replace(/\D/g, '');
-    return (parseFloat(numbers) / 100).toString();
   };
 
   const form = useForm<LeadFormValues>({
@@ -96,7 +80,7 @@ export function LeadDialog({ open, onOpenChange, lead }: LeadDialogProps) {
       position: lead?.position || "",
       project_title: lead?.project_title || "",
       project_description: lead?.project_description || "",
-      estimated_value: lead?.estimated_value ? formatCurrency((lead.estimated_value * 100).toString()) : "",
+      estimated_value: lead?.estimated_value?.toString() || "",
       stage: lead?.stage || "incoming",
       priority: lead?.priority || "medium",
       source: lead?.source || "",
@@ -109,7 +93,7 @@ export function LeadDialog({ open, onOpenChange, lead }: LeadDialogProps) {
     const leadData = {
       ...data,
       phone: data.phone ? unformatPhone(data.phone) : undefined,
-      estimated_value: data.estimated_value ? parseFloat(unformatCurrency(data.estimated_value)) : undefined,
+      estimated_value: data.estimated_value ? parseFloat(data.estimated_value) : undefined,
       win_probability: data.win_probability ? parseInt(data.win_probability) : undefined,
     };
 
@@ -232,15 +216,11 @@ export function LeadDialog({ open, onOpenChange, lead }: LeadDialogProps) {
                 name="estimated_value"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valor Estimado (R$)</FormLabel>
+                    <FormLabel>Valor Estimado</FormLabel>
                     <FormControl>
-                      <Input 
-                        {...field}
-                        placeholder="R$ 0,00"
-                        onChange={(e) => {
-                          const formatted = formatCurrency(e.target.value);
-                          field.onChange(formatted);
-                        }}
+                      <CurrencyInput
+                        value={field.value || ""}
+                        onChange={field.onChange}
                       />
                     </FormControl>
                     <FormMessage />

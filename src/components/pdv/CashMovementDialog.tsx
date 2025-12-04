@@ -8,10 +8,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface CashMovementDialogProps {
   open: boolean;
@@ -70,15 +70,11 @@ export function CashMovementDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="amount">Valor (R$)</Label>
-            <Input
+            <Label htmlFor="amount">Valor</Label>
+            <CurrencyInput
               id="amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              placeholder="R$ 0,00"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={setAmount}
               autoFocus
             />
           </div>
