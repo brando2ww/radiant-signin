@@ -29,7 +29,7 @@ export default function Tasks() {
     weekStart: currentWeek,
   };
 
-  const { tasks, isLoading, createTask, updateTask } = useTasks(filters);
+  const { tasks, isLoading, createTask, updateTask, deleteTask } = useTasks(filters);
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
@@ -57,6 +57,11 @@ export default function Tasks() {
     if (!isSameWeek(taskWeekStart, currentWeek, { weekStartsOn: 0 })) {
       setCurrentWeek(taskWeekStart);
     }
+  };
+
+  const handleDeleteTask = (id: string) => {
+    deleteTask(id);
+    setDialogOpen(false);
   };
 
   return (
@@ -108,6 +113,7 @@ export default function Tasks() {
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           onSave={handleSaveTask}
+          onDelete={handleDeleteTask}
           task={selectedTask}
           defaultDate={defaultDate}
           defaultHour={defaultHour}
