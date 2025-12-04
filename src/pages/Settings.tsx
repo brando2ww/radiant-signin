@@ -20,20 +20,20 @@ export default function Settings() {
   if (loading) {
     return (
       <AppLayout className="p-4 md:p-6">
-        <div className="container mx-auto max-w-7xl space-y-6">
-          <div className="space-y-2">
-            <Skeleton className="h-10 w-64" />
-            <Skeleton className="h-4 w-96" />
-          </div>
-          <Skeleton className="h-[600px] w-full" />
+      <div className="w-full space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-4 w-96" />
         </div>
+        <Skeleton className="h-[600px] w-full" />
+      </div>
       </AppLayout>
     );
   }
 
   return (
     <AppLayout className="p-4 md:p-6">
-      <div className="container mx-auto max-w-7xl space-y-4 md:space-y-6">
+      <div className="w-full space-y-4 md:space-y-6">
         <div className="space-y-2">
           <Button
             variant="ghost"
