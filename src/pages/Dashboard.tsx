@@ -43,7 +43,7 @@ const Dashboard = () => {
       id: bill.id,
       title: bill.title,
       amount: bill.amount,
-      date: bill.dueDate,
+      date: bill.dueDate instanceof Date ? bill.dueDate.toISOString() : String(bill.dueDate),
       type: bill.type === 'receivable' ? 'income' as const : 'expense' as const,
       category: bill.category,
     })),
