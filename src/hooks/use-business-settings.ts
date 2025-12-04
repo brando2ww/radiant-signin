@@ -10,6 +10,7 @@ export interface BusinessSettings {
   business_slogan?: string;
   business_description?: string;
   logo_url?: string;
+  cover_url?: string;
   primary_color: string;
   secondary_color: string;
   welcome_message: string;
@@ -57,6 +58,7 @@ export function useBusinessSettings() {
           business_slogan: updates.business_slogan,
           business_description: updates.business_description,
           logo_url: updates.logo_url,
+          cover_url: updates.cover_url,
           primary_color: updates.primary_color || "#3b82f6",
           secondary_color: updates.secondary_color || "#8b5cf6",
           welcome_message: updates.welcome_message || "Olá! Queremos ouvir você 😊",
