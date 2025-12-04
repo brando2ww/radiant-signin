@@ -22,43 +22,22 @@ import {
   DollarSign,
   UtensilsCrossed,
   Tag,
-  Palette
+  Palette,
+  Store,
+  ChevronDown,
+  LucideIcon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/ui/logo";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 
 const sidebarVariants = {
-  open: {
-    width: "15rem",
-  },
-  closed: {
-    width: "3.5rem",
-  },
-};
-
-const contentVariants = {
-  open: { display: "block", opacity: 1 },
-  closed: { display: "block", opacity: 1 },
-};
-
-const variants = {
-  open: {
-    x: 0,
-    opacity: 1,
-    transition: {
-      x: { stiffness: 1000, velocity: -100 },
-    },
-  },
-  closed: {
-    x: -20,
-    opacity: 0,
-    transition: {
-      x: { stiffness: 100 },
-    },
-  },
+  open: { width: "15rem" },
+  closed: { width: "3.5rem" },
 };
 
 const transitionProps = {
@@ -67,15 +46,22 @@ const transitionProps = {
   duration: 0.2,
 };
 
-const staggerVariants = {
-  open: {
-    transition: { staggerChildren: 0.03, delayChildren: 0.02 },
-  },
-};
+interface SectionItem {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+}
 
-const sectionItems = [
+interface Section {
+  title: string;
+  icon: LucideIcon;
+  items: SectionItem[];
+}
+
+const sectionItems: Section[] = [
   {
     title: "Financeiro",
+    icon: DollarSign,
     items: [
       { title: "Lançamentos", url: "/pdv/financeiro/lancamentos", icon: FileText },
       { title: "Contas a Pagar", url: "/pdv/financeiro/contas-pagar", icon: TrendingDown },
@@ -90,6 +76,7 @@ const sectionItems = [
   },
   {
     title: "Frente de Caixa",
+    icon: Store,
     items: [
       { title: "Salão", url: "/pdv/salao", icon: Armchair },
       { title: "Balcão", url: "/pdv/balcao", icon: ShoppingBag },
@@ -99,6 +86,7 @@ const sectionItems = [
   },
   {
     title: "Delivery",
+    icon: Truck,
     items: [
       { title: "Pedidos", url: "/pdv/delivery/pedidos", icon: ShoppingBag },
       { title: "Cardápio", url: "/pdv/delivery/cardapio", icon: UtensilsCrossed },
@@ -110,6 +98,7 @@ const sectionItems = [
   },
   {
     title: "Administrador",
+    icon: LayoutDashboard,
     items: [
       { title: "Dashboard", url: "/pdv/dashboard", icon: LayoutDashboard },
       { title: "Produtos", url: "/pdv/produtos", icon: Package },
@@ -122,29 +111,64 @@ const sectionItems = [
   }
 ];
 
+function getActiveSectionTitle(pathname: string): string | null {
+  for (const section of sectionItems) {
+    if (section.items.some(item => pathname === item.url || pathname.startsWith(item.url + "/"))) {
+      return section.title;
+    }
+  }
+  return null;
+}
+
 export function PDVSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const location = useLocation();
   const pathname = location.pathname;
+  
+  const [openSections, setOpenSections] = useState<string[]>(() => {
+    const activeSection = getActiveSectionTitle(pathname);
+    return activeSection ? [activeSection] : [];
+  });
+
+  useEffect(() => {
+    const activeSection = getActiveSectionTitle(pathname);
+    if (activeSection && !openSections.includes(activeSection)) {
+      setOpenSections(prev => [...prev, activeSection]);
+    }
+  }, [pathname]);
+
+  const toggleSection = (sectionTitle: string) => {
+    setOpenSections(prev => 
+      prev.includes(sectionTitle)
+        ? prev.filter(s => s !== sectionTitle)
+        : [...prev, sectionTitle]
+    );
+  };
+
+  const handleSectionClick = (sectionTitle: string) => {
+    if (isCollapsed) {
+      setIsCollapsed(false);
+      if (!openSections.includes(sectionTitle)) {
+        setOpenSections(prev => [...prev, sectionTitle]);
+      }
+    } else {
+      toggleSection(sectionTitle);
+    }
+  };
 
   return (
-    <motion.div
-      className={cn(
-        "sidebar fixed left-0 z-50 h-full shrink-0 border-r"
-      )}
-      initial={isCollapsed ? "closed" : "open"}
-      animate={isCollapsed ? "closed" : "open"}
-      variants={sidebarVariants}
-      transition={transitionProps}
-      onMouseEnter={() => setIsCollapsed(false)}
-      onMouseLeave={() => setIsCollapsed(true)}
-    >
+    <TooltipProvider delayDuration={0}>
       <motion.div
-        className="relative z-40 flex text-muted-foreground h-full shrink-0 flex-col bg-background transition-all"
-        variants={contentVariants}
+        className={cn("sidebar fixed left-0 z-50 h-full shrink-0 border-r bg-background")}
+        initial={isCollapsed ? "closed" : "open"}
+        animate={isCollapsed ? "closed" : "open"}
+        variants={sidebarVariants}
+        transition={transitionProps}
+        onMouseEnter={() => setIsCollapsed(false)}
+        onMouseLeave={() => setIsCollapsed(true)}
       >
-        <motion.ul variants={staggerVariants} className="flex h-full flex-col">
-          <div className="flex grow flex-col items-center">
+        <div className="relative z-40 flex text-muted-foreground h-full shrink-0 flex-col transition-all">
+          <div className="flex h-full flex-col">
             {/* Header */}
             <div className="flex h-16 w-full shrink-0 border-b p-3 items-center">
               <div className="flex items-center gap-2 px-1">
@@ -159,47 +183,87 @@ export function PDVSidebar() {
             </div>
 
             {/* Navigation */}
-            <div className="flex h-full w-full flex-col">
-              <div className="flex grow flex-col">
-                <ScrollArea className="h-16 grow p-2">
-                  <div className={cn("flex w-full flex-col")}>
-                    {sectionItems.map((section, sectionIndex) => (
-                      section.items.length > 0 && (
-                        <div key={section.title} className={sectionIndex > 0 ? "mt-4" : ""}>
-                          {!isCollapsed && (
-                            <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                              {section.title}
-                            </div>
-                          )}
-                          <div className="flex flex-col gap-1">
-                            {section.items.map((item) => (
-                              <NavLink
-                                key={item.url}
-                                to={item.url}
-                                className={cn(
-                                  "flex h-9 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-accent hover:text-accent-foreground",
-                                  pathname === item.url && "bg-accent text-accent-foreground font-medium"
-                                )}
-                              >
-                                <item.icon className="h-4 w-4" />
-                                <motion.li variants={variants}>
-                                  {!isCollapsed && (
-                                    <p className="ml-2 text-sm font-medium">{item.title}</p>
-                                  )}
-                                </motion.li>
-                              </NavLink>
-                            ))}
-                          </div>
+            <ScrollArea className="flex-1 p-2">
+              <div className="flex flex-col gap-1">
+                {sectionItems.map((section) => {
+                  const isSectionOpen = openSections.includes(section.title);
+                  const isSectionActive = section.items.some(
+                    item => pathname === item.url || pathname.startsWith(item.url + "/")
+                  );
+
+                  if (isCollapsed) {
+                    return (
+                      <Tooltip key={section.title}>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => handleSectionClick(section.title)}
+                            className={cn(
+                              "flex h-10 w-full items-center justify-center rounded-md transition-colors",
+                              "hover:bg-accent hover:text-accent-foreground",
+                              isSectionActive && "bg-accent text-accent-foreground"
+                            )}
+                          >
+                            <section.icon className="h-5 w-5" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" sideOffset={10}>
+                          {section.title}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  }
+
+                  return (
+                    <Collapsible
+                      key={section.title}
+                      open={isSectionOpen}
+                      onOpenChange={() => toggleSection(section.title)}
+                    >
+                      <CollapsibleTrigger
+                        className={cn(
+                          "flex h-10 w-full items-center justify-between rounded-md px-3 transition-colors",
+                          "hover:bg-accent hover:text-accent-foreground",
+                          isSectionActive && "text-foreground font-medium"
+                        )}
+                      >
+                        <div className="flex items-center gap-3">
+                          <section.icon className="h-4 w-4" />
+                          <span className="text-sm">{section.title}</span>
                         </div>
-                      )
-                    ))}
-                  </div>
-                </ScrollArea>
+                        <ChevronDown
+                          className={cn(
+                            "h-4 w-4 transition-transform duration-200",
+                            isSectionOpen && "rotate-180"
+                          )}
+                        />
+                      </CollapsibleTrigger>
+
+                      <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+                        <div className="flex flex-col gap-0.5 pt-1 pb-2">
+                          {section.items.map((item) => (
+                            <NavLink
+                              key={item.url}
+                              to={item.url}
+                              className={cn(
+                                "flex h-9 items-center gap-3 rounded-md pl-10 pr-3 text-sm transition-colors",
+                                "hover:bg-accent hover:text-accent-foreground",
+                                pathname === item.url && "bg-accent text-accent-foreground font-medium"
+                              )}
+                            >
+                              <item.icon className="h-4 w-4" />
+                              <span>{item.title}</span>
+                            </NavLink>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  );
+                })}
               </div>
-            </div>
+            </ScrollArea>
           </div>
-        </motion.ul>
+        </div>
       </motion.div>
-    </motion.div>
+    </TooltipProvider>
   );
 }
