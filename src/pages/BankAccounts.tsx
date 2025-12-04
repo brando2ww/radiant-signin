@@ -84,57 +84,69 @@ export default function BankAccounts() {
   };
 
   return (
-    <AppLayout className="py-8 px-4">
+    <AppLayout className="py-4 md:py-8 px-4">
       <div className="container mx-auto">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
+        <div className="mb-6 md:mb-8">
+          {/* Header - Mobile Responsive */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
             <div>
-              <h1 className="text-3xl font-bold">Contas Bancárias</h1>
-              <p className="text-muted-foreground mt-1">
+              <h1 className="text-2xl md:text-3xl font-bold">Contas Bancárias</h1>
+              <p className="text-muted-foreground text-sm md:text-base mt-1">
                 Gerencie suas contas e acompanhe seus saldos
               </p>
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => setTransferDialogOpen(true)} variant="outline">
+              <Button 
+                onClick={() => setTransferDialogOpen(true)} 
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none"
+              >
                 <ArrowLeftRight className="mr-2 h-4 w-4" />
-                Transferir
+                <span className="hidden xs:inline">Transferir</span>
+                <span className="xs:hidden">Transfer.</span>
               </Button>
-              <Button onClick={handleNewAccount}>
+              <Button 
+                onClick={handleNewAccount}
+                size="sm"
+                className="flex-1 sm:flex-none"
+              >
                 <Plus className="mr-2 h-4 w-4" />
-                Nova Conta
+                <span className="hidden xs:inline">Nova Conta</span>
+                <span className="xs:hidden">Nova</span>
               </Button>
             </div>
           </div>
 
-          {/* Total Balance Card */}
-          <div className="bg-gradient-to-br from-primary to-primary/80 rounded-2xl p-8 text-white mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <Wallet className="h-6 w-6" />
-              <p className="text-sm opacity-90">Saldo Total</p>
+          {/* Total Balance Card - Mobile Responsive */}
+          <div className="bg-gradient-to-br from-primary to-primary/80 rounded-xl md:rounded-2xl p-4 md:p-8 text-white mb-6 md:mb-8">
+            <div className="flex items-center gap-2 md:gap-3 mb-2">
+              <Wallet className="h-5 w-5 md:h-6 md:w-6" />
+              <p className="text-xs md:text-sm opacity-90">Saldo Total</p>
             </div>
-            <p className="text-4xl font-bold">{formatCurrency(totalBalance)}</p>
-            <p className="text-sm opacity-75 mt-2">
+            <p className="text-2xl md:text-4xl font-bold">{formatCurrency(totalBalance)}</p>
+            <p className="text-xs md:text-sm opacity-75 mt-1 md:mt-2">
               em {bankAccounts.length} {bankAccounts.length === 1 ? "conta" : "contas"}
             </p>
           </div>
 
           {/* Accounts Grid */}
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="h-64 bg-muted animate-pulse rounded-lg"
+                  className="h-48 md:h-64 bg-muted animate-pulse rounded-lg"
                 />
               ))}
             </div>
           ) : bankAccounts.length === 0 ? (
-            <div className="text-center py-16">
-              <Wallet className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">
+            <div className="text-center py-12 md:py-16">
+              <Wallet className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg md:text-xl font-semibold mb-2">
                 Nenhuma conta cadastrada
               </h3>
-              <p className="text-muted-foreground mb-6">
+              <p className="text-muted-foreground text-sm md:text-base mb-6">
                 Comece adicionando sua primeira conta bancária
               </p>
               <Button onClick={handleNewAccount}>
@@ -143,7 +155,7 @@ export default function BankAccounts() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {bankAccounts.map((account) => (
                 <BankAccountCard
                   key={account.id}
