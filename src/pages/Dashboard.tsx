@@ -75,21 +75,18 @@ const Dashboard = () => {
               title="Receitas"
               value={formatCurrency(stats.totalRevenue)}
               icon={<TrendingUp className="h-6 w-6" />}
-              trend={stats.revenueTrend}
               delay={0}
             />
             <StatsCard
               title="Despesas"
               value={formatCurrency(stats.totalExpenses)}
               icon={<TrendingDown className="h-6 w-6" />}
-              trend={stats.expensesTrend}
               delay={100}
             />
             <StatsCard
               title="Lucro"
               value={formatCurrency(stats.profit)}
               icon={<DollarSign className="h-6 w-6" />}
-              trend={stats.profitTrend}
               delay={200}
             />
           </div>
