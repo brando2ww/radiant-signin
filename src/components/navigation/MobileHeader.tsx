@@ -32,9 +32,9 @@ export function MobileHeader() {
   };
 
   return (
-    <header className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-background/95 backdrop-blur-lg border-b border-border">
+    <header className="lg:hidden fixed top-0 left-0 right-0 z-50 h-16 bg-background/95 backdrop-blur-lg border-b border-border">
       <div className="flex items-center justify-between h-full px-4">
-        <img src={logo} alt="Velara" className="h-14" />
+        <img src={logo} alt="Velara" className="h-10" />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
