@@ -24,6 +24,7 @@ import { DeliveryProduct, useCreateProduct, useUpdateProduct } from "@/hooks/use
 import { DeliveryCategory } from "@/hooks/use-delivery-categories";
 import { useProductImageUpload } from "@/hooks/use-product-image-upload";
 import { ProductOptionsManager } from "./ProductOptionsManager";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { toast } from "sonner";
 
 interface ProductDialogProps {
@@ -181,12 +182,18 @@ export const ProductDialog = ({
 
                 <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Preço Base * (R$)</Label>
-                  <Input type="number" step="0.01" placeholder="R$ 0,00" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} required />
+                  <Label>Preço Base *</Label>
+                  <CurrencyInput
+                    value={basePrice}
+                    onChange={setBasePrice}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label>Preço Promocional (R$)</Label>
-                  <Input type="number" step="0.01" placeholder="R$ 0,00" value={promotionalPrice} onChange={(e) => setPromotionalPrice(e.target.value)} />
+                  <Label>Preço Promocional</Label>
+                  <CurrencyInput
+                    value={promotionalPrice}
+                    onChange={setPromotionalPrice}
+                  />
                 </div>
               </div>
 

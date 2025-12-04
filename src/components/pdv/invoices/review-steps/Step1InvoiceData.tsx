@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { cn, formatCurrency } from "@/lib/utils";
 import { EditableInvoiceData } from "@/types/invoice";
 import { formatNFeKey } from "@/lib/invoice/validators";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface Step1InvoiceDataProps {
   data: EditableInvoiceData;
@@ -17,11 +18,11 @@ interface Step1InvoiceDataProps {
 }
 
 export function Step1InvoiceData({ data, onUpdate }: Step1InvoiceDataProps) {
-  const handleTotalChange = (field: keyof EditableInvoiceData['totals'], value: number) => {
+  const handleTotalChange = (field: keyof EditableInvoiceData['totals'], value: string) => {
     onUpdate({
       totals: {
         ...data.totals,
-        [field]: value,
+        [field]: parseFloat(value) || 0,
       },
     });
   };
@@ -134,74 +135,56 @@ export function Step1InvoiceData({ data, onUpdate }: Step1InvoiceDataProps) {
         
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="total-products">Total de Produtos (R$)</Label>
-            <Input
+            <Label htmlFor="total-products">Total de Produtos</Label>
+            <CurrencyInput
               id="total-products"
-              type="number"
-              step="0.01"
-              value={data.totals.products}
-              onChange={(e) => handleTotalChange('products', parseFloat(e.target.value))}
-              placeholder="R$ 0,00"
+              value={data.totals.products.toString()}
+              onChange={(value) => handleTotalChange('products', value)}
             />
           </div>
 
           <div>
-            <Label htmlFor="total-tax">Total de Impostos (R$)</Label>
-            <Input
+            <Label htmlFor="total-tax">Total de Impostos</Label>
+            <CurrencyInput
               id="total-tax"
-              type="number"
-              step="0.01"
-              value={data.totals.tax}
-              onChange={(e) => handleTotalChange('tax', parseFloat(e.target.value))}
-              placeholder="R$ 0,00"
+              value={data.totals.tax.toString()}
+              onChange={(value) => handleTotalChange('tax', value)}
             />
           </div>
 
           <div>
-            <Label htmlFor="freight">Frete (R$)</Label>
-            <Input
+            <Label htmlFor="freight">Frete</Label>
+            <CurrencyInput
               id="freight"
-              type="number"
-              step="0.01"
-              value={data.totals.freight}
-              onChange={(e) => handleTotalChange('freight', parseFloat(e.target.value))}
-              placeholder="R$ 0,00"
+              value={data.totals.freight.toString()}
+              onChange={(value) => handleTotalChange('freight', value)}
             />
           </div>
 
           <div>
-            <Label htmlFor="insurance">Seguro (R$)</Label>
-            <Input
+            <Label htmlFor="insurance">Seguro</Label>
+            <CurrencyInput
               id="insurance"
-              type="number"
-              step="0.01"
-              value={data.totals.insurance}
-              onChange={(e) => handleTotalChange('insurance', parseFloat(e.target.value))}
-              placeholder="R$ 0,00"
+              value={data.totals.insurance.toString()}
+              onChange={(value) => handleTotalChange('insurance', value)}
             />
           </div>
 
           <div>
-            <Label htmlFor="other-expenses">Outras Despesas (R$)</Label>
-            <Input
+            <Label htmlFor="other-expenses">Outras Despesas</Label>
+            <CurrencyInput
               id="other-expenses"
-              type="number"
-              step="0.01"
-              value={data.totals.otherExpenses}
-              onChange={(e) => handleTotalChange('otherExpenses', parseFloat(e.target.value))}
-              placeholder="R$ 0,00"
+              value={data.totals.otherExpenses.toString()}
+              onChange={(value) => handleTotalChange('otherExpenses', value)}
             />
           </div>
 
           <div>
-            <Label htmlFor="discount">Desconto (R$)</Label>
-            <Input
+            <Label htmlFor="discount">Desconto</Label>
+            <CurrencyInput
               id="discount"
-              type="number"
-              step="0.01"
-              value={data.totals.discount}
-              onChange={(e) => handleTotalChange('discount', parseFloat(e.target.value))}
-              placeholder="R$ 0,00"
+              value={data.totals.discount.toString()}
+              onChange={(value) => handleTotalChange('discount', value)}
             />
           </div>
         </div>

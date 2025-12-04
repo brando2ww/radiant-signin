@@ -9,6 +9,7 @@ import {
   useCreateCoupon,
   useUpdateCoupon,
 } from "@/hooks/use-delivery-coupons";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface CouponDialogProps {
   open: boolean;
@@ -121,46 +122,45 @@ export const CouponDialog = ({ open, onOpenChange, coupon }: CouponDialogProps) 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="value">
-                Valor do Desconto * {type === "percentage" ? "(%)" : "(R$)"}
+                Valor do Desconto * {type === "percentage" ? "(%)" : ""}
               </Label>
-              <Input
-                id="value"
-                type="number"
-                step={type === "percentage" ? "1" : "0.01"}
-                min="0"
-                max={type === "percentage" ? "100" : undefined}
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                required
-              />
+              {type === "fixed" ? (
+                <CurrencyInput
+                  id="value"
+                  value={value}
+                  onChange={setValue}
+                />
+              ) : (
+                <Input
+                  id="value"
+                  type="number"
+                  step="1"
+                  min="0"
+                  max="100"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  required
+                />
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="minOrderValue">Pedido Mínimo (R$)</Label>
-              <Input
+              <Label htmlFor="minOrderValue">Pedido Mínimo</Label>
+              <CurrencyInput
                 id="minOrderValue"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="R$ 0,00"
                 value={minOrderValue}
-                onChange={(e) => setMinOrderValue(e.target.value)}
-                required
+                onChange={setMinOrderValue}
               />
             </div>
           </div>
 
           {type === "percentage" && (
             <div className="space-y-2">
-              <Label htmlFor="maxDiscount">Desconto Máximo (R$)</Label>
-              <Input
+              <Label htmlFor="maxDiscount">Desconto Máximo</Label>
+              <CurrencyInput
                 id="maxDiscount"
-                type="number"
-                step="0.01"
-                min="0"
                 value={maxDiscount}
-                onChange={(e) => setMaxDiscount(e.target.value)}
-                placeholder="R$ 0,00"
+                onChange={setMaxDiscount}
               />
               <p className="text-xs text-muted-foreground">
                 Limite o valor máximo do desconto

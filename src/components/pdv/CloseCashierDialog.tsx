@@ -8,11 +8,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface CloseCashierDialogProps {
   open: boolean;
@@ -116,15 +116,11 @@ export function CloseCashierDialog({
           </Card>
 
           <div className="space-y-2">
-            <Label htmlFor="closing">Saldo Final em Dinheiro (R$)</Label>
-            <Input
+            <Label htmlFor="closing">Saldo Final em Dinheiro</Label>
+            <CurrencyInput
               id="closing"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="R$ 0,00"
               value={closingBalance}
-              onChange={(e) => setClosingBalance(e.target.value)}
+              onChange={setClosingBalance}
               autoFocus
             />
             {closingBalance && (

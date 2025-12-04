@@ -10,6 +10,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { cn, formatCurrency } from "@/lib/utils";
 import { EditableInvoiceData, EditableFinancialData } from "@/types/invoice";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface Step3FinancialDataProps {
   data: EditableInvoiceData;
@@ -48,14 +49,11 @@ export function Step3FinancialData({ data, onUpdate }: Step3FinancialDataProps) 
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="financial-amount">Valor (R$) *</Label>
-            <Input
+            <Label htmlFor="financial-amount">Valor *</Label>
+            <CurrencyInput
               id="financial-amount"
-              type="number"
-              step="0.01"
-              value={data.financial.amount}
-              onChange={(e) => handleFinancialChange('amount', parseFloat(e.target.value))}
-              placeholder="R$ 0,00"
+              value={data.financial.amount.toString()}
+              onChange={(value) => handleFinancialChange('amount', parseFloat(value) || 0)}
             />
           </div>
 

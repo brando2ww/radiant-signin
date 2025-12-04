@@ -9,6 +9,7 @@ import {
   useCreateOrUpdateSettings,
   DeliveryZone,
 } from "@/hooks/use-delivery-settings";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 export const DeliverySettings = () => {
   const { data: settings } = useDeliverySettings();
@@ -63,28 +64,20 @@ export const DeliverySettings = () => {
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="minOrderValue">Pedido Mínimo (R$)</Label>
-              <Input
+              <Label htmlFor="minOrderValue">Pedido Mínimo</Label>
+              <CurrencyInput
                 id="minOrderValue"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="R$ 0,00"
                 value={minOrderValue}
-                onChange={(e) => setMinOrderValue(e.target.value)}
+                onChange={setMinOrderValue}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="defaultDeliveryFee">Taxa Padrão (R$)</Label>
-              <Input
+              <Label htmlFor="defaultDeliveryFee">Taxa Padrão</Label>
+              <CurrencyInput
                 id="defaultDeliveryFee"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="R$ 0,00"
                 value={defaultDeliveryFee}
-                onChange={(e) => setDefaultDeliveryFee(e.target.value)}
+                onChange={setDefaultDeliveryFee}
               />
             </div>
 
@@ -139,13 +132,9 @@ export const DeliverySettings = () => {
               value={newZoneNeighborhood}
               onChange={(e) => setNewZoneNeighborhood(e.target.value)}
             />
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="R$ 0,00"
+            <CurrencyInput
               value={newZoneFee}
-              onChange={(e) => setNewZoneFee(e.target.value)}
+              onChange={setNewZoneFee}
               className="w-32"
             />
             <Button onClick={handleAddZone} disabled={!newZoneNeighborhood || !newZoneFee}>

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Save } from "lucide-react";
 import { Lead } from "@/hooks/use-crm-leads";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface LeadInfoTabProps {
   lead: Lead;
@@ -149,14 +150,11 @@ export function LeadInfoTab({ lead, onSave }: LeadInfoTabProps) {
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="estimated_value">Valor Estimado (R$)</Label>
-              <Input
+              <Label htmlFor="estimated_value">Valor Estimado</Label>
+              <CurrencyInput
                 id="estimated_value"
-                type="number"
-                step="0.01"
-                placeholder="R$ 0,00"
                 value={formData.estimated_value}
-                onChange={(e) => setFormData({ ...formData, estimated_value: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, estimated_value: value })}
               />
             </div>
             <div className="space-y-2">

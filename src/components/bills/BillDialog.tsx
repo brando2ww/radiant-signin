@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { Bill } from "@/hooks/use-bills";
 import { BankAccountSelector } from "@/components/bank-accounts/BankAccountSelector";
 import { incomeCategories, expenseCategories } from "@/data/transaction-categories";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 interface BillDialogProps {
   open: boolean;
@@ -121,14 +122,10 @@ export function BillDialog({ open, onOpenChange, bill, onSave, type }: BillDialo
 
             <div className="space-y-2">
               <Label htmlFor="amount">Valor *</Label>
-              <Input
+              <CurrencyInput
                 id="amount"
-                type="number"
-                step="0.01"
                 value={formData.amount}
-                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                required
-                placeholder="R$ 0,00"
+                onChange={(value) => setFormData({ ...formData, amount: value })}
               />
             </div>
           </div>

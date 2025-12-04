@@ -19,6 +19,7 @@ import { usePDVChartOfAccounts } from "@/hooks/use-pdv-chart-of-accounts";
 import { usePDVBankAccounts } from "@/hooks/use-pdv-bank-accounts";
 import { usePDVSuppliers } from "@/hooks/use-pdv-suppliers";
 import { usePDVCustomers } from "@/hooks/use-pdv-customers";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import type { PDVFinancialTransaction } from "@/hooks/use-pdv-financial-transactions";
 
 interface PDVTransactionDialogProps {
@@ -140,12 +141,9 @@ export function PDVTransactionDialog({ open, onOpenChange, transaction, onSubmit
                   <FormItem>
                     <FormLabel>Valor *</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="R$ 0,00"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
+                      <CurrencyInput
+                        value={field.value?.toString() || ""}
+                        onChange={(value) => field.onChange(parseFloat(value) || 0)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -429,9 +427,10 @@ export function PDVTransactionDialog({ open, onOpenChange, transaction, onSubmit
                   <FormLabel>Observações</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Adicione observações sobre esta transação..."
+                      placeholder="Informações adicionais..."
                       {...field}
                       value={field.value || ''}
+                      rows={3}
                     />
                   </FormControl>
                   <FormMessage />
@@ -439,12 +438,12 @@ export function PDVTransactionDialog({ open, onOpenChange, transaction, onSubmit
               )}
             />
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancelar
               </Button>
               <Button type="submit">
-                {transaction ? 'Atualizar' : 'Criar'} Lançamento
+                {transaction ? 'Salvar' : 'Criar'} Lançamento
               </Button>
             </div>
           </form>
