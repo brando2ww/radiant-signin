@@ -42,7 +42,7 @@ export const ShortcutCard = ({
       <CardContent className="p-4 flex flex-col items-center text-center gap-2">
         <div className={cn(
           "p-3 rounded-full",
-          "bg-primary/10"
+          "bg-yellow-500/20"
         )}>
           <Icon className={cn("h-6 w-6", iconColor)} />
         </div>

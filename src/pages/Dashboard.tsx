@@ -151,56 +151,56 @@ const Dashboard = () => {
               title="Cartões"
               description="Gerenciar"
               icon={CreditCard}
-              iconColor="text-purple-500"
+              iconColor="text-yellow-600"
               href="/credit-cards"
             />
             <ShortcutCard
               title="Extrato"
               description="Movimentações"
               icon={Receipt}
-              iconColor="text-blue-500"
+              iconColor="text-yellow-600"
               href="/transactions"
             />
             <ShortcutCard
               title="Contas"
               description="Bancárias"
               icon={Building2}
-              iconColor="text-indigo-500"
+              iconColor="text-yellow-600"
               href="/bank-accounts"
             />
             <ShortcutCard
               title="Metas"
               description="Objetivos"
               icon={Target}
-              iconColor="text-green-500"
+              iconColor="text-yellow-600"
               href="/goals"
             />
             <ShortcutCard
               title="Relatórios"
               description="Análises"
               icon={BarChart3}
-              iconColor="text-orange-500"
+              iconColor="text-yellow-600"
               href="/reports"
             />
             <ShortcutCard
               title="Calendário"
               description="Agenda"
               icon={Calendar}
-              iconColor="text-cyan-500"
+              iconColor="text-yellow-600"
               href="/calendar"
             />
             <ShortcutCard
               title="Tarefas"
               description="Pendências"
               icon={CheckSquare}
-              iconColor="text-pink-500"
+              iconColor="text-yellow-600"
               href="/tasks"
             />
             <ShortcutCard
               title="Configurações"
               description="Preferências"
               icon={Settings}
-              iconColor="text-gray-500"
+              iconColor="text-yellow-600"
               href="/settings"
             />
           </div>
