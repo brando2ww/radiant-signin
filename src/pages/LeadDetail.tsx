@@ -1,20 +1,25 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useLeads, useUpdateLead, Lead } from "@/hooks/use-crm-leads";
+import { useLeads, Lead } from "@/hooks/use-crm-leads";
 import { LeadOverviewTab } from "@/components/crm/LeadOverviewTab";
 import { LeadInfoTab } from "@/components/crm/LeadInfoTab";
 import { LeadActivitiesTab } from "@/components/crm/LeadActivitiesTab";
 import { LeadNotesTab } from "@/components/crm/LeadNotesTab";
-import confetti from "canvas-confetti";
+import { ConvertLeadDialog } from "@/components/crm/ConvertLeadDialog";
+import { LostLeadDialog } from "@/components/crm/LostLeadDialog";
+import { useUpdateLead } from "@/hooks/use-crm-leads";
 
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: leads = [] } = useLeads();
   const updateMutation = useUpdateLead();
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [lostDialogOpen, setLostDialogOpen] = useState(false);
 
   const lead = leads.find(l => l.id === id);
 
@@ -31,51 +36,12 @@ export default function LeadDetail() {
     );
   }
 
-  const fireConfetti = () => {
-    const duration = 3000;
-    const animationEnd = Date.now() + duration;
-    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
-
-    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
-
-    const interval = window.setInterval(() => {
-      const timeLeft = animationEnd - Date.now();
-
-      if (timeLeft <= 0) {
-        return clearInterval(interval);
-      }
-
-      const particleCount = 50 * (timeLeft / duration);
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-      });
-      confetti({
-        ...defaults,
-        particleCount,
-        origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-      });
-    }, 250);
-  };
-
   const handleMarkWon = () => {
-    updateMutation.mutate({
-      id: lead.id,
-      stage: 'won',
-      status: 'converted',
-      closed_date: new Date().toISOString(),
-    });
-    fireConfetti();
+    setConvertDialogOpen(true);
   };
 
   const handleMarkLost = () => {
-    updateMutation.mutate({
-      id: lead.id,
-      stage: 'lost',
-      status: 'archived',
-      closed_date: new Date().toISOString(),
-    });
+    setLostDialogOpen(true);
   };
 
   const handleSaveInfo = (updates: Partial<Lead>) => {
@@ -131,6 +97,18 @@ export default function LeadDetail() {
           <LeadNotesTab leadId={lead.id} />
         </TabsContent>
       </Tabs>
+
+      <ConvertLeadDialog
+        open={convertDialogOpen}
+        onOpenChange={setConvertDialogOpen}
+        lead={lead}
+      />
+
+      <LostLeadDialog
+        open={lostDialogOpen}
+        onOpenChange={setLostDialogOpen}
+        lead={lead}
+      />
     </div>
   );
 }
