@@ -14,6 +14,7 @@ interface CalendarFiltersProps {
     showBills: boolean;
     showTransactions: boolean;
     showCards: boolean;
+    showTasks: boolean;
     status: 'all' | 'pending' | 'paid' | 'overdue';
   };
   onFiltersChange: (filters: CalendarFiltersProps['filters']) => void;
@@ -60,6 +61,19 @@ export const CalendarFilters = ({ filters, onFiltersChange }: CalendarFiltersPro
             checked={filters.showCards}
             onCheckedChange={(checked) =>
               onFiltersChange({ ...filters, showCards: checked })
+            }
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <Label htmlFor="show-tasks" className="text-sm text-muted-foreground">
+            Tarefas
+          </Label>
+          <Switch
+            id="show-tasks"
+            checked={filters.showTasks}
+            onCheckedChange={(checked) =>
+              onFiltersChange({ ...filters, showTasks: checked })
             }
           />
         </div>

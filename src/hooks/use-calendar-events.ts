@@ -2,13 +2,17 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
-  Calendar, 
   CreditCard, 
   TrendingUp, 
   TrendingDown,
   AlertCircle,
   CheckCircle,
-  XCircle
+  XCircle,
+  CheckSquare,
+  Users,
+  Calculator,
+  Briefcase,
+  User,
 } from 'lucide-react';
 import { LucideIcon } from 'lucide-react';
 
@@ -18,18 +22,45 @@ export interface CalendarEvent {
   time?: string;
   title: string;
   amount?: number;
-  type: 'bill' | 'transaction' | 'card_due' | 'card_closing';
+  type: 'bill' | 'transaction' | 'card_due' | 'card_closing' | 'task';
   category?: string;
   status?: 'pending' | 'paid' | 'overdue';
   description?: string;
   icon: LucideIcon;
   color: string;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  endDate?: Date;
+  taskId?: string;
 }
+
+const getTaskIcon = (category: string): LucideIcon => {
+  switch (category) {
+    case 'payment': return CreditCard;
+    case 'meeting': return Users;
+    case 'reconciliation': return Calculator;
+    case 'administrative': return Briefcase;
+    case 'personal': return User;
+    default: return CheckSquare;
+  }
+};
+
+const getCategoryLabel = (category: string): string => {
+  const labels: Record<string, string> = {
+    payment: 'Pagamento',
+    meeting: 'Reunião',
+    reconciliation: 'Conciliação',
+    administrative: 'Administrativo',
+    personal: 'Pessoal',
+    other: 'Outros',
+  };
+  return labels[category] || 'Outros';
+};
 
 export const useCalendarEvents = (selectedMonth: Date, filters: {
   showBills: boolean;
   showTransactions: boolean;
   showCards: boolean;
+  showTasks: boolean;
   status: 'all' | 'pending' | 'paid' | 'overdue';
 }) => {
   const { user } = useAuth();
@@ -170,6 +201,45 @@ export const useCalendarEvents = (selectedMonth: Date, filters: {
                   });
                 }
               }
+            }
+          });
+        }
+      }
+
+      // Fetch tasks
+      if (filters.showTasks) {
+        const { data: tasks } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('user_id', user.id)
+          .gte('start_time', monthStart.toISOString())
+          .lte('start_time', monthEnd.toISOString());
+
+        if (tasks) {
+          tasks.forEach((task) => {
+            let eventStatus: 'pending' | 'paid' | 'overdue' = 'pending';
+            if (task.status === 'completed') eventStatus = 'paid';
+            else if (task.status === 'cancelled') eventStatus = 'overdue';
+
+            if (filters.status === 'all' || filters.status === eventStatus) {
+              const startTime = new Date(task.start_time);
+              const endTime = new Date(task.end_time);
+              
+              events.push({
+                id: task.id,
+                date: startTime,
+                time: startTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                title: task.title,
+                type: 'task',
+                category: getCategoryLabel(task.category),
+                status: eventStatus,
+                description: task.description || undefined,
+                icon: getTaskIcon(task.category),
+                color: task.color || 'hsl(var(--chart-3))',
+                priority: task.priority as 'low' | 'medium' | 'high' | 'urgent',
+                endDate: endTime,
+                taskId: task.id,
+              });
             }
           });
         }
