@@ -23,12 +23,23 @@ export function MobileHeader({
   showNotifications = false,
   onMenuClick 
 }: MobileHeaderProps) {
-  const { user, signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await signOut();
     navigate('/auth');
+  };
+
+  const getInitials = () => {
+    if (profile?.full_name) {
+      const names = profile.full_name.split(' ').filter(Boolean);
+      if (names.length >= 2) {
+        return (names[0][0] + names[1][0]).toUpperCase();
+      }
+      return names[0]?.substring(0, 2).toUpperCase() || '??';
+    }
+    return user?.email?.[0]?.toUpperCase() || '?';
   };
 
   return (
@@ -67,15 +78,15 @@ export function MobileHeader({
                   size="sm" 
                   className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center p-0 hover:bg-primary/20 transition-colors overflow-hidden"
                 >
-                  {user.user_metadata?.avatar_url ? (
+                  {profile?.avatar_url ? (
                     <img 
-                      src={user.user_metadata.avatar_url} 
+                      src={profile.avatar_url} 
                       alt="Profile" 
                       className="w-full h-full object-cover rounded-full"
                     />
                   ) : (
                     <span className="text-sm font-medium text-primary">
-                      {user.user_metadata?.name?.[0] || user.email?.[0]?.toUpperCase()}
+                      {getInitials()}
                     </span>
                   )}
                 </Button>
