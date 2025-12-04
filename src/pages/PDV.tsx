@@ -33,7 +33,7 @@ export default function PDV() {
         
         <div className="flex flex-col flex-1 w-full ml-14">
           {/* Header */}
-          <header className="sticky top-0 z-50 w-full border-b bg-background">
+          <header className="sticky top-0 z-40 w-full border-b bg-background">
             <div className="flex h-14 items-center px-4 gap-4">
               <div className="flex-1" />
               
