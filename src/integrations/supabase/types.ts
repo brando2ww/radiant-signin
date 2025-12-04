@@ -198,6 +198,7 @@ export type Database = {
           business_description: string | null
           business_name: string
           business_slogan: string | null
+          cover_url: string | null
           created_at: string | null
           id: string
           logo_url: string | null
@@ -212,6 +213,7 @@ export type Database = {
           business_description?: string | null
           business_name: string
           business_slogan?: string | null
+          cover_url?: string | null
           created_at?: string | null
           id?: string
           logo_url?: string | null
@@ -226,6 +228,7 @@ export type Database = {
           business_description?: string | null
           business_name?: string
           business_slogan?: string | null
+          cover_url?: string | null
           created_at?: string | null
           id?: string
           logo_url?: string | null

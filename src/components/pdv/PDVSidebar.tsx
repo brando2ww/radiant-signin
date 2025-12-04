@@ -21,7 +21,8 @@ import {
   Receipt,
   DollarSign,
   UtensilsCrossed,
-  Tag
+  Tag,
+  Palette
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -101,6 +102,7 @@ const sectionItems = [
     items: [
       { title: "Pedidos", url: "/pdv/delivery/pedidos", icon: ShoppingBag },
       { title: "Cardápio", url: "/pdv/delivery/cardapio", icon: UtensilsCrossed },
+      { title: "Personalização", url: "/pdv/delivery/personalizacao", icon: Palette },
       { title: "Cupons", url: "/pdv/delivery/cupons", icon: Tag },
       { title: "Configurações", url: "/pdv/delivery/configuracoes", icon: Settings },
       { title: "Relatórios", url: "/pdv/delivery/relatorios", icon: BarChart3 },
