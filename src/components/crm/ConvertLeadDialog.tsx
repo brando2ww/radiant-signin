@@ -131,7 +131,7 @@ export function ConvertLeadDialog({ open, onOpenChange, lead }: ConvertLeadDialo
                 value={saleValue}
                 onChange={(e) => setSaleValue(Number(e.target.value))}
                 className="pl-10"
-                placeholder="0,00"
+                placeholder="R$ 0,00"
               />
             </div>
           </div>

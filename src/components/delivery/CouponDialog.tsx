@@ -142,6 +142,7 @@ export const CouponDialog = ({ open, onOpenChange, coupon }: CouponDialogProps) 
                 type="number"
                 step="0.01"
                 min="0"
+                placeholder="R$ 0,00"
                 value={minOrderValue}
                 onChange={(e) => setMinOrderValue(e.target.value)}
                 required
@@ -159,7 +160,7 @@ export const CouponDialog = ({ open, onOpenChange, coupon }: CouponDialogProps) 
                 min="0"
                 value={maxDiscount}
                 onChange={(e) => setMaxDiscount(e.target.value)}
-                placeholder="Opcional"
+                placeholder="R$ 0,00"
               />
               <p className="text-xs text-muted-foreground">
                 Limite o valor máximo do desconto

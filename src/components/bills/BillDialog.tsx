@@ -128,7 +128,7 @@ export function BillDialog({ open, onOpenChange, bill, onSave, type }: BillDialo
                 value={formData.amount}
                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                 required
-                placeholder="0,00"
+                placeholder="R$ 0,00"
               />
             </div>
           </div>

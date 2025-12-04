@@ -122,7 +122,7 @@ export function CloseCashierDialog({
               type="number"
               step="0.01"
               min="0"
-              placeholder="0,00"
+              placeholder="R$ 0,00"
               value={closingBalance}
               onChange={(e) => setClosingBalance(e.target.value)}
               autoFocus

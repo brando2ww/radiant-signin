@@ -55,7 +55,7 @@ export function Step3FinancialData({ data, onUpdate }: Step3FinancialDataProps) 
               step="0.01"
               value={data.financial.amount}
               onChange={(e) => handleFinancialChange('amount', parseFloat(e.target.value))}
-              placeholder="0,00"
+              placeholder="R$ 0,00"
             />
           </div>
 

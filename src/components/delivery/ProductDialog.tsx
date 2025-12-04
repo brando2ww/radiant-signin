@@ -179,14 +179,14 @@ export const ProductDialog = ({
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Preço Base * (R$)</Label>
-                  <Input type="number" step="0.01" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} required />
+                  <Input type="number" step="0.01" placeholder="R$ 0,00" value={basePrice} onChange={(e) => setBasePrice(e.target.value)} required />
                 </div>
                 <div className="space-y-2">
                   <Label>Preço Promocional (R$)</Label>
-                  <Input type="number" step="0.01" value={promotionalPrice} onChange={(e) => setPromotionalPrice(e.target.value)} />
+                  <Input type="number" step="0.01" placeholder="R$ 0,00" value={promotionalPrice} onChange={(e) => setPromotionalPrice(e.target.value)} />
                 </div>
               </div>
 

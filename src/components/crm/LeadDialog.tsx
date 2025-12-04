@@ -236,7 +236,7 @@ export function LeadDialog({ open, onOpenChange, lead }: LeadDialogProps) {
                     <FormControl>
                       <Input 
                         {...field}
-                        placeholder="0,00"
+                        placeholder="R$ 0,00"
                         onChange={(e) => {
                           const formatted = formatCurrency(e.target.value);
                           field.onChange(formatted);

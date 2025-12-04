@@ -50,7 +50,7 @@ export function OpenCashierDialog({
               type="number"
               step="0.01"
               min="0"
-              placeholder="0,00"
+              placeholder="R$ 0,00"
               value={openingBalance}
               onChange={(e) => setOpeningBalance(e.target.value)}
               onKeyDown={(e) => {
