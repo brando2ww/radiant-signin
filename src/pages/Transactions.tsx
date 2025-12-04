@@ -7,7 +7,6 @@ import { TransactionFilters } from '@/components/transactions/TransactionFilters
 import { TransactionList } from '@/components/transactions/TransactionList';
 import { TransactionDialog } from '@/components/transactions/TransactionDialog';
 import { DeleteConfirmDialog } from '@/components/transactions/DeleteConfirmDialog';
-import { ExpenseLimitCard } from '@/components/transactions/ExpenseLimitCard';
 import { useTransactions, FilterState, Transaction } from '@/hooks/use-transactions';
 import { useTransactionStats } from '@/hooks/use-transaction-stats';
 import { TransactionFormData } from '@/lib/validations/transaction';
@@ -24,7 +23,6 @@ export default function Transactions() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [expenseLimit, setExpenseLimit] = useState(5000); // Default limit
 
   const {
     transactions,
@@ -71,10 +69,6 @@ export default function Transactions() {
     setDialogOpen(true);
   };
 
-  const handleUpdateLimit = (newLimit: number) => {
-    setExpenseLimit(newLimit);
-  };
-
   return (
     <AppLayout className="p-4 md:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted/20">
       <div className="max-w-7xl mx-auto">
@@ -106,13 +100,6 @@ export default function Transactions() {
             }
           />
         )}
-
-        {/* Expense Limit Card */}
-        <ExpenseLimitCard
-          currentSpending={stats.totalExpense}
-          limit={expenseLimit}
-          onUpdateLimit={handleUpdateLimit}
-        />
 
         {/* Stats Cards */}
         <TransactionStats
