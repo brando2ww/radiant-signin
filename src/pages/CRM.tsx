@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { SessionNavBar } from "@/components/ui/sidebar";
 import { CRMHeader } from "@/components/crm/CRMHeader";
 import { PipelineKanban } from "@/components/crm/PipelineKanban";
 import { LeadDialog } from "@/components/crm/LeadDialog";
@@ -8,6 +7,7 @@ import { ConvertLeadDialog } from "@/components/crm/ConvertLeadDialog";
 import { LostLeadDialog } from "@/components/crm/LostLeadDialog";
 import { useLeads, Lead, useDeleteLead } from "@/hooks/use-crm-leads";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AppLayout } from "@/components/layouts/AppLayout";
 
 export default function CRM() {
   const { data: leads, isLoading } = useLeads();
@@ -75,87 +75,81 @@ export default function CRM() {
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-full">
-        <SessionNavBar />
-        <main className="flex-1 overflow-y-auto ml-0 md:ml-[3.05rem]">
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-4 text-muted-foreground">Carregando CRM...</p>
-            </div>
+      <AppLayout className="p-4 md:p-6">
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Carregando CRM...</p>
           </div>
-        </main>
-      </div>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="flex h-screen w-full">
-      <SessionNavBar />
-      <main className="flex-1 overflow-y-auto p-4 md:p-6 ml-0 md:ml-[3.05rem]">
-        <div className="space-y-4 md:space-y-6">
-          <CRMHeader onNewLead={handleNewLead} onSearch={setSearchQuery} />
+    <AppLayout className="p-4 md:p-6">
+      <div className="space-y-4 md:space-y-6">
+        <CRMHeader onNewLead={handleNewLead} onSearch={setSearchQuery} />
 
-          <PipelineKanban
-            leads={filteredLeads}
-            onEditLead={handleEditLead}
-            onDeleteLead={handleDeleteLead}
-            onViewDetails={handleViewDetails}
-            onConvertLead={handleConvertLead}
-            onLostLead={handleLostLead}
-          />
-        </div>
-
-        <LeadDialog
-          open={leadDialogOpen}
-          onOpenChange={setLeadDialogOpen}
-          lead={selectedLead}
+        <PipelineKanban
+          leads={filteredLeads}
+          onEditLead={handleEditLead}
+          onDeleteLead={handleDeleteLead}
+          onViewDetails={handleViewDetails}
+          onConvertLead={handleConvertLead}
+          onLostLead={handleLostLead}
         />
+      </div>
 
-        <LeadDetailPanel
-          open={detailPanelOpen}
-          onOpenChange={setDetailPanelOpen}
-          lead={selectedLead}
-          onEdit={() => handleEditLead(selectedLead!)}
-          onConvert={() => {
-            setDetailPanelOpen(false);
-            handleConvertLead(selectedLead!);
-          }}
-          onLost={() => {
-            setDetailPanelOpen(false);
-            handleLostLead(selectedLead!);
-          }}
-        />
+      <LeadDialog
+        open={leadDialogOpen}
+        onOpenChange={setLeadDialogOpen}
+        lead={selectedLead}
+      />
 
-        <ConvertLeadDialog
-          open={convertDialogOpen}
-          onOpenChange={setConvertDialogOpen}
-          lead={leadToConvert}
-        />
+      <LeadDetailPanel
+        open={detailPanelOpen}
+        onOpenChange={setDetailPanelOpen}
+        lead={selectedLead}
+        onEdit={() => handleEditLead(selectedLead!)}
+        onConvert={() => {
+          setDetailPanelOpen(false);
+          handleConvertLead(selectedLead!);
+        }}
+        onLost={() => {
+          setDetailPanelOpen(false);
+          handleLostLead(selectedLead!);
+        }}
+      />
 
-        <LostLeadDialog
-          open={lostDialogOpen}
-          onOpenChange={setLostDialogOpen}
-          lead={leadToConvert}
-        />
+      <ConvertLeadDialog
+        open={convertDialogOpen}
+        onOpenChange={setConvertDialogOpen}
+        lead={leadToConvert}
+      />
 
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-              <AlertDialogDescription>
-                Tem certeza que deseja excluir o lead "{leadToDelete?.name}"? Esta ação não pode ser desfeita.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Excluir
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </main>
-    </div>
+      <LostLeadDialog
+        open={lostDialogOpen}
+        onOpenChange={setLostDialogOpen}
+        lead={leadToConvert}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o lead "{leadToDelete?.name}"? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </AppLayout>
   );
 }

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { startOfWeek, isSameWeek } from "date-fns";
-import { SessionNavBar } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useTasks } from "@/hooks/use-tasks";
@@ -9,6 +8,7 @@ import { WeekViewGrid } from "@/components/tasks/WeekViewGrid";
 import { TaskFilters } from "@/components/tasks/TaskFilters";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import { Task } from "@/hooks/use-tasks";
+import { AppLayout } from "@/components/layouts/AppLayout";
 
 export default function Tasks() {
   const [currentWeek, setCurrentWeek] = useState(new Date());
@@ -65,60 +65,57 @@ export default function Tasks() {
   };
 
   return (
-    <div className="flex h-screen w-full">
-      <SessionNavBar />
-      <main className="flex-1 flex flex-col ml-12 overflow-hidden">
-        <div className="flex items-center justify-between p-4 border-b bg-background">
-          <h1 className="text-2xl font-bold">Tarefas</h1>
-          <Button onClick={() => {
-            setSelectedTask(undefined);
-            setDefaultDate(new Date());
-            setDefaultHour(9);
-            setDialogOpen(true);
-          }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Tarefa
-          </Button>
-        </div>
+    <AppLayout>
+      <div className="flex items-center justify-between p-4 border-b bg-background">
+        <h1 className="text-2xl font-bold">Tarefas</h1>
+        <Button onClick={() => {
+          setSelectedTask(undefined);
+          setDefaultDate(new Date());
+          setDefaultHour(9);
+          setDialogOpen(true);
+        }}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Tarefa
+        </Button>
+      </div>
 
-        <TaskFilters
-          search={search}
-          category={category}
-          status={status}
-          priority={priority}
-          onSearchChange={setSearch}
-          onCategoryChange={setCategory}
-          onStatusChange={setStatus}
-          onPriorityChange={setPriority}
-        />
+      <TaskFilters
+        search={search}
+        category={category}
+        status={status}
+        priority={priority}
+        onSearchChange={setSearch}
+        onCategoryChange={setCategory}
+        onStatusChange={setStatus}
+        onPriorityChange={setPriority}
+      />
 
-        <WeekViewHeader currentWeek={currentWeek} onWeekChange={setCurrentWeek} />
+      <WeekViewHeader currentWeek={currentWeek} onWeekChange={setCurrentWeek} />
 
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-muted-foreground">Carregando tarefas...</p>
-            </div>
-          ) : (
-            <WeekViewGrid
-              currentWeek={currentWeek}
-              tasks={tasks}
-              onTaskClick={handleTaskClick}
-              onTimeSlotClick={handleTimeSlotClick}
-            />
-          )}
-        </div>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-muted-foreground">Carregando tarefas...</p>
+          </div>
+        ) : (
+          <WeekViewGrid
+            currentWeek={currentWeek}
+            tasks={tasks}
+            onTaskClick={handleTaskClick}
+            onTimeSlotClick={handleTimeSlotClick}
+          />
+        )}
+      </div>
 
-        <TaskDialog
-          open={dialogOpen}
-          onOpenChange={setDialogOpen}
-          onSave={handleSaveTask}
-          onDelete={handleDeleteTask}
-          task={selectedTask}
-          defaultDate={defaultDate}
-          defaultHour={defaultHour}
-        />
-      </main>
-    </div>
+      <TaskDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSave={handleSaveTask}
+        onDelete={handleDeleteTask}
+        task={selectedTask}
+        defaultDate={defaultDate}
+        defaultHour={defaultHour}
+      />
+    </AppLayout>
   );
 }

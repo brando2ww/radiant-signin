@@ -6,7 +6,7 @@ import { BankAccountDialog } from "@/components/bank-accounts/BankAccountDialog"
 import { BankAccountCard } from "@/components/bank-accounts/BankAccountCard";
 import { TransferDialog } from "@/components/bank-accounts/TransferDialog";
 import type { BankAccount } from "@/hooks/use-bank-accounts";
-import { SessionNavBar } from "@/components/ui/sidebar";
+import { AppLayout } from "@/components/layouts/AppLayout";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -84,10 +84,8 @@ export default function BankAccounts() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <SessionNavBar />
-      
-      <div className="container mx-auto py-8 px-4">
+    <AppLayout className="py-8 px-4">
+      <div className="container mx-auto">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -194,6 +192,6 @@ export default function BankAccounts() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </AppLayout>
   );
 }

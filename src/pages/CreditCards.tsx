@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { SessionNavBar } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { ResponsivePageHeader } from '@/components/ui/responsive-page-header';
@@ -12,6 +11,7 @@ import { DeleteCardDialog } from '@/components/credit-cards/DeleteCardDialog';
 import { CreditCardDetailsDialog } from '@/components/credit-cards/CreditCardDetailsDialog';
 import { CreditCardFormData } from '@/lib/validations/credit-card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AppLayout } from '@/components/layouts/AppLayout';
 
 export default function CreditCards() {
   const { cards, isLoading, createCard, updateCard, deleteCard, isCreating, isUpdating } = useCreditCards();
@@ -65,73 +65,70 @@ export default function CreditCards() {
   };
 
   return (
-    <div className="flex h-screen w-full">
-      <SessionNavBar />
-      <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 ml-0 md:ml-12">
-        <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
-          {/* Header */}
-          <ResponsivePageHeader
-            title="Cartões de Crédito"
-            description="Gerencie seus cartões de crédito e acompanhe faturas"
-            action={
-              <Button onClick={() => setDialogOpen(true)} className="w-full md:w-auto">
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Cartão
-              </Button>
-            }
-          />
+    <AppLayout className="p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6 md:space-y-8">
+        {/* Header */}
+        <ResponsivePageHeader
+          title="Cartões de Crédito"
+          description="Gerencie seus cartões de crédito e acompanhe faturas"
+          action={
+            <Button onClick={() => setDialogOpen(true)} className="w-full md:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Cartão
+            </Button>
+          }
+        />
 
-          {/* Stats */}
+        {/* Stats */}
+        {isLoading ? (
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+          </div>
+        ) : (
+          <CreditCardStats
+            totalCards={stats.totalCards}
+            totalInvoices={stats.totalInvoices}
+            alerts={stats.alerts}
+          />
+        )}
+
+        {/* Cards Grid */}
+        <div>
+          <h2 className="text-lg md:text-xl font-semibold mb-4">Meus Cartões</h2>
+          
           {isLoading ? (
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-              <Skeleton className="h-32" />
-              <Skeleton className="h-32" />
-              <Skeleton className="h-32" />
+            <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+              <Skeleton className="h-96" />
+              <Skeleton className="h-96" />
+              <Skeleton className="h-96" />
+            </div>
+          ) : cards.length === 0 ? (
+            <div className="text-center py-12 border-2 border-dashed rounded-lg">
+              <p className="text-muted-foreground mb-4">
+                Você ainda não tem cartões cadastrados
+              </p>
+              <Button onClick={() => setDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Primeiro Cartão
+              </Button>
             </div>
           ) : (
-            <CreditCardStats
-              totalCards={stats.totalCards}
-              totalInvoices={stats.totalInvoices}
-              alerts={stats.alerts}
-            />
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {cards.map((card) => (
+                <CreditCardItem
+                  key={card.id}
+                  card={card}
+                  onViewDetails={handleViewDetails}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
           )}
-
-          {/* Cards Grid */}
-          <div>
-            <h2 className="text-lg md:text-xl font-semibold mb-4">Meus Cartões</h2>
-            
-            {isLoading ? (
-              <div className="grid gap-4 md:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                <Skeleton className="h-96" />
-                <Skeleton className="h-96" />
-                <Skeleton className="h-96" />
-              </div>
-            ) : cards.length === 0 ? (
-              <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                <p className="text-muted-foreground mb-4">
-                  Você ainda não tem cartões cadastrados
-                </p>
-                <Button onClick={() => setDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Primeiro Cartão
-                </Button>
-              </div>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {cards.map((card) => (
-                  <CreditCardItem
-                    key={card.id}
-                    card={card}
-                    onViewDetails={handleViewDetails}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
         </div>
-      </main>
+      </div>
 
       {/* Dialogs */}
       <CreditCardDialog
@@ -154,6 +151,6 @@ export default function CreditCards() {
         onOpenChange={setDetailsDialogOpen}
         card={selectedCard}
       />
-    </div>
+    </AppLayout>
   );
 }
