@@ -4,6 +4,8 @@ import { CRMHeader } from "@/components/crm/CRMHeader";
 import { PipelineKanban } from "@/components/crm/PipelineKanban";
 import { LeadDialog } from "@/components/crm/LeadDialog";
 import { LeadDetailPanel } from "@/components/crm/LeadDetailPanel";
+import { ConvertLeadDialog } from "@/components/crm/ConvertLeadDialog";
+import { LostLeadDialog } from "@/components/crm/LostLeadDialog";
 import { useLeads, Lead, useDeleteLead } from "@/hooks/use-crm-leads";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
@@ -17,6 +19,9 @@ export default function CRM() {
   const [detailPanelOpen, setDetailPanelOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
+  const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+  const [lostDialogOpen, setLostDialogOpen] = useState(false);
+  const [leadToConvert, setLeadToConvert] = useState<Lead | null>(null);
 
   const handleNewLead = () => {
     setSelectedLead(null);
@@ -48,6 +53,16 @@ export default function CRM() {
     setDetailPanelOpen(true);
   };
 
+  const handleConvertLead = (lead: Lead) => {
+    setLeadToConvert(lead);
+    setConvertDialogOpen(true);
+  };
+
+  const handleLostLead = (lead: Lead) => {
+    setLeadToConvert(lead);
+    setLostDialogOpen(true);
+  };
+
   const filteredLeads = leads?.filter((lead) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -62,7 +77,7 @@ export default function CRM() {
     return (
       <div className="flex h-screen w-full">
         <SessionNavBar />
-        <main className="flex-1 overflow-y-auto ml-12">
+        <main className="flex-1 overflow-y-auto ml-0 md:ml-[3.05rem]">
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
@@ -77,8 +92,8 @@ export default function CRM() {
   return (
     <div className="flex h-screen w-full">
       <SessionNavBar />
-      <main className="flex-1 overflow-y-auto p-6 ml-12">
-        <div className="space-y-6">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6 ml-0 md:ml-[3.05rem]">
+        <div className="space-y-4 md:space-y-6">
           <CRMHeader onNewLead={handleNewLead} onSearch={setSearchQuery} />
 
           <PipelineKanban
@@ -86,6 +101,8 @@ export default function CRM() {
             onEditLead={handleEditLead}
             onDeleteLead={handleDeleteLead}
             onViewDetails={handleViewDetails}
+            onConvertLead={handleConvertLead}
+            onLostLead={handleLostLead}
           />
         </div>
 
@@ -100,6 +117,26 @@ export default function CRM() {
           onOpenChange={setDetailPanelOpen}
           lead={selectedLead}
           onEdit={() => handleEditLead(selectedLead!)}
+          onConvert={() => {
+            setDetailPanelOpen(false);
+            handleConvertLead(selectedLead!);
+          }}
+          onLost={() => {
+            setDetailPanelOpen(false);
+            handleLostLead(selectedLead!);
+          }}
+        />
+
+        <ConvertLeadDialog
+          open={convertDialogOpen}
+          onOpenChange={setConvertDialogOpen}
+          lead={leadToConvert}
+        />
+
+        <LostLeadDialog
+          open={lostDialogOpen}
+          onOpenChange={setLostDialogOpen}
+          lead={leadToConvert}
         />
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

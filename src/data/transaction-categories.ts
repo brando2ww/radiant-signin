@@ -13,11 +13,13 @@ import {
   Settings,
   CreditCard,
   MoreHorizontal,
+  Percent,
 } from 'lucide-react';
 
 export const incomeCategories = [
   { value: 'vendas', label: 'Vendas de Produtos', icon: ShoppingBag },
   { value: 'servicos', label: 'Prestação de Serviços', icon: Wrench },
+  { value: 'comissoes', label: 'Comissões', icon: Percent },
   { value: 'outros_recebimentos', label: 'Outros Recebimentos', icon: DollarSign },
   { value: 'bonificacoes', label: 'Bonificações', icon: Gift },
 ];

@@ -42,7 +42,6 @@ export function useLeads() {
         .from('crm_leads')
         .select('*')
         .eq('user_id', user.id)
-        .eq('status', 'active')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

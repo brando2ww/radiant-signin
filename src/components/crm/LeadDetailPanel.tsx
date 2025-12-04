@@ -4,7 +4,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Lead, useUpdateLead } from "@/hooks/use-crm-leads";
+import { Lead } from "@/hooks/use-crm-leads";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,6 @@ import { Separator } from "@/components/ui/separator";
 import { Mail, Phone, Building, Calendar, DollarSign, Edit, Trophy, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import confetti from "canvas-confetti";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { useNavigate } from "react-router-dom";
 
@@ -21,13 +20,14 @@ interface LeadDetailPanelProps {
   onOpenChange: (open: boolean) => void;
   lead: Lead | null;
   onEdit: () => void;
+  onConvert?: () => void;
+  onLost?: () => void;
 }
 
-export function LeadDetailPanel({ open, onOpenChange, lead, onEdit }: LeadDetailPanelProps) {
+export function LeadDetailPanel({ open, onOpenChange, lead, onEdit, onConvert, onLost }: LeadDetailPanelProps) {
   if (!lead) return null;
 
   const navigate = useNavigate();
-  const updateMutation = useUpdateLead();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -44,35 +44,6 @@ export function LeadDetailPanel({ open, onOpenChange, lead, onEdit }: LeadDetail
       urgent: 'destructive' as const,
     };
     return variants[priority as keyof typeof variants] || 'outline';
-  };
-
-  const fireConfetti = () => {
-    confetti({
-      particleCount: 100,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
-  };
-
-  const handleWin = async () => {
-    await updateMutation.mutateAsync({
-      id: lead.id,
-      stage: 'won',
-      status: 'converted',
-      closed_date: new Date().toISOString(),
-    });
-    fireConfetti();
-    setTimeout(() => onOpenChange(false), 1000);
-  };
-
-  const handleLoss = async () => {
-    await updateMutation.mutateAsync({
-      id: lead.id,
-      stage: 'lost',
-      status: 'archived',
-      closed_date: new Date().toISOString(),
-    });
-    onOpenChange(false);
   };
 
   return (
@@ -101,7 +72,7 @@ export function LeadDetailPanel({ open, onOpenChange, lead, onEdit }: LeadDetail
                   {lead.position} na {lead.company}
                 </p>
               )}
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-2 mt-2 flex-wrap">
                 <Badge variant={getPriorityVariant(lead.priority)}>
                   {lead.priority === 'low' ? 'Baixa' :
                    lead.priority === 'medium' ? 'Média' :
@@ -184,18 +155,16 @@ export function LeadDetailPanel({ open, onOpenChange, lead, onEdit }: LeadDetail
                 <h4 className="font-semibold text-sm">Decisão Final</h4>
                 <div className="flex gap-3">
                   <Button
-                    onClick={handleWin}
+                    onClick={onConvert}
                     className="flex-1 bg-success text-success-foreground hover:bg-success/90"
-                    disabled={updateMutation.isPending}
                   >
                     <Trophy className="h-4 w-4 mr-2" />
-                    Ganho
+                    Fechar Venda
                   </Button>
                   <Button
-                    onClick={handleLoss}
+                    onClick={onLost}
                     variant="destructive"
                     className="flex-1"
-                    disabled={updateMutation.isPending}
                   >
                     <X className="h-4 w-4 mr-2" />
                     Perdido
