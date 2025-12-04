@@ -8,7 +8,10 @@ export const transactionSchema = z.object({
     .min(3, 'Descrição deve ter no mínimo 3 caracteres')
     .max(200, 'Descrição muito longa'),
   category: z.string().min(1, 'Selecione uma categoria'),
-  amount: z.number()
+  amount: z.coerce.number({
+    required_error: 'Informe o valor',
+    invalid_type_error: 'Valor inválido',
+  })
     .positive('Valor deve ser positivo')
     .max(1000000, 'Valor muito alto'),
   transaction_date: z.date({

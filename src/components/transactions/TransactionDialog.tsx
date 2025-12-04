@@ -57,7 +57,7 @@ export const TransactionDialog = ({
       type: 'income',
       description: '',
       category: '',
-      amount: 0,
+      amount: '' as unknown as number,
       transaction_date: new Date(),
       payment_method: '',
       is_recurring: false,
@@ -83,7 +83,7 @@ export const TransactionDialog = ({
         type: 'income',
         description: '',
         category: '',
-        amount: 0,
+        amount: '' as unknown as number,
         transaction_date: new Date(),
         payment_method: '',
         is_recurring: false,
@@ -177,15 +177,22 @@ export const TransactionDialog = ({
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Valor (R$)</FormLabel>
+                  <FormLabel>Valor</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0,00"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                        R$
+                      </span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder="0,00"
+                        className="pl-10"
+                        {...field}
+                        value={field.value || ''}
+                        onChange={(e) => field.onChange(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      />
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
