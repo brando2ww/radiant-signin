@@ -60,6 +60,8 @@ export function TaskDialog({ open, onOpenChange, onSave, onDelete, task, default
   const [tags, setTags] = useState("");
 
   useEffect(() => {
+    if (!open) return;
+    
     if (task) {
       setTitle(task.title);
       setDescription(task.description || "");
@@ -72,15 +74,31 @@ export function TaskDialog({ open, onOpenChange, onSave, onDelete, task, default
       setPriority(task.priority);
       setLocation(task.location || "");
       setTags(task.tags?.join(", ") || "");
-    } else if (defaultDate && defaultHour !== undefined) {
-      const date = format(defaultDate, "yyyy-MM-dd");
-      const time = `${defaultHour.toString().padStart(2, "0")}:00`;
-      setStartDate(date);
-      setStartTime(time);
-      setEndDate(date);
-      setEndTime(`${(defaultHour + 1).toString().padStart(2, "0")}:00`);
+    } else {
+      // Reset all fields for new task
+      setTitle("");
+      setDescription("");
+      setCategory('other');
+      setColor('#3b82f6');
+      setPriority('medium');
+      setLocation("");
+      setTags("");
+      
+      if (defaultDate && defaultHour !== undefined) {
+        const date = format(defaultDate, "yyyy-MM-dd");
+        const time = `${defaultHour.toString().padStart(2, "0")}:00`;
+        setStartDate(date);
+        setStartTime(time);
+        setEndDate(date);
+        setEndTime(`${(defaultHour + 1).toString().padStart(2, "0")}:00`);
+      } else {
+        setStartDate("");
+        setStartTime("");
+        setEndDate("");
+        setEndTime("");
+      }
     }
-  }, [task, defaultDate, defaultHour]);
+  }, [open, task, defaultDate, defaultHour]);
 
   const handleSave = () => {
     const startDateTime = new Date(`${startDate}T${startTime}`);
