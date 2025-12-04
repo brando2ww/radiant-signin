@@ -132,14 +132,14 @@ export function PDVSidebar() {
         <motion.ul variants={staggerVariants} className="flex h-full flex-col">
           <div className="flex grow flex-col items-center">
             {/* Header */}
-            <div className="flex h-14 w-full shrink-0 border-b p-2 items-center">
+            <div className="flex h-16 w-full shrink-0 border-b p-3 items-center">
               <div className="flex items-center gap-2 px-1">
                 {isCollapsed ? (
                   <div className="flex items-center justify-center w-8 h-8">
                     <Logo size="sm" className="h-6 w-auto object-contain" />
                   </div>
                 ) : (
-                  <Logo size="md" className="h-8 w-auto" />
+                  <Logo size="lg" className="h-12 w-auto" />
                 )}
               </div>
             </div>
