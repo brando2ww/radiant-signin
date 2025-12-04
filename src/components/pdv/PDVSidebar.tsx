@@ -3,7 +3,6 @@ import {
   LayoutDashboard, 
   Armchair, 
   ShoppingBag, 
-  DollarSign, 
   ChefHat, 
   Package, 
   Warehouse,
@@ -19,11 +18,13 @@ import {
   FileBarChart,
   PackageSearch,
   PieChart,
-  Receipt
+  Receipt,
+  DollarSign
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
+import { Logo } from "@/components/ui/logo";
 import { useState } from "react";
 
 const sidebarVariants = {
@@ -133,16 +134,13 @@ export function PDVSidebar() {
             {/* Header */}
             <div className="flex h-14 w-full shrink-0 border-b p-2 items-center">
               <div className="flex items-center gap-2 px-1">
-                <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary text-primary-foreground">
-                  <DollarSign className="h-5 w-5" />
-                </div>
-                <motion.div variants={variants}>
-                  {!isCollapsed && (
-                    <span className="font-semibold text-lg text-foreground">
-                      Velara PDV
-                    </span>
-                  )}
-                </motion.div>
+                {isCollapsed ? (
+                  <div className="flex items-center justify-center w-8 h-8">
+                    <Logo size="sm" className="h-6 w-auto object-contain" />
+                  </div>
+                ) : (
+                  <Logo size="md" className="h-8 w-auto" />
+                )}
               </div>
             </div>
 
