@@ -106,7 +106,7 @@ export const TransactionList = ({ transactions, isLoading, onEdit, onDelete }: T
                   <div className="flex-1">
                     <p className="font-semibold text-sm mb-1">{transaction.description}</p>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{format(new Date(transaction.transaction_date), "dd MMM yyyy", { locale: ptBR })}</span>
+                      <span>{format(new Date(transaction.transaction_date + 'T12:00:00'), "dd MMM yyyy", { locale: ptBR })}</span>
                       <span>•</span>
                       <Badge variant="outline" className="text-xs">
                         {getCategoryLabel(transaction.type, transaction.category)}
