@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, Save } from "lucide-react";
@@ -82,16 +83,10 @@ export function OrdersTab({ defaultValues, onSave, isSubmitting }: OrdersTabProp
                 <FormItem>
                   <FormLabel>Valor Mínimo do Pedido</FormLabel>
                   <FormControl>
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">R$</span>
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                      />
-                    </div>
+                    <CurrencyInput
+                      value={field.value || ''}
+                      onChange={(v) => field.onChange(v ? parseFloat(v) : 0)}
+                    />
                   </FormControl>
                   <FormDescription>
                     Valor mínimo necessário para aceitar o pedido

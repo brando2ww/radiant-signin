@@ -3,6 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { creditCardSchema, CreditCardFormData } from '@/lib/validations/credit-card';
@@ -131,12 +132,9 @@ export function CreditCardDialog({
 
           <div className="space-y-2">
             <Label htmlFor="credit_limit">Limite de Crédito</Label>
-            <Input
-              id="credit_limit"
-              type="number"
-              step="0.01"
-              {...register('credit_limit', { valueAsNumber: true })}
-              placeholder="5000.00"
+            <CurrencyInput
+              value={watch('credit_limit') || ''}
+              onChange={(v) => setValue('credit_limit', v ? parseFloat(v) : 0)}
             />
             {errors.credit_limit && (
               <p className="text-sm text-destructive">{errors.credit_limit.message}</p>

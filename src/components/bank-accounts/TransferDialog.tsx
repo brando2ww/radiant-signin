@@ -18,7 +18,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { BankAccountSelector } from "./BankAccountSelector";
@@ -126,12 +126,9 @@ export function TransferDialog({
                 <FormItem>
                   <FormLabel>Valor *</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    <CurrencyInput
+                      value={field.value || ''}
+                      onChange={(v) => field.onChange(v ? parseFloat(v) : 0)}
                     />
                   </FormControl>
                   <FormMessage />

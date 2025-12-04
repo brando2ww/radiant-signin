@@ -17,6 +17,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { CurrencyInput } from '@/components/ui/currency-input';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -179,20 +180,10 @@ export const TransactionDialog = ({
                 <FormItem>
                   <FormLabel>Valor</FormLabel>
                   <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                        R$
-                      </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0,00"
-                        className="pl-10"
-                        {...field}
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      />
-                    </div>
+                    <CurrencyInput
+                      value={field.value || ''}
+                      onChange={(v) => field.onChange(v === '' ? '' : parseFloat(v))}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
