@@ -158,19 +158,19 @@ export const useDashboardData = () => {
     });
 
     const currentRevenue = currentMonthTransactions
-      .filter(t => t.type === 'receita')
+      .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + Number(t.amount), 0);
 
     const currentExpenses = currentMonthTransactions
-      .filter(t => t.type === 'despesa')
+      .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + Number(t.amount), 0);
 
     const previousRevenue = previousMonthTransactions
-      .filter(t => t.type === 'receita')
+      .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + Number(t.amount), 0);
 
     const previousExpenses = previousMonthTransactions
-      .filter(t => t.type === 'despesa')
+      .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + Number(t.amount), 0);
 
     const currentProfit = currentRevenue - currentExpenses;
@@ -226,11 +226,11 @@ export const useDashboardData = () => {
       });
 
       const receitas = monthTransactions
-        .filter(t => t.type === 'receita')
+        .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + Number(t.amount), 0);
 
       const despesas = monthTransactions
-        .filter(t => t.type === 'despesa')
+        .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + Number(t.amount), 0);
 
       months.push({
@@ -373,7 +373,7 @@ export const useDashboardData = () => {
 
     const currentMonthRevenues = transactions.filter(t => {
       const date = new Date(t.transaction_date);
-      return t.type === 'receita' && date >= currentMonthStart && date <= currentMonthEnd;
+      return t.type === 'income' && date >= currentMonthStart && date <= currentMonthEnd;
     });
 
     const categoryTotals: Record<string, number> = {};
