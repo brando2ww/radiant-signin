@@ -74,7 +74,7 @@ export const TransactionDialog = ({
         description: transaction.description || '',
         category: transaction.category,
         amount: Number(transaction.amount),
-        transaction_date: new Date(transaction.transaction_date),
+        transaction_date: new Date(transaction.transaction_date + 'T12:00:00'),
         payment_method: transaction.payment_method || '',
         is_recurring: transaction.is_recurring || false,
       });

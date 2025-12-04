@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { TransactionFormData } from '@/lib/validations/transaction';
+import { format } from 'date-fns';
 
 export interface FilterState {
   search: string;
@@ -88,7 +89,7 @@ export const useTransactions = (filters?: FilterState) => {
         description: data.description,
         category: data.category,
         amount: data.amount,
-        transaction_date: data.transaction_date.toISOString().split('T')[0],
+        transaction_date: format(data.transaction_date, 'yyyy-MM-dd'),
         payment_method: data.payment_method,
         is_recurring: data.is_recurring,
         user_id: user.id,
@@ -118,7 +119,7 @@ export const useTransactions = (filters?: FilterState) => {
         .from('transactions')
         .update({
           ...data,
-          transaction_date: data.transaction_date.toISOString().split('T')[0],
+          transaction_date: format(data.transaction_date, 'yyyy-MM-dd'),
           amount: data.amount,
         })
         .eq('id', id);
