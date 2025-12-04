@@ -69,6 +69,7 @@ export const DeliverySettings = () => {
                 type="number"
                 step="0.01"
                 min="0"
+                placeholder="R$ 0,00"
                 value={minOrderValue}
                 onChange={(e) => setMinOrderValue(e.target.value)}
               />
@@ -81,6 +82,7 @@ export const DeliverySettings = () => {
                 type="number"
                 step="0.01"
                 min="0"
+                placeholder="R$ 0,00"
                 value={defaultDeliveryFee}
                 onChange={(e) => setDefaultDeliveryFee(e.target.value)}
               />
@@ -141,7 +143,7 @@ export const DeliverySettings = () => {
               type="number"
               step="0.01"
               min="0"
-              placeholder="Taxa (R$)"
+              placeholder="R$ 0,00"
               value={newZoneFee}
               onChange={(e) => setNewZoneFee(e.target.value)}
               className="w-32"

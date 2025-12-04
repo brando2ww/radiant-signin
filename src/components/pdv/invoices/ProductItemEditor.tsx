@@ -130,7 +130,7 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
               value={item.unitValue}
               onChange={(e) => handleFieldChange('unitValue', parseFloat(e.target.value))}
               className="h-8"
-              placeholder="0,00"
+              placeholder="R$ 0,00"
             />
           </div>
 
@@ -143,7 +143,7 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
               value={item.totalValue}
               onChange={(e) => handleFieldChange('totalValue', parseFloat(e.target.value))}
               className="h-8"
-              placeholder="0,00"
+              placeholder="R$ 0,00"
             />
           </div>
         </div>
@@ -163,7 +163,7 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
                 value={item.taxes.icms || 0}
                 onChange={(e) => handleTaxChange('icms', parseFloat(e.target.value))}
                 className="h-8"
-                placeholder="0,00"
+                placeholder="R$ 0,00"
               />
             </div>
 
@@ -176,7 +176,7 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
                 value={item.taxes.ipi || 0}
                 onChange={(e) => handleTaxChange('ipi', parseFloat(e.target.value))}
                 className="h-8"
-                placeholder="0,00"
+                placeholder="R$ 0,00"
               />
             </div>
 
@@ -189,7 +189,7 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
                 value={item.taxes.pis || 0}
                 onChange={(e) => handleTaxChange('pis', parseFloat(e.target.value))}
                 className="h-8"
-                placeholder="0,00"
+                placeholder="R$ 0,00"
               />
             </div>
 
@@ -202,7 +202,7 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
                 value={item.taxes.cofins || 0}
                 onChange={(e) => handleTaxChange('cofins', parseFloat(e.target.value))}
                 className="h-8"
-                placeholder="0,00"
+                placeholder="R$ 0,00"
               />
             </div>
           </div>

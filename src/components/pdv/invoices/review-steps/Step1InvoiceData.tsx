@@ -141,7 +141,7 @@ export function Step1InvoiceData({ data, onUpdate }: Step1InvoiceDataProps) {
               step="0.01"
               value={data.totals.products}
               onChange={(e) => handleTotalChange('products', parseFloat(e.target.value))}
-              placeholder="0,00"
+              placeholder="R$ 0,00"
             />
           </div>
 
@@ -153,7 +153,7 @@ export function Step1InvoiceData({ data, onUpdate }: Step1InvoiceDataProps) {
               step="0.01"
               value={data.totals.tax}
               onChange={(e) => handleTotalChange('tax', parseFloat(e.target.value))}
-              placeholder="0,00"
+              placeholder="R$ 0,00"
             />
           </div>
 
@@ -165,7 +165,7 @@ export function Step1InvoiceData({ data, onUpdate }: Step1InvoiceDataProps) {
               step="0.01"
               value={data.totals.freight}
               onChange={(e) => handleTotalChange('freight', parseFloat(e.target.value))}
-              placeholder="0,00"
+              placeholder="R$ 0,00"
             />
           </div>
 
@@ -177,7 +177,7 @@ export function Step1InvoiceData({ data, onUpdate }: Step1InvoiceDataProps) {
               step="0.01"
               value={data.totals.insurance}
               onChange={(e) => handleTotalChange('insurance', parseFloat(e.target.value))}
-              placeholder="0,00"
+              placeholder="R$ 0,00"
             />
           </div>
 
@@ -189,7 +189,7 @@ export function Step1InvoiceData({ data, onUpdate }: Step1InvoiceDataProps) {
               step="0.01"
               value={data.totals.otherExpenses}
               onChange={(e) => handleTotalChange('otherExpenses', parseFloat(e.target.value))}
-              placeholder="0,00"
+              placeholder="R$ 0,00"
             />
           </div>
 
@@ -201,7 +201,7 @@ export function Step1InvoiceData({ data, onUpdate }: Step1InvoiceDataProps) {
               step="0.01"
               value={data.totals.discount}
               onChange={(e) => handleTotalChange('discount', parseFloat(e.target.value))}
-              placeholder="0,00"
+              placeholder="R$ 0,00"
             />
           </div>
         </div>

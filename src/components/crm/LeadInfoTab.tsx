@@ -154,6 +154,7 @@ export function LeadInfoTab({ lead, onSave }: LeadInfoTabProps) {
                 id="estimated_value"
                 type="number"
                 step="0.01"
+                placeholder="R$ 0,00"
                 value={formData.estimated_value}
                 onChange={(e) => setFormData({ ...formData, estimated_value: e.target.value })}
               />

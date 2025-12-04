@@ -87,7 +87,7 @@ export function GoalDialog({
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder="0,00"
+                placeholder="R$ 0,00"
                 value={revenueGoal}
                 onChange={(e) => setRevenueGoal(e.target.value)}
               />
@@ -103,7 +103,7 @@ export function GoalDialog({
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder="0,00"
+                placeholder="R$ 0,00"
                 value={savingsGoal}
                 onChange={(e) => setSavingsGoal(e.target.value)}
               />
@@ -119,7 +119,7 @@ export function GoalDialog({
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder="0,00"
+                placeholder="R$ 0,00"
                 value={investmentGoal}
                 onChange={(e) => setInvestmentGoal(e.target.value)}
               />
