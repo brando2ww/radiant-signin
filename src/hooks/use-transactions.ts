@@ -143,11 +143,19 @@ export const useTransactions = (filters?: FilterState) => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // Primeiro, limpa a referência em qualquer lead que aponte para esta transação
+      await supabase
+        .from('crm_leads')
+        .update({ converted_to_transaction_id: null })
+        .eq('converted_to_transaction_id', id);
+
+      // Agora exclui a transação
       const { error } = await supabase.from('transactions').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
       toast({
         title: 'Transação excluída',
         description: 'A transação foi removida com sucesso.',
