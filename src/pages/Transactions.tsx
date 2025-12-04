@@ -1,18 +1,21 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, History } from 'lucide-react';
 import { ResponsivePageHeader } from '@/components/ui/responsive-page-header';
 import { TransactionStats } from '@/components/transactions/TransactionStats';
 import { TransactionFilters } from '@/components/transactions/TransactionFilters';
 import { TransactionList } from '@/components/transactions/TransactionList';
 import { TransactionDialog } from '@/components/transactions/TransactionDialog';
 import { DeleteConfirmDialog } from '@/components/transactions/DeleteConfirmDialog';
+import { ExpenseLimitCard } from '@/components/transactions/ExpenseLimitCard';
 import { useTransactions, FilterState, Transaction } from '@/hooks/use-transactions';
 import { useTransactionStats } from '@/hooks/use-transaction-stats';
 import { TransactionFormData } from '@/lib/validations/transaction';
 import { AppLayout } from '@/components/layouts/AppLayout';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function Transactions() {
+  const isMobile = useIsMobile();
   const [filters, setFilters] = useState<FilterState>({
     search: '',
     type: 'all',
@@ -21,6 +24,7 @@ export default function Transactions() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [expenseLimit, setExpenseLimit] = useState(5000); // Default limit
 
   const {
     transactions,
@@ -67,19 +71,47 @@ export default function Transactions() {
     setDialogOpen(true);
   };
 
+  const handleUpdateLimit = (newLimit: number) => {
+    setExpenseLimit(newLimit);
+  };
+
   return (
     <AppLayout className="p-4 md:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted/20">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <ResponsivePageHeader
-          title="Receitas e Despesas"
-          description="Registre e acompanhe todas as transações do seu MEI"
-          action={
-            <Button onClick={handleNewTransaction} className="w-full md:w-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Transação
-            </Button>
-          }
+        {/* Mobile Header */}
+        {isMobile ? (
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-primary" />
+                <h1 className="text-xl font-bold">Transações</h1>
+              </div>
+              <Button onClick={handleNewTransaction} size="sm">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Gerencie suas receitas e despesas
+            </p>
+          </div>
+        ) : (
+          <ResponsivePageHeader
+            title="Receitas e Despesas"
+            description="Registre e acompanhe todas as transações do seu MEI"
+            action={
+              <Button onClick={handleNewTransaction} className="w-full md:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Transação
+              </Button>
+            }
+          />
+        )}
+
+        {/* Expense Limit Card */}
+        <ExpenseLimitCard
+          currentSpending={stats.totalExpense}
+          limit={expenseLimit}
+          onUpdateLimit={handleUpdateLimit}
         />
 
         {/* Stats Cards */}
@@ -90,7 +122,11 @@ export default function Transactions() {
         />
 
         {/* Filters */}
-        <TransactionFilters filters={filters} onFilterChange={setFilters} />
+        <TransactionFilters 
+          filters={filters} 
+          onFilterChange={setFilters}
+          transactionCount={transactions.length}
+        />
 
         {/* Transaction List */}
         <TransactionList
