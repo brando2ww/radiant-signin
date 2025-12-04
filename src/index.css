@@ -41,6 +41,19 @@ All colors MUST be HSL.
 
     --radius: 0.5rem;
 
+    /* Modern Yellow Palette */
+    --yellow-50: 48 100% 96%;
+    --yellow-100: 48 96% 89%;
+    --yellow-200: 48 97% 77%;
+    --yellow-300: 46 97% 65%;
+    --yellow-400: 43 96% 56%;
+    --yellow-500: 38 92% 50%;
+    --yellow-600: 32 95% 44%;
+
+    /* Highlight color for cards */
+    --highlight: 43 96% 56%;
+    --highlight-foreground: 222.2 84% 4.9%;
+
     --sidebar-background: 0 0% 98%;
 
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -97,6 +110,18 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Modern Yellow Palette - Dark Mode */
+    --yellow-50: 48 30% 15%;
+    --yellow-100: 48 40% 20%;
+    --yellow-200: 48 50% 30%;
+    --yellow-300: 46 60% 40%;
+    --yellow-400: 43 80% 50%;
+    --yellow-500: 38 92% 50%;
+    --yellow-600: 32 95% 44%;
+    
+    --highlight: 43 80% 50%;
+    --highlight-foreground: 0 0% 100%;
   }
 }
 
