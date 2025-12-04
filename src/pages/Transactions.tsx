@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { SessionNavBar } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { ResponsivePageHeader } from '@/components/ui/responsive-page-header';
@@ -11,6 +10,7 @@ import { DeleteConfirmDialog } from '@/components/transactions/DeleteConfirmDial
 import { useTransactions, FilterState, Transaction } from '@/hooks/use-transactions';
 import { useTransactionStats } from '@/hooks/use-transaction-stats';
 import { TransactionFormData } from '@/lib/validations/transaction';
+import { AppLayout } from '@/components/layouts/AppLayout';
 
 export default function Transactions() {
   const [filters, setFilters] = useState<FilterState>({
@@ -68,58 +68,55 @@ export default function Transactions() {
   };
 
   return (
-    <div className="flex h-screen w-full">
-      <SessionNavBar />
-      <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 ml-0 md:ml-12 bg-gradient-to-br from-background via-background to-muted/20">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <ResponsivePageHeader
-            title="Receitas e Despesas"
-            description="Registre e acompanhe todas as transações do seu MEI"
-            action={
-              <Button onClick={handleNewTransaction} className="w-full md:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Nova Transação
-              </Button>
-            }
-          />
+    <AppLayout className="p-4 md:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <ResponsivePageHeader
+          title="Receitas e Despesas"
+          description="Registre e acompanhe todas as transações do seu MEI"
+          action={
+            <Button onClick={handleNewTransaction} className="w-full md:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              Nova Transação
+            </Button>
+          }
+        />
 
-          {/* Stats Cards */}
-          <TransactionStats
-            totalIncome={stats.totalIncome}
-            totalExpense={stats.totalExpense}
-            balance={stats.balance}
-          />
+        {/* Stats Cards */}
+        <TransactionStats
+          totalIncome={stats.totalIncome}
+          totalExpense={stats.totalExpense}
+          balance={stats.balance}
+        />
 
-          {/* Filters */}
-          <TransactionFilters filters={filters} onFilterChange={setFilters} />
+        {/* Filters */}
+        <TransactionFilters filters={filters} onFilterChange={setFilters} />
 
-          {/* Transaction List */}
-          <TransactionList
-            transactions={transactions}
-            isLoading={isLoading}
-            onEdit={handleEdit}
-            onDelete={handleDeleteClick}
-          />
+        {/* Transaction List */}
+        <TransactionList
+          transactions={transactions}
+          isLoading={isLoading}
+          onEdit={handleEdit}
+          onDelete={handleDeleteClick}
+        />
 
-          {/* Create/Edit Dialog */}
-          <TransactionDialog
-            open={dialogOpen}
-            onOpenChange={setDialogOpen}
-            onSubmit={handleCreateOrUpdate}
-            transaction={selectedTransaction}
-            isSubmitting={isCreating || isUpdating}
-          />
+        {/* Create/Edit Dialog */}
+        <TransactionDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          onSubmit={handleCreateOrUpdate}
+          transaction={selectedTransaction}
+          isSubmitting={isCreating || isUpdating}
+        />
 
-          {/* Delete Confirmation Dialog */}
-          <DeleteConfirmDialog
-            open={deleteDialogOpen}
-            onOpenChange={setDeleteDialogOpen}
-            onConfirm={handleDeleteConfirm}
-            transaction={selectedTransaction}
-          />
-        </div>
-      </main>
-    </div>
+        {/* Delete Confirmation Dialog */}
+        <DeleteConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={handleDeleteConfirm}
+          transaction={selectedTransaction}
+        />
+      </div>
+    </AppLayout>
   );
 }
