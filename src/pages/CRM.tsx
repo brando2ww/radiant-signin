@@ -8,8 +8,11 @@ import { LostLeadDialog } from "@/components/crm/LostLeadDialog";
 import { useLeads, Lead, useDeleteLead } from "@/hooks/use-crm-leads";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AppLayout } from "@/components/layouts/AppLayout";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobilePipelineView } from "@/components/crm/MobilePipelineView";
 
 export default function CRM() {
+  const isMobile = useIsMobile();
   const { data: leads, isLoading } = useLeads();
   const deleteLead = useDeleteLead();
 
@@ -91,14 +94,25 @@ export default function CRM() {
       <div className="space-y-4 md:space-y-6">
         <CRMHeader onNewLead={handleNewLead} onSearch={setSearchQuery} />
 
-        <PipelineKanban
-          leads={filteredLeads}
-          onEditLead={handleEditLead}
-          onDeleteLead={handleDeleteLead}
-          onViewDetails={handleViewDetails}
-          onConvertLead={handleConvertLead}
-          onLostLead={handleLostLead}
-        />
+        {isMobile ? (
+          <MobilePipelineView
+            leads={filteredLeads}
+            onEditLead={handleEditLead}
+            onDeleteLead={handleDeleteLead}
+            onViewDetails={handleViewDetails}
+            onConvertLead={handleConvertLead}
+            onLostLead={handleLostLead}
+          />
+        ) : (
+          <PipelineKanban
+            leads={filteredLeads}
+            onEditLead={handleEditLead}
+            onDeleteLead={handleDeleteLead}
+            onViewDetails={handleViewDetails}
+            onConvertLead={handleConvertLead}
+            onLostLead={handleLostLead}
+          />
+        )}
       </div>
 
       <LeadDialog

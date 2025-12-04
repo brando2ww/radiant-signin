@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layouts/AppLayout";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -18,7 +19,7 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <AppLayout className="p-6">
+      <AppLayout className="p-4 md:p-6">
         <div className="container mx-auto max-w-7xl space-y-6">
           <div className="space-y-2">
             <Skeleton className="h-10 w-64" />
@@ -31,8 +32,8 @@ export default function Settings() {
   }
 
   return (
-    <AppLayout className="p-6">
-      <div className="container mx-auto max-w-7xl space-y-6">
+    <AppLayout className="p-4 md:p-6">
+      <div className="container mx-auto max-w-7xl space-y-4 md:space-y-6">
         <div className="space-y-2">
           <Button
             variant="ghost"
@@ -41,24 +42,43 @@ export default function Settings() {
             className="mb-2 gap-2"
           >
             <ArrowLeft className="h-4 w-4" />
-            Voltar para Dashboard
+            <span className="hidden sm:inline">Voltar para Dashboard</span>
+            <span className="sm:hidden">Voltar</span>
           </Button>
           <div className="flex items-center gap-2">
-            <SettingsIcon className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
+            <SettingsIcon className="h-6 w-6 md:h-8 md:w-8 text-primary" />
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Configurações</h1>
           </div>
-          <p className="text-muted-foreground">Personalize sua experiência no sistema financeiro</p>
+          <p className="text-muted-foreground text-sm md:text-base">
+            Personalize sua experiência no sistema financeiro
+          </p>
         </div>
 
-        <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
-            <TabsTrigger value="general">Geral</TabsTrigger>
-            <TabsTrigger value="financial">Financeiro</TabsTrigger>
-            <TabsTrigger value="notifications">Notificações</TabsTrigger>
-            <TabsTrigger value="security">Segurança</TabsTrigger>
-            <TabsTrigger value="integrations">Integrações</TabsTrigger>
-            <TabsTrigger value="advanced">Avançado</TabsTrigger>
-          </TabsList>
+        <Tabs defaultValue="general" className="space-y-4 md:space-y-6">
+          {/* Tabs com scroll horizontal no mobile */}
+          <ScrollArea className="w-full whitespace-nowrap">
+            <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-6 h-auto p-1">
+              <TabsTrigger value="general" className="px-3 py-2 text-xs md:text-sm">
+                Geral
+              </TabsTrigger>
+              <TabsTrigger value="financial" className="px-3 py-2 text-xs md:text-sm">
+                Financeiro
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="px-3 py-2 text-xs md:text-sm">
+                Notificações
+              </TabsTrigger>
+              <TabsTrigger value="security" className="px-3 py-2 text-xs md:text-sm">
+                Segurança
+              </TabsTrigger>
+              <TabsTrigger value="integrations" className="px-3 py-2 text-xs md:text-sm">
+                Integrações
+              </TabsTrigger>
+              <TabsTrigger value="advanced" className="px-3 py-2 text-xs md:text-sm">
+                Avançado
+              </TabsTrigger>
+            </TabsList>
+            <ScrollBar orientation="horizontal" className="md:hidden" />
+          </ScrollArea>
 
           <TabsContent value="general">
             <GeneralSettingsComponent
