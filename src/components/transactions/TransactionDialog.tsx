@@ -1,9 +1,9 @@
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
 import { TransactionFormData } from '@/lib/validations/transaction';
 import { Transaction } from '@/hooks/use-transactions';
 import { TransactionWizard } from './wizard/TransactionWizard';
@@ -28,21 +28,23 @@ export const TransactionDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="max-h-[90vh] rounded-t-[20px]">
+        <DrawerHeader className="text-center pb-2">
+          <DrawerTitle>
             {transaction ? 'Editar Transação' : 'Nova Transação'}
-          </DialogTitle>
-        </DialogHeader>
+          </DrawerTitle>
+        </DrawerHeader>
 
-        <TransactionWizard
-          transaction={transaction}
-          isSubmitting={isSubmitting}
-          onSubmit={handleSubmit}
-          onCancel={() => onOpenChange(false)}
-        />
-      </DialogContent>
-    </Dialog>
+        <div className="overflow-y-auto px-4 pb-6">
+          <TransactionWizard
+            transaction={transaction}
+            isSubmitting={isSubmitting}
+            onSubmit={handleSubmit}
+            onCancel={() => onOpenChange(false)}
+          />
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 };
