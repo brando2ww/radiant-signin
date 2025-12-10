@@ -13,8 +13,6 @@ import {
   BarChart3,
   CreditCard,
   Wallet,
-  Users,
-  UtensilsCrossed,
   CheckSquare,
   Star,
   Crown,
@@ -38,8 +36,6 @@ const navigationSections = {
   contas: [
     { path: "/credit-cards", label: "Cartões de Crédito", icon: CreditCard },
     { path: "/bank-accounts", label: "Contas Bancárias", icon: Wallet },
-    { path: "/crm", label: "CRM", icon: Users },
-    { path: "/delivery", label: "Delivery", icon: UtensilsCrossed },
   ],
   agenda: [
     { path: "/calendar", label: "Calendário", icon: Calendar },
