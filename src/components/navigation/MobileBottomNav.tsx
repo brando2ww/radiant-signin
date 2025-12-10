@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTransactionDialog } from "@/contexts/TransactionDialogContext";
 import { 
   Home, 
   Building2, 
@@ -54,6 +55,7 @@ const navigationSections = {
 export function MobileBottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { openDialog } = useTransactionDialog();
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const currentPath = location.pathname;
@@ -174,7 +176,7 @@ export function MobileBottomNav() {
 
               {/* Central FAB (elevated) */}
               <button
-                onClick={() => navigate("/transactions")}
+                onClick={() => openDialog()}
                 className="flex flex-col items-center justify-center gap-1 group"
               >
                 <div className="relative z-20 -mt-6">
