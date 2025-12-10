@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { Search, Filter, RotateCcw } from 'lucide-react';
+import { Search, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { FilterState } from '@/hooks/use-transactions';
 import { incomeCategories, expenseCategories } from '@/data/transaction-categories';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface TransactionFiltersProps {
   filters: FilterState;
@@ -129,6 +130,11 @@ export const TransactionFilters = ({ filters, onFilterChange, transactionCount }
     ? expenseCategories 
     : [...incomeCategories, ...expenseCategories];
 
+  const hasActiveFilters = localFilters.type !== 'all' || 
+    localFilters.category !== 'all' || 
+    localFilters.dateFilter !== 'all' ||
+    localFilters.search !== '';
+
   // Mobile filters content
   const FiltersContent = () => (
     <div className="space-y-4">
@@ -227,30 +233,81 @@ export const TransactionFilters = ({ filters, onFilterChange, transactionCount }
     </div>
   );
 
-  // Mobile layout
+  // Mobile layout - Chips + Filter button
   if (isMobile) {
     return (
-      <div className="flex items-center justify-between mb-4">
-        <Badge variant="secondary" className="text-sm">
-          {transactionCount || 0} transações
-        </Badge>
-        
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Filter className="w-4 h-4 mr-2" />
-              Filtros
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="h-[85vh]">
-            <SheetHeader>
-              <SheetTitle>Filtrar Transações</SheetTitle>
-            </SheetHeader>
-            <div className="mt-6 overflow-y-auto">
-              <FiltersContent />
-            </div>
-          </SheetContent>
-        </Sheet>
+      <div className="space-y-3">
+        {/* Type chips */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <Button
+            variant={localFilters.type === 'all' ? 'default' : 'outline'}
+            size="sm"
+            className={cn(
+              "rounded-full px-4 whitespace-nowrap h-9",
+              localFilters.type === 'all' && "bg-primary text-primary-foreground"
+            )}
+            onClick={() => handleTypeChange('all')}
+          >
+            Todas
+          </Button>
+          <Button
+            variant={localFilters.type === 'income' ? 'default' : 'outline'}
+            size="sm"
+            className={cn(
+              "rounded-full px-4 whitespace-nowrap h-9",
+              localFilters.type === 'income' && "bg-green-600 text-white hover:bg-green-700"
+            )}
+            onClick={() => handleTypeChange('income')}
+          >
+            Receitas
+          </Button>
+          <Button
+            variant={localFilters.type === 'expense' ? 'default' : 'outline'}
+            size="sm"
+            className={cn(
+              "rounded-full px-4 whitespace-nowrap h-9",
+              localFilters.type === 'expense' && "bg-red-600 text-white hover:bg-red-700"
+            )}
+            onClick={() => handleTypeChange('expense')}
+          >
+            Despesas
+          </Button>
+          
+          {/* Filter button */}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className={cn(
+                  "rounded-full px-4 whitespace-nowrap h-9 ml-auto",
+                  hasActiveFilters && "border-primary text-primary"
+                )}
+              >
+                <SlidersHorizontal className="w-4 h-4 mr-2" />
+                Filtros
+                {hasActiveFilters && (
+                  <span className="ml-1.5 h-2 w-2 rounded-full bg-primary" />
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="h-[85vh] rounded-t-3xl">
+              <SheetHeader>
+                <SheetTitle>Filtrar Transações</SheetTitle>
+              </SheetHeader>
+              <div className="mt-6 overflow-y-auto">
+                <FiltersContent />
+              </div>
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        {/* Transaction count */}
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {transactionCount || 0} transações encontradas
+          </p>
+        </div>
       </div>
     );
   }

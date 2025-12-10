@@ -1,13 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Transaction } from '@/hooks/use-transactions';
-import { FileText, Edit, Trash, TrendingUp, TrendingDown, History } from 'lucide-react';
+import { FileText, Edit, Trash, ArrowDownLeft, ArrowUpRight, History } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { incomeCategories, expenseCategories } from '@/data/transaction-categories';
+import { incomeCategories, expenseCategories, getCategoryIcon } from '@/data/transaction-categories';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface TransactionListProps {
@@ -34,107 +34,113 @@ export const TransactionList = ({ transactions, isLoading, onEdit, onDelete }: T
 
   if (isLoading) {
     return (
-      <Card className="glass-bg border-border/20">
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
+      <div className="space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="bg-card rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-12 w-12 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-20" />
+                <Skeleton className="h-3 w-16 ml-auto" />
+              </div>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
     );
   }
 
   if (transactions.length === 0) {
     return (
-      <Card className="glass-bg border-border/20">
-        <CardContent className="flex flex-col items-center justify-center py-16">
+      <div className="bg-card rounded-2xl p-8 shadow-sm">
+        <div className="flex flex-col items-center justify-center py-8">
           <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
             <FileText className="h-8 w-8 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-semibold mb-2">Nenhuma transação encontrada</h3>
-          <p className="text-muted-foreground text-center mb-4">
-            Comece adicionando sua primeira transação.
+          <h3 className="text-lg font-semibold mb-2">Nenhuma transação</h3>
+          <p className="text-muted-foreground text-center text-sm">
+            Adicione sua primeira transação para começar.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     );
   }
 
-  // Mobile layout
+  // Mobile layout - Modern cards
   if (isMobile) {
     return (
-      <div className="space-y-4">
-        {transactions.map((transaction) => (
-          <Card key={transaction.id} className="glass-bg border-border/20 animate-fade-in">
-            <CardContent className="p-5">
-              <div className="space-y-4">
-                {/* Header with date and amount */}
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2 flex-1 mr-4">
-                    <p className="text-xs text-muted-foreground font-medium">
-                      {format(new Date(transaction.transaction_date + 'T12:00:00'), 'dd/MM/yyyy', { locale: ptBR })}
-                    </p>
-                    <h3 className="font-semibold text-lg leading-tight">
-                      {transaction.description}
-                    </h3>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className={cn(
-                      "text-xl font-bold",
-                      transaction.type === 'income' ? "text-green-600" : "text-destructive"
-                    )}>
-                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                    </p>
+      <div className="space-y-3">
+        {transactions.map((transaction, index) => {
+          const CategoryIcon = getCategoryIcon(transaction.category, transaction.type as 'income' | 'expense');
+          
+          return (
+            <div 
+              key={transaction.id} 
+              className="bg-card rounded-2xl p-4 shadow-sm active:scale-[0.98] transition-transform"
+              onClick={() => onEdit(transaction)}
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <div className="flex items-center gap-3">
+                {/* Circular Icon */}
+                <div className={cn(
+                  "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
+                  transaction.type === 'income' 
+                    ? "bg-green-100 dark:bg-green-900/30" 
+                    : "bg-red-100 dark:bg-red-900/30"
+                )}>
+                  {transaction.type === 'income' ? (
+                    <ArrowDownLeft className={cn(
+                      "w-5 h-5",
+                      "text-green-600 dark:text-green-400"
+                    )} />
+                  ) : (
+                    <ArrowUpRight className={cn(
+                      "w-5 h-5",
+                      "text-red-600 dark:text-red-400"
+                    )} />
+                  )}
+                </div>
+                
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate text-foreground">
+                    {transaction.description}
+                  </p>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                    <CategoryIcon className="w-3.5 h-3.5" />
+                    <span className="truncate">{getCategoryLabel(transaction.type, transaction.category)}</span>
                   </div>
                 </div>
-
-                <div className="border-t border-border/20 my-4"></div>
-
-                {/* Details */}
-                <div className="space-y-3">
-                  <div className="flex items-center">
-                    <Badge variant="secondary" className="text-xs">
-                      {getCategoryLabel(transaction.type, transaction.category)}
-                    </Badge>
-                  </div>
-                  <div className="flex gap-2 flex-wrap items-center">
-                    <Badge variant="outline" className="text-xs">
-                      {transaction.type === 'income' ? 'Receita' : 'Despesa'}
-                    </Badge>
-                    <div className="flex gap-1 ml-auto">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEdit(transaction)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDelete(transaction)}
-                      >
-                        <Trash className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
+                
+                {/* Amount and Date */}
+                <div className="text-right shrink-0">
+                  <p className={cn(
+                    "font-semibold",
+                    transaction.type === 'income' 
+                      ? "text-green-600 dark:text-green-400" 
+                      : "text-red-600 dark:text-red-400"
+                  )}>
+                    {transaction.type === 'income' ? '+' : '−'} {formatCurrency(transaction.amount)}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {format(new Date(transaction.transaction_date + 'T12:00:00'), 'dd.MM.yyyy', { locale: ptBR })}
+                  </p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+          );
+        })}
       </div>
     );
   }
 
   // Desktop layout
   return (
-    <Card className="glass-bg border-border/20 animate-fade-in">
+    <Card className="border-border/40 shadow-sm animate-fade-in">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -154,64 +160,73 @@ export const TransactionList = ({ transactions, isLoading, onEdit, onDelete }: T
       
       <CardContent>
         <div className="space-y-2">
-          {transactions.map((transaction) => (
-            <div
-              key={transaction.id}
-              className="group flex items-center justify-between p-4 border border-border/20 rounded-lg hover:bg-muted/50 transition-all duration-200"
-            >
-              <div className="flex items-center gap-4">
-                <div className={cn(
-                  "p-2 rounded-full transition-transform group-hover:scale-110",
-                  transaction.type === 'income' 
-                    ? "bg-green-500/10 text-green-500"
-                    : "bg-destructive/10 text-destructive"
-                )}>
-                  {transaction.type === 'income' ? (
-                    <TrendingUp className="w-4 h-4" />
-                  ) : (
-                    <TrendingDown className="w-4 h-4" />
-                  )}
+          {transactions.map((transaction) => {
+            const CategoryIcon = getCategoryIcon(transaction.category, transaction.type as 'income' | 'expense');
+            
+            return (
+              <div
+                key={transaction.id}
+                className="group flex items-center justify-between p-4 border border-border/20 rounded-xl hover:bg-muted/50 transition-all duration-200"
+              >
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "w-10 h-10 rounded-full flex items-center justify-center transition-transform group-hover:scale-110",
+                    transaction.type === 'income' 
+                      ? "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
+                      : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                  )}>
+                    {transaction.type === 'income' ? (
+                      <ArrowDownLeft className="w-5 h-5" />
+                    ) : (
+                      <ArrowUpRight className="w-5 h-5" />
+                    )}
+                  </div>
+                  
+                  <div className="flex-1">
+                    <p className="font-medium">{transaction.description}</p>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CategoryIcon className="w-3.5 h-3.5" />
+                      <span>{getCategoryLabel(transaction.type, transaction.category)}</span>
+                      <span>•</span>
+                      <span>{format(new Date(transaction.transaction_date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}</span>
+                    </div>
+                  </div>
                 </div>
                 
-                <div className="flex-1">
-                  <p className="font-medium">{transaction.description}</p>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <span>{getCategoryLabel(transaction.type, transaction.category)}</span>
-                    <span>•</span>
-                    <span>{format(new Date(transaction.transaction_date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}</span>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className={cn(
+                      "font-semibold text-lg",
+                      transaction.type === 'income' 
+                        ? "text-green-600 dark:text-green-400" 
+                        : "text-red-600 dark:text-red-400"
+                    )}>
+                      {transaction.type === 'income' ? '+' : '−'} {formatCurrency(transaction.amount)}
+                    </p>
+                  </div>
+                  
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEdit(transaction)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(transaction)}
+                      className="h-8 w-8 p-0 hover:text-destructive"
+                    >
+                      <Trash className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className={cn(
-                    "font-semibold text-lg",
-                    transaction.type === 'income' ? "text-green-600" : "text-destructive"
-                  )}>
-                    {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
-                  </p>
-                </div>
-                
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onEdit(transaction)}
-                  >
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDelete(transaction)}
-                  >
-                    <Trash className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
