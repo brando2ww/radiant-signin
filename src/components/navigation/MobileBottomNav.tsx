@@ -14,7 +14,6 @@ import {
   CreditCard,
   Wallet,
   CheckSquare,
-  Star,
   Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -40,7 +39,6 @@ const navigationSections = {
   agenda: [
     { path: "/calendar", label: "Calendário", icon: Calendar },
     { path: "/tasks", label: "Tarefas", icon: CheckSquare },
-    { path: "/avaliacoes", label: "Avaliações", icon: Star },
   ],
   config: [
     { path: "/settings", label: "Configurações", icon: Settings },
