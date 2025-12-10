@@ -73,7 +73,7 @@ export const TransactionList = ({ transactions, isLoading, onEdit, onDelete }: T
   // Mobile layout - Modern cards
   if (isMobile) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3 w-full overflow-hidden">
         {transactions.map((transaction, index) => {
           const CategoryIcon = getCategoryIcon(transaction.category, transaction.type as 'income' | 'expense');
           
@@ -84,7 +84,7 @@ export const TransactionList = ({ transactions, isLoading, onEdit, onDelete }: T
               onClick={() => onEdit(transaction)}
               style={{ animationDelay: `${index * 50}ms` }}
             >
-              <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 w-full overflow-hidden">
                 {/* Circular Icon */}
                 <div className={cn(
                   "w-12 h-12 rounded-full flex items-center justify-center shrink-0",
@@ -117,9 +117,9 @@ export const TransactionList = ({ transactions, isLoading, onEdit, onDelete }: T
                 </div>
                 
                 {/* Amount and Date */}
-                <div className="text-right shrink-0">
+                <div className="text-right shrink-0 max-w-[110px]">
                   <p className={cn(
-                    "font-semibold",
+                    "font-semibold text-sm truncate",
                     transaction.type === 'income' 
                       ? "text-green-600 dark:text-green-400" 
                       : "text-red-600 dark:text-red-400"

@@ -236,9 +236,9 @@ export const TransactionFilters = ({ filters, onFilterChange, transactionCount }
   // Mobile layout - Chips + Filter button
   if (isMobile) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-3 w-full overflow-hidden">
         {/* Type chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide w-full">
           <Button
             variant={localFilters.type === 'all' ? 'default' : 'outline'}
             size="sm"
