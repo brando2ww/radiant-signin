@@ -72,8 +72,8 @@ export default function Transactions() {
   };
 
   return (
-    <AppLayout className="p-0 md:p-6 lg:p-8 bg-muted/30">
-      <div className="max-w-7xl mx-auto">
+    <AppLayout className="p-0 md:p-6 lg:p-8 bg-muted/30 overflow-x-hidden">
+      <div className="w-full max-w-7xl mx-auto overflow-hidden">
         {/* Mobile Header - Clean & Modern */}
         {isMobile ? (
           <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-4 py-3">
@@ -109,7 +109,7 @@ export default function Transactions() {
           />
         )}
 
-        <div className={isMobile ? "px-4 py-4 space-y-4" : "space-y-6"}>
+        <div className={isMobile ? "px-4 py-4 space-y-4 w-full overflow-hidden" : "space-y-6"}>
           {/* Stats Cards - Hidden on mobile for cleaner look, or show compact version */}
           {!isMobile && (
             <TransactionStats
@@ -121,24 +121,24 @@ export default function Transactions() {
 
           {/* Mobile Stats Summary */}
           {isMobile && (
-            <div className="flex items-center justify-between bg-card rounded-2xl p-4 shadow-sm">
-              <div className="text-center flex-1">
-                <p className="text-xs text-muted-foreground mb-1">Receitas</p>
-                <p className="text-sm font-semibold text-green-600">
+            <div className="flex items-center justify-between bg-card rounded-2xl p-3 shadow-sm overflow-hidden">
+              <div className="text-center flex-1 min-w-0 px-1">
+                <p className="text-xs text-muted-foreground mb-0.5">Receitas</p>
+                <p className="text-xs font-semibold text-green-600 truncate">
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalIncome)}
                 </p>
               </div>
-              <div className="w-px h-10 bg-border/50" />
-              <div className="text-center flex-1">
-                <p className="text-xs text-muted-foreground mb-1">Despesas</p>
-                <p className="text-sm font-semibold text-red-600">
+              <div className="w-px h-8 bg-border/50 shrink-0" />
+              <div className="text-center flex-1 min-w-0 px-1">
+                <p className="text-xs text-muted-foreground mb-0.5">Despesas</p>
+                <p className="text-xs font-semibold text-red-600 truncate">
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.totalExpense)}
                 </p>
               </div>
-              <div className="w-px h-10 bg-border/50" />
-              <div className="text-center flex-1">
-                <p className="text-xs text-muted-foreground mb-1">Balanço</p>
-                <p className={`text-sm font-semibold ${stats.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div className="w-px h-8 bg-border/50 shrink-0" />
+              <div className="text-center flex-1 min-w-0 px-1">
+                <p className="text-xs text-muted-foreground mb-0.5">Balanço</p>
+                <p className={`text-xs font-semibold truncate ${stats.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.balance)}
                 </p>
               </div>
