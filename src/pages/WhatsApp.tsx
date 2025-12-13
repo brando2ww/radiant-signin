@@ -209,7 +209,7 @@ export default function WhatsApp() {
         description="Verifique seu número de WhatsApp para receber notificações"
       />
 
-      <div className="max-w-md mx-auto space-y-6">
+      <div className="max-w-md mx-auto space-y-6 mt-8 md:mt-12">
         {/* Stepper */}
         <div className="flex items-center justify-center gap-2">
           {steps.map((step, index) => {
