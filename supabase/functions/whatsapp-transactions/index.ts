@@ -278,6 +278,43 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
+// Baixa áudio via Evolution API
+async function downloadAudioFromEvolution(messageKey: Record<string, unknown>): Promise<string | null> {
+  console.log('📥 Baixando áudio via Evolution API...', JSON.stringify(messageKey));
+  
+  try {
+    const response = await fetch(
+      `${evolutionApiUrl}/chat/getBase64FromMediaMessage/${encodeURIComponent(evolutionInstanceName)}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': evolutionApiKey,
+        },
+        body: JSON.stringify({
+          message: {
+            key: messageKey
+          },
+          convertToMp4: false
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Erro Evolution API:', response.status, errorText);
+      return null;
+    }
+
+    const result = await response.json();
+    console.log('✅ Áudio baixado! Tamanho base64:', result.base64?.length || 0);
+    return result.base64 || null;
+  } catch (error) {
+    console.error('❌ Erro ao baixar áudio:', error);
+    return null;
+  }
+}
+
 // Transcreve áudio usando OpenAI Whisper
 async function transcribeAudio(audioBase64: string): Promise<string | null> {
   console.log('🎤 Transcrevendo áudio...');
@@ -549,49 +586,45 @@ serve(async (req) => {
     else if (messageType === 'audioMessage') {
       console.log('🎤 Mensagem de áudio recebida');
       
-      // DEBUG: Log completo para encontrar o base64
-      console.log('🔍 DEBUG - Chaves do body:', Object.keys(body || {}));
-      console.log('🔍 DEBUG - Chaves do data:', Object.keys(data || {}));
-      console.log('🔍 DEBUG - Chaves do data.message:', Object.keys(data?.message || {}));
-      console.log('🔍 DEBUG - Chaves do data.message.audioMessage:', Object.keys(data?.message?.audioMessage || {}));
+      // Pega a key da mensagem para baixar o áudio via API
+      const messageKey = data?.key;
+      console.log('🔑 Message key:', JSON.stringify(messageKey));
       
-      // Log específico para encontrar base64
-      console.log('🔍 DEBUG - body.base64 existe?', !!body?.base64);
-      console.log('🔍 DEBUG - data.base64 existe?', !!data?.base64);
-      console.log('🔍 DEBUG - data.message.base64 existe?', !!data?.message?.base64);
-      console.log('🔍 DEBUG - data.message.audioMessage.base64 existe?', !!data?.message?.audioMessage?.base64);
-      console.log('🔍 DEBUG - body.data.message.base64 existe?', !!body?.data?.message?.base64);
-      
-      // Evolution API pode enviar o base64 em diferentes campos
-      const audioBase64 = data?.message?.audioMessage?.base64 || 
-                          data?.message?.base64 ||
-                          body?.data?.message?.base64 ||
-                          data?.base64Audio ||
-                          data?.base64 ||
-                          body?.base64;
-      
-      console.log('🔍 DEBUG - audioBase64 encontrado?', !!audioBase64, 'Tamanho:', audioBase64?.length || 0);
-      
-      if (audioBase64) {
-        await sendWhatsAppMessage(remoteJid, '🎤 Escutando seu áudio...');
-        messageText = await transcribeAudio(audioBase64);
-        
-        if (!messageText) {
-          await sendWhatsAppMessage(remoteJid, '❌ Não consegui entender o áudio. Pode tentar novamente ou enviar por texto?');
-          return new Response(JSON.stringify({ status: 'transcription_failed' }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
-        
-        // Confirma o que entendeu
-        await sendWhatsAppMessage(remoteJid, `💬 Entendi: "${messageText}"`);
-      } else {
-        console.log('❌ Áudio recebido mas sem base64');
-        await sendWhatsAppMessage(remoteJid, '❌ Não consegui acessar o áudio. Tente enviar novamente.');
-        return new Response(JSON.stringify({ status: 'audio_no_base64' }), {
+      if (!messageKey) {
+        console.log('❌ Áudio sem key para download');
+        await sendWhatsAppMessage(remoteJid, '❌ Não consegui identificar o áudio.');
+        return new Response(JSON.stringify({ status: 'no_key' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      
+      // Informa que está processando
+      await sendWhatsAppMessage(remoteJid, '🎤 Escutando seu áudio...');
+      
+      // Baixa o base64 via Evolution API
+      const audioBase64 = await downloadAudioFromEvolution(messageKey);
+      
+      if (!audioBase64) {
+        console.log('❌ Falha ao baixar áudio da Evolution API');
+        await sendWhatsAppMessage(remoteJid, '❌ Não consegui acessar o áudio. Tente enviar novamente.');
+        return new Response(JSON.stringify({ status: 'download_failed' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      // Transcreve o áudio
+      messageText = await transcribeAudio(audioBase64);
+      
+      if (!messageText) {
+        await sendWhatsAppMessage(remoteJid, '❌ Não consegui entender o áudio. Pode tentar novamente ou enviar por texto?');
+        return new Response(JSON.stringify({ status: 'transcription_failed' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      // Confirma o que entendeu
+      console.log(`✅ Áudio transcrito com sucesso: ${messageText}`);
+      await sendWhatsAppMessage(remoteJid, `💬 Entendi: "${messageText}"`);
     }
     // Tipo não suportado
     else {
