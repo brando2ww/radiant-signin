@@ -133,7 +133,7 @@ Equipe Velara`
           'apikey': evolutionApiKey,
         },
         body: JSON.stringify({
-          number: `${formattedPhone}@s.whatsapp.net`,
+          number: numberInfo.jid,
           text: messageText,
         }),
       }
