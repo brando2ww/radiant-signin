@@ -549,11 +549,28 @@ serve(async (req) => {
     else if (messageType === 'audioMessage') {
       console.log('🎤 Mensagem de áudio recebida');
       
+      // DEBUG: Log completo para encontrar o base64
+      console.log('🔍 DEBUG - Chaves do body:', Object.keys(body || {}));
+      console.log('🔍 DEBUG - Chaves do data:', Object.keys(data || {}));
+      console.log('🔍 DEBUG - Chaves do data.message:', Object.keys(data?.message || {}));
+      console.log('🔍 DEBUG - Chaves do data.message.audioMessage:', Object.keys(data?.message?.audioMessage || {}));
+      
+      // Log específico para encontrar base64
+      console.log('🔍 DEBUG - body.base64 existe?', !!body?.base64);
+      console.log('🔍 DEBUG - data.base64 existe?', !!data?.base64);
+      console.log('🔍 DEBUG - data.message.base64 existe?', !!data?.message?.base64);
+      console.log('🔍 DEBUG - data.message.audioMessage.base64 existe?', !!data?.message?.audioMessage?.base64);
+      console.log('🔍 DEBUG - body.data.message.base64 existe?', !!body?.data?.message?.base64);
+      
       // Evolution API pode enviar o base64 em diferentes campos
       const audioBase64 = data?.message?.audioMessage?.base64 || 
                           data?.message?.base64 ||
+                          body?.data?.message?.base64 ||
                           data?.base64Audio ||
+                          data?.base64 ||
                           body?.base64;
+      
+      console.log('🔍 DEBUG - audioBase64 encontrado?', !!audioBase64, 'Tamanho:', audioBase64?.length || 0);
       
       if (audioBase64) {
         await sendWhatsAppMessage(remoteJid, '🎤 Escutando seu áudio...');
