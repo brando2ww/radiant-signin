@@ -21,8 +21,8 @@ import {
   Wallet,
   Users,
   Star,
-  
   DollarSign,
+  MessageCircle,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link, useLocation } from "react-router-dom";
@@ -223,6 +223,21 @@ export function SessionNavBar() {
                       <motion.li variants={variants}>
                         {!isCollapsed && (
                           <p className="ml-2 text-sm font-medium">Contas Bancárias</p>
+                        )}
+                      </motion.li>
+                    </Link>
+
+                    <Link
+                      to="/whatsapp"
+                      className={cn(
+                        "flex h-8 w-full flex-row items-center rounded-md px-2 py-1.5 transition hover:bg-muted hover:text-primary",
+                        pathname.includes("whatsapp") && "bg-muted text-primary",
+                      )}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      <motion.li variants={variants}>
+                        {!isCollapsed && (
+                          <p className="ml-2 text-sm font-medium">WhatsApp</p>
                         )}
                       </motion.li>
                     </Link>
