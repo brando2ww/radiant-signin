@@ -74,6 +74,44 @@ Deno.serve(async (req) => {
       )
     }
 
+    // Verificar se o número é um WhatsApp válido antes de enviar
+    const checkResponse = await fetch(
+      `${evolutionApiUrl}/chat/whatsappNumbers/${evolutionInstanceName}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': evolutionApiKey,
+        },
+        body: JSON.stringify({
+          numbers: [formattedPhone],
+        }),
+      }
+    )
+
+    if (!checkResponse.ok) {
+      console.error('Error checking WhatsApp number:', await checkResponse.text())
+      return new Response(
+        JSON.stringify({ error: 'Erro ao verificar número do WhatsApp' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const checkResult = await checkResponse.json()
+    console.log('WhatsApp check result:', JSON.stringify(checkResult))
+
+    // Verifica se o número existe no WhatsApp
+    const numberInfo = checkResult[0]
+    if (!numberInfo?.exists) {
+      console.log(`Number ${formattedPhone} is not registered on WhatsApp`)
+      return new Response(
+        JSON.stringify({ error: 'Este número não está cadastrado no WhatsApp. Verifique o número e tente novamente.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    console.log(`Number ${formattedPhone} verified on WhatsApp, proceeding to send message...`)
+
     // Send WhatsApp message via Evolution API
     const messageText = `Olá! Aqui é a Velara, sua assistente financeira.
 
