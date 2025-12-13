@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AppLayout } from "@/components/layouts/AppLayout";
 import { ResponsivePageHeader } from "@/components/ui/responsive-page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -90,14 +91,14 @@ export default function WhatsApp() {
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <AppLayout className="flex-1 flex items-center justify-center">
         <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="flex-1 space-y-6 p-4 md:p-6">
+    <AppLayout className="space-y-6 py-4 md:py-8 px-4">
       <ResponsivePageHeader
         title="Verificação de WhatsApp"
         description="Verifique seu número de WhatsApp para receber notificações"
@@ -253,6 +254,6 @@ export default function WhatsApp() {
           </Card>
         )}
       </div>
-    </div>
+    </AppLayout>
   );
 }
