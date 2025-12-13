@@ -191,7 +191,7 @@ export default function WhatsApp() {
 
   if (isLoading) {
     return (
-      <AppLayout className="flex-1 flex items-center justify-center">
+      <AppLayout className="flex-1 flex items-center justify-center p-4 md:p-6 lg:p-8">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -203,7 +203,7 @@ export default function WhatsApp() {
   }
 
   return (
-    <AppLayout className="space-y-6 py-4 md:py-8 px-4">
+    <AppLayout className="space-y-6 p-4 md:p-6 lg:p-8">
       <ResponsivePageHeader
         title="Verificação de WhatsApp"
         description="Verifique seu número de WhatsApp para receber notificações"
