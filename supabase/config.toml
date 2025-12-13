@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.verify-whatsapp-code]
 verify_jwt = false
+
+[functions.whatsapp-transactions]
+verify_jwt = false

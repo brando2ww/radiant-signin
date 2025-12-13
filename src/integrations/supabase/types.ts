@@ -3219,6 +3219,47 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_session_context: {
+        Row: {
+          conversation_state: string | null
+          created_at: string | null
+          id: string
+          last_account_id: string | null
+          pending_transaction: Json | null
+          phone_number: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          conversation_state?: string | null
+          created_at?: string | null
+          id?: string
+          last_account_id?: string | null
+          pending_transaction?: Json | null
+          phone_number: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          conversation_state?: string | null
+          created_at?: string | null
+          id?: string
+          last_account_id?: string | null
+          pending_transaction?: Json | null
+          phone_number?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_session_context_last_account_id_fkey"
+            columns: ["last_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_verifications: {
         Row: {
           created_at: string | null
