@@ -278,6 +278,44 @@ function formatCurrency(value: number): string {
   }).format(value);
 }
 
+// Transcreve áudio usando OpenAI Whisper
+async function transcribeAudio(audioBase64: string): Promise<string | null> {
+  console.log('🎤 Transcrevendo áudio...');
+  
+  try {
+    // Converte base64 para Uint8Array
+    const binaryAudio = Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0));
+    
+    // Prepara FormData para a API
+    const formData = new FormData();
+    const blob = new Blob([binaryAudio], { type: 'audio/ogg' });
+    formData.append('file', blob, 'audio.ogg');
+    formData.append('model', 'whisper-1');
+    formData.append('language', 'pt');
+
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Erro OpenAI Whisper:', errorText);
+      throw new Error(`OpenAI API error: ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log(`✅ Áudio transcrito: ${result.text}`);
+    return result.text;
+  } catch (error) {
+    console.error('❌ Erro ao transcrever áudio:', error);
+    return null;
+  }
+}
+
 // Processa a mensagem recebida
 async function processMessage(remoteJid: string, messageText: string) {
   const formattedPhone = formatPhoneNumber(remoteJid);
@@ -501,16 +539,51 @@ serve(async (req) => {
     const remoteJid = data?.key?.remoteJid;
     const messageType = data?.messageType;
     
-    // Por enquanto, só processa mensagens de texto
-    if (messageType !== 'conversation' && messageType !== 'extendedTextMessage') {
+    let messageText: string | null = null;
+
+    // Mensagem de texto
+    if (messageType === 'conversation' || messageType === 'extendedTextMessage') {
+      messageText = data?.message?.conversation || data?.message?.extendedTextMessage?.text;
+    }
+    // Mensagem de áudio
+    else if (messageType === 'audioMessage') {
+      console.log('🎤 Mensagem de áudio recebida');
+      
+      // Evolution API pode enviar o base64 em diferentes campos
+      const audioBase64 = data?.message?.audioMessage?.base64 || 
+                          data?.message?.base64 ||
+                          data?.base64Audio ||
+                          body?.base64;
+      
+      if (audioBase64) {
+        await sendWhatsAppMessage(remoteJid, '🎤 Escutando seu áudio...');
+        messageText = await transcribeAudio(audioBase64);
+        
+        if (!messageText) {
+          await sendWhatsAppMessage(remoteJid, '❌ Não consegui entender o áudio. Pode tentar novamente ou enviar por texto?');
+          return new Response(JSON.stringify({ status: 'transcription_failed' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
+        // Confirma o que entendeu
+        await sendWhatsAppMessage(remoteJid, `💬 Entendi: "${messageText}"`);
+      } else {
+        console.log('❌ Áudio recebido mas sem base64');
+        await sendWhatsAppMessage(remoteJid, '❌ Não consegui acessar o áudio. Tente enviar novamente.');
+        return new Response(JSON.stringify({ status: 'audio_no_base64' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+    // Tipo não suportado
+    else {
       console.log(`⏭️ Tipo de mensagem não suportado: ${messageType}`);
-      await sendWhatsAppMessage(remoteJid, '📝 Por enquanto só consigo processar mensagens de texto. Envia uma mensagem escrita!');
+      await sendWhatsAppMessage(remoteJid, '📝 Só consigo processar texto e áudio. Envia de outra forma!');
       return new Response(JSON.stringify({ status: 'unsupported_type' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const messageText = data?.message?.conversation || data?.message?.extendedTextMessage?.text;
     
     if (!remoteJid || !messageText) {
       console.log('⏭️ Mensagem inválida - sem remoteJid ou texto');
