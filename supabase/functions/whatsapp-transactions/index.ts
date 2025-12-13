@@ -598,10 +598,7 @@ serve(async (req) => {
         });
       }
       
-      // Informa que está processando
-      await sendWhatsAppMessage(remoteJid, '🎤 Escutando seu áudio...');
-      
-      // Baixa o base64 via Evolution API
+      // Baixa o base64 via Evolution API (silenciosamente)
       const audioBase64 = await downloadAudioFromEvolution(messageKey);
       
       if (!audioBase64) {
@@ -622,9 +619,7 @@ serve(async (req) => {
         });
       }
       
-      // Confirma o que entendeu
       console.log(`✅ Áudio transcrito com sucesso: ${messageText}`);
-      await sendWhatsAppMessage(remoteJid, `💬 Entendi: "${messageText}"`);
     }
     // Tipo não suportado
     else {
