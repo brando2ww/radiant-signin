@@ -205,13 +205,12 @@ async function createTransaction(userId: string, accountId: string, data: Record
     .from('transactions')
     .insert({
       user_id: userId,
-      account_id: accountId,
+      bank_account_id: accountId,
       amount: data.amount,
       type: data.transaction_type,
       description: data.description,
       category: data.category || 'outros',
-      status: 'completed',
-      date: new Date().toISOString().split('T')[0],
+      transaction_date: new Date().toISOString().split('T')[0],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
