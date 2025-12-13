@@ -207,6 +207,7 @@ export default function WhatsApp() {
       <ResponsivePageHeader
         title="Verificação de WhatsApp"
         description="Verifique seu número de WhatsApp para receber notificações"
+        className="mt-4 md:mt-6 lg:mt-8"
       />
 
       <div className="max-w-md mx-auto space-y-6 mt-8 md:mt-12">
