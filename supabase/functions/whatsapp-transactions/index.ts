@@ -110,53 +110,56 @@ async function getUserAccounts(userId: string) {
 // Interpreta mensagem usando OpenAI
 async function interpretMessage(message: string, context: Record<string, unknown>) {
   console.log(`🤖 Interpretando mensagem: ${message}`);
+  console.log(`📋 Contexto atual:`, JSON.stringify(context));
   
   const systemPrompt = `Você é um assistente financeiro via WhatsApp. Sua função é interpretar mensagens e extrair informações financeiras.
 
 IMPORTANTE: Responda SEMPRE em JSON válido.
 
-Se a mensagem indicar uma transação financeira (gasto, receita, pagamento, etc):
+🚨 REGRA CRÍTICA - ANALISE O ESTADO ATUAL:
+- conversation_state = "awaiting_account": O usuário está SELECIONANDO UMA CONTA. 
+  Se a mensagem for um NÚMERO (1, 2, 3...) ou nome de conta, retorne SEMPRE:
+  {"type": "account_selection", "selection": "valor informado"}
+  
+- conversation_state = "idle": O usuário está iniciando uma conversa nova.
+
+TIPOS DE RESPOSTA:
+
+1. Se a mensagem indicar uma transação financeira (gasto, receita, pagamento, etc):
 {
   "type": "transaction",
   "transaction_type": "expense" ou "income",
   "amount": número (valor em reais),
   "description": "descrição curta",
-  "category": "categoria sugerida",
-  "needs_confirmation": true
+  "category": "categoria sugerida"
 }
 
-Se for uma pergunta sobre contas ou saldo:
+2. Se for uma pergunta sobre contas ou saldo:
 {
   "type": "query",
   "query_type": "accounts" ou "balance" ou "transactions",
   "message": "resposta amigável"
 }
 
-Se for uma confirmação (sim, ok, pode, confirma, etc):
-{
-  "type": "confirmation",
-  "confirmed": true ou false
-}
-
-Se for seleção de conta (número ou nome):
+3. Se for seleção de conta (número 1, 2, 3... ou nome de conta) - ESPECIALMENTE quando conversation_state = "awaiting_account":
 {
   "type": "account_selection",
   "selection": "valor informado pelo usuário"
 }
 
-Se for saudação ou conversa casual:
+4. Se for saudação ou conversa casual:
 {
   "type": "greeting",
   "message": "resposta amigável e breve"
 }
 
-Se não entender:
+5. Se não entender:
 {
   "type": "unknown",
   "message": "mensagem pedindo esclarecimento"
 }
 
-Contexto atual: ${JSON.stringify(context)}`;
+ESTADO ATUAL DO USUÁRIO: ${JSON.stringify(context)}`;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -171,7 +174,7 @@ Contexto atual: ${JSON.stringify(context)}`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: message }
         ],
-        temperature: 0.3,
+        temperature: 0.1,
       }),
     });
 
@@ -375,12 +378,12 @@ async function processMessage(remoteJid: string, messageText: string) {
   // Busca contas do usuário
   const accounts = await getUserAccounts(user.user_id);
   
-  // Interpreta a mensagem
+  // Interpreta a mensagem com contexto completo
   const interpretation = await interpretMessage(messageText, {
-    state: context.conversation_state,
-    pendingTransaction: context.pending_transaction,
-    hasAccounts: accounts.length > 0,
-    lastAccountId: context.last_account_id,
+    conversation_state: context.conversation_state,
+    pending_transaction: context.pending_transaction,
+    accounts_count: accounts.length,
+    last_account_id: context.last_account_id,
   });
 
   console.log(`🧠 Interpretação:`, interpretation);
@@ -400,28 +403,51 @@ async function processMessage(remoteJid: string, messageText: string) {
         return;
       }
 
-      // Salva transação pendente
+      // Se só tem 1 conta, registra direto SEM perguntar
+      if (accounts.length === 1) {
+        const singleAccount = accounts[0];
+        const success = await createTransaction(user.user_id, singleAccount.id, interpretation);
+        
+        if (success) {
+          const emoji = interpretation.transaction_type === 'income' ? '💰' : '💸';
+          const tipoTexto = interpretation.transaction_type === 'income' ? 'receita' : 'despesa';
+          
+          await sendWhatsAppMessage(remoteJid,
+            `${emoji} *${tipoTexto.charAt(0).toUpperCase() + tipoTexto.slice(1)} registrada!*\n\n` +
+            `💵 *${formatCurrency(interpretation.amount)}*\n` +
+            `📝 ${interpretation.description}\n` +
+            `🏦 ${singleAccount.name}`
+          );
+          
+          // Atualiza última conta usada
+          await updateSessionContext(user.user_id, {
+            last_account_id: singleAccount.id,
+            conversation_state: 'idle'
+          });
+        } else {
+          await sendWhatsAppMessage(remoteJid, '❌ Erro ao registrar. Tente novamente.');
+        }
+        return;
+      }
+
+      // Múltiplas contas: salva pendente e pergunta qual
       await updateSessionContext(user.user_id, {
         pending_transaction: interpretation,
         conversation_state: 'awaiting_account'
       });
 
-      // Lista contas para seleção
-      let accountsList = '📂 *Em qual conta você quer registrar?*\n\n';
-      accounts.forEach((acc, idx) => {
-        accountsList += `${idx + 1}️⃣ ${acc.name} (${formatCurrency(acc.current_balance)})\n`;
-      });
-      accountsList += '\n_Responda com o número da conta_';
-
       const emoji = interpretation.transaction_type === 'income' ? '💰' : '💸';
       const tipoTexto = interpretation.transaction_type === 'income' ? 'receita' : 'despesa';
       
+      let accountsList = '';
+      accounts.forEach((acc, idx) => {
+        accountsList += `${idx + 1}️⃣ ${acc.name}\n`;
+      });
+      
       await sendWhatsAppMessage(remoteJid, 
-        `${emoji} Encontrei uma *${tipoTexto}*:\n\n` +
-        `💵 Valor: *${formatCurrency(interpretation.amount)}*\n` +
-        `📝 Descrição: ${interpretation.description}\n` +
-        `🏷️ Categoria: ${interpretation.category}\n\n` +
-        accountsList
+        `${emoji} *${formatCurrency(interpretation.amount)}* - ${interpretation.description}\n\n` +
+        `📂 Qual conta?\n${accountsList}\n` +
+        `_Responda com o número_`
       );
       break;
 
@@ -447,72 +473,38 @@ async function processMessage(remoteJid: string, messageText: string) {
       }
 
       if (!selectedAccount) {
-        await sendWhatsAppMessage(remoteJid, '❌ Não encontrei essa conta. Tente novamente com o número ou nome.');
+        let retryList = '';
+        accounts.forEach((acc, idx) => {
+          retryList += `${idx + 1}️⃣ ${acc.name}\n`;
+        });
+        await sendWhatsAppMessage(remoteJid, `❌ Não encontrei. Qual conta?\n\n${retryList}`);
         return;
       }
 
-      // Atualiza estado para aguardar confirmação
-      await updateSessionContext(user.user_id, {
-        last_account_id: selectedAccount.id,
-        conversation_state: 'awaiting_confirmation'
-      });
+      // REGISTRA DIRETO - sem pedir confirmação
+      const pendingTx = context.pending_transaction;
+      const successTx = await createTransaction(user.user_id, selectedAccount.id, pendingTx);
 
-      const pending = context.pending_transaction;
-      const tipoTx = pending.transaction_type === 'income' ? 'receita' : 'despesa';
-      
-      await sendWhatsAppMessage(remoteJid,
-        `✅ *Confirma o registro?*\n\n` +
-        `💵 Valor: *${formatCurrency(pending.amount)}*\n` +
-        `📝 Descrição: ${pending.description}\n` +
-        `🏷️ Tipo: ${tipoTx}\n` +
-        `🏦 Conta: ${selectedAccount.name}\n\n` +
-        `_Responda *sim* para confirmar ou *não* para cancelar_`
-      );
-      break;
-
-    case 'confirmation':
-      if (context.conversation_state !== 'awaiting_confirmation' || !context.pending_transaction) {
-        await sendWhatsAppMessage(remoteJid, '🤔 Não tenho nada para confirmar. Me conte sobre um gasto ou receita!');
-        return;
-      }
-
-      if (interpretation.confirmed) {
-        // Cria a transação
-        const success = await createTransaction(
-          user.user_id,
-          context.last_account_id,
-          context.pending_transaction
+      if (successTx) {
+        const emojiTx = pendingTx.transaction_type === 'income' ? '💰' : '💸';
+        const tipoTx = pendingTx.transaction_type === 'income' ? 'Receita' : 'Despesa';
+        
+        await sendWhatsAppMessage(remoteJid,
+          `${emojiTx} *${tipoTx} registrada!*\n\n` +
+          `💵 *${formatCurrency(pendingTx.amount)}*\n` +
+          `📝 ${pendingTx.description}\n` +
+          `🏦 ${selectedAccount.name}`
         );
-
-        if (success) {
-          const tx = context.pending_transaction;
-          const tipo = tx.transaction_type === 'income' ? 'receita' : 'despesa';
-          const account = accounts.find(a => a.id === context.last_account_id);
-          
-          await sendWhatsAppMessage(remoteJid,
-            `✅ *Transação registrada com sucesso!*\n\n` +
-            `💵 Valor: *${formatCurrency(tx.amount)}*\n` +
-            `📝 Descrição: ${tx.description}\n` +
-            `🏷️ Tipo: ${tipo}\n` +
-            `🏦 Conta: ${account?.name || 'N/A'}\n\n` +
-            `📊 Continue registrando suas finanças! 💪`
-          );
-        } else {
-          await sendWhatsAppMessage(remoteJid, '❌ Erro ao registrar transação. Tente novamente.');
-        }
-
-        // Limpa estado
-        await updateSessionContext(user.user_id, {
-          pending_transaction: null,
-          conversation_state: 'idle'
-        });
       } else {
-        await sendWhatsAppMessage(remoteJid, '❌ Transação cancelada. Me avise quando quiser registrar algo!');
-        await updateSessionContext(user.user_id, {
-          pending_transaction: null,
-          conversation_state: 'idle'
-        });
+        await sendWhatsAppMessage(remoteJid, '❌ Erro ao registrar. Tente novamente.');
       }
+
+      // Limpa estado
+      await updateSessionContext(user.user_id, {
+        pending_transaction: null,
+        last_account_id: selectedAccount.id,
+        conversation_state: 'idle'
+      });
       break;
 
     case 'query':
