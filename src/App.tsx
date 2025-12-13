@@ -16,6 +16,7 @@ import Goals from "./pages/Goals";
 import Transactions from "./pages/Transactions";
 import CreditCards from "./pages/CreditCards";
 import BankAccounts from "./pages/BankAccounts";
+import WhatsApp from "./pages/WhatsApp";
 import CRM from "./pages/CRM";
 import LeadDetail from "./pages/LeadDetail";
 import Settings from "./pages/Settings";
@@ -109,6 +110,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <BankAccounts />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/whatsapp" 
+              element={
+                <ProtectedRoute>
+                  <WhatsApp />
                 </ProtectedRoute>
               } 
             />
