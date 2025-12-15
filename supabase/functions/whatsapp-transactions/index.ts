@@ -161,14 +161,205 @@ async function getTransactionsSummary(
   };
 }
 
+// ==================== FUNÇÕES DE AGENDA ====================
+
+// Busca eventos por período
+async function getEventsByPeriod(userId: string, startDate: Date, endDate: Date) {
+  console.log(`📅 Buscando eventos de ${startDate.toISOString()} até ${endDate.toISOString()}`);
+  
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('start_time', startDate.toISOString())
+    .lte('start_time', endDate.toISOString())
+    .order('start_time', { ascending: true });
+  
+  if (error) {
+    console.error('Erro ao buscar eventos:', error);
+    return [];
+  }
+  
+  console.log(`📅 Encontrados ${data?.length || 0} eventos`);
+  return data || [];
+}
+
+// Cria evento na agenda
+async function createEvent(userId: string, eventData: {
+  title: string;
+  date: string;
+  time: string;
+  location?: string;
+}) {
+  console.log(`📅 Criando evento: ${eventData.title} em ${eventData.date} às ${eventData.time}`);
+  
+  const startTime = new Date(`${eventData.date}T${eventData.time}:00`);
+  const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // +1h padrão
+  
+  const { error } = await supabase
+    .from('tasks')
+    .insert({
+      user_id: userId,
+      title: eventData.title,
+      start_time: startTime.toISOString(),
+      end_time: endTime.toISOString(),
+      location: eventData.location || null,
+      category: 'meeting',
+      status: 'pending',
+      priority: 'medium',
+    });
+  
+  if (error) {
+    console.error('Erro ao criar evento:', error);
+    return false;
+  }
+  
+  console.log('✅ Evento criado com sucesso');
+  return true;
+}
+
+// Formata data para exibição
+function formatDateBR(date: Date): string {
+  return date.toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: '2-digit',
+    month: '2-digit'
+  });
+}
+
+// Formata hora para exibição
+function formatTimeBR(date: Date): string {
+  return date.toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+// Parseia data natural (amanhã, próxima segunda, 20/12, etc.)
+function parseNaturalDate(input: string): string | null {
+  const today = new Date();
+  const lowerInput = input.toLowerCase().trim();
+  
+  // Hoje
+  if (lowerInput === 'hoje') {
+    return today.toISOString().split('T')[0];
+  }
+  
+  // Amanhã
+  if (lowerInput === 'amanhã' || lowerInput === 'amanha') {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  }
+  
+  // Depois de amanhã
+  if (lowerInput.includes('depois de amanhã') || lowerInput.includes('depois de amanha')) {
+    const afterTomorrow = new Date(today);
+    afterTomorrow.setDate(afterTomorrow.getDate() + 2);
+    return afterTomorrow.toISOString().split('T')[0];
+  }
+  
+  // Próxima semana
+  if (lowerInput.includes('próxima semana') || lowerInput.includes('proxima semana')) {
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    return nextWeek.toISOString().split('T')[0];
+  }
+  
+  // Dias da semana
+  const diasSemana: Record<string, number> = {
+    'domingo': 0, 'segunda': 1, 'terça': 2, 'terca': 2, 'quarta': 3,
+    'quinta': 4, 'sexta': 5, 'sábado': 6, 'sabado': 6
+  };
+  
+  for (const [dia, num] of Object.entries(diasSemana)) {
+    if (lowerInput.includes(dia)) {
+      const targetDay = new Date(today);
+      const currentDay = today.getDay();
+      let daysToAdd = num - currentDay;
+      if (daysToAdd <= 0) daysToAdd += 7;
+      targetDay.setDate(today.getDate() + daysToAdd);
+      return targetDay.toISOString().split('T')[0];
+    }
+  }
+  
+  // Formato DD/MM ou DD/MM/YYYY
+  const dateMatch = lowerInput.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/);
+  if (dateMatch) {
+    const day = parseInt(dateMatch[1]);
+    const month = parseInt(dateMatch[2]) - 1;
+    let year = dateMatch[3] ? parseInt(dateMatch[3]) : today.getFullYear();
+    if (year < 100) year += 2000;
+    
+    const parsedDate = new Date(year, month, day);
+    if (!isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString().split('T')[0];
+    }
+  }
+  
+  return null;
+}
+
+// Parseia hora natural (14h, 14:00, 2 da tarde, etc.)
+function parseNaturalTime(input: string): string | null {
+  const lowerInput = input.toLowerCase().trim();
+  
+  // Formato HH:MM
+  const timeMatch = lowerInput.match(/(\d{1,2}):(\d{2})/);
+  if (timeMatch) {
+    const hour = parseInt(timeMatch[1]).toString().padStart(2, '0');
+    const minute = timeMatch[2];
+    return `${hour}:${minute}`;
+  }
+  
+  // Formato XXh ou XXhMM
+  const hMatch = lowerInput.match(/(\d{1,2})h(\d{2})?/);
+  if (hMatch) {
+    const hour = parseInt(hMatch[1]).toString().padStart(2, '0');
+    const minute = hMatch[2] || '00';
+    return `${hour}:${minute}`;
+  }
+  
+  // X da tarde/noite
+  const tardeManhaMath = lowerInput.match(/(\d{1,2})\s*(da\s*)?(tarde|noite)/);
+  if (tardeManhaMath) {
+    let hour = parseInt(tardeManhaMath[1]);
+    if (hour < 12) hour += 12;
+    return `${hour.toString().padStart(2, '0')}:00`;
+  }
+  
+  // X da manhã
+  const manhaMath = lowerInput.match(/(\d{1,2})\s*(da\s*)?manhã/);
+  if (manhaMath) {
+    const hour = parseInt(manhaMath[1]);
+    return `${hour.toString().padStart(2, '0')}:00`;
+  }
+  
+  // Só número (assume hora)
+  const soloNumber = lowerInput.match(/^(\d{1,2})$/);
+  if (soloNumber) {
+    const hour = parseInt(soloNumber[1]);
+    if (hour >= 0 && hour <= 23) {
+      return `${hour.toString().padStart(2, '0')}:00`;
+    }
+  }
+  
+  return null;
+}
+
+// ==================== FIM FUNÇÕES DE AGENDA ====================
+
 // Interpreta mensagem usando OpenAI
 async function interpretMessage(message: string, context: Record<string, unknown>) {
   console.log(`🤖 Interpretando mensagem: ${message}`);
   console.log(`📋 Contexto atual:`, JSON.stringify(context));
   
-  const systemPrompt = `Você é um assistente financeiro via WhatsApp. Sua função é interpretar mensagens e extrair informações financeiras.
+  const today = new Date().toISOString().split('T')[0];
+  
+  const systemPrompt = `Você é um assistente financeiro e de agenda via WhatsApp. Sua função é interpretar mensagens e extrair informações financeiras ou de agenda.
 
 IMPORTANTE: Responda SEMPRE em JSON válido.
+DATA DE HOJE: ${today}
 
 🚨🚨🚨 REGRA ABSOLUTAMENTE CRÍTICA - TIPO DE TRANSAÇÃO:
 
@@ -195,6 +386,18 @@ RECEITA (income) - SEMPRE quando o usuário usa:
   {"type": "description_answer", "description": "texto informado pelo usuário"}
   
   MAS se o usuário estiver CORRIGINDO algo (ex: "não é receita", "era despesa", "cancela"), retorne correction!
+
+- conversation_state = "awaiting_event_title": Usuário informando NOME do evento
+  {"type": "event_title_answer", "title": "nome do evento"}
+
+- conversation_state = "awaiting_event_date": Usuário informando DATA do evento
+  {"type": "event_date_answer", "date": "texto da data (ex: amanhã, 20/12, segunda)"}
+
+- conversation_state = "awaiting_event_time": Usuário informando HORÁRIO do evento
+  {"type": "event_time_answer", "time": "texto do horário (ex: 14h, 14:00, 2 da tarde)"}
+
+- conversation_state = "awaiting_event_location": Usuário informando LOCAL do evento
+  {"type": "event_location_answer", "location": "local informado ou null se disse não/pular"}
   
 - conversation_state = "idle": O usuário está iniciando uma conversa nova.
 
@@ -237,7 +440,7 @@ Exemplos de correção:
 - "errado, era 50 não 80" → type: "correction", correction_type: "amount", new_value: 50
 - "cancela" ou "deixa pra lá" → type: "correction", correction_type: "cancel"
 
-3. CONSULTA - Se for uma pergunta sobre dados financeiros:
+3. CONSULTA FINANCEIRA - Se for uma pergunta sobre dados financeiros:
 {
   "type": "query",
   "query_type": "accounts" ou "balance" ou "period_summary",
@@ -274,13 +477,65 @@ REGRAS DE PERÍODO:
   "description": "texto informado"
 }
 
-6. SAUDAÇÃO - Se for saudação ou conversa casual:
+6. CRIAR EVENTO - Se o usuário quer CRIAR um evento/compromisso na agenda:
+{
+  "type": "create_event",
+  "title": "nome do evento ou null",
+  "date": "data informada ou null (ex: amanhã, 20/12, segunda)",
+  "time": "horário informado ou null (ex: 14h, 14:00)",
+  "location": "local informado ou null"
+}
+
+Exemplos de CRIAR EVENTO:
+- "Cria evento reunião amanhã às 14h" → type: "create_event", title: "Reunião", date: "amanhã", time: "14h", location: null
+- "Marca consulta médica dia 20 às 10h no hospital" → type: "create_event", title: "Consulta médica", date: "20", time: "10h", location: "Hospital"
+- "Adiciona compromisso" → type: "create_event", title: null, date: null, time: null, location: null
+- "Criar evento" → type: "create_event", title: null, date: null, time: null, location: null
+- "Lembra de ligar pro João segunda às 15h" → type: "create_event", title: "Ligar pro João", date: "segunda", time: "15h", location: null
+
+7. CONSULTAR EVENTOS - Se o usuário quer ver eventos da agenda:
+{
+  "type": "query_events",
+  "query_type": "today" ou "tomorrow" ou "week" ou "date",
+  "specific_date": "data específica ou null"
+}
+
+Exemplos de CONSULTAR EVENTOS:
+- "O que tenho hoje?" → type: "query_events", query_type: "today"
+- "Compromissos de amanhã" → type: "query_events", query_type: "tomorrow"
+- "Eventos da semana" → type: "query_events", query_type: "week"
+- "O que tenho dia 20?" → type: "query_events", query_type: "date", specific_date: "20"
+- "Minha agenda de hoje" → type: "query_events", query_type: "today"
+- "Próximos compromissos" → type: "query_events", query_type: "week"
+
+8. RESPOSTAS PARCIAIS DE EVENTO:
+{
+  "type": "event_title_answer",
+  "title": "nome do evento"
+}
+
+{
+  "type": "event_date_answer",
+  "date": "data informada"
+}
+
+{
+  "type": "event_time_answer",
+  "time": "horário informado"
+}
+
+{
+  "type": "event_location_answer",
+  "location": "local ou null se disse não/pular"
+}
+
+9. SAUDAÇÃO - Se for saudação ou conversa casual:
 {
   "type": "greeting",
   "message": "resposta amigável e breve"
 }
 
-7. NÃO ENTENDEU:
+10. NÃO ENTENDEU:
 {
   "type": "unknown",
   "message": "mensagem pedindo esclarecimento"
@@ -509,6 +764,7 @@ async function processMessage(remoteJid: string, messageText: string) {
   const interpretation = await interpretMessage(messageText, {
     conversation_state: context.conversation_state,
     pending_transaction: context.pending_transaction,
+    pending_event: context.pending_event,
     accounts_count: accounts.length,
     last_account_id: context.last_account_id,
   });
@@ -518,7 +774,12 @@ async function processMessage(remoteJid: string, messageText: string) {
   // Processa baseado no tipo de interpretação e estado da conversa
   switch (interpretation.type) {
     case 'greeting':
-      await sendWhatsAppMessage(remoteJid, interpretation.message || 'Olá! 👋 Como posso ajudar com suas finanças hoje?');
+      await sendWhatsAppMessage(remoteJid, 
+        interpretation.message || 
+        'Olá! 👋 Como posso ajudar?\n\n' +
+        '💰 *Finanças:* "Gastei 50 no almoço"\n' +
+        '📅 *Agenda:* "Criar evento" ou "O que tenho hoje?"'
+      );
       break;
 
     case 'transaction':
@@ -751,11 +1012,11 @@ async function processMessage(remoteJid: string, messageText: string) {
             `📝 ${summary.count} ${summary.count === 1 ? 'transação' : 'transações'}`
           );
         } else {
-          const emoji = filterType === 'expense' ? '💸' : '💰';
+          const emojiQuery = filterType === 'expense' ? '💸' : '💰';
           const tipoText = filterType === 'expense' ? 'gastos' : 'receitas';
           
           await sendWhatsAppMessage(remoteJid,
-            `${emoji} *Total de ${tipoText} nos últimos ${days} ${days === 1 ? 'dia' : 'dias'}:*\n\n` +
+            `${emojiQuery} *Total de ${tipoText} nos últimos ${days} ${days === 1 ? 'dia' : 'dias'}:*\n\n` +
             `💵 *${formatCurrency(summary.total)}*\n` +
             `📝 ${summary.count} ${summary.count === 1 ? 'transação' : 'transações'}`
           );
@@ -765,11 +1026,355 @@ async function processMessage(remoteJid: string, messageText: string) {
       }
       break;
 
+    // ==================== CASOS DE AGENDA ====================
+
+    case 'create_event': {
+      // Usuário quer criar um evento
+      const pendingEvent: Record<string, unknown> = {
+        title: interpretation.title || null,
+        date: interpretation.date || null,
+        time: interpretation.time || null,
+        location: interpretation.location || null,
+      };
+
+      // Verificar o que está faltando e perguntar
+      if (!pendingEvent.title) {
+        await updateSessionContext(user.user_id, {
+          pending_event: pendingEvent,
+          conversation_state: 'awaiting_event_title'
+        });
+        await sendWhatsAppMessage(remoteJid, '📅 *Criar evento*\n\n📝 Qual o nome do evento?');
+        return;
+      }
+
+      if (!pendingEvent.date) {
+        await updateSessionContext(user.user_id, {
+          pending_event: pendingEvent,
+          conversation_state: 'awaiting_event_date'
+        });
+        await sendWhatsAppMessage(remoteJid, 
+          `📅 *${pendingEvent.title}*\n\n` +
+          `📆 Qual a data?\n` +
+          `_Ex: amanhã, 20/12, segunda_`
+        );
+        return;
+      }
+
+      if (!pendingEvent.time) {
+        await updateSessionContext(user.user_id, {
+          pending_event: pendingEvent,
+          conversation_state: 'awaiting_event_time'
+        });
+        await sendWhatsAppMessage(remoteJid, 
+          `📅 *${pendingEvent.title}*\n` +
+          `📆 ${pendingEvent.date}\n\n` +
+          `⏰ Qual o horário?\n` +
+          `_Ex: 14h, 14:00, 2 da tarde_`
+        );
+        return;
+      }
+
+      // Temos tudo, perguntar local (opcional)
+      if (pendingEvent.location === null) {
+        await updateSessionContext(user.user_id, {
+          pending_event: pendingEvent,
+          conversation_state: 'awaiting_event_location'
+        });
+        await sendWhatsAppMessage(remoteJid, 
+          `📅 *${pendingEvent.title}*\n` +
+          `📆 ${pendingEvent.date} às ${pendingEvent.time}\n\n` +
+          `📍 Qual o local?\n` +
+          `_Responda "não" ou "pular" se não tiver_`
+        );
+        return;
+      }
+
+      // Temos todos os dados, criar evento
+      const parsedDate = parseNaturalDate(pendingEvent.date as string);
+      const parsedTime = parseNaturalTime(pendingEvent.time as string);
+
+      if (!parsedDate) {
+        await sendWhatsAppMessage(remoteJid, '❌ Não entendi a data. Tente novamente com um formato como "amanhã", "20/12" ou "segunda".');
+        return;
+      }
+
+      if (!parsedTime) {
+        await sendWhatsAppMessage(remoteJid, '❌ Não entendi o horário. Tente novamente com um formato como "14h", "14:00" ou "2 da tarde".');
+        return;
+      }
+
+      const eventSuccess = await createEvent(user.user_id, {
+        title: pendingEvent.title as string,
+        date: parsedDate,
+        time: parsedTime,
+        location: pendingEvent.location as string | undefined,
+      });
+
+      if (eventSuccess) {
+        const eventDate = new Date(`${parsedDate}T${parsedTime}:00`);
+        let confirmMsg = `✅ *Evento criado!*\n\n` +
+          `📅 ${pendingEvent.title}\n` +
+          `📆 ${formatDateBR(eventDate)} às ${formatTimeBR(eventDate)}`;
+        
+        if (pendingEvent.location) {
+          confirmMsg += `\n📍 ${pendingEvent.location}`;
+        }
+        
+        await sendWhatsAppMessage(remoteJid, confirmMsg);
+      } else {
+        await sendWhatsAppMessage(remoteJid, '❌ Erro ao criar evento. Tente novamente.');
+      }
+
+      await updateSessionContext(user.user_id, {
+        pending_event: null,
+        conversation_state: 'idle'
+      });
+      break;
+    }
+
+    case 'event_title_answer': {
+      if (context.conversation_state !== 'awaiting_event_title') {
+        await sendWhatsAppMessage(remoteJid, '🤔 Não estou esperando um nome de evento. Diga "criar evento" para começar.');
+        return;
+      }
+
+      const currentEvent = (context.pending_event as Record<string, unknown>) || {};
+      const updatedEvent = { ...currentEvent, title: interpretation.title || messageText.trim() };
+
+      await updateSessionContext(user.user_id, {
+        pending_event: updatedEvent,
+        conversation_state: 'awaiting_event_date'
+      });
+
+      await sendWhatsAppMessage(remoteJid, 
+        `📅 *${updatedEvent.title}*\n\n` +
+        `📆 Qual a data?\n` +
+        `_Ex: amanhã, 20/12, segunda_`
+      );
+      break;
+    }
+
+    case 'event_date_answer': {
+      if (context.conversation_state !== 'awaiting_event_date') {
+        await sendWhatsAppMessage(remoteJid, '🤔 Não estou esperando uma data. Diga "criar evento" para começar.');
+        return;
+      }
+
+      const currentEvent2 = (context.pending_event as Record<string, unknown>) || {};
+      const dateInput = interpretation.date || messageText.trim();
+      const updatedEvent2 = { ...currentEvent2, date: dateInput };
+
+      await updateSessionContext(user.user_id, {
+        pending_event: updatedEvent2,
+        conversation_state: 'awaiting_event_time'
+      });
+
+      await sendWhatsAppMessage(remoteJid, 
+        `📅 *${currentEvent2.title}*\n` +
+        `📆 ${dateInput}\n\n` +
+        `⏰ Qual o horário?\n` +
+        `_Ex: 14h, 14:00, 2 da tarde_`
+      );
+      break;
+    }
+
+    case 'event_time_answer': {
+      if (context.conversation_state !== 'awaiting_event_time') {
+        await sendWhatsAppMessage(remoteJid, '🤔 Não estou esperando um horário. Diga "criar evento" para começar.');
+        return;
+      }
+
+      const currentEvent3 = (context.pending_event as Record<string, unknown>) || {};
+      const timeInput = interpretation.time || messageText.trim();
+      const updatedEvent3 = { ...currentEvent3, time: timeInput };
+
+      await updateSessionContext(user.user_id, {
+        pending_event: updatedEvent3,
+        conversation_state: 'awaiting_event_location'
+      });
+
+      await sendWhatsAppMessage(remoteJid, 
+        `📅 *${currentEvent3.title}*\n` +
+        `📆 ${currentEvent3.date} às ${timeInput}\n\n` +
+        `📍 Qual o local?\n` +
+        `_Responda "não" ou "pular" se não tiver_`
+      );
+      break;
+    }
+
+    case 'event_location_answer': {
+      if (context.conversation_state !== 'awaiting_event_location') {
+        await sendWhatsAppMessage(remoteJid, '🤔 Não estou esperando um local. Diga "criar evento" para começar.');
+        return;
+      }
+
+      const currentEvent4 = (context.pending_event as Record<string, unknown>) || {};
+      const locationInput = interpretation.location;
+      
+      // Verificar se usuário disse não/pular
+      const skipWords = ['não', 'nao', 'pular', 'nenhum', 'sem local', '-'];
+      const isSkip = !locationInput || skipWords.some(w => messageText.toLowerCase().includes(w));
+      
+      const finalLocation = isSkip ? undefined : (locationInput || messageText.trim());
+
+      // Parsear data e hora
+      const parsedDateFinal = parseNaturalDate(currentEvent4.date as string);
+      const parsedTimeFinal = parseNaturalTime(currentEvent4.time as string);
+
+      if (!parsedDateFinal) {
+        await sendWhatsAppMessage(remoteJid, '❌ Não entendi a data informada. Vamos recomeçar - diga "criar evento".');
+        await updateSessionContext(user.user_id, {
+          pending_event: null,
+          conversation_state: 'idle'
+        });
+        return;
+      }
+
+      if (!parsedTimeFinal) {
+        await sendWhatsAppMessage(remoteJid, '❌ Não entendi o horário informado. Vamos recomeçar - diga "criar evento".');
+        await updateSessionContext(user.user_id, {
+          pending_event: null,
+          conversation_state: 'idle'
+        });
+        return;
+      }
+
+      const eventSuccessFinal = await createEvent(user.user_id, {
+        title: currentEvent4.title as string,
+        date: parsedDateFinal,
+        time: parsedTimeFinal,
+        location: finalLocation,
+      });
+
+      if (eventSuccessFinal) {
+        const eventDateFinal = new Date(`${parsedDateFinal}T${parsedTimeFinal}:00`);
+        let confirmMsgFinal = `✅ *Evento criado!*\n\n` +
+          `📅 ${currentEvent4.title}\n` +
+          `📆 ${formatDateBR(eventDateFinal)} às ${formatTimeBR(eventDateFinal)}`;
+        
+        if (finalLocation) {
+          confirmMsgFinal += `\n📍 ${finalLocation}`;
+        }
+        
+        await sendWhatsAppMessage(remoteJid, confirmMsgFinal);
+      } else {
+        await sendWhatsAppMessage(remoteJid, '❌ Erro ao criar evento. Tente novamente.');
+      }
+
+      await updateSessionContext(user.user_id, {
+        pending_event: null,
+        conversation_state: 'idle'
+      });
+      break;
+    }
+
+    case 'query_events': {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      let startDate: Date;
+      let endDate: Date;
+      let periodLabel: string;
+
+      switch (interpretation.query_type) {
+        case 'today':
+          startDate = new Date(today);
+          endDate = new Date(today);
+          endDate.setHours(23, 59, 59, 999);
+          periodLabel = 'hoje';
+          break;
+        case 'tomorrow':
+          startDate = new Date(today);
+          startDate.setDate(startDate.getDate() + 1);
+          endDate = new Date(startDate);
+          endDate.setHours(23, 59, 59, 999);
+          periodLabel = 'amanhã';
+          break;
+        case 'week':
+          startDate = new Date(today);
+          endDate = new Date(today);
+          endDate.setDate(endDate.getDate() + 7);
+          endDate.setHours(23, 59, 59, 999);
+          periodLabel = 'próximos 7 dias';
+          break;
+        case 'date':
+          const specificDate = interpretation.specific_date;
+          const parsed = parseNaturalDate(specificDate || '');
+          if (!parsed) {
+            await sendWhatsAppMessage(remoteJid, '❌ Não entendi a data. Tente "hoje", "amanhã", "semana" ou uma data como "20/12".');
+            return;
+          }
+          startDate = new Date(parsed + 'T00:00:00');
+          endDate = new Date(parsed + 'T23:59:59');
+          periodLabel = formatDateBR(startDate);
+          break;
+        default:
+          startDate = new Date(today);
+          endDate = new Date(today);
+          endDate.setDate(endDate.getDate() + 7);
+          endDate.setHours(23, 59, 59, 999);
+          periodLabel = 'próximos 7 dias';
+      }
+
+      const events = await getEventsByPeriod(user.user_id, startDate, endDate);
+
+      if (events.length === 0) {
+        await sendWhatsAppMessage(remoteJid, `📅 Nenhum evento para ${periodLabel}.`);
+      } else {
+        let eventsMsg = `📅 *Eventos - ${periodLabel}:*\n\n`;
+        
+        // Agrupa eventos por dia se for mais de um dia
+        if (interpretation.query_type === 'week') {
+          const eventsByDay: Record<string, typeof events> = {};
+          
+          for (const event of events) {
+            const eventDate = new Date(event.start_time);
+            const dayKey = eventDate.toISOString().split('T')[0];
+            if (!eventsByDay[dayKey]) {
+              eventsByDay[dayKey] = [];
+            }
+            eventsByDay[dayKey].push(event);
+          }
+
+          for (const [dayKey, dayEvents] of Object.entries(eventsByDay)) {
+            const dayDate = new Date(dayKey + 'T12:00:00');
+            eventsMsg += `📆 *${formatDateBR(dayDate)}*\n`;
+            
+            for (const event of dayEvents) {
+              const eventTime = new Date(event.start_time);
+              eventsMsg += `⏰ ${formatTimeBR(eventTime)} - ${event.title}`;
+              if (event.location) {
+                eventsMsg += `\n📍 ${event.location}`;
+              }
+              eventsMsg += '\n';
+            }
+            eventsMsg += '\n';
+          }
+        } else {
+          // Lista simples para um dia
+          for (const event of events) {
+            const eventTime = new Date(event.start_time);
+            eventsMsg += `⏰ ${formatTimeBR(eventTime)} - ${event.title}`;
+            if (event.location) {
+              eventsMsg += `\n📍 ${event.location}`;
+            }
+            eventsMsg += '\n\n';
+          }
+        }
+
+        await sendWhatsAppMessage(remoteJid, eventsMsg.trim());
+      }
+      break;
+    }
+
+    // ==================== FIM CASOS DE AGENDA ====================
+
     case 'correction':
       // Usuário está corrigindo algo
       if (interpretation.correction_type === 'cancel') {
         await updateSessionContext(user.user_id, {
           pending_transaction: null,
+          pending_event: null,
           conversation_state: 'idle'
         });
         await sendWhatsAppMessage(remoteJid, '✅ Cancelado! Me conte quando quiser registrar algo.');
@@ -839,10 +1444,15 @@ async function processMessage(remoteJid: string, messageText: string) {
     default:
       await sendWhatsAppMessage(remoteJid, 
         interpretation.message || 
-        '🤔 Não entendi. Você pode me dizer coisas como:\n\n' +
-        '• "Gastei 50 reais no almoço"\n' +
+        '🤔 Não entendi. Você pode:\n\n' +
+        '💰 *Finanças:*\n' +
+        '• "Gastei 50 no almoço"\n' +
         '• "Recebi 1000 de salário"\n' +
-        '• "Quais são minhas contas?"'
+        '• "Quanto gastei essa semana?"\n\n' +
+        '📅 *Agenda:*\n' +
+        '• "Criar evento reunião amanhã 14h"\n' +
+        '• "O que tenho hoje?"\n' +
+        '• "Eventos da semana"'
       );
       break;
   }
@@ -949,11 +1559,9 @@ serve(async (req) => {
     return new Response(JSON.stringify({ status: 'processing' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-
-  } catch (error: unknown) {
+  } catch (error) {
     console.error('❌ Erro no webhook:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: 'Internal error' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
