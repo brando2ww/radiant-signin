@@ -557,7 +557,36 @@ RECEITA (income) - SEMPRE quando o usuário usa:
 ⚠️ NUNCA confunda "gastei" com receita - "gastei" é SEMPRE DESPESA!
 ⚠️ NUNCA confunda "recebi" com despesa - "recebi" é SEMPRE RECEITA!
 
-🚨 REGRA CRÍTICA - ANALISE O ESTADO ATUAL:
+🚨🚨🚨 REGRA MAIS IMPORTANTE - ESTADOS DE AGENDA:
+
+Se conversation_state começa com "awaiting_event_", você DEVE retornar o tipo correspondente ao estado,
+INDEPENDENTE do conteúdo da mensagem. O usuário está RESPONDENDO a uma pergunta específica.
+
+MAPEAMENTO OBRIGATÓRIO:
+- conversation_state = "awaiting_event_title" → SEMPRE retorne {"type": "event_title_answer", "title": "mensagem completa do usuário"}
+- conversation_state = "awaiting_event_date" → SEMPRE retorne {"type": "event_date_answer", "date": "mensagem completa do usuário"}
+- conversation_state = "awaiting_event_time" → SEMPRE retorne {"type": "event_time_answer", "time": "mensagem completa do usuário"}
+- conversation_state = "awaiting_event_location" → SEMPRE retorne {"type": "event_location_answer", "location": "texto ou null se negativo"}
+
+EXEMPLOS CRÍTICOS para awaiting_event_date:
+- Usuário diz "amanhã às 14h" → {"type": "event_date_answer", "date": "amanhã às 14h"}
+- Usuário diz "20/12" → {"type": "event_date_answer", "date": "20/12"}
+- Usuário diz "segunda" → {"type": "event_date_answer", "date": "segunda"}
+- Usuário diz "dia 16 as 14h" → {"type": "event_date_answer", "date": "dia 16 as 14h"}
+
+EXEMPLOS CRÍTICOS para awaiting_event_time:
+- Usuário diz "14h" → {"type": "event_time_answer", "time": "14h"}
+- Usuário diz "2 da tarde" → {"type": "event_time_answer", "time": "2 da tarde"}
+
+EXEMPLOS CRÍTICOS para awaiting_event_location:
+- Usuário diz "não", "nao", "pular", "-", "nenhum", "sem local" → {"type": "event_location_answer", "location": null}
+- Usuário diz "escritório" → {"type": "event_location_answer", "location": "escritório"}
+- Usuário diz "casa da maria" → {"type": "event_location_answer", "location": "casa da maria"}
+
+⚠️ NUNCA retorne "unknown" quando o usuário está em um estado awaiting_event_*!
+⚠️ MESMO que a resposta pareça conter outros dados (data+hora junto), confie no estado e retorne o tipo correto!
+
+🚨 REGRA CRÍTICA - OUTROS ESTADOS:
 - conversation_state = "awaiting_account": O usuário está SELECIONANDO UMA CONTA. 
   Se a mensagem for um NÚMERO (1, 2, 3...) ou nome de conta, retorne:
   {"type": "account_selection", "selection": "valor informado"}
@@ -570,18 +599,6 @@ RECEITA (income) - SEMPRE quando o usuário usa:
   
   MAS se o usuário estiver CORRIGINDO algo (ex: "não é receita", "era despesa", "cancela"), retorne correction!
 
-- conversation_state = "awaiting_event_title": Usuário informando NOME do evento
-  {"type": "event_title_answer", "title": "nome do evento"}
-
-- conversation_state = "awaiting_event_date": Usuário informando DATA do evento
-  {"type": "event_date_answer", "date": "texto da data (ex: amanhã, 20/12, segunda)"}
-
-- conversation_state = "awaiting_event_time": Usuário informando HORÁRIO do evento
-  {"type": "event_time_answer", "time": "texto do horário (ex: 14h, 14:00, 2 da tarde)"}
-
-- conversation_state = "awaiting_event_location": Usuário informando LOCAL do evento
-  {"type": "event_location_answer", "location": "local informado ou null se disse não/pular"}
-  
 - conversation_state = "idle": O usuário está iniciando uma conversa nova.
 
 TIPOS DE RESPOSTA:
@@ -691,7 +708,7 @@ Exemplos de CONSULTAR EVENTOS:
 - "Minha agenda de hoje" → type: "query_events", query_type: "today"
 - "Próximos compromissos" → type: "query_events", query_type: "week"
 
-8. RESPOSTAS PARCIAIS DE EVENTO:
+8. RESPOSTAS PARCIAIS DE EVENTO (APENAS se no estado correspondente):
 {
   "type": "event_title_answer",
   "title": "nome do evento"
@@ -754,7 +771,7 @@ Pode ser número (1=nome, 2=data, 3=horário, 4=local) ou texto (nome, data, hor
   "message": "resposta amigável e breve"
 }
 
-14. NÃO ENTENDEU:
+14. NÃO ENTENDEU (USE APENAS QUANDO conversation_state = "idle" E realmente não entender):
 {
   "type": "unknown",
   "message": "mensagem pedindo esclarecimento"
@@ -1359,7 +1376,66 @@ async function processMessage(remoteJid: string, messageText: string) {
       }
 
       const currentEvent = (context.pending_event as Record<string, unknown>) || {};
-      const updatedEvent = { ...currentEvent, title: interpretation.title || messageText.trim() };
+      const rawTitle = interpretation.title || messageText.trim();
+      
+      // Tenta extrair data e hora da mensagem do título (caso usuário tenha informado tudo junto)
+      const extractedDate = parseNaturalDate(rawTitle);
+      const extractedTime = parseNaturalTime(rawTitle);
+      
+      // Remove partes de data/hora do título se foram extraídas
+      let cleanTitle = rawTitle
+        .replace(/(?:no\s*)?dia\s*\d{1,2}/gi, '')
+        .replace(/\d{1,2}\/\d{1,2}(?:\/\d{2,4})?/g, '')
+        .replace(/(?:às?|as)\s*\d{1,2}(?:h|:)?\d{0,2}/gi, '')
+        .replace(/\d{1,2}h\d{0,2}/gi, '')
+        .replace(/\d{1,2}\s*(?:da\s*)?(tarde|noite|manhã)/gi, '')
+        .replace(/amanh[aã]/gi, '')
+        .replace(/hoje/gi, '')
+        .replace(/segunda|terça|terca|quarta|quinta|sexta|s[aá]bado|domingo/gi, '')
+        .trim()
+        .replace(/\s+/g, ' ');
+      
+      // Se o título ficou muito curto ou vazio, usa o original
+      if (cleanTitle.length < 2) {
+        cleanTitle = rawTitle;
+      }
+      
+      const updatedEvent = { 
+        ...currentEvent, 
+        title: cleanTitle,
+        date: extractedDate ? rawTitle : currentEvent.date, // Guarda o texto original para parsing depois
+        time: extractedTime ? rawTitle : currentEvent.time
+      };
+
+      // Se extraiu data e hora, pula direto para local
+      if (extractedDate && extractedTime) {
+        await updateSessionContext(user.user_id, {
+          pending_event: updatedEvent,
+          conversation_state: 'awaiting_event_location'
+        });
+        await sendWhatsAppMessage(remoteJid, 
+          `📅 *${cleanTitle}*\n` +
+          `📆 ${rawTitle}\n\n` +
+          `📍 Qual o local?\n` +
+          `_Responda "não" ou "pular" se não tiver_`
+        );
+        return;
+      }
+      
+      // Se extraiu só a data, pula para horário
+      if (extractedDate) {
+        await updateSessionContext(user.user_id, {
+          pending_event: updatedEvent,
+          conversation_state: 'awaiting_event_time'
+        });
+        await sendWhatsAppMessage(remoteJid, 
+          `📅 *${cleanTitle}*\n` +
+          `📆 ${rawTitle}\n\n` +
+          `⏰ Qual o horário?\n` +
+          `_Ex: 14h, 14:00, 2 da tarde_`
+        );
+        return;
+      }
 
       await updateSessionContext(user.user_id, {
         pending_event: updatedEvent,
@@ -1367,7 +1443,7 @@ async function processMessage(remoteJid: string, messageText: string) {
       });
 
       await sendWhatsAppMessage(remoteJid, 
-        `📅 *${updatedEvent.title}*\n\n` +
+        `📅 *${cleanTitle}*\n\n` +
         `📆 Qual a data?\n` +
         `_Ex: amanhã, 20/12, segunda_`
       );
@@ -1943,6 +2019,210 @@ async function processMessage(remoteJid: string, messageText: string) {
 
     case 'unknown':
     default:
+      // FALLBACK INTELIGENTE: Se estamos em um estado de agenda, tenta processar a mensagem diretamente
+      console.log(`⚠️ Fallback: Estado=${context.conversation_state}, OpenAI retornou=${interpretation.type}`);
+      
+      // Fallback para awaiting_event_date
+      if (context.conversation_state === 'awaiting_event_date') {
+        const fallbackDate = parseNaturalDate(messageText);
+        if (fallbackDate || messageText.trim().length > 0) {
+          const currentEventFallback = (context.pending_event as Record<string, unknown>) || {};
+          const dateInputFallback = messageText.trim();
+          
+          // Também tenta extrair hora da mensagem
+          const timeInDateMsg = parseNaturalTime(messageText);
+          
+          const updatedEventFallback = { 
+            ...currentEventFallback, 
+            date: dateInputFallback,
+            time: timeInDateMsg ? dateInputFallback : currentEventFallback.time
+          };
+          
+          // Se extraiu horário junto, pula para local
+          if (timeInDateMsg) {
+            await updateSessionContext(user.user_id, {
+              pending_event: updatedEventFallback,
+              conversation_state: 'awaiting_event_location'
+            });
+            await sendWhatsAppMessage(remoteJid, 
+              `📅 *${currentEventFallback.title}*\n` +
+              `📆 ${dateInputFallback}\n\n` +
+              `📍 Qual o local?\n` +
+              `_Responda "não" ou "pular" se não tiver_`
+            );
+            return;
+          }
+          
+          await updateSessionContext(user.user_id, {
+            pending_event: updatedEventFallback,
+            conversation_state: 'awaiting_event_time'
+          });
+          await sendWhatsAppMessage(remoteJid, 
+            `📅 *${currentEventFallback.title}*\n` +
+            `📆 ${dateInputFallback}\n\n` +
+            `⏰ Qual o horário?\n` +
+            `_Ex: 14h, 14:00, 2 da tarde_`
+          );
+          return;
+        }
+      }
+      
+      // Fallback para awaiting_event_time
+      if (context.conversation_state === 'awaiting_event_time') {
+        const fallbackTime = parseNaturalTime(messageText);
+        if (fallbackTime || messageText.trim().length > 0) {
+          const currentEventFallback3 = (context.pending_event as Record<string, unknown>) || {};
+          const timeInputFallback = messageText.trim();
+          const updatedEventFallback3 = { ...currentEventFallback3, time: timeInputFallback };
+          
+          await updateSessionContext(user.user_id, {
+            pending_event: updatedEventFallback3,
+            conversation_state: 'awaiting_event_location'
+          });
+          await sendWhatsAppMessage(remoteJid, 
+            `📅 *${currentEventFallback3.title}*\n` +
+            `📆 ${currentEventFallback3.date} às ${timeInputFallback}\n\n` +
+            `📍 Qual o local?\n` +
+            `_Responda "não" ou "pular" se não tiver_`
+          );
+          return;
+        }
+      }
+      
+      // Fallback para awaiting_event_location
+      if (context.conversation_state === 'awaiting_event_location') {
+        const currentEventFallback4 = (context.pending_event as Record<string, unknown>) || {};
+        const locationMsgLower = messageText.toLowerCase().trim();
+        const skipLocationWords = ['não', 'nao', 'pular', 'nenhum', 'sem local', '-', 'n', 'nope', 'no'];
+        const isSkipLocation = skipLocationWords.some(w => locationMsgLower === w || locationMsgLower.includes(w));
+        
+        const finalLocationFallback = isSkipLocation ? undefined : messageText.trim();
+        
+        // Parsear data e hora e criar evento
+        const parsedDateFallback = parseNaturalDate(currentEventFallback4.date as string);
+        const parsedTimeFallback = parseNaturalTime(currentEventFallback4.time as string);
+        
+        if (!parsedDateFallback) {
+          await sendWhatsAppMessage(remoteJid, '❌ Não entendi a data informada. Vamos recomeçar - diga "criar evento".');
+          await updateSessionContext(user.user_id, {
+            pending_event: null,
+            conversation_state: 'idle'
+          });
+          return;
+        }
+        
+        if (!parsedTimeFallback) {
+          await sendWhatsAppMessage(remoteJid, '❌ Não entendi o horário informado. Vamos recomeçar - diga "criar evento".');
+          await updateSessionContext(user.user_id, {
+            pending_event: null,
+            conversation_state: 'idle'
+          });
+          return;
+        }
+        
+        const eventSuccessFallback = await createEvent(user.user_id, {
+          title: currentEventFallback4.title as string,
+          date: parsedDateFallback,
+          time: parsedTimeFallback,
+          location: finalLocationFallback,
+        });
+        
+        if (eventSuccessFallback) {
+          const eventDateFallback = new Date(`${parsedDateFallback}T${parsedTimeFallback}:00`);
+          let confirmMsgFallback = `✅ *Evento criado!*\n\n` +
+            `📅 ${currentEventFallback4.title}\n` +
+            `📆 ${formatDateBR(eventDateFallback)} às ${formatTimeBR(eventDateFallback)}`;
+          
+          if (finalLocationFallback) {
+            confirmMsgFallback += `\n📍 ${finalLocationFallback}`;
+          }
+          
+          await sendWhatsAppMessage(remoteJid, confirmMsgFallback);
+        } else {
+          await sendWhatsAppMessage(remoteJid, '❌ Erro ao criar evento. Tente novamente.');
+        }
+        
+        await updateSessionContext(user.user_id, {
+          pending_event: null,
+          conversation_state: 'idle'
+        });
+        return;
+      }
+      
+      // Fallback para awaiting_event_title
+      if (context.conversation_state === 'awaiting_event_title') {
+        const currentEventFallbackTitle = (context.pending_event as Record<string, unknown>) || {};
+        const titleFallback = messageText.trim();
+        
+        // Tenta extrair data e hora
+        const extractedDateFallback = parseNaturalDate(titleFallback);
+        const extractedTimeFallback = parseNaturalTime(titleFallback);
+        
+        let cleanTitleFallback = titleFallback
+          .replace(/(?:no\s*)?dia\s*\d{1,2}/gi, '')
+          .replace(/\d{1,2}\/\d{1,2}(?:\/\d{2,4})?/g, '')
+          .replace(/(?:às?|as)\s*\d{1,2}(?:h|:)?\d{0,2}/gi, '')
+          .replace(/\d{1,2}h\d{0,2}/gi, '')
+          .replace(/\d{1,2}\s*(?:da\s*)?(tarde|noite|manhã)/gi, '')
+          .replace(/amanh[aã]/gi, '')
+          .replace(/hoje/gi, '')
+          .replace(/segunda|terça|terca|quarta|quinta|sexta|s[aá]bado|domingo/gi, '')
+          .trim()
+          .replace(/\s+/g, ' ');
+        
+        if (cleanTitleFallback.length < 2) {
+          cleanTitleFallback = titleFallback;
+        }
+        
+        const updatedEventFallbackTitle = { 
+          ...currentEventFallbackTitle, 
+          title: cleanTitleFallback,
+          date: extractedDateFallback ? titleFallback : currentEventFallbackTitle.date,
+          time: extractedTimeFallback ? titleFallback : currentEventFallbackTitle.time
+        };
+        
+        // Decide próximo estado
+        if (extractedDateFallback && extractedTimeFallback) {
+          await updateSessionContext(user.user_id, {
+            pending_event: updatedEventFallbackTitle,
+            conversation_state: 'awaiting_event_location'
+          });
+          await sendWhatsAppMessage(remoteJid, 
+            `📅 *${cleanTitleFallback}*\n` +
+            `📆 ${titleFallback}\n\n` +
+            `📍 Qual o local?\n` +
+            `_Responda "não" ou "pular" se não tiver_`
+          );
+          return;
+        }
+        
+        if (extractedDateFallback) {
+          await updateSessionContext(user.user_id, {
+            pending_event: updatedEventFallbackTitle,
+            conversation_state: 'awaiting_event_time'
+          });
+          await sendWhatsAppMessage(remoteJid, 
+            `📅 *${cleanTitleFallback}*\n` +
+            `📆 ${titleFallback}\n\n` +
+            `⏰ Qual o horário?\n` +
+            `_Ex: 14h, 14:00, 2 da tarde_`
+          );
+          return;
+        }
+        
+        await updateSessionContext(user.user_id, {
+          pending_event: updatedEventFallbackTitle,
+          conversation_state: 'awaiting_event_date'
+        });
+        await sendWhatsAppMessage(remoteJid, 
+          `📅 *${cleanTitleFallback}*\n\n` +
+          `📆 Qual a data?\n` +
+          `_Ex: amanhã, 20/12, segunda_`
+        );
+        return;
+      }
+      
+      // Nenhum fallback aplicável, mostra mensagem padrão
       await sendWhatsAppMessage(remoteJid, 
         interpretation.message || 
         '🤔 Não entendi. Você pode:\n\n' +
