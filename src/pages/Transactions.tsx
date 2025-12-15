@@ -66,7 +66,7 @@ export default function Transactions() {
     setDialogOpen(true);
   };
   return <AppLayout className="p-0 md:p-6 lg:p-8 bg-muted/30 overflow-x-hidden">
-      <div className="w-full max-w-7xl mx-auto overflow-hidden">
+      <div className="w-full max-w-7xl mx-auto">
         {/* Mobile Header - Clean & Modern */}
         {isMobile ? <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-4 py-3">
             <div className="flex items-center justify-between">
@@ -81,7 +81,7 @@ export default function Transactions() {
                 Nova Transação
               </Button>} />}
 
-        <div className={isMobile ? "px-4 py-4 space-y-4 w-full overflow-hidden" : "space-y-6"}>
+        <div className={isMobile ? "px-4 py-4 space-y-4 w-full" : "space-y-6"}>
           {/* Stats Cards - Hidden on mobile for cleaner look, or show compact version */}
           {!isMobile && <TransactionStats totalIncome={stats.totalIncome} totalExpense={stats.totalExpense} balance={stats.balance} />}
 
