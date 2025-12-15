@@ -218,6 +218,86 @@ async function createEvent(userId: string, eventData: {
   return true;
 }
 
+// Atualiza evento existente
+async function updateEvent(eventId: string, updates: {
+  title?: string;
+  date?: string;
+  time?: string;
+  location?: string;
+}, existingEvent: { start_time: string; end_time: string }) {
+  console.log(`📅 Atualizando evento ${eventId}:`, updates);
+  
+  const updateData: Record<string, unknown> = {};
+  
+  // Se alterou data ou hora, recalcula start_time e end_time
+  if (updates.date || updates.time) {
+    const existingStart = new Date(existingEvent.start_time);
+    const existingEnd = new Date(existingEvent.end_time);
+    const duration = existingEnd.getTime() - existingStart.getTime();
+    
+    let newDate = updates.date ? parseNaturalDate(updates.date) : existingStart.toISOString().split('T')[0];
+    let newTime = updates.time ? parseNaturalTime(updates.time) : existingStart.toTimeString().slice(0, 5);
+    
+    if (newDate && newTime) {
+      const newStartTime = new Date(`${newDate}T${newTime}:00`);
+      const newEndTime = new Date(newStartTime.getTime() + duration);
+      
+      updateData.start_time = newStartTime.toISOString();
+      updateData.end_time = newEndTime.toISOString();
+    }
+  }
+  
+  if (updates.title) {
+    updateData.title = updates.title;
+  }
+  
+  if (updates.location !== undefined) {
+    updateData.location = updates.location || null;
+  }
+  
+  updateData.updated_at = new Date().toISOString();
+  
+  const { error } = await supabase
+    .from('tasks')
+    .update(updateData)
+    .eq('id', eventId);
+  
+  if (error) {
+    console.error('Erro ao atualizar evento:', error);
+    return false;
+  }
+  
+  console.log('✅ Evento atualizado com sucesso');
+  return true;
+}
+
+// Busca eventos para edição (por nome ou próximos)
+async function findEventsForEdit(userId: string, searchTerm?: string) {
+  const now = new Date();
+  
+  let query = supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('start_time', now.toISOString())
+    .order('start_time', { ascending: true })
+    .limit(10);
+  
+  if (searchTerm) {
+    query = query.ilike('title', `%${searchTerm}%`);
+  }
+  
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Erro ao buscar eventos para edição:', error);
+    return [];
+  }
+  
+  console.log(`📅 Encontrados ${data?.length || 0} eventos para edição`);
+  return data || [];
+}
+
 // Formata data para exibição
 function formatDateBR(date: Date): string {
   return date.toLocaleDateString('pt-BR', {
@@ -529,13 +609,49 @@ Exemplos de CONSULTAR EVENTOS:
   "location": "local ou null se disse não/pular"
 }
 
-9. SAUDAÇÃO - Se for saudação ou conversa casual:
+9. EDITAR EVENTO - Se o usuário quer MODIFICAR um evento existente:
+{
+  "type": "edit_event",
+  "event_identifier": "nome ou parte do nome do evento ou null",
+  "field_to_edit": "title" | "date" | "time" | "location" | null,
+  "new_value": "novo valor ou null"
+}
+
+Exemplos de EDITAR EVENTO:
+- "Editar reunião" → type: "edit_event", event_identifier: "reunião", field_to_edit: null, new_value: null
+- "Mudar horário da consulta para 15h" → type: "edit_event", event_identifier: "consulta", field_to_edit: "time", new_value: "15h"
+- "Alterar data do almoço para sexta" → type: "edit_event", event_identifier: "almoço", field_to_edit: "date", new_value: "sexta"
+- "Mudar local da reunião para escritório" → type: "edit_event", event_identifier: "reunião", field_to_edit: "location", new_value: "escritório"
+- "Renomear evento reunião para apresentação" → type: "edit_event", event_identifier: "reunião", field_to_edit: "title", new_value: "apresentação"
+- "Editar meus eventos" → type: "edit_event", event_identifier: null, field_to_edit: null, new_value: null
+
+10. SELEÇÃO DE EVENTO PARA EDIÇÃO (quando conversation_state = "awaiting_event_selection"):
+{
+  "type": "event_selection",
+  "selection": "número ou nome informado"
+}
+
+11. SELEÇÃO DE CAMPO PARA EDIÇÃO (quando conversation_state = "awaiting_edit_field"):
+{
+  "type": "edit_field_selection",
+  "field": "title" | "date" | "time" | "location"
+}
+
+Pode ser número (1=nome, 2=data, 3=horário, 4=local) ou texto (nome, data, horário, local).
+
+12. NOVO VALOR DO CAMPO (quando conversation_state = "awaiting_edit_value"):
+{
+  "type": "edit_value_answer",
+  "value": "novo valor informado"
+}
+
+13. SAUDAÇÃO - Se for saudação ou conversa casual:
 {
   "type": "greeting",
   "message": "resposta amigável e breve"
 }
 
-10. NÃO ENTENDEU:
+14. NÃO ENTENDEU:
 {
   "type": "unknown",
   "message": "mensagem pedindo esclarecimento"
@@ -765,6 +881,7 @@ async function processMessage(remoteJid: string, messageText: string) {
     conversation_state: context.conversation_state,
     pending_transaction: context.pending_transaction,
     pending_event: context.pending_event,
+    pending_edit: context.pending_edit,
     accounts_count: accounts.length,
     last_account_id: context.last_account_id,
   });
@@ -1367,6 +1484,287 @@ async function processMessage(remoteJid: string, messageText: string) {
       break;
     }
 
+    // ==================== CASOS DE EDIÇÃO DE EVENTOS ====================
+
+    case 'edit_event': {
+      // Usuário quer editar um evento
+      const searchTerm = interpretation.event_identifier;
+      const fieldToEdit = interpretation.field_to_edit;
+      const newValue = interpretation.new_value;
+
+      // Busca eventos que correspondem ao termo
+      const eventsToEdit = await findEventsForEdit(user.user_id, searchTerm || undefined);
+
+      if (eventsToEdit.length === 0) {
+        await sendWhatsAppMessage(remoteJid,
+          searchTerm
+            ? `❌ Nenhum evento encontrado com "${searchTerm}".\n\nDiga "editar eventos" para ver a lista.`
+            : '📅 Nenhum evento futuro encontrado para editar.'
+        );
+        return;
+      }
+
+      // Se encontrou exatamente um evento
+      if (eventsToEdit.length === 1) {
+        const eventToEdit = eventsToEdit[0];
+        const eventStart = new Date(eventToEdit.start_time);
+
+        // Se já especificou campo e valor, edita direto
+        if (fieldToEdit && newValue) {
+          const updateSuccess = await updateEvent(eventToEdit.id, {
+            [fieldToEdit]: newValue
+          }, { start_time: eventToEdit.start_time, end_time: eventToEdit.end_time });
+
+          if (updateSuccess) {
+            const fieldLabels: Record<string, string> = {
+              title: 'Nome',
+              date: 'Data',
+              time: 'Horário',
+              location: 'Local'
+            };
+            await sendWhatsAppMessage(remoteJid,
+              `✅ *Evento atualizado!*\n\n` +
+              `📅 ${eventToEdit.title}\n` +
+              `✏️ ${fieldLabels[fieldToEdit]} alterado para: *${newValue}*`
+            );
+          } else {
+            await sendWhatsAppMessage(remoteJid, '❌ Erro ao atualizar evento. Tente novamente.');
+          }
+          return;
+        }
+
+        // Se só especificou o campo, pergunta o novo valor
+        if (fieldToEdit) {
+          await updateSessionContext(user.user_id, {
+            pending_edit: {
+              event_id: eventToEdit.id,
+              event_title: eventToEdit.title,
+              start_time: eventToEdit.start_time,
+              end_time: eventToEdit.end_time,
+              field_to_edit: fieldToEdit
+            },
+            conversation_state: 'awaiting_edit_value'
+          });
+
+          const fieldPrompts: Record<string, string> = {
+            title: '📝 Qual o novo nome?',
+            date: '📆 Qual a nova data?\n_Ex: amanhã, 20/12, segunda_',
+            time: '⏰ Qual o novo horário?\n_Ex: 14h, 14:00, 2 da tarde_',
+            location: '📍 Qual o novo local?'
+          };
+
+          await sendWhatsAppMessage(remoteJid,
+            `📅 *Editando: ${eventToEdit.title}*\n` +
+            `📆 ${formatDateBR(eventStart)} às ${formatTimeBR(eventStart)}\n\n` +
+            fieldPrompts[fieldToEdit]
+          );
+          return;
+        }
+
+        // Mostra opções de campo para editar
+        await updateSessionContext(user.user_id, {
+          pending_edit: {
+            event_id: eventToEdit.id,
+            event_title: eventToEdit.title,
+            start_time: eventToEdit.start_time,
+            end_time: eventToEdit.end_time,
+            field_to_edit: null
+          },
+          conversation_state: 'awaiting_edit_field'
+        });
+
+        let editMsg = `📅 *Editando: ${eventToEdit.title}*\n` +
+          `📆 ${formatDateBR(eventStart)} às ${formatTimeBR(eventStart)}`;
+        if (eventToEdit.location) {
+          editMsg += `\n📍 ${eventToEdit.location}`;
+        }
+        editMsg += `\n\nO que você quer alterar?\n` +
+          `1️⃣ Nome\n` +
+          `2️⃣ Data\n` +
+          `3️⃣ Horário\n` +
+          `4️⃣ Local`;
+
+        await sendWhatsAppMessage(remoteJid, editMsg);
+        return;
+      }
+
+      // Múltiplos eventos encontrados - pede para escolher
+      await updateSessionContext(user.user_id, {
+        pending_edit: {
+          events_list: eventsToEdit.map(e => ({ id: e.id, title: e.title, start_time: e.start_time, end_time: e.end_time, location: e.location }))
+        },
+        conversation_state: 'awaiting_event_selection'
+      });
+
+      let listMsg = `📅 *Qual evento você quer editar?*\n\n`;
+      eventsToEdit.forEach((event, idx) => {
+        const eventTime = new Date(event.start_time);
+        listMsg += `${idx + 1}️⃣ ${event.title}\n   📆 ${formatDateBR(eventTime)} às ${formatTimeBR(eventTime)}\n`;
+      });
+      listMsg += `\n_Responda com o número_`;
+
+      await sendWhatsAppMessage(remoteJid, listMsg);
+      break;
+    }
+
+    case 'event_selection': {
+      if (context.conversation_state !== 'awaiting_event_selection') {
+        await sendWhatsAppMessage(remoteJid, '🤔 Não estou esperando uma seleção. Diga "editar evento" para começar.');
+        return;
+      }
+
+      const pendingEditData = context.pending_edit as { events_list: Array<{ id: string; title: string; start_time: string; end_time: string; location?: string }> };
+      const eventsList = pendingEditData?.events_list || [];
+
+      const selection = interpretation.selection?.toString().trim();
+      const eventIndex = parseInt(selection) - 1;
+
+      let selectedEvent = null;
+      if (!isNaN(eventIndex) && eventIndex >= 0 && eventIndex < eventsList.length) {
+        selectedEvent = eventsList[eventIndex];
+      } else {
+        // Tenta por nome
+        selectedEvent = eventsList.find(e =>
+          e.title.toLowerCase().includes(selection?.toLowerCase() || '')
+        );
+      }
+
+      if (!selectedEvent) {
+        let retryList = '';
+        eventsList.forEach((e, idx) => {
+          retryList += `${idx + 1}️⃣ ${e.title}\n`;
+        });
+        await sendWhatsAppMessage(remoteJid, `❌ Não encontrei. Qual evento?\n\n${retryList}`);
+        return;
+      }
+
+      const selectedEventStart = new Date(selectedEvent.start_time);
+
+      // Mostra opções de campo para editar
+      await updateSessionContext(user.user_id, {
+        pending_edit: {
+          event_id: selectedEvent.id,
+          event_title: selectedEvent.title,
+          start_time: selectedEvent.start_time,
+          end_time: selectedEvent.end_time,
+          field_to_edit: null
+        },
+        conversation_state: 'awaiting_edit_field'
+      });
+
+      let editMsg = `📅 *Editando: ${selectedEvent.title}*\n` +
+        `📆 ${formatDateBR(selectedEventStart)} às ${formatTimeBR(selectedEventStart)}`;
+      if (selectedEvent.location) {
+        editMsg += `\n📍 ${selectedEvent.location}`;
+      }
+      editMsg += `\n\nO que você quer alterar?\n` +
+        `1️⃣ Nome\n` +
+        `2️⃣ Data\n` +
+        `3️⃣ Horário\n` +
+        `4️⃣ Local`;
+
+      await sendWhatsAppMessage(remoteJid, editMsg);
+      break;
+    }
+
+    case 'edit_field_selection': {
+      if (context.conversation_state !== 'awaiting_edit_field') {
+        await sendWhatsAppMessage(remoteJid, '🤔 Não estou esperando uma seleção de campo. Diga "editar evento" para começar.');
+        return;
+      }
+
+      const pendingEditField = context.pending_edit as { event_id: string; event_title: string; start_time: string; end_time: string };
+
+      // Mapeia seleção para campo
+      const fieldMap: Record<string, string> = {
+        '1': 'title', 'nome': 'title',
+        '2': 'date', 'data': 'date',
+        '3': 'time', 'horário': 'time', 'horario': 'time', 'hora': 'time',
+        '4': 'location', 'local': 'location'
+      };
+
+      const fieldKey = interpretation.field?.toLowerCase() || messageText.toLowerCase().trim();
+      const field = fieldMap[fieldKey] || fieldMap[interpretation.field] || null;
+
+      if (!field) {
+        await sendWhatsAppMessage(remoteJid,
+          `❌ Não entendi. O que você quer alterar?\n\n` +
+          `1️⃣ Nome\n` +
+          `2️⃣ Data\n` +
+          `3️⃣ Horário\n` +
+          `4️⃣ Local`
+        );
+        return;
+      }
+
+      await updateSessionContext(user.user_id, {
+        pending_edit: {
+          ...pendingEditField,
+          field_to_edit: field
+        },
+        conversation_state: 'awaiting_edit_value'
+      });
+
+      const fieldPrompts: Record<string, string> = {
+        title: '📝 Qual o novo nome?',
+        date: '📆 Qual a nova data?\n_Ex: amanhã, 20/12, segunda_',
+        time: '⏰ Qual o novo horário?\n_Ex: 14h, 14:00, 2 da tarde_',
+        location: '📍 Qual o novo local?'
+      };
+
+      await sendWhatsAppMessage(remoteJid,
+        `📅 *Editando: ${pendingEditField.event_title}*\n\n` +
+        fieldPrompts[field]
+      );
+      break;
+    }
+
+    case 'edit_value_answer': {
+      if (context.conversation_state !== 'awaiting_edit_value') {
+        await sendWhatsAppMessage(remoteJid, '🤔 Não estou esperando um valor. Diga "editar evento" para começar.');
+        return;
+      }
+
+      const pendingEditValue = context.pending_edit as {
+        event_id: string;
+        event_title: string;
+        start_time: string;
+        end_time: string;
+        field_to_edit: string;
+      };
+
+      const newValueInput = interpretation.value || messageText.trim();
+      const fieldToUpdate = pendingEditValue.field_to_edit;
+
+      const updateSuccess = await updateEvent(pendingEditValue.event_id, {
+        [fieldToUpdate]: newValueInput
+      }, { start_time: pendingEditValue.start_time, end_time: pendingEditValue.end_time });
+
+      if (updateSuccess) {
+        const fieldLabels: Record<string, string> = {
+          title: 'Nome',
+          date: 'Data',
+          time: 'Horário',
+          location: 'Local'
+        };
+        await sendWhatsAppMessage(remoteJid,
+          `✅ *Evento atualizado!*\n\n` +
+          `📅 ${pendingEditValue.event_title}\n` +
+          `✏️ ${fieldLabels[fieldToUpdate]} alterado para: *${newValueInput}*`
+        );
+      } else {
+        await sendWhatsAppMessage(remoteJid, '❌ Erro ao atualizar evento. Tente novamente.');
+      }
+
+      await updateSessionContext(user.user_id, {
+        pending_edit: null,
+        conversation_state: 'idle'
+      });
+      break;
+    }
+
+    // ==================== FIM CASOS DE EDIÇÃO DE EVENTOS ====================
+
     // ==================== FIM CASOS DE AGENDA ====================
 
     case 'correction':
@@ -1452,7 +1850,8 @@ async function processMessage(remoteJid: string, messageText: string) {
         '📅 *Agenda:*\n' +
         '• "Criar evento reunião amanhã 14h"\n' +
         '• "O que tenho hoje?"\n' +
-        '• "Eventos da semana"'
+        '• "Editar evento reunião"\n' +
+        '• "Mudar horário da consulta para 15h"'
       );
       break;
   }
