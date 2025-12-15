@@ -120,6 +120,10 @@ IMPORTANTE: Responda SEMPRE em JSON válido.
 - conversation_state = "awaiting_account": O usuário está SELECIONANDO UMA CONTA. 
   Se a mensagem for um NÚMERO (1, 2, 3...) ou nome de conta, retorne SEMPRE:
   {"type": "account_selection", "selection": "valor informado"}
+
+- conversation_state = "awaiting_description": O usuário está INFORMANDO A DESCRIÇÃO da transação.
+  Retorne SEMPRE:
+  {"type": "description_answer", "description": "texto informado pelo usuário"}
   
 - conversation_state = "idle": O usuário está iniciando uma conversa nova.
 
@@ -130,9 +134,21 @@ TIPOS DE RESPOSTA:
   "type": "transaction",
   "transaction_type": "expense" ou "income",
   "amount": número (valor em reais),
-  "description": "descrição curta",
+  "description": "descrição ou null",
   "category": "categoria sugerida"
 }
+
+📝 REGRA PARA DESCRIÇÃO:
+- Se o usuário MENCIONAR o que foi (gasolina, luz, mercado, almoço, salário, cliente X), use como description
+- Se o usuário NÃO mencionar o que foi, retorne description: null
+
+Exemplos:
+- "Gastei 80 com gasolina" → description: "Gasolina"
+- "Paguei 150 de luz" → description: "Luz"  
+- "Recebi 500 do cliente João" → description: "Cliente João"
+- "Gastei 80" → description: null
+- "Saiu 200" → description: null
+- "Entrou 1000" → description: null
 
 2. Se for uma pergunta sobre contas ou saldo:
 {
@@ -147,13 +163,19 @@ TIPOS DE RESPOSTA:
   "selection": "valor informado pelo usuário"
 }
 
-4. Se for saudação ou conversa casual:
+4. Se for resposta de descrição - quando conversation_state = "awaiting_description":
+{
+  "type": "description_answer",
+  "description": "texto informado"
+}
+
+5. Se for saudação ou conversa casual:
 {
   "type": "greeting",
   "message": "resposta amigável e breve"
 }
 
-5. Se não entender:
+6. Se não entender:
 {
   "type": "unknown",
   "message": "mensagem pedindo esclarecimento"
@@ -403,6 +425,23 @@ async function processMessage(remoteJid: string, messageText: string) {
         return;
       }
 
+      // Se não tem descrição, perguntar primeiro
+      if (!interpretation.description) {
+        await updateSessionContext(user.user_id, {
+          pending_transaction: interpretation,
+          conversation_state: 'awaiting_description'
+        });
+
+        const emojiDesc = interpretation.transaction_type === 'income' ? '💰' : '💸';
+        const tipoDesc = interpretation.transaction_type === 'income' ? 'receita' : 'despesa';
+        
+        await sendWhatsAppMessage(remoteJid,
+          `${emojiDesc} *${formatCurrency(interpretation.amount)}*\n\n` +
+          `📝 O que foi essa ${tipoDesc}?`
+        );
+        return;
+      }
+
       // Se só tem 1 conta, registra direto SEM perguntar
       if (accounts.length === 1) {
         const singleAccount = accounts[0];
@@ -447,6 +486,72 @@ async function processMessage(remoteJid: string, messageText: string) {
       await sendWhatsAppMessage(remoteJid, 
         `${emoji} *${formatCurrency(interpretation.amount)}* - ${interpretation.description}\n\n` +
         `📂 Qual conta?\n${accountsList}\n` +
+        `_Responda com o número_`
+      );
+      break;
+
+    case 'description_answer':
+      // Usuário informou a descrição da transação pendente
+      if (context.conversation_state !== 'awaiting_description' || !context.pending_transaction) {
+        await sendWhatsAppMessage(remoteJid, '🤔 Não tenho nenhuma transação pendente. Me conte sobre um gasto ou receita!');
+        return;
+      }
+
+      const pendingTxData = context.pending_transaction as Record<string, unknown>;
+      const descriptionText = interpretation.description || messageText.trim();
+      
+      // Acessa valores com casting correto
+      const txType = pendingTxData.transaction_type as string;
+      const txAmount = pendingTxData.amount as number;
+
+      const pendingWithDesc: Record<string, unknown> = {
+        ...pendingTxData,
+        description: descriptionText
+      };
+
+      // Se só tem 1 conta, registra direto
+      if (accounts.length === 1) {
+        const singleAcc = accounts[0];
+        const successDesc = await createTransaction(user.user_id, singleAcc.id, pendingWithDesc);
+        
+        if (successDesc) {
+          const emojiD = txType === 'income' ? '💰' : '💸';
+          const tipoD = txType === 'income' ? 'Receita' : 'Despesa';
+          
+          await sendWhatsAppMessage(remoteJid,
+            `${emojiD} *${tipoD} registrada!*\n\n` +
+            `💵 *${formatCurrency(txAmount)}*\n` +
+            `📝 ${descriptionText}\n` +
+            `🏦 ${singleAcc.name}`
+          );
+        } else {
+          await sendWhatsAppMessage(remoteJid, '❌ Erro ao registrar. Tente novamente.');
+        }
+
+        await updateSessionContext(user.user_id, {
+          pending_transaction: null,
+          last_account_id: singleAcc.id,
+          conversation_state: 'idle'
+        });
+        return;
+      }
+
+      // Múltiplas contas: atualiza pending com descrição e pergunta qual conta
+      await updateSessionContext(user.user_id, {
+        pending_transaction: pendingWithDesc,
+        conversation_state: 'awaiting_account'
+      });
+
+      const emojiAcc = txType === 'income' ? '💰' : '💸';
+      
+      let accsListDesc = '';
+      accounts.forEach((acc, idx) => {
+        accsListDesc += `${idx + 1}️⃣ ${acc.name}\n`;
+      });
+      
+      await sendWhatsAppMessage(remoteJid, 
+        `${emojiAcc} *${formatCurrency(txAmount)}* - ${descriptionText}\n\n` +
+        `📂 Qual conta?\n${accsListDesc}\n` +
         `_Responda com o número_`
       );
       break;
