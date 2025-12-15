@@ -315,7 +315,7 @@ function formatTimeBR(date: Date): string {
   });
 }
 
-// Parseia data natural (amanhã, próxima segunda, 20/12, etc.)
+// Parseia data natural (amanhã, próxima segunda, 20/12, daqui X dias, fim de semana, etc.)
 function parseNaturalDate(input: string): string | null {
   const today = new Date();
   const lowerInput = input.toLowerCase().trim();
@@ -339,11 +339,63 @@ function parseNaturalDate(input: string): string | null {
     return afterTomorrow.toISOString().split('T')[0];
   }
   
-  // Próxima semana
-  if (lowerInput.includes('próxima semana') || lowerInput.includes('proxima semana')) {
-    const nextWeek = new Date(today);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-    return nextWeek.toISOString().split('T')[0];
+  // Daqui X dias / em X dias
+  const daquiMatch = lowerInput.match(/(?:daqui|em)\s*(?:a\s*)?(\d+)\s*dias?/);
+  if (daquiMatch) {
+    const days = parseInt(daquiMatch[1]);
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + days);
+    return targetDate.toISOString().split('T')[0];
+  }
+  
+  // Fim de semana / final de semana
+  if (lowerInput.includes('fim de semana') || lowerInput.includes('final de semana')) {
+    const daysUntilSat = (6 - today.getDay() + 7) % 7 || 7;
+    const saturday = new Date(today);
+    saturday.setDate(today.getDate() + daysUntilSat);
+    return saturday.toISOString().split('T')[0];
+  }
+  
+  // Essa semana (próximo dia útil da semana atual, ou hoje se for dia útil)
+  if (lowerInput.includes('essa semana') || lowerInput.includes('esta semana')) {
+    // Se hoje é dia útil (seg-sex), retorna hoje
+    if (today.getDay() >= 1 && today.getDay() <= 5) {
+      return today.toISOString().split('T')[0];
+    }
+    // Se é fim de semana, retorna próxima segunda
+    const daysUntilMonday = (1 - today.getDay() + 7) % 7 || 7;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + daysUntilMonday);
+    return monday.toISOString().split('T')[0];
+  }
+  
+  // Semana que vem / próxima semana (próxima segunda)
+  if (lowerInput.includes('semana que vem') || lowerInput.includes('próxima semana') || lowerInput.includes('proxima semana')) {
+    const daysUntilNextMonday = (1 - today.getDay() + 7) % 7 || 7;
+    const nextMonday = new Date(today);
+    nextMonday.setDate(today.getDate() + daysUntilNextMonday);
+    return nextMonday.toISOString().split('T')[0];
+  }
+  
+  // Mês que vem / próximo mês (dia 1 do próximo mês)
+  if (lowerInput.includes('mês que vem') || lowerInput.includes('mes que vem') || 
+      lowerInput.includes('próximo mês') || lowerInput.includes('proximo mes')) {
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    return nextMonth.toISOString().split('T')[0];
+  }
+  
+  // No dia X (do mês atual ou próximo se já passou)
+  const diaMatch = lowerInput.match(/(?:no\s*)?dia\s*(\d{1,2})/);
+  if (diaMatch) {
+    const targetDay = parseInt(diaMatch[1]);
+    let targetDate = new Date(today.getFullYear(), today.getMonth(), targetDay);
+    // Se o dia já passou neste mês, vai para o próximo mês
+    if (targetDate < today) {
+      targetDate = new Date(today.getFullYear(), today.getMonth() + 1, targetDay);
+    }
+    if (!isNaN(targetDate.getTime())) {
+      return targetDate.toISOString().split('T')[0];
+    }
   }
   
   // Dias da semana
@@ -434,12 +486,63 @@ async function interpretMessage(message: string, context: Record<string, unknown
   console.log(`🤖 Interpretando mensagem: ${message}`);
   console.log(`📋 Contexto atual:`, JSON.stringify(context));
   
-  const today = new Date().toISOString().split('T')[0];
+  // Contexto temporal completo
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const dayOfWeek = now.toLocaleDateString('pt-BR', { weekday: 'long' });
+  const dayNumber = now.getDate();
+  const month = now.toLocaleDateString('pt-BR', { month: 'long' });
+  const year = now.getFullYear();
+  
+  // Amanhã
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  const tomorrowWeekday = tomorrow.toLocaleDateString('pt-BR', { weekday: 'long' });
+  const tomorrowDate = tomorrow.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  
+  // Depois de amanhã
+  const afterTomorrow = new Date(now);
+  afterTomorrow.setDate(now.getDate() + 2);
+  const afterTomorrowWeekday = afterTomorrow.toLocaleDateString('pt-BR', { weekday: 'long' });
+  const afterTomorrowDate = afterTomorrow.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  
+  // Próximo fim de semana
+  const daysUntilSaturday = (6 - now.getDay() + 7) % 7 || 7;
+  const nextSaturday = new Date(now);
+  nextSaturday.setDate(now.getDate() + daysUntilSaturday);
+  const saturdayDate = nextSaturday.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  
+  // Próxima segunda (início da próxima semana)
+  const daysUntilMonday = (1 - now.getDay() + 7) % 7 || 7;
+  const nextMonday = new Date(now);
+  nextMonday.setDate(now.getDate() + daysUntilMonday);
+  const mondayDate = nextMonday.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  
+  // Próximo mês
+  const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const nextMonthName = nextMonth.toLocaleDateString('pt-BR', { month: 'long' });
+  
+  const temporalContext = `
+CONTEXTO TEMPORAL (USE PARA INTERPRETAR DATAS):
+- Hoje é ${dayOfWeek}, ${dayNumber} de ${month} de ${year} (${today})
+- Amanhã é ${tomorrowWeekday}, ${tomorrowDate}
+- Depois de amanhã é ${afterTomorrowWeekday}, ${afterTomorrowDate}
+- Próximo sábado (fim de semana): ${saturdayDate}
+- Próxima segunda (semana que vem): ${mondayDate}
+- Próximo mês: ${nextMonthName}
+
+REGRAS PARA INTERPRETAR DATAS RELATIVAS:
+- "daqui X dias" ou "em X dias" = some X dias à data de hoje
+- "essa semana" = período de hoje até o próximo domingo
+- "fim de semana" ou "final de semana" = sábado ${saturdayDate}
+- "semana que vem" ou "próxima semana" = segunda ${mondayDate} em diante
+- "mês que vem" ou "próximo mês" = ${nextMonthName}
+- "no dia X" = dia X do mês atual (ou próximo mês se já passou)`;
   
   const systemPrompt = `Você é um assistente financeiro e de agenda via WhatsApp. Sua função é interpretar mensagens e extrair informações financeiras ou de agenda.
 
 IMPORTANTE: Responda SEMPRE em JSON válido.
-DATA DE HOJE: ${today}
+${temporalContext}
 
 🚨🚨🚨 REGRA ABSOLUTAMENTE CRÍTICA - TIPO DE TRANSAÇÃO:
 
