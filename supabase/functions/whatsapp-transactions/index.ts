@@ -116,20 +116,37 @@ async function interpretMessage(message: string, context: Record<string, unknown
 
 IMPORTANTE: Responda SEMPRE em JSON válido.
 
+🚨🚨🚨 REGRA ABSOLUTAMENTE CRÍTICA - TIPO DE TRANSAÇÃO:
+
+DESPESA (expense) - SEMPRE quando o usuário usa:
+- "gastei", "paguei", "saiu", "comprei", "despesa", "gasto", "custo", "fiz um pix", "transferi"
+- QUALQUER indicação de dinheiro SAINDO
+
+RECEITA (income) - SEMPRE quando o usuário usa:
+- "recebi", "entrou", "ganhei", "receita", "salário", "vendi", "faturei", "caiu na conta", "me pagaram"
+- QUALQUER indicação de dinheiro ENTRANDO
+
+⚠️ NUNCA confunda "gastei" com receita - "gastei" é SEMPRE DESPESA!
+⚠️ NUNCA confunda "recebi" com despesa - "recebi" é SEMPRE RECEITA!
+
 🚨 REGRA CRÍTICA - ANALISE O ESTADO ATUAL:
 - conversation_state = "awaiting_account": O usuário está SELECIONANDO UMA CONTA. 
-  Se a mensagem for um NÚMERO (1, 2, 3...) ou nome de conta, retorne SEMPRE:
+  Se a mensagem for um NÚMERO (1, 2, 3...) ou nome de conta, retorne:
   {"type": "account_selection", "selection": "valor informado"}
+  
+  MAS se o usuário estiver CORRIGINDO algo (ex: "não é receita", "errado", "cancela"), retorne correction!
 
 - conversation_state = "awaiting_description": O usuário está INFORMANDO A DESCRIÇÃO da transação.
-  Retorne SEMPRE:
+  Se for texto simples (gasolina, almoço, etc), retorne:
   {"type": "description_answer", "description": "texto informado pelo usuário"}
+  
+  MAS se o usuário estiver CORRIGINDO algo (ex: "não é receita", "era despesa", "cancela"), retorne correction!
   
 - conversation_state = "idle": O usuário está iniciando uma conversa nova.
 
 TIPOS DE RESPOSTA:
 
-1. Se a mensagem indicar uma transação financeira (gasto, receita, pagamento, etc):
+1. TRANSAÇÃO - Se a mensagem indicar uma transação financeira:
 {
   "type": "transaction",
   "transaction_type": "expense" ou "income",
@@ -142,40 +159,56 @@ TIPOS DE RESPOSTA:
 - Se o usuário MENCIONAR o que foi (gasolina, luz, mercado, almoço, salário, cliente X), use como description
 - Se o usuário NÃO mencionar o que foi, retorne description: null
 
-Exemplos:
-- "Gastei 80 com gasolina" → description: "Gasolina"
-- "Paguei 150 de luz" → description: "Luz"  
-- "Recebi 500 do cliente João" → description: "Cliente João"
-- "Gastei 80" → description: null
-- "Saiu 200" → description: null
-- "Entrou 1000" → description: null
+Exemplos CORRETOS:
+- "Gastei 80 com gasolina" → transaction_type: "expense", description: "Gasolina"
+- "Paguei 150 de luz" → transaction_type: "expense", description: "Luz"  
+- "Gastei 80" → transaction_type: "expense", description: null
+- "Saiu 200" → transaction_type: "expense", description: null
+- "Recebi 500 do cliente João" → transaction_type: "income", description: "Cliente João"
+- "Entrou 1000" → transaction_type: "income", description: null
+- "Ganhei 300 de bônus" → transaction_type: "income", description: "Bônus"
 
-2. Se for uma pergunta sobre contas ou saldo:
+2. CORREÇÃO - Se o usuário estiver CORRIGINDO algo que o bot interpretou errado:
+{
+  "type": "correction",
+  "correction_type": "transaction_type" ou "amount" ou "description" ou "cancel",
+  "new_value": "novo valor se aplicável",
+  "message": "entendimento da correção"
+}
+
+Exemplos de correção:
+- "não é receita, é despesa" → type: "correction", correction_type: "transaction_type", new_value: "expense"
+- "eu gastei, não recebi" → type: "correction", correction_type: "transaction_type", new_value: "expense"
+- "é receita, não despesa" → type: "correction", correction_type: "transaction_type", new_value: "income"
+- "errado, era 50 não 80" → type: "correction", correction_type: "amount", new_value: 50
+- "cancela" ou "deixa pra lá" → type: "correction", correction_type: "cancel"
+
+3. CONSULTA - Se for uma pergunta sobre contas ou saldo:
 {
   "type": "query",
   "query_type": "accounts" ou "balance" ou "transactions",
   "message": "resposta amigável"
 }
 
-3. Se for seleção de conta (número 1, 2, 3... ou nome de conta) - ESPECIALMENTE quando conversation_state = "awaiting_account":
+4. SELEÇÃO DE CONTA (quando conversation_state = "awaiting_account"):
 {
   "type": "account_selection",
   "selection": "valor informado pelo usuário"
 }
 
-4. Se for resposta de descrição - quando conversation_state = "awaiting_description":
+5. RESPOSTA DE DESCRIÇÃO (quando conversation_state = "awaiting_description"):
 {
   "type": "description_answer",
   "description": "texto informado"
 }
 
-5. Se for saudação ou conversa casual:
+6. SAUDAÇÃO - Se for saudação ou conversa casual:
 {
   "type": "greeting",
   "message": "resposta amigável e breve"
 }
 
-6. Se não entender:
+7. NÃO ENTENDEU:
 {
   "type": "unknown",
   "message": "mensagem pedindo esclarecimento"
@@ -625,6 +658,76 @@ async function processMessage(remoteJid: string, messageText: string) {
         }
       } else {
         await sendWhatsAppMessage(remoteJid, interpretation.message || 'Consulta não suportada ainda.');
+      }
+      break;
+
+    case 'correction':
+      // Usuário está corrigindo algo
+      if (interpretation.correction_type === 'cancel') {
+        await updateSessionContext(user.user_id, {
+          pending_transaction: null,
+          conversation_state: 'idle'
+        });
+        await sendWhatsAppMessage(remoteJid, '✅ Cancelado! Me conte quando quiser registrar algo.');
+        return;
+      }
+
+      // Se tem transação pendente, corrige
+      if (context.pending_transaction) {
+        const pendingToFix = context.pending_transaction as Record<string, unknown>;
+        
+        if (interpretation.correction_type === 'transaction_type') {
+          const newType = interpretation.new_value as string;
+          const fixedPending = { ...pendingToFix, transaction_type: newType };
+          
+          await updateSessionContext(user.user_id, {
+            pending_transaction: fixedPending
+          });
+          
+          const emojiFixed = newType === 'income' ? '💰' : '💸';
+          const tipoFixed = newType === 'income' ? 'receita' : 'despesa';
+          
+          // Se estava aguardando descrição, continua perguntando
+          if (context.conversation_state === 'awaiting_description') {
+            await sendWhatsAppMessage(remoteJid,
+              `✅ Corrigido para ${tipoFixed}!\n\n` +
+              `${emojiFixed} *${formatCurrency(pendingToFix.amount as number)}*\n\n` +
+              `📝 O que foi essa ${tipoFixed}?`
+            );
+          } else if (context.conversation_state === 'awaiting_account') {
+            // Se estava aguardando conta, continua perguntando
+            let accsListFix = '';
+            accounts.forEach((acc, idx) => {
+              accsListFix += `${idx + 1}️⃣ ${acc.name}\n`;
+            });
+            
+            await sendWhatsAppMessage(remoteJid,
+              `✅ Corrigido para ${tipoFixed}!\n\n` +
+              `${emojiFixed} *${formatCurrency(pendingToFix.amount as number)}* - ${pendingToFix.description}\n\n` +
+              `📂 Qual conta?\n${accsListFix}\n` +
+              `_Responda com o número_`
+            );
+          }
+          return;
+        }
+        
+        if (interpretation.correction_type === 'amount') {
+          const newAmount = interpretation.new_value as number;
+          const fixedPending = { ...pendingToFix, amount: newAmount };
+          
+          await updateSessionContext(user.user_id, {
+            pending_transaction: fixedPending
+          });
+          
+          const emojiAmt = (pendingToFix.transaction_type as string) === 'income' ? '💰' : '💸';
+          await sendWhatsAppMessage(remoteJid,
+            `✅ Valor corrigido para *${formatCurrency(newAmount)}*!\n\n` +
+            `${emojiAmt} Continuando...`
+          );
+          return;
+        }
+      } else {
+        await sendWhatsAppMessage(remoteJid, '🤔 Não tenho nenhuma transação pendente para corrigir. Me conte sobre um gasto ou receita!');
       }
       break;
 
