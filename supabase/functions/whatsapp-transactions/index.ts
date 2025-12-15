@@ -107,6 +107,60 @@ async function getUserAccounts(userId: string) {
   return data || [];
 }
 
+// Busca resumo de transações por período
+async function getTransactionsSummary(
+  userId: string, 
+  days: number, 
+  filterType: 'expense' | 'income' | 'all'
+) {
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+  const startDateStr = startDate.toISOString().split('T')[0];
+  
+  console.log(`📊 Buscando transações: ${filterType} nos últimos ${days} dias (desde ${startDateStr})`);
+  
+  let query = supabase
+    .from('transactions')
+    .select('amount, type, description')
+    .eq('user_id', userId)
+    .gte('transaction_date', startDateStr);
+  
+  if (filterType !== 'all') {
+    query = query.eq('type', filterType);
+  }
+  
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Erro ao buscar transações:', error);
+    return { total: 0, count: 0, expenses: 0, income: 0 };
+  }
+  
+  const transactions = data || [];
+  
+  const expenses = transactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+    
+  const income = transactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+  
+  const total = filterType === 'all' 
+    ? income - expenses 
+    : transactions.reduce((sum, t) => sum + Number(t.amount), 0);
+  
+  console.log(`📊 Resultado: ${transactions.length} transações, Total: ${total}`);
+  
+  return { 
+    total: Math.abs(total), 
+    count: transactions.length, 
+    expenses, 
+    income,
+    balance: income - expenses
+  };
+}
+
 // Interpreta mensagem usando OpenAI
 async function interpretMessage(message: string, context: Record<string, unknown>) {
   console.log(`🤖 Interpretando mensagem: ${message}`);
@@ -183,12 +237,30 @@ Exemplos de correção:
 - "errado, era 50 não 80" → type: "correction", correction_type: "amount", new_value: 50
 - "cancela" ou "deixa pra lá" → type: "correction", correction_type: "cancel"
 
-3. CONSULTA - Se for uma pergunta sobre contas ou saldo:
+3. CONSULTA - Se for uma pergunta sobre dados financeiros:
 {
   "type": "query",
-  "query_type": "accounts" ou "balance" ou "transactions",
+  "query_type": "accounts" ou "balance" ou "period_summary",
+  "period_days": número (ex: 7, 30, 90) - OBRIGATÓRIO para period_summary,
+  "filter_type": "expense" ou "income" ou "all" - OBRIGATÓRIO para period_summary,
   "message": "resposta amigável"
 }
+
+Exemplos de CONSULTA POR PERÍODO:
+- "Quanto gastei nos últimos 7 dias" → query_type: "period_summary", period_days: 7, filter_type: "expense"
+- "Quanto recebi esse mês" → query_type: "period_summary", period_days: 30, filter_type: "income"
+- "Quanto entrou e saiu essa semana" → query_type: "period_summary", period_days: 7, filter_type: "all"
+- "Total de gastos do mês" → query_type: "period_summary", period_days: 30, filter_type: "expense"
+- "Quanto gastei hoje" → query_type: "period_summary", period_days: 1, filter_type: "expense"
+- "Receitas da semana" → query_type: "period_summary", period_days: 7, filter_type: "income"
+- "Quais são minhas contas" → query_type: "accounts"
+
+REGRAS DE PERÍODO:
+- "hoje" = 1 dia
+- "ontem" = 2 dias
+- "essa semana" ou "última semana" = 7 dias
+- "esse mês" ou "último mês" ou "mês" = 30 dias
+- "últimos X dias" = X dias
 
 4. SELEÇÃO DE CONTA (quando conversation_state = "awaiting_account"):
 {
@@ -655,6 +727,38 @@ async function processMessage(remoteJid: string, messageText: string) {
             msg += `• ${acc.name}: ${formatCurrency(acc.current_balance)}\n`;
           });
           await sendWhatsAppMessage(remoteJid, msg);
+        }
+      } else if (interpretation.query_type === 'period_summary') {
+        const days = interpretation.period_days || 30;
+        const filterType = interpretation.filter_type || 'all';
+        
+        const summary = await getTransactionsSummary(user.user_id, days, filterType);
+        
+        if (summary.count === 0) {
+          const tipoText = filterType === 'expense' ? 'despesas' : 
+                           filterType === 'income' ? 'receitas' : 'transações';
+          await sendWhatsAppMessage(remoteJid, 
+            `📊 Nenhuma ${tipoText} nos últimos ${days} ${days === 1 ? 'dia' : 'dias'}.`
+          );
+        } else if (filterType === 'all') {
+          // Mostra resumo completo
+          await sendWhatsAppMessage(remoteJid,
+            `📊 *Resumo dos últimos ${days} ${days === 1 ? 'dia' : 'dias'}:*\n\n` +
+            `💰 Receitas: *${formatCurrency(summary.income)}*\n` +
+            `💸 Despesas: *${formatCurrency(summary.expenses)}*\n` +
+            `━━━━━━━━━━━━━━\n` +
+            `📈 Saldo: *${formatCurrency(summary.balance || 0)}*\n\n` +
+            `📝 ${summary.count} ${summary.count === 1 ? 'transação' : 'transações'}`
+          );
+        } else {
+          const emoji = filterType === 'expense' ? '💸' : '💰';
+          const tipoText = filterType === 'expense' ? 'gastos' : 'receitas';
+          
+          await sendWhatsAppMessage(remoteJid,
+            `${emoji} *Total de ${tipoText} nos últimos ${days} ${days === 1 ? 'dia' : 'dias'}:*\n\n` +
+            `💵 *${formatCurrency(summary.total)}*\n` +
+            `📝 ${summary.count} ${summary.count === 1 ? 'transação' : 'transações'}`
+          );
         }
       } else {
         await sendWhatsAppMessage(remoteJid, interpretation.message || 'Consulta não suportada ainda.');
