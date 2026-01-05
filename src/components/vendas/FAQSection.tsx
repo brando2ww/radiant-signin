@@ -9,42 +9,50 @@ import {
 const faqs = [
   {
     question: "Como funciona o teste de 20 dias?",
-    answer: "Você tem acesso completo a todas as funcionalidades por 20 dias, sem compromisso. Após o período, seu plano é ativado automaticamente. Pode cancelar a qualquer momento antes sem custo.",
+    answer:
+      "É simples: você se cadastra e tem acesso completo a todas as funcionalidades por 20 dias, sem pagar nada. Pode usar à vontade, testar tudo. Se gostar, continua. Se não gostar, cancela sem custo algum. Sem pegadinhas, prometemos!",
   },
   {
-    question: "Preciso colocar cartão para testar?",
-    answer: "Não! O teste de 20 dias é totalmente gratuito e não exige cartão. Você só adiciona o cartão se decidir continuar após o teste.",
+    question: "Preciso colocar cartão de crédito para testar?",
+    answer:
+      "Sim, pedimos o cartão no cadastro para facilitar a continuidade caso você goste. Mas fique tranquilo: você só será cobrado após os 20 dias, e pode cancelar a qualquer momento antes disso. A gente te avisa antes de cobrar.",
   },
   {
     question: "Qual a diferença entre o plano mensal e anual?",
-    answer: "O plano anual oferece 20% de desconto (equivale a 2 meses grátis). Você paga R$ 286,80 por ano em vez de R$ 358,80. Ambos têm acesso às mesmas funcionalidades.",
+    answer:
+      "O plano anual sai 20% mais barato (é como ganhar 2 meses grátis!) e você ainda tem suporte prioritário. O mensal é ótimo se você quer mais flexibilidade e prefere ir mês a mês. Nos dois casos, você tem acesso a todas as funcionalidades.",
   },
   {
     question: "Posso cancelar a qualquer momento?",
-    answer: "Sim! Sem multas ou burocracia. Basta enviar uma mensagem solicitando o cancelamento. Você mantém acesso até o fim do período já pago.",
+    answer:
+      "Claro! Sem multa, sem burocracia, sem perguntas chatas. É só cancelar pelo próprio app ou nos chamar no WhatsApp. Se for no plano anual, você continua usando até o fim do período que já pagou.",
   },
   {
-    question: "Como o agente me ajuda com o MEI?",
-    answer: "O agente controla seu faturamento em tempo real, te avisa quando está chegando perto do limite de R$ 81.000, lembra de pagar o DAS e envia relatórios automáticos. Tudo pelo WhatsApp.",
+    question: "Como a Velara me ajuda com meu MEI?",
+    answer:
+      "A Velara foi feita pensando em você, MEI! Ela controla seu faturamento, te avisa quando o DAS vai vencer, mostra quanto falta pro limite de R$ 81.000 e te manda relatórios automáticos. É como ter um contador de bolso, só que muito mais simpático.",
   },
   {
-    question: "E se eu ultrapassar o limite do MEI?",
-    answer: "O agente te avisa com antecedência quando você está se aproximando do limite anual de R$ 81.000, para você se preparar para uma possível mudança de regime tributário.",
+    question: "E se eu estiver chegando perto do limite do MEI?",
+    answer:
+      "A gente te avisa com antecedência! Quando você atingir 80% do limite, você recebe um alerta. Assim você tem tempo de se planejar caso precise mudar de regime. Melhor saber antes do que levar um susto, né?",
   },
   {
     question: "Meus dados estão seguros?",
-    answer: "Sim! Utilizamos criptografia de ponta a ponta e seguimos todas as normas da LGPD. Seus dados financeiros são armazenados com segurança e nunca são compartilhados.",
+    answer:
+      "Muito seguros! Usamos criptografia de ponta a ponta, os mesmos padrões de segurança dos bancos. Somos 100% conformes com a LGPD e seus dados nunca são compartilhados com terceiros. Sua privacidade é sagrada pra gente.",
   },
   {
     question: "Funciona para qualquer tipo de MEI?",
-    answer: "Sim! Prestadores de serviço, comércio, produtores, freelancers, autônomos. Qualquer atividade enquadrada como MEI pode usar a Velara.",
+    answer:
+      "Sim! Não importa se você é cabeleireiro, eletricista, confeiteira, designer, motorista de app ou qualquer outra atividade. Se você é MEI e quer organizar suas finanças de um jeito fácil, a Velara é pra você.",
   },
 ];
 
 export const FAQSection = () => {
   return (
-    <section className="py-20 bg-muted/30">
-      <div className="container">
+    <section id="faq" className="py-20">
+      <div className="container max-w-3xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -52,10 +60,10 @@ export const FAQSection = () => {
           className="text-center mb-12"
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Perguntas Frequentes
+            Perguntas frequentes
           </h2>
           <p className="text-muted-foreground text-lg">
-            Tire suas dúvidas sobre a Velara
+            Tudo que você precisa saber antes de começar
           </p>
         </motion.div>
 
@@ -63,7 +71,6 @@ export const FAQSection = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="max-w-2xl mx-auto"
         >
           <Accordion type="single" collapsible className="w-full">
             {faqs.map((faq, index) => (
@@ -71,7 +78,7 @@ export const FAQSection = () => {
                 <AccordionTrigger className="text-left hover:no-underline">
                   {faq.question}
                 </AccordionTrigger>
-                <AccordionContent className="text-muted-foreground">
+                <AccordionContent className="text-muted-foreground leading-relaxed">
                   {faq.answer}
                 </AccordionContent>
               </AccordionItem>
