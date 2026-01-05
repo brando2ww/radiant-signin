@@ -1,44 +1,76 @@
 import { motion } from "framer-motion";
-import { ArrowRight, X, Check } from "lucide-react";
+import { 
+  ArrowRight, 
+  AlertTriangle, 
+  Bell, 
+  TrendingDown, 
+  BarChart3, 
+  FileSpreadsheet, 
+  MessageCircle, 
+  HelpCircle, 
+  LineChart,
+  LucideIcon
+} from "lucide-react";
 
-const painPoints = [
+interface PainPoint {
+  before: {
+    icon: LucideIcon;
+    title: string;
+    text: string;
+  };
+  after: {
+    icon: LucideIcon;
+    title: string;
+    text: string;
+  };
+}
+
+const painPoints: PainPoint[] = [
   {
     before: {
-      emoji: "😰",
+      icon: AlertTriangle,
+      title: "Multas e atrasos",
       text: "Esqueci de pagar o DAS e levei multa de R$ 50",
     },
     after: {
-      emoji: "😌",
+      icon: Bell,
+      title: "Alertas inteligentes",
       text: "Alerta 3 dias antes no seu WhatsApp, impossível esquecer",
     },
   },
   {
     before: {
-      emoji: "😓",
+      icon: TrendingDown,
+      title: "Limite desconhecido",
       text: "Não sei se vou estourar o limite do MEI este ano",
     },
     after: {
-      emoji: "📊",
-      text: "Limite atualizado em tempo real com alertas automáticos",
+      icon: BarChart3,
+      title: "Controle em tempo real",
+      text: "Limite atualizado automaticamente com alertas preventivos",
     },
   },
   {
     before: {
-      emoji: "😩",
+      icon: FileSpreadsheet,
+      title: "Planilhas abandonadas",
       text: "Planilha complicada que nunca lembro de atualizar",
     },
     after: {
-      emoji: "💬",
+      icon: MessageCircle,
+      title: "Conversa natural",
       text: 'Só manda mensagem: "gastei 50 no mercado" e pronto',
     },
   },
   {
     before: {
-      emoji: "😵",
+      icon: HelpCircle,
+      title: "Fim do mês perdido",
       text: "Fim do mês sem saber quanto ganhei ou gastei",
     },
     after: {
-      emoji: "📈",
+      icon: LineChart,
+      title: "Relatórios automáticos",
       text: "Relatório automático toda semana direto no WhatsApp",
     },
   },
@@ -50,7 +82,7 @@ interface PainPointsSectionProps {
 
 export const PainPointsSection = ({ id }: PainPointsSectionProps) => {
   return (
-    <section id={id} className="py-20">
+    <section id={id} className="py-20 bg-muted/30">
       <div className="container">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -69,59 +101,85 @@ export const PainPointsSection = ({ id }: PainPointsSectionProps) => {
           </p>
         </motion.div>
 
-        <div className="max-w-4xl mx-auto space-y-6">
-          {painPoints.map((item, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-              className="group"
-            >
-              <div className="grid md:grid-cols-[1fr,auto,1fr] gap-4 items-center p-4 md:p-6 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors">
-                {/* Before */}
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-destructive/10 flex items-center justify-center">
-                    <X className="w-5 h-5 text-destructive" />
+        <div className="max-w-5xl mx-auto space-y-8">
+          {painPoints.map((item, index) => {
+            const BeforeIcon = item.before.icon;
+            const AfterIcon = item.after.icon;
+            
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                className="group"
+              >
+                <div className="grid md:grid-cols-[1fr,auto,1fr] gap-4 md:gap-6 items-stretch">
+                  {/* Before Card */}
+                  <div className="relative p-6 rounded-2xl bg-background border-2 border-destructive/20 hover:border-destructive/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+                    <div className="absolute -top-3 left-4">
+                      <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-destructive/10 text-destructive rounded-full">
+                        Antes
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-4 mt-2">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-destructive/10 flex items-center justify-center">
+                        <BeforeIcon className="w-6 h-6 text-destructive" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-foreground mb-1">
+                          {item.before.title}
+                        </h4>
+                        <p className="text-muted-foreground text-sm leading-relaxed">
+                          "{item.before.text}"
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-2xl">{item.before.emoji}</span>
-                    <p className="text-muted-foreground mt-1 text-sm md:text-base">
-                      "{item.before.text}"
-                    </p>
-                  </div>
-                </div>
 
-                {/* Arrow */}
-                <div className="hidden md:flex items-center justify-center">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                    <ArrowRight className="w-5 h-5 text-primary" />
+                  {/* Arrow - Desktop */}
+                  <div className="hidden md:flex items-center justify-center">
+                    <motion.div 
+                      className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 group-hover:scale-110 transition-all duration-300"
+                      whileHover={{ scale: 1.1 }}
+                    >
+                      <ArrowRight className="w-6 h-6 text-primary" />
+                    </motion.div>
                   </div>
-                </div>
 
-                {/* Mobile arrow */}
-                <div className="md:hidden flex justify-center">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center rotate-90">
-                    <ArrowRight className="w-4 h-4 text-primary" />
+                  {/* Arrow - Mobile */}
+                  <div className="md:hidden flex justify-center py-2">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center rotate-90">
+                      <ArrowRight className="w-5 h-5 text-primary" />
+                    </div>
                   </div>
-                </div>
 
-                {/* After */}
-                <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                    <Check className="w-5 h-5 text-green-500" />
-                  </div>
-                  <div>
-                    <span className="text-2xl">{item.after.emoji}</span>
-                    <p className="text-foreground mt-1 text-sm md:text-base font-medium">
-                      {item.after.text}
-                    </p>
+                  {/* After Card */}
+                  <div className="relative p-6 rounded-2xl bg-background border-2 border-green-500/20 hover:border-green-500/40 transition-all duration-300 hover:shadow-lg hover:shadow-green-500/5 hover:-translate-y-1">
+                    <div className="absolute -top-3 left-4">
+                      <span className="px-3 py-1 text-xs font-semibold uppercase tracking-wider bg-green-500/10 text-green-600 dark:text-green-400 rounded-full">
+                        Com a Velara
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-4 mt-2">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                        <AfterIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-foreground mb-1">
+                          {item.after.title}
+                        </h4>
+                        <p className="text-foreground/80 text-sm leading-relaxed font-medium">
+                          {item.after.text}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
 
         {/* Bottom message */}
@@ -130,14 +188,16 @@ export const PainPointsSection = ({ id }: PainPointsSectionProps) => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.5 }}
-          className="text-center mt-12"
+          className="text-center mt-16"
         >
-          <p className="text-lg text-muted-foreground">
-            Chega de estresse.{" "}
+          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary/5 border border-primary/10">
+            <span className="text-muted-foreground">
+              Chega de estresse.
+            </span>
             <span className="text-foreground font-semibold">
               Deixa que a Velara cuida.
             </span>
-          </p>
+          </div>
         </motion.div>
       </div>
     </section>
