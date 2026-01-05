@@ -31,7 +31,7 @@ export const VendasHeader = ({ onCTAClick }: VendasHeaderProps) => {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            <Logo size="md" />
+            <Logo size="lg" />
           </Link>
 
           {/* Desktop Navigation */}

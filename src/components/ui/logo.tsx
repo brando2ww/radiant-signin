@@ -3,14 +3,15 @@ import { cn } from "@/lib/utils";
 
 interface LogoProps {
   variant?: "full" | "icon";
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   className?: string;
 }
 
 const sizeClasses = {
-  sm: "h-6",
-  md: "h-8",
-  lg: "h-10"
+  sm: "h-8",
+  md: "h-10",
+  lg: "h-14",
+  xl: "h-16"
 };
 
 export function Logo({ variant = "full", size = "md", className }: LogoProps) {

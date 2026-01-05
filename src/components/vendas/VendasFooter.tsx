@@ -44,7 +44,7 @@ export const VendasFooter = () => {
         <div className="grid grid-cols-2 md:grid-cols-6 gap-8 mb-12">
           {/* Logo and Tagline */}
           <div className="col-span-2">
-            <Logo size="lg" className="mb-4" />
+            <Logo size="xl" className="mb-4" />
             <p className="text-muted-foreground text-sm leading-relaxed mb-4">
               Seu parceiro financeiro no WhatsApp.<br />
               Feito com <Heart className="w-3 h-3 inline text-red-500 fill-red-500" /> para MEIs brasileiros.
