@@ -1,56 +1,61 @@
 import { motion } from "framer-motion";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 const faqs = [
   {
-    question: "O que é o agente de IA?",
-    answer: "É um assistente virtual inteligente que funciona pelo WhatsApp e entende suas perguntas sobre finanças em linguagem natural. Ele analisa seus dados, gera relatórios e te avisa sobre vencimentos e oportunidades.",
+    question: "Como funciona o teste de 20 dias?",
+    answer: "Você tem acesso completo a todas as funcionalidades por 20 dias, sem compromisso. Após o período, seu plano é ativado automaticamente. Pode cancelar a qualquer momento antes sem custo.",
   },
   {
-    question: "Como funciona pelo WhatsApp?",
-    answer: "Você adiciona nosso número oficial e conversa naturalmente, como se estivesse falando com seu contador. Pode fazer perguntas, pedir relatórios ou registrar transações usando texto ou áudio.",
+    question: "Preciso colocar cartão para testar?",
+    answer: "Não! O teste de 20 dias é totalmente gratuito e não exige cartão. Você só adiciona o cartão se decidir continuar após o teste.",
+  },
+  {
+    question: "Qual a diferença entre o plano mensal e anual?",
+    answer: "O plano anual oferece 20% de desconto (equivale a 2 meses grátis). Você paga R$ 286,80 por ano em vez de R$ 358,80. Ambos têm acesso às mesmas funcionalidades.",
+  },
+  {
+    question: "Posso cancelar a qualquer momento?",
+    answer: "Sim! Sem multas ou burocracia. Basta enviar uma mensagem solicitando o cancelamento. Você mantém acesso até o fim do período já pago.",
+  },
+  {
+    question: "Como o agente me ajuda com o MEI?",
+    answer: "O agente controla seu faturamento em tempo real, te avisa quando está chegando perto do limite de R$ 81.000, lembra de pagar o DAS e envia relatórios automáticos. Tudo pelo WhatsApp.",
+  },
+  {
+    question: "E se eu ultrapassar o limite do MEI?",
+    answer: "O agente te avisa com antecedência quando você está se aproximando do limite anual de R$ 81.000, para você se preparar para uma possível mudança de regime tributário.",
   },
   {
     question: "Meus dados estão seguros?",
-    answer: "Sim! Usamos criptografia de ponta a ponta, conformidade total com LGPD, e seus dados financeiros nunca são compartilhados. Temos as mesmas certificações de segurança dos maiores bancos.",
+    answer: "Sim! Utilizamos criptografia de ponta a ponta e seguimos todas as normas da LGPD. Seus dados financeiros são armazenados com segurança e nunca são compartilhados.",
   },
   {
-    question: "Quando será o lançamento?",
-    answer: "Estamos em fase final de testes e planejamos lançar em breve. Quem entrar na fila agora será avisado com prioridade e terá acesso antecipado.",
-  },
-  {
-    question: "Qual o preço após o período promocional?",
-    answer: "Após os primeiros 100 assinantes, o preço será R$ 197/mês. Mas quem entrar agora garante R$ 97/mês para sempre (preço congelado).",
-  },
-  {
-    question: "Posso testar antes de pagar?",
-    answer: "Sim! Oferecemos 7 dias de teste grátis e 30 dias de garantia incondicional. Se não gostar, devolvemos 100% do seu dinheiro.",
-  },
-  {
-    question: "Funciona para qualquer tipo de negócio?",
-    answer: "Sim! Atende desde MEIs e freelancers até pequenas e médias empresas de qualquer segmento. O agente se adapta ao seu modelo de negócio.",
-  },
-  {
-    question: "Preciso entender de tecnologia?",
-    answer: "Não! Se você sabe usar WhatsApp, já sabe usar nossa plataforma. É simples e intuitivo como uma conversa normal.",
+    question: "Funciona para qualquer tipo de MEI?",
+    answer: "Sim! Prestadores de serviço, comércio, produtores, freelancers, autônomos. Qualquer atividade enquadrada como MEI pode usar a Velara.",
   },
 ];
 
 export const FAQSection = () => {
   return (
-    <section className="py-20">
+    <section className="py-20 bg-muted/30">
       <div className="container">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="max-w-3xl mx-auto text-center mb-16"
+          className="text-center mb-12"
         >
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Perguntas Frequentes
           </h2>
-          <p className="text-xl text-muted-foreground">
-            Tudo o que você precisa saber
+          <p className="text-muted-foreground text-lg">
+            Tire suas dúvidas sobre a Velara
           </p>
         </motion.div>
 
@@ -58,12 +63,12 @@ export const FAQSection = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="max-w-3xl mx-auto"
+          className="max-w-2xl mx-auto"
         >
           <Accordion type="single" collapsible className="w-full">
             {faqs.map((faq, index) => (
               <AccordionItem key={index} value={`item-${index}`}>
-                <AccordionTrigger className="text-left">
+                <AccordionTrigger className="text-left hover:no-underline">
                   {faq.question}
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground">
