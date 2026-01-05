@@ -1,11 +1,12 @@
 import { motion } from "framer-motion";
+import { VendasHeader } from "@/components/vendas/VendasHeader";
 import { HeroSection } from "@/components/vendas/HeroSection";
 import { SocialProofSection } from "@/components/vendas/SocialProofSection";
 import { FeaturesSection } from "@/components/vendas/FeaturesSection";
-import { DemoSection } from "@/components/vendas/DemoSection";
 import { PricingSection } from "@/components/vendas/PricingSection";
 import { TestimonialsSection } from "@/components/vendas/TestimonialsSection";
 import { FAQSection } from "@/components/vendas/FAQSection";
+import { VendasFooter } from "@/components/vendas/VendasFooter";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, ArrowRight } from "lucide-react";
 
@@ -21,10 +22,14 @@ const Vendas = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <VendasHeader onCTAClick={scrollToPricing} />
+      
+      {/* Spacer for fixed header */}
+      <div className="h-16 md:h-20" />
+      
       <HeroSection onCTAClick={scrollToPricing} />
       <SocialProofSection />
       <FeaturesSection />
-      <DemoSection onCTAClick={scrollToPricing} />
       <PricingSection id="pricing" />
       <TestimonialsSection />
       <FAQSection />
@@ -39,37 +44,27 @@ const Vendas = () => {
             className="text-center max-w-2xl mx-auto"
           >
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Pronto para organizar suas finanças?
+              Pronto para simplificar suas finanças?
             </h2>
             <p className="text-muted-foreground text-lg mb-8">
-              Comece seu teste grátis de 20 dias hoje mesmo. 
-              Sem cartão, sem compromisso.
+              Junte-se a centenas de MEIs que já transformaram a forma como controlam seu dinheiro. 
+              Comece agora e veja a diferença em minutos.
             </p>
             <Button size="lg" onClick={scrollToPricing} className="group">
-              Começar Agora
+              Começar Meus 20 Dias Grátis
               <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Button>
           </motion.div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t py-8">
-        <div className="container text-center text-sm text-muted-foreground">
-          <p>© 2025 Velara. Todos os direitos reservados.</p>
-          <div className="mt-4 flex justify-center gap-6">
-            <a href="#" className="hover:text-foreground transition-colors">Termos de Uso</a>
-            <a href="#" className="hover:text-foreground transition-colors">Política de Privacidade</a>
-            <a href="#" className="hover:text-foreground transition-colors">Contato</a>
-          </div>
-        </div>
-      </footer>
+      <VendasFooter />
 
       {/* Scroll to top button */}
       <Button
         size="icon"
         variant="outline"
-        className="fixed bottom-8 right-8 rounded-full shadow-lg"
+        className="fixed bottom-8 right-8 rounded-full shadow-lg z-40"
         onClick={scrollToTop}
       >
         <ArrowUp className="w-5 h-5" />
