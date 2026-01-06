@@ -2,19 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  TrendingDown,
-  CreditCard,
-  Receipt,
-  Building2,
-  Target,
-  BarChart3,
-  Calendar,
-  CheckSquare,
-  Settings
-} from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Building2, Target, BarChart3, Calendar, CheckSquare, Settings } from 'lucide-react';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { ShortcutCard } from '@/components/dashboard/ShortcutCard';
@@ -27,9 +15,10 @@ import { AlertsWidget } from '@/components/dashboard/AlertsWidget';
 import { CreditCardsOverview } from '@/components/dashboard/CreditCardsOverview';
 import { RevenueByCategoryChart } from '@/components/dashboard/RevenueByCategoryChart';
 import { AppLayout } from '@/components/layouts/AppLayout';
-
 const Dashboard = () => {
-  const { profile } = useAuth();
+  const {
+    profile
+  } = useAuth();
   const {
     stats,
     cashFlowData,
@@ -39,20 +28,17 @@ const Dashboard = () => {
     alerts,
     revenueByCategory,
     meiInfo,
-    isLoading,
+    isLoading
   } = useDashboardData();
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-      minimumFractionDigits: 2,
+      minimumFractionDigits: 2
     }).format(value);
   };
-
   if (isLoading) {
-    return (
-      <AppLayout className="p-4 md:p-6 lg:p-8">
+    return <AppLayout className="p-4 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto w-full space-y-6">
           <Skeleton className="h-20 w-full" />
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
@@ -60,18 +46,13 @@ const Dashboard = () => {
             <Skeleton className="h-32" />
           </div>
           <div className="grid gap-3 grid-cols-2 sm:grid-cols-4">
-            {[...Array(8)].map((_, i) => (
-              <Skeleton key={i} className="h-24" />
-            ))}
+            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-24" />)}
           </div>
           <Skeleton className="h-96 w-full" />
         </div>
-      </AppLayout>
-    );
+      </AppLayout>;
   }
-
-  return (
-    <AppLayout className="p-4 md:p-6 lg:p-8">
+  return <AppLayout className="p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto w-full space-y-6">
         
         {/* Header Simplificado */}
@@ -147,62 +128,14 @@ const Dashboard = () => {
         <div>
           <h2 className="text-lg font-semibold mb-4">Atalhos Rápidos</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <ShortcutCard
-              title="Cartões"
-              description="Gerenciar"
-              icon={CreditCard}
-              iconColor="text-yellow-600"
-              href="/credit-cards"
-            />
-            <ShortcutCard
-              title="Extrato"
-              description="Movimentações"
-              icon={Receipt}
-              iconColor="text-yellow-600"
-              href="/transactions"
-            />
-            <ShortcutCard
-              title="Contas"
-              description="Bancárias"
-              icon={Building2}
-              iconColor="text-yellow-600"
-              href="/bank-accounts"
-            />
-            <ShortcutCard
-              title="Metas"
-              description="Objetivos"
-              icon={Target}
-              iconColor="text-yellow-600"
-              href="/goals"
-            />
-            <ShortcutCard
-              title="Relatórios"
-              description="Análises"
-              icon={BarChart3}
-              iconColor="text-yellow-600"
-              href="/reports"
-            />
-            <ShortcutCard
-              title="Calendário"
-              description="Agenda"
-              icon={Calendar}
-              iconColor="text-yellow-600"
-              href="/calendar"
-            />
-            <ShortcutCard
-              title="Tarefas"
-              description="Pendências"
-              icon={CheckSquare}
-              iconColor="text-yellow-600"
-              href="/tasks"
-            />
-            <ShortcutCard
-              title="Configurações"
-              description="Preferências"
-              icon={Settings}
-              iconColor="text-yellow-600"
-              href="/settings"
-            />
+            <ShortcutCard title="Cartões" description="Gerenciar" icon={CreditCard} iconColor="text-yellow-600" href="/credit-cards" />
+            <ShortcutCard title="Extrato" description="Movimentações" icon={Receipt} iconColor="text-yellow-600" href="/transactions" />
+            <ShortcutCard title="Contas" description="Bancárias" icon={Building2} iconColor="text-yellow-600" href="/bank-accounts" />
+            <ShortcutCard title="Metas" description="Objetivos" icon={Target} iconColor="text-yellow-600" href="/goals" />
+            <ShortcutCard title="Relatórios" description="Análises" icon={BarChart3} iconColor="text-yellow-600" href="/reports" />
+            <ShortcutCard title="Calendário" description="Agenda" icon={Calendar} iconColor="text-yellow-600" href="/calendar" />
+            <ShortcutCard title="Tarefas" description="Pendências" icon={CheckSquare} iconColor="text-yellow-600" href="/tasks" />
+            <ShortcutCard title="Configurações" description="Preferências" icon={Settings} iconColor="text-yellow-600" href="/settings" />
           </div>
         </div>
 
@@ -220,21 +153,8 @@ const Dashboard = () => {
           <h2 className="text-lg font-semibold mb-4">Resumo</h2>
           <div className="grid gap-4 md:grid-cols-3">
             <QuickActions />
-            <MEIWidget
-              dasValue={meiInfo.dasValue}
-              dasMonth={meiInfo.dasMonth}
-              dueDate={meiInfo.dueDate}
-              yearlyRevenue={meiInfo.yearlyRevenue}
-              yearlyLimit={meiInfo.yearlyLimit}
-            />
-            <MonthlyGoals
-              revenueGoal={monthlyGoals.revenueGoal}
-              currentRevenue={monthlyGoals.currentRevenue}
-              savingsGoal={monthlyGoals.savingsGoal}
-              currentSavings={monthlyGoals.currentSavings}
-              investmentGoal={monthlyGoals.investmentGoal}
-              currentInvestment={monthlyGoals.currentInvestment}
-            />
+            <MEIWidget dasValue={meiInfo.dasValue} dasMonth={meiInfo.dasMonth} dueDate={meiInfo.dueDate} yearlyRevenue={meiInfo.yearlyRevenue} yearlyLimit={meiInfo.yearlyLimit} />
+            <MonthlyGoals revenueGoal={monthlyGoals.revenueGoal} currentRevenue={monthlyGoals.currentRevenue} savingsGoal={monthlyGoals.savingsGoal} currentSavings={monthlyGoals.currentSavings} investmentGoal={monthlyGoals.investmentGoal} currentInvestment={monthlyGoals.currentInvestment} />
           </div>
         </div>
 
@@ -248,13 +168,8 @@ const Dashboard = () => {
         </div>
 
         {/* Receitas por Categoria */}
-        <div>
-          <h2 className="text-lg font-semibold mb-4">Receitas por Categoria</h2>
-          <RevenueByCategoryChart data={revenueByCategory} />
-        </div>
+        
       </div>
-    </AppLayout>
-  );
+    </AppLayout>;
 };
-
 export default Dashboard;
