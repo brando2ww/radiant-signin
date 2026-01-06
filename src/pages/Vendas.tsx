@@ -9,6 +9,7 @@ import { PainPointsSection } from "@/components/vendas/PainPointsSection";
 import { PricingSection } from "@/components/vendas/PricingSection";
 import { TestimonialsSection } from "@/components/vendas/TestimonialsSection";
 import { FAQSection } from "@/components/vendas/FAQSection";
+import { CRMSection } from "@/components/vendas/CRMSection";
 import { VendasFooter } from "@/components/vendas/VendasFooter";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, ArrowRight } from "lucide-react";
@@ -45,6 +46,7 @@ const Vendas = () => {
       <HowItWorksSection />
       <FeaturesSection />
       <PainPointsSection />
+      <CRMSection />
       <PricingSection id="pricing" />
       <TestimonialsSection />
       <FAQSection />
