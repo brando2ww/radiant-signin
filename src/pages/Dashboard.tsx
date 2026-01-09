@@ -3,7 +3,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Building2, Target, BarChart3, Calendar, CheckSquare, Settings, Eye, Bell } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Building2, Target, BarChart3, Calendar, CheckSquare, Settings, Eye, Bell, Trophy } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StatsCard } from '@/components/dashboard/StatsCard';
@@ -32,6 +33,7 @@ const Dashboard = () => {
     isLoading
   } = useDashboardData();
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -87,9 +89,23 @@ const Dashboard = () => {
                   <p className="text-sm text-black/70">Seu painel financeiro</p>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" className="text-black hover:bg-black/10 rounded-full">
-                <Bell className="h-5 w-5" />
-              </Button>
+              <div className="flex gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-black hover:bg-black/10 rounded-full bg-white/30"
+                  onClick={() => navigate('/goals')}
+                >
+                  <Trophy className="h-5 w-5" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="text-black hover:bg-black/10 rounded-full bg-white/30"
+                >
+                  <Bell className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
             
             {/* Card de Saldo - Dentro da área amarela */}
