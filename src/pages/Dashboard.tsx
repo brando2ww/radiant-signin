@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Building2, Target, BarChart3, Calendar, CheckSquare, Settings, Eye, MoreVertical, LogOut } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Building2, Target, BarChart3, Calendar, CheckSquare, Settings, Eye, EyeOff, MoreVertical, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +28,7 @@ import { RevenueByCategoryChart } from '@/components/dashboard/RevenueByCategory
 import { AppLayout } from '@/components/layouts/AppLayout';
 
 const Dashboard = () => {
+  const [showBalance, setShowBalance] = useState(true);
   const { profile, signOut } = useAuth();
   const {
     stats,
@@ -134,19 +136,28 @@ const Dashboard = () => {
                 
                 <div className="flex items-center justify-center gap-3 mb-4">
                   <span className={`text-4xl font-bold ${stats.profit >= 0 ? 'text-black' : 'text-red-600'}`}>
-                    {formatCurrency(stats.profit)}
+                    {showBalance ? formatCurrency(stats.profit) : '••••••'}
                   </span>
-                  <Eye className="h-5 w-5 text-black/60 cursor-pointer hover:text-black transition-colors" />
+                  <button 
+                    onClick={() => setShowBalance(!showBalance)}
+                    className="text-black/60 hover:text-black transition-colors"
+                  >
+                    {showBalance ? (
+                      <Eye className="h-5 w-5" />
+                    ) : (
+                      <EyeOff className="h-5 w-5" />
+                    )}
+                  </button>
                 </div>
                 
                 <div className="flex justify-center gap-6 text-sm text-black/70">
                   <div className="flex items-center gap-1.5">
                     <TrendingUp className="h-4 w-4 text-green-700" />
-                    <span>{formatCurrency(stats.totalRevenue)}</span>
+                    <span>{showBalance ? formatCurrency(stats.totalRevenue) : '••••'}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <TrendingDown className="h-4 w-4 text-red-700" />
-                    <span>{formatCurrency(stats.totalExpenses)}</span>
+                    <span>{showBalance ? formatCurrency(stats.totalExpenses) : '••••'}</span>
                   </div>
                 </div>
               </CardContent>
