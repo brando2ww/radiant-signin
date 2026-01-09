@@ -70,26 +70,26 @@ const Dashboard = () => {
         {/* Cards Principais - Layout Mobile vs Desktop */}
         {isMobile ? (
           /* Mobile: Card único de saldo com lucro em destaque */
-          <Card className="bg-gradient-to-br from-yellow-400 to-yellow-500 border-0 shadow-lg">
+          <Card className="bg-card border shadow-sm">
             <CardContent className="pt-6 pb-8 text-center">
-              <p className="text-xs uppercase tracking-widest text-yellow-900/70 font-medium mb-3">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">
                 Saldo Disponível
               </p>
               
               <div className="flex items-center justify-center gap-3 mb-4">
-                <span className={`text-4xl font-bold ${stats.profit >= 0 ? 'text-yellow-900' : 'text-red-700'}`}>
+                <span className={`text-4xl font-bold ${stats.profit >= 0 ? 'text-foreground' : 'text-destructive'}`}>
                   {formatCurrency(stats.profit)}
                 </span>
-                <Eye className="h-5 w-5 text-yellow-900/50" />
+                <Eye className="h-5 w-5 text-muted-foreground" />
               </div>
               
-              <div className="flex justify-center gap-6 text-sm text-yellow-900/80">
+              <div className="flex justify-center gap-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1.5">
-                  <TrendingUp className="h-4 w-4 text-green-700" />
+                  <TrendingUp className="h-4 w-4 text-green-600" />
                   <span>{formatCurrency(stats.totalRevenue)}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <TrendingDown className="h-4 w-4 text-red-700" />
+                  <TrendingDown className="h-4 w-4 text-destructive" />
                   <span>{formatCurrency(stats.totalExpenses)}</span>
                 </div>
               </div>
