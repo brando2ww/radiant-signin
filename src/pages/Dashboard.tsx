@@ -70,7 +70,7 @@ const Dashboard = () => {
         {/* Cards Principais - Layout Mobile vs Desktop */}
         {isMobile ? (
           /* Mobile: Card único de saldo com lucro em destaque */
-          <Card className="bg-card border shadow-sm">
+          <Card className="bg-card shadow-sm">
             <CardContent className="pt-6 pb-8 text-center">
               <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">
                 Saldo Disponível
