@@ -96,14 +96,14 @@ const Dashboard = () => {
                   className="text-black hover:bg-black/10 rounded-full bg-white/30"
                   onClick={() => navigate('/goals')}
                 >
-                  <Trophy className="h-5 w-5" />
+                  <Trophy className="h-6 w-6" strokeWidth={1.0} />
                 </Button>
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   className="text-black hover:bg-black/10 rounded-full bg-white/30"
                 >
-                  <Bell className="h-5 w-5" />
+                  <Bell className="h-6 w-6" strokeWidth={1.0} />
                 </Button>
               </div>
             </div>
