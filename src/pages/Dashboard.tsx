@@ -3,7 +3,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Building2, Target, BarChart3, Calendar, CheckSquare, Settings, Eye, Bell, Trophy } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Building2, Target, BarChart3, Calendar, CheckSquare, Settings, Eye, MoreVertical, LogOut } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useNavigate } from 'react-router-dom';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -20,7 +27,7 @@ import { RevenueByCategoryChart } from '@/components/dashboard/RevenueByCategory
 import { AppLayout } from '@/components/layouts/AppLayout';
 
 const Dashboard = () => {
-  const { profile } = useAuth();
+  const { profile, signOut } = useAuth();
   const {
     stats,
     cashFlowData,
@@ -48,6 +55,11 @@ const Dashboard = () => {
       return profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
     }
     return 'U';
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/auth');
   };
 
   if (isLoading) {
@@ -89,23 +101,28 @@ const Dashboard = () => {
                   <p className="text-sm text-black/70">Seu painel financeiro</p>
                 </div>
               </div>
-              <div className="flex gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-black hover:bg-black/10 rounded-full bg-white/30"
-                  onClick={() => navigate('/goals')}
-                >
-                  <Trophy className="h-6 w-6" strokeWidth={1.0} />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="text-black hover:bg-black/10 rounded-full bg-white/30"
-                >
-                  <Bell className="h-6 w-6" strokeWidth={1.0} />
-                </Button>
-              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-black hover:bg-black/10 rounded-full bg-white/30"
+                  >
+                    <MoreVertical className="h-6 w-6" strokeWidth={1.0} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => navigate('/settings')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Configurações
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             
             {/* Card de Saldo - Dentro da área amarela */}
