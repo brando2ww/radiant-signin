@@ -75,7 +75,7 @@ const Dashboard = () => {
             {/* Header Customizado */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-full bg-white/40 flex items-center justify-center overflow-hidden shadow-sm">
+                <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center overflow-hidden shadow-sm">
                   {profile?.avatar_url ? (
                     <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
