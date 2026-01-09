@@ -109,26 +109,26 @@ const Dashboard = () => {
             </div>
             
             {/* Card de Saldo - Dentro da área amarela */}
-            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-lg rounded-2xl">
+            <Card className="bg-yellow-400 border-0 rounded-2xl">
               <CardContent className="pt-6 pb-6 text-center">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">
+                <p className="text-xs uppercase tracking-widest text-black/70 font-medium mb-3">
                   Saldo Disponível
                 </p>
                 
                 <div className="flex items-center justify-center gap-3 mb-4">
-                  <span className={`text-4xl font-bold ${stats.profit >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+                  <span className={`text-4xl font-bold ${stats.profit >= 0 ? 'text-black' : 'text-red-600'}`}>
                     {formatCurrency(stats.profit)}
                   </span>
-                  <Eye className="h-5 w-5 text-muted-foreground cursor-pointer hover:text-foreground transition-colors" />
+                  <Eye className="h-5 w-5 text-black/60 cursor-pointer hover:text-black transition-colors" />
                 </div>
                 
-                <div className="flex justify-center gap-6 text-sm text-muted-foreground">
+                <div className="flex justify-center gap-6 text-sm text-black/70">
                   <div className="flex items-center gap-1.5">
-                    <TrendingUp className="h-4 w-4 text-green-600" />
+                    <TrendingUp className="h-4 w-4 text-green-700" />
                     <span>{formatCurrency(stats.totalRevenue)}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <TrendingDown className="h-4 w-4 text-destructive" />
+                    <TrendingDown className="h-4 w-4 text-red-700" />
                     <span>{formatCurrency(stats.totalExpenses)}</span>
                   </div>
                 </div>
