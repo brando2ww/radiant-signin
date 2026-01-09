@@ -109,7 +109,7 @@ const Dashboard = () => {
             </div>
             
             {/* Card de Saldo - Dentro da área amarela */}
-            <Card className="bg-yellow-400 border-0 rounded-2xl">
+            <Card className="bg-yellow-400 border-0 shadow-none rounded-2xl">
               <CardContent className="pt-6 pb-6 text-center">
                 <p className="text-xs uppercase tracking-widest text-black/70 font-medium mb-3">
                   Saldo Disponível
