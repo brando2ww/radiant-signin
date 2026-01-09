@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, TrendingUp, TrendingDown, FileText, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const QuickActions = () => {
@@ -16,12 +16,6 @@ export const QuickActions = () => {
       icon: <TrendingDown className="h-5 w-5" />,
       href: '/transactions',
       variant: 'secondary' as const,
-    },
-    {
-      label: 'Nota Fiscal',
-      icon: <FileText className="h-5 w-5" />,
-      href: '/transactions',
-      variant: 'outline' as const,
     },
     {
       label: 'Relatórios',
