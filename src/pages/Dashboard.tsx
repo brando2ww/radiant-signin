@@ -82,7 +82,7 @@ const Dashboard = () => {
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-black">
-                    Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}! 👋
+                  Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}!
                   </h1>
                   <p className="text-sm text-black/70">Seu painel financeiro</p>
                 </div>
@@ -125,7 +125,7 @@ const Dashboard = () => {
         {!isMobile && (
           <div className="animate-fade-in">
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}! 👋
+              Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}!
             </h1>
             <p className="text-sm text-muted-foreground">
               Seu painel financeiro
