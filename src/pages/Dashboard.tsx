@@ -2,7 +2,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Building2, Target, BarChart3, Calendar, CheckSquare, Settings, Eye } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DollarSign, TrendingUp, TrendingDown, CreditCard, Receipt, Building2, Target, BarChart3, Calendar, CheckSquare, Settings, Eye, Bell } from 'lucide-react';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { StatsCard } from '@/components/dashboard/StatsCard';
@@ -16,10 +17,9 @@ import { AlertsWidget } from '@/components/dashboard/AlertsWidget';
 import { CreditCardsOverview } from '@/components/dashboard/CreditCardsOverview';
 import { RevenueByCategoryChart } from '@/components/dashboard/RevenueByCategoryChart';
 import { AppLayout } from '@/components/layouts/AppLayout';
+
 const Dashboard = () => {
-  const {
-    profile
-  } = useAuth();
+  const { profile } = useAuth();
   const {
     stats,
     cashFlowData,
@@ -32,6 +32,7 @@ const Dashboard = () => {
     isLoading
   } = useDashboardData();
   const isMobile = useIsMobile();
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -39,8 +40,16 @@ const Dashboard = () => {
       minimumFractionDigits: 2
     }).format(value);
   };
+
+  const getInitials = () => {
+    if (profile?.full_name) {
+      return profile.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+    }
+    return 'U';
+  };
+
   if (isLoading) {
-    return <AppLayout className="p-4 md:p-6 lg:p-8">
+    return <AppLayout className="p-4 md:p-6 lg:p-8" hideHeader={isMobile}>
         <div className="max-w-7xl mx-auto w-full space-y-6">
           <Skeleton className="h-20 w-full" />
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
@@ -54,48 +63,78 @@ const Dashboard = () => {
         </div>
       </AppLayout>;
   }
-  return <AppLayout className="p-4 md:p-6 lg:p-8">
+
+  return <AppLayout className={isMobile ? "" : "p-4 md:p-6 lg:p-8"} hideHeader={isMobile}>
       <div className="max-w-7xl mx-auto w-full space-y-6">
         
-        {/* Header Simplificado */}
-        <div className="animate-fade-in">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-            Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}! 👋
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Seu painel financeiro
-          </p>
-        </div>
+        {/* Hero Section Mobile - Área Amarela com Curva */}
+        {isMobile && (
+          <div className="bg-yellow-400 px-4 pt-6 pb-10 rounded-b-[2.5rem] -mx-0 mb-2">
+            {/* Header Customizado */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-full bg-white/40 flex items-center justify-center overflow-hidden shadow-sm">
+                  {profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="font-semibold text-black text-sm">{getInitials()}</span>
+                  )}
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-black">
+                    Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}! 👋
+                  </h1>
+                  <p className="text-sm text-black/70">Seu painel financeiro</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" className="text-black hover:bg-black/10 rounded-full">
+                <Bell className="h-5 w-5" />
+              </Button>
+            </div>
+            
+            {/* Card de Saldo - Dentro da área amarela */}
+            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-lg rounded-2xl">
+              <CardContent className="pt-6 pb-6 text-center">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">
+                  Saldo Disponível
+                </p>
+                
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <span className={`text-4xl font-bold ${stats.profit >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+                    {formatCurrency(stats.profit)}
+                  </span>
+                  <Eye className="h-5 w-5 text-muted-foreground cursor-pointer hover:text-foreground transition-colors" />
+                </div>
+                
+                <div className="flex justify-center gap-6 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="h-4 w-4 text-green-600" />
+                    <span>{formatCurrency(stats.totalRevenue)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <TrendingDown className="h-4 w-4 text-destructive" />
+                    <span>{formatCurrency(stats.totalExpenses)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-        {/* Cards Principais - Layout Mobile vs Desktop */}
-        {isMobile ? (
-          /* Mobile: Card único de saldo com lucro em destaque */
-          <Card className="border-0 shadow-none">
-            <CardContent className="pt-6 pb-8 text-center">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium mb-3">
-                Saldo Disponível
-              </p>
-              
-              <div className="flex items-center justify-center gap-3 mb-4">
-                <span className={`text-4xl font-bold ${stats.profit >= 0 ? 'text-foreground' : 'text-destructive'}`}>
-                  {formatCurrency(stats.profit)}
-                </span>
-                <Eye className="h-5 w-5 text-muted-foreground" />
-              </div>
-              
-              <div className="flex justify-center gap-6 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                  <span>{formatCurrency(stats.totalRevenue)}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <TrendingDown className="h-4 w-4 text-destructive" />
-                  <span>{formatCurrency(stats.totalExpenses)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
+        {/* Header Desktop */}
+        {!isMobile && (
+          <div className="animate-fade-in">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+              Olá, {profile?.full_name?.split(' ')[0] || 'Usuário'}! 👋
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Seu painel financeiro
+            </p>
+          </div>
+        )}
+
+        {/* Cards Principais - Desktop Only */}
+        {!isMobile && (
           /* Desktop: Dois cards lado a lado */
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
             {/* Card Receitas - Verde */}
@@ -157,7 +196,7 @@ const Dashboard = () => {
         )}
 
         {/* Atalhos Rápidos - Estilo App Bancário */}
-        <div>
+        <div className={isMobile ? "px-4" : ""}>
           <h2 className="text-lg font-semibold mb-4">Atalhos Rápidos</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <ShortcutCard title="Cartões" description="Gerenciar" icon={CreditCard} iconColor="text-yellow-600" href="/credit-cards" />
@@ -172,7 +211,7 @@ const Dashboard = () => {
         </div>
 
         {/* Visão Geral */}
-        <div>
+        <div className={isMobile ? "px-4" : ""}>
           <h2 className="text-lg font-semibold mb-4">Visão Geral</h2>
           <div className="grid gap-4 md:gap-6 grid-cols-1 lg:grid-cols-3">
             <CashFlowChart data={cashFlowData} />
@@ -181,7 +220,7 @@ const Dashboard = () => {
         </div>
 
         {/* Resumo */}
-        <div>
+        <div className={isMobile ? "px-4" : ""}>
           <h2 className="text-lg font-semibold mb-4">Resumo</h2>
           <div className="grid gap-4 md:grid-cols-3">
             <QuickActions />
@@ -191,15 +230,15 @@ const Dashboard = () => {
         </div>
 
         {/* Alertas */}
-        <AlertsWidget alerts={alerts} />
+        <div className={isMobile ? "px-4" : ""}>
+          <AlertsWidget alerts={alerts} />
+        </div>
 
         {/* Cartões de Crédito */}
-        <div>
+        <div className={isMobile ? "px-4" : ""}>
           <h2 className="text-lg font-semibold mb-4">Cartões de Crédito</h2>
           <CreditCardsOverview cards={creditCards} />
         </div>
-
-        {/* Receitas por Categoria */}
         
       </div>
     </AppLayout>;
