@@ -91,6 +91,7 @@ export default function Calendar() {
                   onSelectDate={setSelectedDate}
                   currentMonth={currentMonth}
                   onMonthChange={setCurrentMonth}
+                  events={events}
                 />
                 
                 {/* Month Summary */}
@@ -116,6 +117,7 @@ export default function Calendar() {
                     onSelectDate={setSelectedDate}
                     currentMonth={currentMonth}
                     onMonthChange={setCurrentMonth}
+                    events={events}
                   />
                   <MonthSummary events={events} />
                   <CalendarFilters
