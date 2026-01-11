@@ -107,6 +107,22 @@ async function getUserAccounts(userId: string) {
   return data || [];
 }
 
+// Busca cartões de crédito do usuário
+async function getUserCreditCards(userId: string) {
+  const { data, error } = await supabase
+    .from('credit_cards')
+    .select('id, name, brand, last_four_digits, credit_limit, current_balance, due_day')
+    .eq('user_id', userId)
+    .eq('is_active', true);
+
+  if (error) {
+    console.error('Erro ao buscar cartões:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
 // Busca resumo de transações por período
 async function getTransactionsSummary(
   userId: string, 
@@ -643,7 +659,7 @@ Exemplos de correção:
 3. CONSULTA FINANCEIRA - Se for uma pergunta sobre dados financeiros:
 {
   "type": "query",
-  "query_type": "accounts" ou "balance" ou "period_summary",
+  "query_type": "accounts" ou "credit_cards" ou "balance" ou "period_summary",
   "period_days": número (ex: 7, 30, 90) - OBRIGATÓRIO para period_summary,
   "filter_type": "expense" ou "income" ou "all" - OBRIGATÓRIO para period_summary,
   "message": "resposta amigável"
@@ -657,6 +673,11 @@ Exemplos de CONSULTA POR PERÍODO:
 - "Quanto gastei hoje" → query_type: "period_summary", period_days: 1, filter_type: "expense"
 - "Receitas da semana" → query_type: "period_summary", period_days: 7, filter_type: "income"
 - "Quais são minhas contas" → query_type: "accounts"
+- "Quais cartões tenho" → query_type: "credit_cards"
+- "Meus cartões de crédito" → query_type: "credit_cards"
+- "Lista de cartões" → query_type: "credit_cards"
+- "Quais cartões tenho cadastrado" → query_type: "credit_cards"
+- "Faturas dos cartões" → query_type: "credit_cards"
 
 REGRAS DE PERÍODO:
 - "hoje" = 1 dia
@@ -1223,6 +1244,28 @@ async function processMessage(remoteJid: string, messageText: string) {
           let msg = '🏦 *Suas contas:*\n\n';
           accounts.forEach(acc => {
             msg += `• ${acc.name}: ${formatCurrency(acc.current_balance)}\n`;
+          });
+          await sendWhatsAppMessage(remoteJid, msg);
+        }
+      } else if (interpretation.query_type === 'credit_cards') {
+        const creditCards = await getUserCreditCards(user.user_id);
+        
+        if (creditCards.length === 0) {
+          await sendWhatsAppMessage(remoteJid, '💳 Você ainda não tem cartões cadastrados.');
+        } else {
+          let msg = '💳 *Seus cartões de crédito:*\n\n';
+          creditCards.forEach(card => {
+            const limitFormatted = formatCurrency(card.credit_limit || 0);
+            const balanceFormatted = formatCurrency(card.current_balance || 0);
+            const lastDigits = card.last_four_digits || '****';
+            
+            msg += `• *${card.name}* (•••• ${lastDigits})\n`;
+            msg += `  Fatura atual: ${balanceFormatted}\n`;
+            msg += `  Limite: ${limitFormatted}\n`;
+            if (card.due_day) {
+              msg += `  Vencimento: dia ${card.due_day}\n`;
+            }
+            msg += '\n';
           });
           await sendWhatsAppMessage(remoteJid, msg);
         }
