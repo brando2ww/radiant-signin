@@ -7,18 +7,27 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { MonthlyGoal } from '@/hooks/use-monthly-goals';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface GoalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: Partial<MonthlyGoal>) => void;
+  onSubmit: (data: Partial<MonthlyGoal> & { month_year?: string }) => void;
   isSubmitting: boolean;
   goal?: MonthlyGoal | null;
-  monthYear: string;
+  monthOptions: { value: string; label: string }[];
 }
 
 export function GoalDialog({
@@ -27,18 +36,22 @@ export function GoalDialog({
   onSubmit,
   isSubmitting,
   goal,
-  monthYear,
+  monthOptions,
 }: GoalDialogProps) {
+  const [selectedMonth, setSelectedMonth] = useState('');
   const [revenueGoal, setRevenueGoal] = useState('');
   const [savingsGoal, setSavingsGoal] = useState('');
   const [investmentGoal, setInvestmentGoal] = useState('');
 
   useEffect(() => {
     if (goal) {
+      setSelectedMonth(goal.month_year);
       setRevenueGoal(goal.revenue_goal?.toString() || '');
       setSavingsGoal(goal.savings_goal?.toString() || '');
       setInvestmentGoal(goal.investment_goal?.toString() || '');
     } else {
+      // Default to current month for new goals
+      setSelectedMonth(format(new Date(), 'yyyy-MM'));
       setRevenueGoal('');
       setSavingsGoal('');
       setInvestmentGoal('');
@@ -49,6 +62,7 @@ export function GoalDialog({
     e.preventDefault();
     
     onSubmit({
+      month_year: selectedMonth,
       revenue_goal: revenueGoal ? parseFloat(revenueGoal) : null,
       savings_goal: savingsGoal ? parseFloat(savingsGoal) : null,
       investment_goal: investmentGoal ? parseFloat(investmentGoal) : null,
@@ -59,11 +73,10 @@ export function GoalDialog({
     }
   };
 
-  const formatMonthYear = (monthYear: string) => {
+  const formatMonthLabel = (monthYear: string) => {
     const [year, month] = monthYear.split('-');
-    const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
-                        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-    return `${monthNames[parseInt(month) - 1]} ${year}`;
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return format(date, 'MMMM yyyy', { locale: ptBR });
   };
 
   return (
@@ -71,7 +84,7 @@ export function GoalDialog({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {goal ? 'Editar Metas' : 'Definir Metas'} - {formatMonthYear(monthYear)}
+            {goal ? 'Editar Meta' : 'Nova Meta'}
           </DialogTitle>
           <DialogDescription>
             Defina suas metas financeiras para o mês. Deixe em branco os campos que não deseja configurar.
@@ -80,6 +93,40 @@ export function GoalDialog({
 
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
+            {/* Month Selector - Only show when creating new goal */}
+            {!goal && (
+              <div className="space-y-2">
+                <Label htmlFor="month">Mês da Meta</Label>
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o mês">
+                      {selectedMonth && (
+                        <span className="capitalize">{formatMonthLabel(selectedMonth)}</span>
+                      )}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {monthOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        <span className="capitalize">{formatMonthLabel(option.value)}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Escolha o mês para definir suas metas
+                </p>
+              </div>
+            )}
+
+            {goal && (
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium capitalize">
+                  {formatMonthLabel(goal.month_year)}
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="revenue">Meta de Receita</Label>
               <CurrencyInput
@@ -126,8 +173,8 @@ export function GoalDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Salvando...' : 'Salvar Metas'}
+            <Button type="submit" disabled={isSubmitting || !selectedMonth}>
+              {isSubmitting ? 'Salvando...' : 'Salvar Meta'}
             </Button>
           </DialogFooter>
         </form>
