@@ -26,5 +26,45 @@ export const MEIWidget = ({
       currency: 'BRL'
     }).format(value);
   };
-  return;
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base font-medium">MEI - DAS</CardTitle>
+          {isNearLimit && (
+            <Badge variant="destructive" className="flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3" />
+              Atenção
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">DAS - {dasMonth}</span>
+            <span className="font-medium">{formatCurrency(dasValue)}</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Vencimento</span>
+            <span className="font-medium">
+              {format(dueDate, "dd 'de' MMMM", { locale: ptBR })}
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Faturamento anual</span>
+            <span className="font-medium">{formatCurrency(yearlyRevenue)}</span>
+          </div>
+          <Progress value={limitPercentage} className="h-2" />
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{limitPercentage.toFixed(1)}% do limite</span>
+            <span>Limite: {formatCurrency(yearlyLimit)}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 };
