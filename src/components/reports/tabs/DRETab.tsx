@@ -15,6 +15,11 @@ export const DRETab = ({ reportData }: DRETabProps) => {
     }).format(value);
   };
 
+  const safePercentage = (value: number, total: number): number => {
+    if (total === 0) return 0;
+    return (value / total) * 100;
+  };
+
   const { summary, expenseByCategory, comparison } = reportData;
 
   const dreData = [
@@ -39,7 +44,7 @@ export const DRETab = ({ reportData }: DRETabProps) => {
       value: -summary.totalExpense,
       level: 0,
       isBold: true,
-      percentage: (summary.totalExpense / summary.totalRevenue) * 100,
+      percentage: safePercentage(summary.totalExpense, summary.totalRevenue),
       change: comparison?.expense.change,
     },
     ...expenseByCategory.map(cat => ({
@@ -103,7 +108,9 @@ export const DRETab = ({ reportData }: DRETabProps) => {
                     {formatCurrency(Math.abs(item.value))}
                   </TableCell>
                   <TableCell className={`text-right ${item.isBold ? 'font-bold' : ''}`}>
-                    {item.percentage ? `${item.percentage.toFixed(1)}%` : '-'}
+                    {item.percentage !== undefined && isFinite(item.percentage) 
+                      ? `${item.percentage.toFixed(1)}%` 
+                      : '-'}
                   </TableCell>
                   {comparison && (
                     <TableCell className="text-right">
@@ -131,15 +138,15 @@ export const DRETab = ({ reportData }: DRETabProps) => {
           <CardContent className="space-y-4">
             <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
               <span className="font-medium">Margem Bruta</span>
-              <span className="text-xl font-bold">{summary.profitMargin.toFixed(1)}%</span>
+              <span className="text-xl font-bold">{isFinite(summary.profitMargin) ? summary.profitMargin.toFixed(1) : 0}%</span>
             </div>
             <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
               <span className="font-medium">Margem Operacional</span>
-              <span className="text-xl font-bold">{summary.profitMargin.toFixed(1)}%</span>
+              <span className="text-xl font-bold">{isFinite(summary.profitMargin) ? summary.profitMargin.toFixed(1) : 0}%</span>
             </div>
             <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
               <span className="font-medium">Margem Líquida</span>
-              <span className="text-xl font-bold">{summary.profitMargin.toFixed(1)}%</span>
+              <span className="text-xl font-bold">{isFinite(summary.profitMargin) ? summary.profitMargin.toFixed(1) : 0}%</span>
             </div>
             <div className="flex justify-between items-center p-3 bg-green-100 rounded-lg">
               <span className="font-medium">Lucro/Prejuízo</span>
