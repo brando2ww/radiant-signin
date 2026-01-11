@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { MessageCircle, Phone, CheckCircle2, RefreshCw, Shield, ChevronDown, Bell, HelpCircle, Clock, Send } from "lucide-react";
+import { Phone, CheckCircle2, RefreshCw, Shield, ChevronDown, Bell, HelpCircle, Clock, Send } from "lucide-react";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { useWhatsAppVerification } from "@/hooks/use-whatsapp-verification";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -399,7 +400,7 @@ export default function WhatsApp() {
               }} transition={{
                 delay: 0.1
               }} className="mx-auto w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mb-4">
-                    <MessageCircle className="h-8 w-8 text-green-500" />
+                    <WhatsAppIcon className="h-8 w-8 text-green-500" />
                   </motion.div>
                   <CardTitle>Verificar WhatsApp</CardTitle>
                   <CardDescription>
@@ -435,7 +436,7 @@ export default function WhatsApp() {
                   {/* Info box */}
                   <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground">
                     <p className="flex items-start gap-2">
-                      <MessageCircle className="h-4 w-4 mt-0.5 text-green-500 flex-shrink-0" />
+                      <WhatsAppIcon className="h-4 w-4 mt-0.5 text-green-500 flex-shrink-0" />
                       Você receberá uma mensagem do nosso número oficial com um código de 6 dígitos.
                     </p>
                   </div>
