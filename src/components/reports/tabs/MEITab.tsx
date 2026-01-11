@@ -89,16 +89,16 @@ export const MEITab = ({ meiData }: MEITabProps) => {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-2">
-                <Button variant="outline" size="sm" className="flex-1 text-xs sm:text-sm" asChild>
+                <Button variant="outline" className="flex-1" asChild>
                   <a href="https://www.gov.br/empresas-e-negocios/pt-br/empreendedor" target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                    <span className="truncate">Portal MEI</span>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Portal MEI
                   </a>
                 </Button>
-                <Button variant="default" size="sm" className="flex-1 text-xs sm:text-sm" asChild>
+                <Button variant="default" className="flex-1" asChild>
                   <a href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATSPO/pgmei.app/Identificacao" target="_blank" rel="noopener noreferrer">
-                    <FileCheck className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                    <span className="truncate">Gerar DAS</span>
+                    <FileCheck className="h-4 w-4 mr-2" />
+                    Gerar DAS
                   </a>
                 </Button>
               </div>
