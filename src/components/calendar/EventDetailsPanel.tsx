@@ -9,9 +9,12 @@ import { cn } from '@/lib/utils';
 
 interface EventDetailsPanelProps {
   event: CalendarEvent | null;
+  onEdit?: (event: CalendarEvent) => void;
+  onDelete?: (event: CalendarEvent) => void;
+  onMarkAsPaid?: (event: CalendarEvent) => void;
 }
 
-export const EventDetailsPanel = ({ event }: EventDetailsPanelProps) => {
+export const EventDetailsPanel = ({ event, onEdit, onDelete, onMarkAsPaid }: EventDetailsPanelProps) => {
   if (!event) {
     return (
       <Card className="p-8 text-center h-full flex items-center justify-center">
@@ -184,19 +187,23 @@ export const EventDetailsPanel = ({ event }: EventDetailsPanelProps) => {
       </div>
 
       <div className="flex gap-2 pt-4 border-t">
-        {event.status === 'pending' && (
-          <Button className="flex-1" size="sm">
+        {event.status === 'pending' && onMarkAsPaid && (
+          <Button className="flex-1" size="sm" onClick={() => onMarkAsPaid(event)}>
             <Check className="h-4 w-4 mr-2" />
             {event.type === 'task' ? 'Concluir' : 'Marcar como Pago'}
           </Button>
         )}
-        <Button variant="outline" size="sm" className="flex-1">
-          <Pencil className="h-4 w-4 mr-2" />
-          Editar
-        </Button>
-        <Button variant="outline" size="sm">
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        {onEdit && (
+          <Button variant="outline" size="sm" className="flex-1" onClick={() => onEdit(event)}>
+            <Pencil className="h-4 w-4 mr-2" />
+            Editar
+          </Button>
+        )}
+        {onDelete && (
+          <Button variant="outline" size="sm" onClick={() => onDelete(event)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </Card>
   );
