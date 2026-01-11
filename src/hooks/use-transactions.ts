@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { TransactionFormData } from '@/lib/validations/transaction';
 import { format } from 'date-fns';
+import { useTransactionNotifications } from './use-transaction-notifications';
 
 export interface FilterState {
   search: string;
@@ -30,6 +31,7 @@ export interface Transaction {
 export const useTransactions = (filters?: FilterState) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { notifyNewIncome, notifyNewExpense, notifyTransactionEdited, notifyTransactionDeleted } = useTransactionNotifications();
 
   const fetchTransactions = async (): Promise<Transaction[]> => {
     if (!user?.id) return [];
@@ -96,13 +98,17 @@ export const useTransactions = (filters?: FilterState) => {
       }]);
 
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      toast({
-        title: 'Transação criada',
-        description: 'A transação foi registrada com sucesso.',
-      });
+      
+      // Notificação baseada nas preferências do usuário
+      if (data.type === 'income') {
+        notifyNewIncome(data.amount, data.description || undefined);
+      } else {
+        notifyNewExpense(data.amount, data.description || undefined);
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -125,13 +131,11 @@ export const useTransactions = (filters?: FilterState) => {
         .eq('id', id);
 
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      toast({
-        title: 'Transação atualizada',
-        description: 'As alterações foram salvas com sucesso.',
-      });
+      notifyTransactionEdited(data.description || undefined);
     },
     onError: (error: Error) => {
       toast({
@@ -157,10 +161,7 @@ export const useTransactions = (filters?: FilterState) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['crm-leads'] });
-      toast({
-        title: 'Transação excluída',
-        description: 'A transação foi removida com sucesso.',
-      });
+      notifyTransactionDeleted();
     },
     onError: (error: Error) => {
       toast({
