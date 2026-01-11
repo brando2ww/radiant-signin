@@ -3,13 +3,17 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { securitySettingsSchema, type SecuritySettings } from "@/lib/validations/settings";
-import { useEffect } from "react";
-import { Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Trash2, ShieldCheck, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { use2FA } from "@/hooks/use-2fa";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SecuritySettingsProps {
   settings: SecuritySettings;
@@ -23,13 +27,43 @@ export function SecuritySettingsComponent({ settings, onSave, saving }: Security
     defaultValues: settings,
   });
 
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { checkHasVerifiedWhatsApp } = use2FA();
+  const [hasVerifiedWhatsApp, setHasVerifiedWhatsApp] = useState<boolean | null>(null);
+  const [checkingWhatsApp, setCheckingWhatsApp] = useState(false);
+
   useEffect(() => {
     form.reset(settings);
   }, [settings, form]);
 
+  // Check WhatsApp verification status
+  useEffect(() => {
+    const checkWhatsApp = async () => {
+      if (!user) return;
+      setCheckingWhatsApp(true);
+      const verified = await checkHasVerifiedWhatsApp(user.id);
+      setHasVerifiedWhatsApp(verified);
+      setCheckingWhatsApp(false);
+    };
+    checkWhatsApp();
+  }, [user, checkHasVerifiedWhatsApp]);
+
   const handleDeleteAccount = () => {
     // TODO: Implementar exclusão de conta
     console.log("Excluir conta");
+  };
+
+  const handleTwoFactorChange = async (enabled: boolean, onChange: (value: boolean) => void) => {
+    if (enabled) {
+      // Check if user has verified WhatsApp
+      if (hasVerifiedWhatsApp === false) {
+        toast.warning("Você precisa verificar seu WhatsApp primeiro para ativar o 2FA");
+        navigate("/whatsapp");
+        return;
+      }
+    }
+    onChange(enabled);
   };
 
   return (
@@ -38,21 +72,58 @@ export function SecuritySettingsComponent({ settings, onSave, saving }: Security
         <form onSubmit={form.handleSubmit(onSave)} className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Autenticação</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5" />
+                Autenticação
+              </CardTitle>
               <CardDescription>Configure segurança e autenticação</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Alert if WhatsApp not verified */}
+              {hasVerifiedWhatsApp === false && (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Para ativar a autenticação de dois fatores, você precisa primeiro{" "}
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto font-semibold"
+                      onClick={() => navigate("/whatsapp")}
+                    >
+                      verificar seu WhatsApp
+                    </Button>
+                    .
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <FormField
                 control={form.control}
                 name="two_factor_enabled"
                 render={({ field }) => (
                   <FormItem className="flex items-center justify-between rounded-lg border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel>Autenticação de Dois Fatores (2FA)</FormLabel>
-                      <FormDescription>Adicione uma camada extra de segurança</FormDescription>
+                      <FormLabel className="flex items-center gap-2">
+                        Autenticação de Dois Fatores (2FA)
+                        {field.value && (
+                          <span className="text-xs bg-green-500/20 text-green-600 px-2 py-0.5 rounded-full">
+                            Ativo
+                          </span>
+                        )}
+                      </FormLabel>
+                      <FormDescription>
+                        {field.value
+                          ? "Código será enviado para seu WhatsApp a cada login"
+                          : "Adicione uma camada extra de segurança via WhatsApp"
+                        }
+                      </FormDescription>
                     </div>
                     <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={(enabled) => handleTwoFactorChange(enabled, field.onChange)}
+                        disabled={checkingWhatsApp || hasVerifiedWhatsApp === null}
+                      />
                     </FormControl>
                   </FormItem>
                 )}
