@@ -49,9 +49,12 @@ export function ComparisonTable() {
       <CardHeader>
         <CardTitle>Comparação Detalhada de Recursos</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
+      <CardContent className="px-2 md:px-6">
+        <p className="text-xs text-muted-foreground mb-2 text-center md:hidden">
+          ← Deslize para ver mais →
+        </p>
+        <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
+          <Table className="min-w-[500px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-1/3">Recurso</TableHead>
