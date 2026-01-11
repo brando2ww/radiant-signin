@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
-import { Bell, Menu, LogOut, Settings } from "lucide-react";
+import { Menu, LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,6 +9,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { NotificationSheet } from "@/components/notifications/NotificationSheet";
+import { useNotifications } from "@/hooks/use-notifications";
 
 interface MobileHeaderProps {
   title?: string;
@@ -25,6 +27,7 @@ export function MobileHeader({
 }: MobileHeaderProps) {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, clearAll } = useNotifications();
 
   const handleLogout = async () => {
     await signOut();
@@ -65,9 +68,13 @@ export function MobileHeader({
         {/* Right Section */}
         <div className="flex items-center gap-2">
           {showNotifications && (
-            <Button variant="ghost" size="sm" className="p-2">
-              <Bell className="w-5 h-5" />
-            </Button>
+            <NotificationSheet
+              notifications={notifications}
+              unreadCount={unreadCount}
+              onMarkAsRead={markAsRead}
+              onMarkAllAsRead={markAllAsRead}
+              onClearAll={clearAll}
+            />
           )}
           
           {user && (
