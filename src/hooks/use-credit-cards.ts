@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 import { CreditCardFormData } from '@/lib/validations/credit-card';
+import { logActivityDirect } from '@/hooks/use-activity-logs';
 
 export interface CreditCard {
   id: string;
@@ -64,6 +65,9 @@ export const useCreditCards = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['credit_cards'] });
+      if (user) {
+        logActivityDirect(user.id, 'create', 'credit_card', undefined, { action: 'card_created' });
+      }
       toast({
         title: 'Sucesso!',
         description: 'Cartão adicionado com sucesso.',
@@ -96,8 +100,11 @@ export const useCreditCards = () => {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['credit_cards'] });
+      if (user) {
+        logActivityDirect(user.id, 'update', 'credit_card', variables.id, { action: 'card_updated' });
+      }
       toast({
         title: 'Sucesso!',
         description: 'Cartão atualizado com sucesso.',
@@ -122,8 +129,11 @@ export const useCreditCards = () => {
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_data, cardId) => {
       queryClient.invalidateQueries({ queryKey: ['credit_cards'] });
+      if (user) {
+        logActivityDirect(user.id, 'delete', 'credit_card', cardId, { action: 'card_deleted' });
+      }
       toast({
         title: 'Sucesso!',
         description: 'Cartão excluído com sucesso.',
