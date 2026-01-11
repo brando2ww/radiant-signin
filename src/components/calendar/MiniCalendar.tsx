@@ -24,7 +24,7 @@ export const MiniCalendar = ({
         month={currentMonth}
         onMonthChange={onMonthChange}
         locale={ptBR}
-        className="rounded-md"
+        className="rounded-md w-full"
       />
     </Card>
   );
