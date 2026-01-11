@@ -200,7 +200,7 @@ export function useBankAccounts() {
       // Record movements
       const movementId = crypto.randomUUID();
       
-      await supabase.from("account_movements").insert([
+      const { error: movementError } = await supabase.from("account_movements").insert([
         {
           user_id: user.id,
           bank_account_id: fromAccountId,
@@ -222,6 +222,10 @@ export function useBankAccounts() {
           balance_after: newToBalance,
         },
       ]);
+
+      if (movementError) {
+        console.error("Erro ao registrar movimentações:", movementError);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bank-accounts"] });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -59,10 +59,26 @@ export function TransferDialog({
     },
   });
 
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!open) {
+      form.reset({
+        fromAccountId: "",
+        toAccountId: "",
+        amount: 0,
+        description: "",
+      });
+    }
+  }, [open, form]);
+
   const handleSubmit = async (data: TransferFormData) => {
-    await onSubmit(data);
-    form.reset();
-    onOpenChange(false);
+    try {
+      await onSubmit(data);
+      form.reset();
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Erro na transferência:", error);
+    }
   };
 
   return (
@@ -128,7 +144,10 @@ export function TransferDialog({
                   <FormControl>
                     <CurrencyInput
                       value={field.value || ''}
-                      onChange={(v) => field.onChange(v ? parseFloat(v) : 0)}
+                      onChange={(v) => {
+                        const parsed = v ? parseFloat(v) : 0;
+                        field.onChange(isNaN(parsed) ? 0 : parsed);
+                      }}
                     />
                   </FormControl>
                   <FormMessage />
