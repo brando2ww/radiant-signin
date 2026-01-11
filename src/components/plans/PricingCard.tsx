@@ -18,7 +18,7 @@ export function PricingCard({ plan, isYearly, onSelect, index }: PricingCardProp
 
   return (
     <Card
-      className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg hover:scale-105 animate-fade-in ${
+      className={`relative overflow-hidden transition-all duration-300 hover:shadow-lg md:hover:scale-105 animate-fade-in ${
         plan.isPopular
           ? "border-2 border-primary shadow-xl"
           : "hover:border-primary/50"
@@ -26,27 +26,27 @@ export function PricingCard({ plan, isYearly, onSelect, index }: PricingCardProp
       style={{ animationDelay: `${index * 100}ms` }}
     >
       {plan.isPopular && (
-        <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-4 py-1 rounded-bl-lg flex items-center gap-1">
-          <Flame className="h-4 w-4" />
-          <span className="text-xs font-bold">MAIS POPULAR</span>
+        <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-2 md:px-4 py-1 rounded-bl-lg flex items-center gap-1">
+          <Flame className="h-3 w-3 md:h-4 md:w-4" />
+          <span className="text-[10px] md:text-xs font-bold">MAIS POPULAR</span>
         </div>
       )}
 
-      <CardHeader className="pb-4">
-        <CardTitle className="text-2xl">{plan.name}</CardTitle>
-        <CardDescription>{plan.description}</CardDescription>
+      <CardHeader className="pb-3 md:pb-4">
+        <CardTitle className="text-xl md:text-2xl">{plan.name}</CardTitle>
+        <CardDescription className="text-sm">{plan.description}</CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
+      <CardContent className="space-y-4 md:space-y-6">
+        <div className="space-y-1 md:space-y-2">
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold">
+            <span className="text-3xl md:text-4xl font-bold">
               R$ {price}
             </span>
-            <span className="text-muted-foreground">/mês</span>
+            <span className="text-sm md:text-base text-muted-foreground">/mês</span>
           </div>
           {isYearly && price > 0 && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs md:text-sm text-muted-foreground">
               R$ {totalYearly}/ano • Economize R$ {(plan.monthlyPrice * 12) - totalYearly}
             </p>
           )}
@@ -59,7 +59,7 @@ export function PricingCard({ plan, isYearly, onSelect, index }: PricingCardProp
         <Button
           onClick={() => onSelect(plan.id)}
           variant={plan.isPopular ? "default" : "outline"}
-          className="w-full transition-all hover:scale-105"
+          className="w-full transition-all md:hover:scale-105"
           size="lg"
         >
           {plan.buttonText}

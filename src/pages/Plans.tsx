@@ -23,26 +23,26 @@ export default function Plans() {
   };
 
   return (
-    <AppLayout className="p-8">
-      <div className="max-w-7xl mx-auto space-y-12">
+    <AppLayout className="p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-6 md:space-y-12">
         {/* Header */}
-        <div className="space-y-6 text-center animate-fade-in">
-          <div className="space-y-3">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+        <div className="space-y-4 md:space-y-6 text-center animate-fade-in">
+          <div className="space-y-2 md:space-y-3">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight px-2">
               Escolha o Plano Ideal para Seu MEI
             </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-sm sm:text-base md:text-xl text-muted-foreground max-w-2xl mx-auto px-4">
               Gerencie suas finanças com simplicidade e eficiência. Comece grátis e faça upgrade quando precisar.
             </p>
           </div>
 
-          <div className="pt-4">
+          <div className="pt-2 md:pt-4">
             <PricingToggle isYearly={isYearly} onToggle={setIsYearly} />
           </div>
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
           {Object.values(PLANS).map((plan, index) => (
             <PricingCard 
               key={plan.id} 
@@ -65,9 +65,9 @@ export default function Plans() {
         </div>
 
         {/* CTA Section */}
-        <div className="text-center space-y-4 py-12 animate-fade-in" style={{ animationDelay: "600ms" }}>
-          <h2 className="text-3xl font-bold">Ainda tem dúvidas?</h2>
-          <p className="text-muted-foreground max-w-xl mx-auto">
+        <div className="text-center space-y-3 md:space-y-4 py-8 md:py-12 animate-fade-in" style={{ animationDelay: "600ms" }}>
+          <h2 className="text-2xl md:text-3xl font-bold">Ainda tem dúvidas?</h2>
+          <p className="text-sm md:text-base text-muted-foreground max-w-xl mx-auto px-4">
             Nossa equipe está pronta para ajudar você a escolher o melhor plano para seu negócio.
           </p>
           <Button size="lg" variant="outline" className="mt-4">
