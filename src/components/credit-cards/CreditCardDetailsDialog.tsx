@@ -1,19 +1,29 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CreditCard } from '@/hooks/use-credit-cards';
+import { CreditCardFormData } from '@/lib/validations/credit-card';
 import { CurrentInvoiceTab } from './CurrentInvoiceTab';
+import { CardSettingsTab } from './CardSettingsTab';
 import { getBrandLabel } from '@/data/card-brands';
 
 interface CreditCardDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   card: CreditCard | null;
+  onUpdate?: (id: string, data: CreditCardFormData) => void;
+  onDelete?: (id: string) => void;
+  onToggleActive?: (id: string, isActive: boolean) => void;
+  isUpdating?: boolean;
 }
 
 export function CreditCardDetailsDialog({ 
   open, 
   onOpenChange, 
-  card 
+  card,
+  onUpdate,
+  onDelete,
+  onToggleActive,
+  isUpdating,
 }: CreditCardDetailsDialogProps) {
   if (!card) return null;
 
@@ -43,10 +53,21 @@ export function CreditCardDetailsDialog({
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4">
-            <div className="text-center py-8 text-muted-foreground">
-              <p>Configurações do cartão em desenvolvimento.</p>
-              <p className="text-sm mt-2">Use o botão "Editar" no card do cartão para alterar os dados.</p>
-            </div>
+            {onUpdate && onDelete && onToggleActive ? (
+              <CardSettingsTab
+                card={card}
+                onUpdate={onUpdate}
+                onDelete={onDelete}
+                onToggleActive={onToggleActive}
+                isUpdating={isUpdating}
+                onClose={() => onOpenChange(false)}
+              />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Configurações do cartão em desenvolvimento.</p>
+                <p className="text-sm mt-2">Use o botão "Editar" no card do cartão para alterar os dados.</p>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>

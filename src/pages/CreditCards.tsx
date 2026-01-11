@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AppLayout } from '@/components/layouts/AppLayout';
 
 export default function CreditCards() {
-  const { cards, isLoading, createCard, updateCard, deleteCard, isCreating, isUpdating } = useCreditCards();
+  const { cards, isLoading, createCard, updateCard, deleteCard, toggleActive, isCreating, isUpdating } = useCreditCards();
   const stats = useCreditCardStats(cards);
 
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -148,8 +148,23 @@ export default function CreditCards() {
 
       <CreditCardDetailsDialog
         open={detailsDialogOpen}
-        onOpenChange={setDetailsDialogOpen}
+        onOpenChange={(open) => {
+          setDetailsDialogOpen(open);
+          if (!open) setSelectedCard(null);
+        }}
         card={selectedCard}
+        onUpdate={(id, data) => {
+          updateCard({ id, data });
+        }}
+        onDelete={(id) => {
+          deleteCard(id);
+          setDetailsDialogOpen(false);
+          setSelectedCard(null);
+        }}
+        onToggleActive={(id, isActive) => {
+          toggleActive({ id, isActive });
+        }}
+        isUpdating={isUpdating}
       />
     </AppLayout>
   );
