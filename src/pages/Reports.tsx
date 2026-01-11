@@ -26,15 +26,6 @@ export default function Reports() {
   return (
     <AppLayout className="p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6 md:mb-8">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Relatórios Financeiros</h1>
-            <p className="text-sm md:text-base text-muted-foreground mt-1">
-              Análise detalhada das suas finanças
-            </p>
-          </div>
-        </div>
-
         <ReportHeader
           period={period}
           onPeriodChange={setPeriod}
