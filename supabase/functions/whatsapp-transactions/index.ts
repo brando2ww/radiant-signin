@@ -934,9 +934,7 @@ async function downloadAudioFromEvolution(messageKey: Record<string, unknown>): 
           'apikey': evolutionApiKey,
         },
         body: JSON.stringify({
-          message: {
-            key: messageKey
-          },
+          message: { key: messageKey },
           convertToMp4: false
         }),
       }
@@ -949,8 +947,26 @@ async function downloadAudioFromEvolution(messageKey: Record<string, unknown>): 
     }
 
     const result = await response.json();
-    console.log('✅ Áudio baixado! Tamanho base64:', result.base64?.length || 0);
-    return result.base64 || null;
+    console.log('📦 Resposta Evolution (parcial):', JSON.stringify(result).substring(0, 300));
+    
+    let base64Data = result.base64 || null;
+    
+    if (!base64Data) {
+      console.error('❌ Nenhum base64 retornado pela Evolution API');
+      return null;
+    }
+    
+    // Remove prefixo data:... se existir (ex: data:audio/ogg;base64,...)
+    if (base64Data.includes(',')) {
+      base64Data = base64Data.split(',')[1];
+      console.log('🔄 Prefixo data: removido do base64');
+    }
+    
+    // Remove espaços e quebras de linha
+    base64Data = base64Data.replace(/\s/g, '');
+    
+    console.log('✅ Áudio baixado! Tamanho base64:', base64Data.length);
+    return base64Data;
   } catch (error) {
     console.error('❌ Erro ao baixar áudio:', error);
     return null;
@@ -959,19 +975,55 @@ async function downloadAudioFromEvolution(messageKey: Record<string, unknown>): 
 
 // Transcreve áudio usando OpenAI Whisper
 async function transcribeAudio(audioBase64: string): Promise<string | null> {
-  console.log('🎤 Transcrevendo áudio...');
+  console.log('🎤 Transcrevendo áudio... Tamanho base64:', audioBase64.length);
   
   try {
-    // Converte base64 para Uint8Array
-    const binaryAudio = Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0));
+    // Decodifica base64 de forma segura para binário
+    const binaryString = atob(audioBase64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
     
-    // Prepara FormData para a API
+    console.log('📊 Bytes do áudio:', bytes.length);
+    
+    // Detecta tipo do áudio pelos magic bytes
+    // OGG/Opus começa com "OggS" (0x4F 0x67 0x67 0x53)
+    const isOgg = bytes.length > 4 && bytes[0] === 0x4F && bytes[1] === 0x67 && bytes[2] === 0x67 && bytes[3] === 0x53;
+    // MP3 pode começar com ID3 (0x49 0x44 0x33) ou frame sync (0xFF 0xFB ou similar)
+    const isMp3 = bytes.length > 3 && (
+      (bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) || 
+      (bytes[0] === 0xFF && (bytes[1] & 0xE0) === 0xE0)
+    );
+    
+    let mimeType: string;
+    let fileName: string;
+    
+    if (isOgg) {
+      mimeType = 'audio/ogg';
+      fileName = 'audio.ogg';
+    } else if (isMp3) {
+      mimeType = 'audio/mpeg';
+      fileName = 'audio.mp3';
+    } else {
+      // WhatsApp geralmente envia como OGG/Opus, mesmo sem magic bytes corretos
+      mimeType = 'audio/ogg';
+      fileName = 'audio.ogg';
+    }
+    
+    console.log(`📁 Formato detectado: ${mimeType} (${fileName}) | Magic bytes: ${bytes.slice(0, 4).join(', ')}`);
+    
+    // Cria Blob com tipo correto
+    const blob = new Blob([bytes], { type: mimeType });
+    
+    // Cria FormData para OpenAI
     const formData = new FormData();
-    const blob = new Blob([binaryAudio], { type: 'audio/ogg' });
-    formData.append('file', blob, 'audio.ogg');
+    formData.append('file', blob, fileName);
     formData.append('model', 'whisper-1');
     formData.append('language', 'pt');
 
+    console.log('📤 Enviando para OpenAI Whisper...');
+    
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
@@ -980,14 +1032,22 @@ async function transcribeAudio(audioBase64: string): Promise<string | null> {
       body: formData,
     });
 
+    const responseText = await response.text();
+    console.log('📨 Resposta OpenAI:', response.status, responseText.substring(0, 500));
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Erro OpenAI Whisper:', errorText);
-      throw new Error(`OpenAI API error: ${errorText}`);
+      console.error('❌ Erro OpenAI Whisper:', response.status, responseText);
+      return null;
     }
 
-    const result = await response.json();
-    console.log(`✅ Áudio transcrito: ${result.text}`);
+    const result = JSON.parse(responseText);
+    
+    if (!result.text || result.text.trim() === '') {
+      console.log('⚠️ Transcrição retornou vazia');
+      return null;
+    }
+    
+    console.log(`✅ Áudio transcrito com sucesso: "${result.text}"`);
     return result.text;
   } catch (error) {
     console.error('❌ Erro ao transcrever áudio:', error);
@@ -2324,6 +2384,7 @@ serve(async (req) => {
     // Mensagem de áudio
     else if (messageType === 'audioMessage') {
       console.log('🎤 Mensagem de áudio recebida');
+      console.log('📋 Dados do áudio:', JSON.stringify(data?.message?.audioMessage || {}).substring(0, 500));
       
       // Pega a key da mensagem para baixar o áudio via API
       const messageKey = data?.key;
