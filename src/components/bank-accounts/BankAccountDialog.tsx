@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Button } from "@/components/ui/button";
 import type { BankAccount } from "@/hooks/use-bank-accounts";
 
@@ -228,12 +229,9 @@ export function BankAccountDialog({
                 <FormItem>
                   <FormLabel>Saldo Inicial *</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      {...field}
-                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    <CurrencyInput
+                      value={field.value}
+                      onChange={(value) => field.onChange(parseFloat(value) || 0)}
                     />
                   </FormControl>
                   <FormMessage />
