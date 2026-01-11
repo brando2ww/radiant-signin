@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, addMonths } from 'date-fns';
 
 export interface MonthlyGoal {
   id: string;
@@ -57,18 +57,42 @@ export function useMonthlyGoals(monthYear?: string) {
     enabled: !!user,
   });
 
-  // Buscar histórico de metas (últimos 6 meses)
-  const { data: goalsHistory } = useQuery({
-    queryKey: ['monthly-goals-history', user?.id],
+  // Buscar todas as metas ativas (mês atual + futuros)
+  const { data: allActiveGoals } = useQuery({
+    queryKey: ['all-active-goals', user?.id],
     queryFn: async () => {
       if (!user) return [];
+      
+      const currentMonth = format(new Date(), 'yyyy-MM');
       
       const { data, error } = await supabase
         .from('monthly_goals')
         .select('*')
         .eq('user_id', user.id)
+        .gte('month_year', currentMonth)
+        .order('month_year', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user,
+  });
+
+  // Buscar histórico de metas (meses passados)
+  const { data: goalsHistory } = useQuery({
+    queryKey: ['monthly-goals-history', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const currentMonth = format(new Date(), 'yyyy-MM');
+      
+      const { data, error } = await supabase
+        .from('monthly_goals')
+        .select('*')
+        .eq('user_id', user.id)
+        .lt('month_year', currentMonth)
         .order('month_year', { ascending: false })
-        .limit(6);
+        .limit(12);
 
       if (error) throw error;
       return data || [];
@@ -138,12 +162,12 @@ export function useMonthlyGoals(monthYear?: string) {
 
   // Criar ou atualizar meta
   const upsertMutation = useMutation({
-    mutationFn: async (data: Partial<MonthlyGoal>) => {
+    mutationFn: async (data: Partial<MonthlyGoal> & { month_year?: string }) => {
       if (!user) throw new Error('Usuário não autenticado');
 
       const goalData = {
         user_id: user.id,
-        month_year: currentMonthYear,
+        month_year: data.month_year || currentMonthYear,
         revenue_goal: data.revenue_goal || null,
         savings_goal: data.savings_goal || null,
         investment_goal: data.investment_goal || null,
@@ -163,6 +187,7 @@ export function useMonthlyGoals(monthYear?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['monthly-goal'] });
       queryClient.invalidateQueries({ queryKey: ['monthly-goals-history'] });
+      queryClient.invalidateQueries({ queryKey: ['all-active-goals'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Metas atualizadas com sucesso!');
     },
@@ -185,6 +210,7 @@ export function useMonthlyGoals(monthYear?: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['monthly-goal'] });
       queryClient.invalidateQueries({ queryKey: ['monthly-goals-history'] });
+      queryClient.invalidateQueries({ queryKey: ['all-active-goals'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Meta excluída com sucesso!');
     },
@@ -194,8 +220,18 @@ export function useMonthlyGoals(monthYear?: string) {
     },
   });
 
+  // Gerar opções de meses (próximos 12 meses)
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const date = addMonths(new Date(), i);
+    return {
+      value: format(date, 'yyyy-MM'),
+      label: format(date, 'MMMM yyyy'),
+    };
+  });
+
   return {
     currentGoal,
+    allActiveGoals: allActiveGoals || [],
     goalsHistory: goalsHistory || [],
     goalProgress,
     isLoading,
@@ -203,5 +239,6 @@ export function useMonthlyGoals(monthYear?: string) {
     isUpserting: upsertMutation.isPending,
     deleteGoal: deleteMutation.mutate,
     isDeleting: deleteMutation.isPending,
+    monthOptions,
   };
 }
