@@ -15,8 +15,8 @@ import {
   Wallet,
   CheckSquare,
   Crown,
-  MessageCircle,
 } from "lucide-react";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { cn } from "@/lib/utils";
 
 const mainNavItems = [
@@ -36,7 +36,7 @@ const navigationSections = {
   contas: [
     { path: "/credit-cards", label: "Cartões de Crédito", icon: CreditCard },
     { path: "/bank-accounts", label: "Contas Bancárias", icon: Wallet },
-    { path: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
+    { path: "/whatsapp", label: "WhatsApp", icon: WhatsAppIcon },
   ],
   agenda: [
     { path: "/calendar", label: "Calendário", icon: Calendar },
