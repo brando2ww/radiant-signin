@@ -41,9 +41,21 @@ export function FinancialSettingsComponent({ settings, onSave, saving }: Financi
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Forma de Pagamento Preferencial</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Ex: credit_card, debit_card, pix" />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a forma de pagamento" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+                        <SelectItem value="debit_card">Cartão de Débito</SelectItem>
+                        <SelectItem value="pix">PIX</SelectItem>
+                        <SelectItem value="cash">Dinheiro</SelectItem>
+                        <SelectItem value="bank_transfer">Transferência Bancária</SelectItem>
+                        <SelectItem value="bank_slip">Boleto</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </FormItem>
                 )}
               />
