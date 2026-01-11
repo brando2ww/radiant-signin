@@ -26,7 +26,8 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSettings } from "@/hooks/use-settings";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -84,6 +85,7 @@ const staggerVariants = {
 };
 
 export function SessionNavBar() {
+  const { settings } = useSettings();
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const location = useLocation();
@@ -91,6 +93,13 @@ export function SessionNavBar() {
   const { hasModule } = useUserModules();
   
   const pathname = location.pathname;
+
+  // Sync sidebar state with user settings
+  useEffect(() => {
+    if (settings?.general?.sidebar_expanded !== undefined) {
+      setIsCollapsed(!settings.general.sidebar_expanded);
+    }
+  }, [settings?.general?.sidebar_expanded]);
 
   const handleSignOut = async () => {
     await signOut();
