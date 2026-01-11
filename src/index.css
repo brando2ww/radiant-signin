@@ -116,6 +116,57 @@ All colors MUST be HSL.
   }
 }
 
+/* Density Classes */
+.density-compact {
+  --card-padding: 0.75rem;
+  --button-padding-y: 0.25rem;
+  --button-padding-x: 0.5rem;
+  --spacing-unit: 0.75;
+}
+
+.density-normal {
+  --card-padding: 1rem;
+  --button-padding-y: 0.5rem;
+  --button-padding-x: 1rem;
+  --spacing-unit: 1;
+}
+
+.density-comfortable {
+  --card-padding: 1.5rem;
+  --button-padding-y: 0.75rem;
+  --button-padding-x: 1.5rem;
+  --spacing-unit: 1.25;
+}
+
+/* Apply density to common elements */
+.density-compact .card-content {
+  @apply p-3;
+}
+
+.density-comfortable .card-content {
+  @apply p-6;
+}
+
+.density-compact .btn-density {
+  @apply py-1 px-2 text-sm;
+}
+
+.density-comfortable .btn-density {
+  @apply py-3 px-6;
+}
+
+.density-compact .gap-density {
+  @apply gap-2;
+}
+
+.density-normal .gap-density {
+  @apply gap-4;
+}
+
+.density-comfortable .gap-density {
+  @apply gap-6;
+}
+
 /* Custom Animations for Sign-In Page */
 @keyframes fadeSlideIn {
   from {

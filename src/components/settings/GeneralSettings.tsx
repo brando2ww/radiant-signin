@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { generalSettingsSchema, type GeneralSettings } from "@/lib/validations/settings";
 import { useEffect } from "react";
+import { useTheme } from "next-themes";
 
 interface GeneralSettingsProps {
   settings: GeneralSettings;
@@ -15,6 +16,7 @@ interface GeneralSettingsProps {
 }
 
 export function GeneralSettingsComponent({ settings, onSave, saving }: GeneralSettingsProps) {
+  const { setTheme } = useTheme();
   const form = useForm<GeneralSettings>({
     resolver: zodResolver(generalSettingsSchema),
     defaultValues: settings,
@@ -23,6 +25,15 @@ export function GeneralSettingsComponent({ settings, onSave, saving }: GeneralSe
   useEffect(() => {
     form.reset(settings);
   }, [settings, form]);
+
+  const applyDensity = (density: string) => {
+    document.documentElement.classList.remove(
+      'density-compact',
+      'density-normal',
+      'density-comfortable'
+    );
+    document.documentElement.classList.add(`density-${density}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -135,7 +146,13 @@ export function GeneralSettingsComponent({ settings, onSave, saving }: GeneralSe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tema</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setTheme(value);
+                      }} 
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o tema" />
@@ -157,7 +174,13 @@ export function GeneralSettingsComponent({ settings, onSave, saving }: GeneralSe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Densidade da Interface</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select 
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        applyDensity(value);
+                      }} 
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione a densidade" />
