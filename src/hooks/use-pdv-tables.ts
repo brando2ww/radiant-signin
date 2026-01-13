@@ -21,6 +21,7 @@ export interface PDVTable {
   position_y: number | null;
   shape: string;
   current_order_id: string | null;
+  merged_with: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -128,6 +129,61 @@ export function usePDVTables() {
     },
   });
 
+  const mergeTables = useMutation({
+    mutationFn: async ({ tableId1, tableId2 }: { tableId1: string; tableId2: string }) => {
+      // Update both tables to reference each other
+      const { error: error1 } = await supabase
+        .from("pdv_tables")
+        .update({ merged_with: tableId2 })
+        .eq("id", tableId1);
+      
+      if (error1) throw error1;
+
+      const { error: error2 } = await supabase
+        .from("pdv_tables")
+        .update({ merged_with: tableId1 })
+        .eq("id", tableId2);
+      
+      if (error2) throw error2;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
+      toast.success("Mesas unidas com sucesso");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao unir mesas: " + error.message);
+    },
+  });
+
+  const unmergeTables = useMutation({
+    mutationFn: async (tableId: string) => {
+      const table = tables?.find(t => t.id === tableId);
+      if (!table?.merged_with) return;
+
+      // Remove merge reference from both tables
+      const { error: error1 } = await supabase
+        .from("pdv_tables")
+        .update({ merged_with: null })
+        .eq("id", tableId);
+      
+      if (error1) throw error1;
+
+      const { error: error2 } = await supabase
+        .from("pdv_tables")
+        .update({ merged_with: null })
+        .eq("id", table.merged_with);
+      
+      if (error2) throw error2;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
+      toast.success("Mesas separadas com sucesso");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao separar mesas: " + error.message);
+    },
+  });
+
   return {
     tables: tables || [],
     isLoading,
@@ -137,5 +193,9 @@ export function usePDVTables() {
     isUpdating: updateTable.isPending,
     deleteTable: deleteTable.mutate,
     isDeleting: deleteTable.isPending,
+    mergeTables: mergeTables.mutate,
+    isMerging: mergeTables.isPending,
+    unmergeTables: unmergeTables.mutate,
+    isUnmerging: unmergeTables.isPending,
   };
 }

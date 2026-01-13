@@ -2904,6 +2904,7 @@ export type Database = {
           created_at: string | null
           current_order_id: string | null
           id: string
+          merged_with: string | null
           position_x: number | null
           position_y: number | null
           shape: string | null
@@ -2917,6 +2918,7 @@ export type Database = {
           created_at?: string | null
           current_order_id?: string | null
           id?: string
+          merged_with?: string | null
           position_x?: number | null
           position_y?: number | null
           shape?: string | null
@@ -2930,6 +2932,7 @@ export type Database = {
           created_at?: string | null
           current_order_id?: string | null
           id?: string
+          merged_with?: string | null
           position_x?: number | null
           position_y?: number | null
           shape?: string | null
@@ -2938,7 +2941,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pdv_tables_merged_with_fkey"
+            columns: ["merged_with"]
+            isOneToOne: false
+            referencedRelation: "pdv_tables"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
