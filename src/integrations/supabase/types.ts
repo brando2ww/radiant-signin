@@ -2919,6 +2919,7 @@ export type Database = {
           created_at: string | null
           current_order_id: string | null
           id: string
+          is_active: boolean | null
           merged_with: string | null
           position_x: number | null
           position_y: number | null
@@ -2934,6 +2935,7 @@ export type Database = {
           created_at?: string | null
           current_order_id?: string | null
           id?: string
+          is_active?: boolean | null
           merged_with?: string | null
           position_x?: number | null
           position_y?: number | null
@@ -2949,6 +2951,7 @@ export type Database = {
           created_at?: string | null
           current_order_id?: string | null
           id?: string
+          is_active?: boolean | null
           merged_with?: string | null
           position_x?: number | null
           position_y?: number | null
