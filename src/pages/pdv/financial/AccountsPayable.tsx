@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useBills } from "@/hooks/use-bills";
-import { BillDialog } from "@/components/bills/BillDialog";
-import { BillFilters } from "@/components/bills/BillFilters";
-import { BillCard } from "@/components/bills/BillCard";
-import { BillStats } from "@/components/bills/BillStats";
-import { MarkAsPaidDialog } from "@/components/bills/MarkAsPaidDialog";
+import { BillDialog } from "@/components/pdv/bills/BillDialog";
+import { BillFilters } from "@/components/pdv/bills/BillFilters";
+import { BillCard } from "@/components/pdv/bills/BillCard";
+import { BillStats } from "@/components/pdv/bills/BillStats";
+import { MarkAsPaidDialog } from "@/components/pdv/bills/MarkAsPaidDialog";
 import type { Bill } from "@/hooks/use-bills";
 
 export default function AccountsPayable() {
