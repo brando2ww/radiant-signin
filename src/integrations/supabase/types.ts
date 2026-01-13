@@ -2033,6 +2033,60 @@ export type Database = {
         }
         Relationships: []
       }
+      pdv_ingredient_suppliers: {
+        Row: {
+          created_at: string | null
+          id: string
+          ingredient_id: string
+          is_preferred: boolean | null
+          last_price: number | null
+          last_purchase_date: string | null
+          notes: string | null
+          supplier_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ingredient_id: string
+          is_preferred?: boolean | null
+          last_price?: number | null
+          last_purchase_date?: string | null
+          notes?: string | null
+          supplier_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ingredient_id?: string
+          is_preferred?: boolean | null
+          last_price?: number | null
+          last_purchase_date?: string | null
+          notes?: string | null
+          supplier_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_ingredient_suppliers_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_ingredient_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_ingredients: {
         Row: {
           automatic_output: string | null
@@ -2742,6 +2796,298 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      pdv_purchase_order_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          ingredient_id: string
+          notes: string | null
+          purchase_order_id: string
+          quantity: number
+          quantity_received: number | null
+          quotation_response_id: string | null
+          total_price: number
+          unit: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ingredient_id: string
+          notes?: string | null
+          purchase_order_id: string
+          quantity: number
+          quantity_received?: number | null
+          quotation_response_id?: string | null
+          total_price: number
+          unit: string
+          unit_price: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ingredient_id?: string
+          notes?: string | null
+          purchase_order_id?: string
+          quantity?: number
+          quantity_received?: number | null
+          quotation_response_id?: string | null
+          total_price?: number
+          unit?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_purchase_order_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_purchase_order_items_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_purchase_order_items_quotation_response_id_fkey"
+            columns: ["quotation_response_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_quotation_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_purchase_orders: {
+        Row: {
+          actual_delivery: string | null
+          created_at: string | null
+          discount: number | null
+          expected_delivery: string | null
+          freight: number | null
+          id: string
+          notes: string | null
+          order_date: string | null
+          order_number: string
+          payment_terms: string | null
+          quotation_request_id: string | null
+          status: string | null
+          subtotal: number | null
+          supplier_id: string | null
+          total: number | null
+          updated_at: string | null
+          user_id: string
+          whatsapp_sent_at: string | null
+        }
+        Insert: {
+          actual_delivery?: string | null
+          created_at?: string | null
+          discount?: number | null
+          expected_delivery?: string | null
+          freight?: number | null
+          id?: string
+          notes?: string | null
+          order_date?: string | null
+          order_number: string
+          payment_terms?: string | null
+          quotation_request_id?: string | null
+          status?: string | null
+          subtotal?: number | null
+          supplier_id?: string | null
+          total?: number | null
+          updated_at?: string | null
+          user_id: string
+          whatsapp_sent_at?: string | null
+        }
+        Update: {
+          actual_delivery?: string | null
+          created_at?: string | null
+          discount?: number | null
+          expected_delivery?: string | null
+          freight?: number | null
+          id?: string
+          notes?: string | null
+          order_date?: string | null
+          order_number?: string
+          payment_terms?: string | null
+          quotation_request_id?: string | null
+          status?: string | null
+          subtotal?: number | null
+          supplier_id?: string | null
+          total?: number | null
+          updated_at?: string | null
+          user_id?: string
+          whatsapp_sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_purchase_orders_quotation_request_id_fkey"
+            columns: ["quotation_request_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_quotation_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_quotation_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          ingredient_id: string
+          notes: string | null
+          quantity_needed: number
+          quotation_request_id: string
+          unit: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          ingredient_id: string
+          notes?: string | null
+          quantity_needed: number
+          quotation_request_id: string
+          unit: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          ingredient_id?: string
+          notes?: string | null
+          quantity_needed?: number
+          quotation_request_id?: string
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_quotation_items_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_quotation_items_quotation_request_id_fkey"
+            columns: ["quotation_request_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_quotation_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_quotation_requests: {
+        Row: {
+          created_at: string | null
+          deadline: string | null
+          id: string
+          message_template: string | null
+          notes: string | null
+          request_number: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          deadline?: string | null
+          id?: string
+          message_template?: string | null
+          notes?: string | null
+          request_number: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          deadline?: string | null
+          id?: string
+          message_template?: string | null
+          notes?: string | null
+          request_number?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pdv_quotation_responses: {
+        Row: {
+          brand: string | null
+          created_at: string | null
+          delivery_days: number | null
+          expiration_date: string | null
+          id: string
+          is_winner: boolean | null
+          minimum_order: number | null
+          notes: string | null
+          origin: string | null
+          payment_terms: string | null
+          quotation_item_id: string
+          received_at: string | null
+          supplier_id: string
+          total_price: number | null
+          unit_price: number | null
+        }
+        Insert: {
+          brand?: string | null
+          created_at?: string | null
+          delivery_days?: number | null
+          expiration_date?: string | null
+          id?: string
+          is_winner?: boolean | null
+          minimum_order?: number | null
+          notes?: string | null
+          origin?: string | null
+          payment_terms?: string | null
+          quotation_item_id: string
+          received_at?: string | null
+          supplier_id: string
+          total_price?: number | null
+          unit_price?: number | null
+        }
+        Update: {
+          brand?: string | null
+          created_at?: string | null
+          delivery_days?: number | null
+          expiration_date?: string | null
+          id?: string
+          is_winner?: boolean | null
+          minimum_order?: number | null
+          notes?: string | null
+          origin?: string | null
+          payment_terms?: string | null
+          quotation_item_id?: string
+          received_at?: string | null
+          supplier_id?: string
+          total_price?: number | null
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_quotation_responses_quotation_item_id_fkey"
+            columns: ["quotation_item_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_quotation_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_quotation_responses_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pdv_sectors: {
         Row: {

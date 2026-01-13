@@ -32,6 +32,9 @@ import DeliveryCoupons from "./pdv/delivery/Coupons";
 import DeliverySettings from "./pdv/delivery/Settings";
 import DeliveryReports from "./pdv/delivery/Reports";
 import ComandasPage from "./pdv/Comandas";
+import Quotations from "./pdv/purchases/Quotations";
+import PurchaseOrders from "./pdv/purchases/PurchaseOrders";
+import ShoppingList from "./pdv/purchases/ShoppingList";
 
 export default function PDV() {
   return (
@@ -96,7 +99,12 @@ export default function PDV() {
               <Route path="fornecedores" element={<PDVSuppliers />} />
               <Route path="notas-fiscais" element={<Invoices />} />
               <Route path="relatorios" element={<PDVReports />} />
-            <Route path="configuracoes" element={<PDVSettings />} />
+              <Route path="configuracoes" element={<PDVSettings />} />
+              
+              {/* Compras */}
+              <Route path="compras/cotacoes" element={<Quotations />} />
+              <Route path="compras/pedidos" element={<PurchaseOrders />} />
+              <Route path="compras/lista" element={<ShoppingList />} />
             </Routes>
           </main>
       </div>
