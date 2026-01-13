@@ -222,21 +222,33 @@ export function useIngredientsWithSuppliers() {
     queryFn: async (): Promise<IngredientWithSuppliers[]> => {
       if (!user) return [];
 
-      const { data: ingredients, error: ingredientsError } = await supabase
-        .from('pdv_ingredients' as 'pdv_ingredients')
+      // Use any to avoid deep type instantiation issues
+      const ingredientsResult = await (supabase as any)
+        .from('pdv_ingredients')
         .select('id, name, unit, current_stock, min_stock')
         .eq('user_id', user.id)
         .eq('is_active', true)
-        .order('name') as unknown as { data: { id: string; name: string; unit: string; current_stock: number | null; min_stock: number | null }[] | null; error: Error | null };
+        .order('name');
       
-      if (ingredientsError) throw ingredientsError;
+      if (ingredientsResult.error) throw ingredientsResult.error;
+      const ingredients = (ingredientsResult.data || []) as Array<{
+        id: string;
+        name: string;
+        unit: string;
+        current_stock: number | null;
+        min_stock: number | null;
+      }>;
 
-      const { data: links, error: linksError } = await supabase
-        .from('pdv_ingredient_suppliers' as 'pdv_ingredient_suppliers')
+      const linksResult = await (supabase as any)
+        .from('pdv_ingredient_suppliers')
         .select('ingredient_id, supplier_id')
-        .eq('user_id', user.id) as unknown as { data: { ingredient_id: string; supplier_id: string }[] | null; error: Error | null };
+        .eq('user_id', user.id);
 
-      if (linksError) throw linksError;
+      if (linksResult.error) throw linksResult.error;
+      const links = (linksResult.data || []) as Array<{
+        ingredient_id: string;
+        supplier_id: string;
+      }>;
 
       const supplierCounts: Record<string, number> = {};
       links.forEach((link) => {
