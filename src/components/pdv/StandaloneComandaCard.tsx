@@ -44,11 +44,9 @@ export function StandaloneComandaCard({ comanda, onClick, index = 0 }: Standalon
         className={cn(
           "cursor-pointer transition-all duration-200",
           "min-w-[150px] max-w-[170px] p-4",
-          "bg-gradient-to-br from-red-900 via-red-800 to-red-900",
-          "hover:from-red-800 hover:via-red-700 hover:to-red-800",
-          "border-red-700/50 hover:border-red-600",
-          "shadow-lg hover:shadow-xl hover:shadow-red-900/30",
-          "text-white"
+          "bg-card hover:bg-accent",
+          "border hover:border-primary/50",
+          "shadow-sm hover:shadow-md"
         )}
         onClick={() => onClick(comanda)}
       >
@@ -56,12 +54,12 @@ export function StandaloneComandaCard({ comanda, onClick, index = 0 }: Standalon
           {/* Header: Nome e número */}
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm truncate leading-tight">
+              <p className="font-bold text-sm truncate leading-tight text-card-foreground">
                 {comanda.customer_name || "Sem nome"}
               </p>
               <div className="flex items-center gap-1 mt-0.5">
-                <Receipt className="h-3 w-3 opacity-70" />
-                <span className="text-xs opacity-80">
+                <Receipt className="h-3 w-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">
                   C. {comandaShortNumber}
                 </span>
               </div>
@@ -69,14 +67,14 @@ export function StandaloneComandaCard({ comanda, onClick, index = 0 }: Standalon
           </div>
 
           {/* Tempo aberto */}
-          <div className="flex items-center gap-1.5 text-xs opacity-75">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
             <span>{timeOpen}</span>
           </div>
 
           {/* Valor */}
-          <div className="pt-1 border-t border-red-700/30">
-            <span className="text-lg font-bold">
+          <div className="pt-1 border-t">
+            <span className="text-lg font-bold text-card-foreground">
               R$ {comanda.subtotal.toFixed(2).replace(".", ",")}
             </span>
           </div>

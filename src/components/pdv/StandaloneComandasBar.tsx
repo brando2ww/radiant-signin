@@ -28,19 +28,19 @@ export function StandaloneComandasBar({
   const comandaCount = comandas.length;
 
   return (
-    <div className="border-t-2 border-purple-900/50 bg-gradient-to-r from-purple-950 via-[#3d1a32] to-purple-950 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+    <div className="border-t bg-muted/50">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-purple-800/30">
+      <div className="flex items-center justify-between px-4 py-2 border-b">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-purple-800/50">
-            <Receipt className="h-4 w-4 text-purple-200" />
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-muted">
+            <Receipt className="h-4 w-4 text-muted-foreground" />
           </div>
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+            <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">
               Comandas sem Mesa
             </h3>
             {comandaCount > 0 && (
-              <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-red-600 text-white">
+              <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-primary text-primary-foreground">
                 {comandaCount}
               </span>
             )}
@@ -50,7 +50,6 @@ export function StandaloneComandasBar({
         <Button
           size="sm"
           onClick={onCreateComanda}
-          className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold shadow-lg hover:shadow-green-500/25 transition-all duration-200"
         >
           <Plus className="h-4 w-4 mr-1" />
           Nova Comanda
@@ -78,7 +77,7 @@ export function StandaloneComandasBar({
                     />
                   ))}
                 </div>
-                <ScrollBar orientation="horizontal" className="bg-purple-800/30" />
+                <ScrollBar orientation="horizontal" />
               </ScrollArea>
             </motion.div>
           ) : (
@@ -89,13 +88,13 @@ export function StandaloneComandasBar({
               exit={{ opacity: 0, y: -10 }}
               className="flex flex-col items-center justify-center py-4 text-center"
             >
-              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-purple-800/30 mb-3">
-                <ClipboardList className="h-7 w-7 text-purple-300/60" />
+              <div className="flex items-center justify-center w-14 h-14 rounded-full bg-muted mb-3">
+                <ClipboardList className="h-7 w-7 text-muted-foreground" />
               </div>
-              <p className="text-purple-200/80 text-sm font-medium">
+              <p className="text-muted-foreground text-sm font-medium">
                 Nenhuma comanda avulsa
               </p>
-              <p className="text-purple-300/50 text-xs mt-1">
+              <p className="text-muted-foreground/70 text-xs mt-1">
                 Clique em "Nova Comanda" para criar
               </p>
             </motion.div>
