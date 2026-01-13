@@ -1,17 +1,33 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { usePDVCashier } from "@/hooks/use-pdv-cashier";
+
 export function CashierStatus() {
-  // TODO: Integrar com sistema de caixa
-  const isCashierOpen = false;
-  const currentBalance = 0;
-  return <TooltipProvider>
+  const { activeSession, isLoading } = usePDVCashier();
+  
+  const isCashierOpen = !!activeSession;
+  const currentBalance = activeSession
+    ? activeSession.opening_balance + activeSession.total_cash - activeSession.total_withdrawals
+    : 0;
+
+  if (isLoading) {
+    return (
+      <Button variant="ghost" size="sm" className="flex items-center gap-2 h-10 px-3">
+        <span className="text-sm font-medium animate-pulse">...</span>
+        <Badge variant="secondary">...</Badge>
+      </Button>
+    );
+  }
+
+  return (
+    <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
           <Button variant="ghost" size="sm" className="flex items-center gap-2 h-10 px-3">
-            
+            <span className="text-sm font-semibold">R$</span>
             <span className="hidden sm:inline text-sm font-medium">
-              R$ {currentBalance.toFixed(2)}
+              {currentBalance.toFixed(2)}
             </span>
             <Badge variant={isCashierOpen ? "default" : "secondary"} className="ml-1">
               {isCashierOpen ? "Aberto" : "Fechado"}
@@ -25,5 +41,6 @@ export function CashierStatus() {
           </p>
         </TooltipContent>
       </Tooltip>
-    </TooltipProvider>;
+    </TooltipProvider>
+  );
 }
