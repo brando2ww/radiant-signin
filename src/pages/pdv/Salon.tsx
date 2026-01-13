@@ -43,6 +43,8 @@ export default function PDVSalon() {
     isDeleting,
     mergeTables,
     isMerging,
+    unmergeTables,
+    isUnmerging,
   } = usePDVTables();
 
   const {
@@ -188,6 +190,10 @@ export default function PDVSalon() {
     }
 
     mergeTables({ tableId1, tableId2 });
+  };
+
+  const handleUnmergeTables = (tableId: string) => {
+    unmergeTables(tableId);
   };
 
   const handleCreateOrder = (tableId: string) => {
@@ -416,6 +422,7 @@ export default function PDVSalon() {
         onCloseTable={handleCloseTable}
         onEditTable={handleEditTable}
         onDeleteTable={deleteTable}
+        onUnmergeTables={handleUnmergeTables}
       />
 
       <OrderDetailsDialog
