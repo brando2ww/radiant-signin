@@ -36,9 +36,20 @@ export default function PDVCashier() {
     setOpenDialog(false);
   };
 
-  const handleCloseCashier = (closingBalance: number, notes?: string) => {
+  const handleCloseCashier = (
+    closingBalance: number, 
+    notes?: string,
+    expectedBalance?: number,
+    riskLevel?: "ok" | "low" | "medium" | "high" | "critical"
+  ) => {
     if (!activeSession) return;
-    closeCashier({ sessionId: activeSession.id, closingBalance, notes });
+    closeCashier({ 
+      sessionId: activeSession.id, 
+      closingBalance, 
+      notes,
+      expectedBalance: expectedBalance || 0,
+      riskLevel: riskLevel || "ok"
+    });
     setCloseDialog(false);
   };
 
