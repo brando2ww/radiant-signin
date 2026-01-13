@@ -218,7 +218,27 @@ export default function PDVSalon() {
   };
 
   const handleMapPositionChange = (id: string, x: number, y: number) => {
-    updateTable({ id, updates: { position_x: x, position_y: y } });
+    // Detectar automaticamente se a mesa está dentro de algum setor
+    const TABLE_SIZE = 80;
+    const tableCenter = { x: x + TABLE_SIZE / 2, y: y + TABLE_SIZE / 2 };
+    
+    const containingSector = sectors.find(sector => {
+      return (
+        tableCenter.x >= sector.position_x &&
+        tableCenter.x <= sector.position_x + sector.width &&
+        tableCenter.y >= sector.position_y &&
+        tableCenter.y <= sector.position_y + sector.height
+      );
+    });
+    
+    updateTable({ 
+      id, 
+      updates: { 
+        position_x: x, 
+        position_y: y,
+        sector_id: containingSector?.id || null
+      } 
+    });
   };
 
   const handleMergeTables = (tableId1: string, tableId2: string) => {
