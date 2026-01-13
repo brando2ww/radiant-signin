@@ -23,6 +23,7 @@ export interface PDVTable {
   current_order_id: string | null;
   merged_with: string | null;
   sector_id: string | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -40,6 +41,7 @@ export function usePDVTables() {
         .from("pdv_tables")
         .select("*")
         .eq("user_id", user.id)
+        .eq("is_active", true)
         .order("position_x", { ascending: true, nullsFirst: false })
         .order("table_number");
 
@@ -114,9 +116,10 @@ export function usePDVTables() {
 
   const deleteTable = useMutation({
     mutationFn: async (id: string) => {
+      // Soft delete - apenas marca como inativa
       const { error } = await supabase
         .from("pdv_tables")
-        .delete()
+        .update({ is_active: false })
         .eq("id", id);
 
       if (error) throw error;
