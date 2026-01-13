@@ -102,23 +102,34 @@ export function usePDVCashier() {
     },
   });
 
-  // Fechar caixa
+  // Fechar caixa com sistema antifraude
   const closeCashier = useMutation({
     mutationFn: async ({
       sessionId,
       closingBalance,
       notes,
+      expectedBalance,
+      riskLevel,
     }: {
       sessionId: string;
       closingBalance: number;
       notes?: string;
+      expectedBalance: number;
+      riskLevel: "ok" | "low" | "medium" | "high" | "critical";
     }) => {
+      const balanceDifference = closingBalance - expectedBalance;
+      const differenceJustified = notes && notes.length >= 30;
+
       const { data, error } = await supabase
         .from("pdv_cashier_sessions")
         .update({
           closed_at: new Date().toISOString(),
           closing_balance: closingBalance,
           notes,
+          expected_balance: expectedBalance,
+          balance_difference: balanceDifference,
+          difference_justified: differenceJustified,
+          fraud_risk_level: riskLevel,
         })
         .eq("id", sessionId)
         .select()

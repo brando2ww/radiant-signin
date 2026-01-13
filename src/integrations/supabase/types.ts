@@ -1461,9 +1461,13 @@ export type Database = {
       }
       pdv_cashier_sessions: {
         Row: {
+          balance_difference: number | null
           closed_at: string | null
           closing_balance: number | null
           created_at: string
+          difference_justified: boolean | null
+          expected_balance: number | null
+          fraud_risk_level: string | null
           id: string
           notes: string | null
           opened_at: string
@@ -1477,9 +1481,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          balance_difference?: number | null
           closed_at?: string | null
           closing_balance?: number | null
           created_at?: string
+          difference_justified?: boolean | null
+          expected_balance?: number | null
+          fraud_risk_level?: string | null
           id?: string
           notes?: string | null
           opened_at?: string
@@ -1493,9 +1501,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          balance_difference?: number | null
           closed_at?: string | null
           closing_balance?: number | null
           created_at?: string
+          difference_justified?: boolean | null
+          expected_balance?: number | null
+          fraud_risk_level?: string | null
           id?: string
           notes?: string | null
           opened_at?: string
