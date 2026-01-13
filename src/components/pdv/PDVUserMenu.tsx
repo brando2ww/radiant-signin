@@ -63,13 +63,9 @@ export function PDVUserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => navigate("/settings")}>
+        <DropdownMenuItem onClick={() => navigate("/pdv/configuracoes")}>
           <Settings className="mr-2 h-4 w-4" />
           <span>Configurações</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-          <User className="mr-2 h-4 w-4" />
-          <span>Voltar ao Admin</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem 
