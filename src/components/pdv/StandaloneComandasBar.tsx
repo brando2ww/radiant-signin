@@ -28,7 +28,7 @@ export function StandaloneComandasBar({
   const comandaCount = comandas.length;
 
   return (
-    <div className="border-t bg-muted/50">
+    <div className="border-t bg-muted/50 mt-auto">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b">
         <div className="flex items-center gap-3">
@@ -57,7 +57,7 @@ export function StandaloneComandasBar({
       </div>
 
       {/* Content */}
-      <div className="px-4 py-3 min-h-[120px]">
+      <div className="px-4 py-3">
         <AnimatePresence mode="wait">
           {comandaCount > 0 ? (
             <motion.div
