@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
+import { usePDVComandas, Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
+import { PDVTable } from "@/hooks/use-pdv-tables";
 import { OpenCashierDialog } from "@/components/pdv/OpenCashierDialog";
 import { CloseCashierDialog } from "@/components/pdv/CloseCashierDialog";
 import { CashMovementDialog } from "@/components/pdv/CashMovementDialog";
@@ -11,6 +13,8 @@ import { CashierHeader } from "@/components/pdv/cashier/CashierHeader";
 import { CashierActionsSidebar } from "@/components/pdv/cashier/CashierActionsSidebar";
 import { CashierSummaryFooter } from "@/components/pdv/cashier/CashierSummaryFooter";
 import { KeyboardShortcutsDialog } from "@/components/pdv/cashier/KeyboardShortcutsDialog";
+import { ChargeSelectionDialog } from "@/components/pdv/cashier/ChargeSelectionDialog";
+import { PaymentDialog } from "@/components/pdv/cashier/PaymentDialog";
 
 export default function PDVCashier() {
   const {
@@ -30,6 +34,15 @@ export default function PDVCashier() {
   const [movementDialog, setMovementDialog] = useState(false);
   const [movementType, setMovementType] = useState<"sangria" | "reforco">("reforco");
   const [shortcutsDialog, setShortcutsDialog] = useState(false);
+  const [chargeDialog, setChargeDialog] = useState(false);
+  const [paymentDialog, setPaymentDialog] = useState(false);
+
+  // Payment state
+  const [selectedComanda, setSelectedComanda] = useState<Comanda | null>(null);
+  const [selectedComandaItems, setSelectedComandaItems] = useState<ComandaItem[]>([]);
+  const [selectedTable, setSelectedTable] = useState<PDVTable | null>(null);
+  const [selectedTableComandas, setSelectedTableComandas] = useState<Comanda[]>([]);
+  const [selectedTableItems, setSelectedTableItems] = useState<ComandaItem[]>([]);
 
   const handleOpenCashier = (openingBalance: number) => {
     openCashier({ openingBalance });
@@ -67,6 +80,34 @@ export default function PDVCashier() {
     setMovementDialog(true);
   };
 
+  const handleSelectComanda = (comanda: Comanda, items: ComandaItem[]) => {
+    setSelectedComanda(comanda);
+    setSelectedComandaItems(items);
+    setSelectedTable(null);
+    setSelectedTableComandas([]);
+    setSelectedTableItems([]);
+    setChargeDialog(false);
+    setPaymentDialog(true);
+  };
+
+  const handleSelectTable = (table: PDVTable, comandas: Comanda[], items: ComandaItem[]) => {
+    setSelectedTable(table);
+    setSelectedTableComandas(comandas);
+    setSelectedTableItems(items);
+    setSelectedComanda(null);
+    setSelectedComandaItems([]);
+    setChargeDialog(false);
+    setPaymentDialog(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    setSelectedComanda(null);
+    setSelectedComandaItems([]);
+    setSelectedTable(null);
+    setSelectedTableComandas([]);
+    setSelectedTableItems([]);
+  };
+
   // Calcular valores
   const openingBalance = activeSession?.opening_balance || 0;
   const totalCash = activeSession?.total_cash || 0;
@@ -94,7 +135,7 @@ export default function PDVCashier() {
       }
 
       // Ignorar se algum dialog estiver aberto (exceto F12 que pode fechar o shortcuts dialog)
-      if (openDialog || closeDialog || movementDialog) {
+      if (openDialog || closeDialog || movementDialog || chargeDialog || paymentDialog) {
         if (e.key === "F12") {
           e.preventDefault();
           setShortcutsDialog(false);
@@ -123,6 +164,10 @@ export default function PDVCashier() {
           e.preventDefault();
           if (activeSession) setCloseDialog(true);
           break;
+        case "F5":
+          e.preventDefault();
+          if (activeSession) setChargeDialog(true);
+          break;
         case "F12":
           e.preventDefault();
           setShortcutsDialog(prev => !prev);
@@ -132,7 +177,7 @@ export default function PDVCashier() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeSession, openDialog, closeDialog, movementDialog, shortcutsDialog, isOpeningCashier, isClosingCashier, isAddingMovement]);
+  }, [activeSession, openDialog, closeDialog, movementDialog, chargeDialog, paymentDialog, shortcutsDialog, isOpeningCashier, isClosingCashier, isAddingMovement]);
 
   if (isLoading) {
     return (
@@ -198,6 +243,7 @@ export default function PDVCashier() {
               onCloseCashier={() => setCloseDialog(true)}
               onAddReinforcement={() => handleOpenMovementDialog("reforco")}
               onAddWithdrawal={() => handleOpenMovementDialog("sangria")}
+              onCharge={() => setChargeDialog(true)}
               onShowHelp={() => setShortcutsDialog(true)}
             />
           </CardContent>
@@ -244,6 +290,24 @@ export default function PDVCashier() {
       <KeyboardShortcutsDialog
         open={shortcutsDialog}
         onOpenChange={setShortcutsDialog}
+      />
+
+      <ChargeSelectionDialog
+        open={chargeDialog}
+        onOpenChange={setChargeDialog}
+        onSelectComanda={handleSelectComanda}
+        onSelectTable={handleSelectTable}
+      />
+
+      <PaymentDialog
+        open={paymentDialog}
+        onOpenChange={setPaymentDialog}
+        comanda={selectedComanda}
+        items={selectedComandaItems}
+        table={selectedTable}
+        tableComandas={selectedTableComandas}
+        tableItems={selectedTableItems}
+        onSuccess={handlePaymentSuccess}
       />
     </div>
   );
