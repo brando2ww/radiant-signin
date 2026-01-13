@@ -3872,6 +3872,8 @@ export type Database = {
           created_at: string | null
           id: string
           last_account_id: string | null
+          pending_delete: Json | null
+          pending_receipt: Json | null
           pending_transaction: Json | null
           phone_number: string
           updated_at: string | null
@@ -3882,6 +3884,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_account_id?: string | null
+          pending_delete?: Json | null
+          pending_receipt?: Json | null
           pending_transaction?: Json | null
           phone_number: string
           updated_at?: string | null
@@ -3892,6 +3896,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_account_id?: string | null
+          pending_delete?: Json | null
+          pending_receipt?: Json | null
           pending_transaction?: Json | null
           phone_number?: string
           updated_at?: string | null
