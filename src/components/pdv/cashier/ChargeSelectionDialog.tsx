@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,11 +10,34 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Receipt, UtensilsCrossed, Clock, User } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Receipt,
+  UtensilsCrossed,
+  Clock,
+  User,
+  Search,
+  ArrowUpDown,
+  ShoppingBag,
+} from "lucide-react";
 import { usePDVComandas, Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
 import { usePDVTables, PDVTable } from "@/hooks/use-pdv-tables";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, differenceInMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 interface ChargeSelectionDialogProps {
   open: boolean;
@@ -23,6 +46,8 @@ interface ChargeSelectionDialogProps {
   onSelectTable: (table: PDVTable, comandas: Comanda[], items: ComandaItem[]) => void;
 }
 
+type SortOption = "time" | "value" | "number";
+
 export function ChargeSelectionDialog({
   open,
   onOpenChange,
@@ -30,18 +55,21 @@ export function ChargeSelectionDialog({
   onSelectTable,
 }: ChargeSelectionDialogProps) {
   const [tab, setTab] = useState<"comandas" | "mesas">("comandas");
-  const { comandas, comandaItems, getItemsByComanda, getStandaloneComandas } = usePDVComandas();
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("time");
+  
+  const { comandas, getItemsByComanda, getStandaloneComandas } = usePDVComandas();
   const { tables } = usePDVTables();
 
-  // Comandas avulsas abertas (sem mesa/order)
+  // Get standalone comandas (no table/order)
   const standaloneComandas = getStandaloneComandas();
 
-  // Mesas ocupadas com suas comandas
+  // Get occupied tables with comandas
   const occupiedTables = tables.filter(
     (t) => t.status !== "livre" && t.current_order_id
   );
 
-  // Pegar comandas de uma mesa (através do order_id)
+  // Get comandas for a table
   const getComandasForTable = (table: PDVTable) => {
     if (!table.current_order_id) return [];
     return comandas.filter(
@@ -49,19 +77,78 @@ export function ChargeSelectionDialog({
     );
   };
 
-  // Total de uma mesa
+  // Get table total
   const getTableTotal = (table: PDVTable) => {
     const tableComandas = getComandasForTable(table);
     return tableComandas.reduce((sum, c) => sum + c.subtotal, 0);
   };
 
-  // Formatar valor
+  // Get wait time status color
+  const getTimeStatus = (createdAt: string) => {
+    const minutes = differenceInMinutes(new Date(), new Date(createdAt));
+    if (minutes < 30) return "bg-green-500";
+    if (minutes < 60) return "bg-yellow-500";
+    return "bg-red-500";
+  };
+
+  // Format currency
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
     }).format(value);
   };
+
+  // Filter and sort comandas
+  const filteredComandas = useMemo(() => {
+    let result = standaloneComandas.filter((c) => {
+      const searchLower = search.toLowerCase();
+      return (
+        c.comanda_number.toLowerCase().includes(searchLower) ||
+        c.customer_name?.toLowerCase().includes(searchLower)
+      );
+    });
+
+    switch (sortBy) {
+      case "time":
+        result.sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        break;
+      case "value":
+        result.sort((a, b) => b.subtotal - a.subtotal);
+        break;
+      case "number":
+        result.sort((a, b) => a.comanda_number.localeCompare(b.comanda_number));
+        break;
+    }
+
+    return result;
+  }, [standaloneComandas, search, sortBy]);
+
+  // Filter and sort tables
+  const filteredTables = useMemo(() => {
+    let result = occupiedTables.filter((t) => {
+      const searchLower = search.toLowerCase();
+      return t.table_number.toLowerCase().includes(searchLower);
+    });
+
+    switch (sortBy) {
+      case "time":
+        result.sort(
+          (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+        );
+        break;
+      case "value":
+        result.sort((a, b) => getTableTotal(b) - getTableTotal(a));
+        break;
+      case "number":
+        result.sort((a, b) => a.table_number.localeCompare(b.table_number));
+        break;
+    }
+
+    return result;
+  }, [occupiedTables, search, sortBy]);
 
   const handleSelectComanda = (comanda: Comanda) => {
     const items = getItemsByComanda(comanda.id);
@@ -76,10 +163,10 @@ export function ChargeSelectionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5" />
+            <Receipt className="h-5 w-5 text-primary" />
             Selecionar para Cobrança
           </DialogTitle>
           <DialogDescription>
@@ -87,78 +174,141 @@ export function ChargeSelectionDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Search and Sort */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por número ou cliente..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+            <SelectTrigger className="w-[140px]">
+              <ArrowUpDown className="h-4 w-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="time">Mais recente</SelectItem>
+              <SelectItem value="value">Maior valor</SelectItem>
+              <SelectItem value="number">Número</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <Tabs value={tab} onValueChange={(v) => setTab(v as "comandas" | "mesas")}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="comandas" className="gap-2">
               <Receipt className="h-4 w-4" />
               Comandas
-              {standaloneComandas.length > 0 && (
+              {filteredComandas.length > 0 && (
                 <Badge variant="secondary" className="ml-1">
-                  {standaloneComandas.length}
+                  {filteredComandas.length}
                 </Badge>
               )}
             </TabsTrigger>
             <TabsTrigger value="mesas" className="gap-2">
               <UtensilsCrossed className="h-4 w-4" />
               Mesas
-              {occupiedTables.length > 0 && (
+              {filteredTables.length > 0 && (
                 <Badge variant="secondary" className="ml-1">
-                  {occupiedTables.length}
+                  {filteredTables.length}
                 </Badge>
               )}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="comandas" className="mt-4">
-            <ScrollArea className="h-[300px] pr-4">
-              {standaloneComandas.length === 0 ? (
+            <ScrollArea className="h-[350px] pr-4">
+              {filteredComandas.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
                   <Receipt className="h-12 w-12 mb-3 opacity-50" />
-                  <p className="text-sm">Nenhuma comanda avulsa aberta</p>
+                  <p className="text-sm">
+                    {search
+                      ? "Nenhuma comanda encontrada"
+                      : "Nenhuma comanda avulsa aberta"}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {standaloneComandas.map((comanda) => {
+                  {filteredComandas.map((comanda) => {
                     const items = getItemsByComanda(comanda.id);
                     return (
-                      <Card
-                        key={comanda.id}
-                        className="cursor-pointer hover:bg-accent/50 transition-colors"
-                        onClick={() => handleSelectComanda(comanda)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold">
-                                  #{comanda.comanda_number}
-                                </span>
-                                <Badge variant="outline" className="text-xs">
-                                  {items.length} {items.length === 1 ? "item" : "itens"}
-                                </Badge>
-                              </div>
-                              {comanda.customer_name && (
-                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                  <User className="h-3 w-3" />
-                                  {comanda.customer_name}
+                      <HoverCard key={comanda.id} openDelay={300}>
+                        <HoverCardTrigger asChild>
+                          <Card
+                            className="cursor-pointer hover:bg-accent/50 transition-colors group"
+                            onClick={() => handleSelectComanda(comanda)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between">
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className={cn(
+                                        "w-2 h-2 rounded-full",
+                                        getTimeStatus(comanda.created_at)
+                                      )}
+                                    />
+                                    <span className="font-semibold">
+                                      #{comanda.comanda_number}
+                                    </span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {items.length} {items.length === 1 ? "item" : "itens"}
+                                    </Badge>
+                                  </div>
+                                  {comanda.customer_name && (
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                      <User className="h-3 w-3" />
+                                      {comanda.customer_name}
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    {formatDistanceToNow(new Date(comanda.created_at), {
+                                      addSuffix: true,
+                                      locale: ptBR,
+                                    })}
+                                  </div>
                                 </div>
-                              )}
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Clock className="h-3 w-3" />
-                                {formatDistanceToNow(new Date(comanda.created_at), {
-                                  addSuffix: true,
-                                  locale: ptBR,
-                                })}
+                                <div className="text-right">
+                                  <span className="text-lg font-bold text-primary group-hover:scale-105 transition-transform inline-block">
+                                    {formatCurrency(comanda.subtotal)}
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-lg font-bold text-primary">
-                                {formatCurrency(comanda.subtotal)}
-                              </span>
+                            </CardContent>
+                          </Card>
+                        </HoverCardTrigger>
+                        <HoverCardContent side="right" className="w-64">
+                          <div className="space-y-2">
+                            <h4 className="font-semibold flex items-center gap-2">
+                              <ShoppingBag className="h-4 w-4" />
+                              Itens do Pedido
+                            </h4>
+                            <div className="space-y-1 text-sm">
+                              {items.slice(0, 5).map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="flex justify-between text-muted-foreground"
+                                >
+                                  <span>
+                                    {item.quantity}x {item.product_name}
+                                  </span>
+                                  <span>{formatCurrency(item.subtotal)}</span>
+                                </div>
+                              ))}
+                              {items.length > 5 && (
+                                <p className="text-xs text-muted-foreground">
+                                  +{items.length - 5} mais itens...
+                                </p>
+                              )}
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
+                        </HoverCardContent>
+                      </HoverCard>
                     );
                   })}
                 </div>
@@ -167,51 +317,93 @@ export function ChargeSelectionDialog({
           </TabsContent>
 
           <TabsContent value="mesas" className="mt-4">
-            <ScrollArea className="h-[300px] pr-4">
-              {occupiedTables.length === 0 ? (
+            <ScrollArea className="h-[350px] pr-4">
+              {filteredTables.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
                   <UtensilsCrossed className="h-12 w-12 mb-3 opacity-50" />
-                  <p className="text-sm">Nenhuma mesa ocupada</p>
+                  <p className="text-sm">
+                    {search ? "Nenhuma mesa encontrada" : "Nenhuma mesa ocupada"}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {occupiedTables.map((table) => {
+                  {filteredTables.map((table) => {
                     const tableComandas = getComandasForTable(table);
                     const total = getTableTotal(table);
+                    const allItems = tableComandas.flatMap((c) =>
+                      getItemsByComanda(c.id)
+                    );
                     return (
-                      <Card
-                        key={table.id}
-                        className="cursor-pointer hover:bg-accent/50 transition-colors"
-                        onClick={() => handleSelectTable(table)}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold">
-                                  Mesa {table.table_number}
-                                </span>
-                                <Badge variant="outline" className="text-xs">
-                                  {tableComandas.length}{" "}
-                                  {tableComandas.length === 1 ? "comanda" : "comandas"}
-                                </Badge>
+                      <HoverCard key={table.id} openDelay={300}>
+                        <HoverCardTrigger asChild>
+                          <Card
+                            className="cursor-pointer hover:bg-accent/50 transition-colors group"
+                            onClick={() => handleSelectTable(table)}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between">
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className={cn(
+                                        "w-2 h-2 rounded-full",
+                                        getTimeStatus(table.updated_at)
+                                      )}
+                                    />
+                                    <span className="font-semibold">
+                                      Mesa {table.table_number}
+                                    </span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {tableComandas.length}{" "}
+                                      {tableComandas.length === 1
+                                        ? "comanda"
+                                        : "comandas"}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    {formatDistanceToNow(new Date(table.updated_at), {
+                                      addSuffix: true,
+                                      locale: ptBR,
+                                    })}
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-lg font-bold text-primary group-hover:scale-105 transition-transform inline-block">
+                                    {formatCurrency(total)}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <Clock className="h-3 w-3" />
-                                {formatDistanceToNow(new Date(table.updated_at), {
-                                  addSuffix: true,
-                                  locale: ptBR,
-                                })}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-lg font-bold text-primary">
-                                {formatCurrency(total)}
-                              </span>
+                            </CardContent>
+                          </Card>
+                        </HoverCardTrigger>
+                        <HoverCardContent side="right" className="w-64">
+                          <div className="space-y-2">
+                            <h4 className="font-semibold flex items-center gap-2">
+                              <ShoppingBag className="h-4 w-4" />
+                              Itens da Mesa
+                            </h4>
+                            <div className="space-y-1 text-sm">
+                              {allItems.slice(0, 5).map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="flex justify-between text-muted-foreground"
+                                >
+                                  <span>
+                                    {item.quantity}x {item.product_name}
+                                  </span>
+                                  <span>{formatCurrency(item.subtotal)}</span>
+                                </div>
+                              ))}
+                              {allItems.length > 5 && (
+                                <p className="text-xs text-muted-foreground">
+                                  +{allItems.length - 5} mais itens...
+                                </p>
+                              )}
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
+                        </HoverCardContent>
+                      </HoverCard>
                     );
                   })}
                 </div>
