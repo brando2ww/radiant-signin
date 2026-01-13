@@ -55,11 +55,13 @@ export function SalonFilters({
               <SelectContent>
                 <SelectItem value="all">Todos os setores</SelectItem>
                 <SelectItem value="none">Sem setor</SelectItem>
-                {sectors.map((sector) => (
-                  <SelectItem key={sector.id} value={sector.id}>
-                    {sector.name}
-                  </SelectItem>
-                ))}
+                {sectors
+                  .filter((sector) => sector.id && sector.id.trim() !== "")
+                  .map((sector) => (
+                    <SelectItem key={sector.id} value={sector.id}>
+                      {sector.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           )}
