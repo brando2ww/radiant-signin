@@ -71,11 +71,11 @@ export default function PDVCashier() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-4 space-y-4">
+      <div className="container mx-auto p-4 min-h-[calc(100vh-3.5rem)] flex flex-col gap-4">
         <Skeleton className="h-20 w-full" />
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <Skeleton className="h-96 lg:col-span-3" />
-          <Skeleton className="h-96" />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1">
+          <Skeleton className="lg:col-span-3" />
+          <Skeleton className="" />
         </div>
         <Skeleton className="h-32 w-full" />
       </div>
@@ -83,7 +83,7 @@ export default function PDVCashier() {
   }
 
   return (
-    <div className="container mx-auto p-4 space-y-4">
+    <div className="container mx-auto p-4 min-h-[calc(100vh-3.5rem)] flex flex-col gap-4">
       {/* Header */}
       <CashierHeader
         isOpen={!!activeSession}
@@ -91,9 +91,9 @@ export default function PDVCashier() {
       />
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1">
         {/* Tabela de Movimentações */}
-        <Card className="lg:col-span-3">
+        <Card className="lg:col-span-3 flex flex-col">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Movimentações</CardTitle>
             <CardDescription>
@@ -102,13 +102,13 @@ export default function PDVCashier() {
                 : "Abra o caixa para registrar movimentações"}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 overflow-hidden">
             {activeSession ? (
-              <div className="max-h-[400px] overflow-auto">
+              <div className="h-full overflow-auto">
                 <CashMovementsList movements={movements} />
               </div>
             ) : (
-              <div className="min-h-[300px] flex items-center justify-center">
+              <div className="h-full flex items-center justify-center">
                 <div className="text-center space-y-4 text-muted-foreground">
                   <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto">
                     <Lock className="h-8 w-8" />
