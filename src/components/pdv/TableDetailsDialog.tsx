@@ -196,10 +196,10 @@ export function TableDetailsDialog({
       <AlertDialog open={deleteDialog} onOpenChange={setDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogTitle>Mover para a lixeira</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir a Mesa {table.table_number}?
-              Esta ação não pode ser desfeita.
+              A mesa será movida para a lixeira e poderá ser restaurada posteriormente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -210,9 +210,8 @@ export function TableDetailsDialog({
                 setDeleteDialog(false);
                 onOpenChange(false);
               }}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Excluir
+              Mover para Lixeira
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Grid3x3, Map } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Grid3x3, Map, Trash2 } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
 import { usePDVTables, PDVTable } from "@/hooks/use-pdv-tables";
@@ -14,6 +15,7 @@ import { OrderDetailsDialog } from "@/components/pdv/OrderDetailsDialog";
 import { SalonFilters } from "@/components/pdv/SalonFilters";
 import { SalonMapView } from "@/components/pdv/salon/SalonMapView";
 import { SectorDialog } from "@/components/pdv/SectorDialog";
+import { TrashDialog } from "@/components/pdv/TrashDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -47,12 +49,17 @@ export default function PDVSalon() {
   const {
     tables,
     isLoading: isLoadingTables,
+    deletedTables,
     createTable,
     isCreating,
     updateTable,
     isUpdating,
     deleteTable,
     isDeleting,
+    restoreTable,
+    isRestoring: isRestoringTable,
+    permanentDeleteTable,
+    isPermanentDeleting: isPermanentDeletingTable,
     mergeTables,
     isMerging,
     unmergeTables,
@@ -74,12 +81,17 @@ export default function PDVSalon() {
   const {
     sectors,
     isLoading: isLoadingSectors,
+    deletedSectors,
     createSector,
     isCreating: isCreatingSector,
     updateSector,
     isUpdating: isUpdatingSector,
     deleteSector,
     isDeleting: isDeletingSector,
+    restoreSector,
+    isRestoring: isRestoringSector,
+    permanentDeleteSector,
+    isPermanentDeleting: isPermanentDeletingSector,
   } = usePDVSectors();
 
   const [tableDialog, setTableDialog] = useState(false);
@@ -97,6 +109,10 @@ export default function PDVSalon() {
   const [sectorDialogOpen, setSectorDialogOpen] = useState(false);
   const [selectedSectorForEdit, setSelectedSectorForEdit] = useState<PDVSector | null>(null);
   const [sectorToDelete, setSectorToDelete] = useState<string | null>(null);
+  
+  // Trash dialog state
+  const [trashDialogOpen, setTrashDialogOpen] = useState(false);
+  const trashCount = deletedTables.length + deletedSectors.length;
 
   // Sensors for drag and drop
   const sensors = useSensors(
@@ -379,6 +395,24 @@ export default function PDVSalon() {
             </ToggleGroupItem>
           </ToggleGroup>
           
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setTrashDialogOpen(true)}
+            className="relative"
+            title="Lixeira"
+          >
+            <Trash2 className="h-4 w-4" />
+            {trashCount > 0 && (
+              <Badge
+                variant="destructive"
+                className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
+              >
+                {trashCount}
+              </Badge>
+            )}
+          </Button>
+          
           <Button onClick={handleCreateTable}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Mesa
@@ -537,19 +571,33 @@ export default function PDVSalon() {
       <AlertDialog open={!!sectorToDelete} onOpenChange={() => setSectorToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir Setor</AlertDialogTitle>
+            <AlertDialogTitle>Mover setor para a lixeira</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir este setor? As mesas associadas não serão excluídas, apenas desvinculadas.
+              O setor será movido para a lixeira e poderá ser restaurado posteriormente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDeleteSector}>
-              Excluir
+              Mover para Lixeira
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TrashDialog
+        open={trashDialogOpen}
+        onOpenChange={setTrashDialogOpen}
+        deletedTables={deletedTables}
+        deletedSectors={deletedSectors}
+        onRestoreTable={restoreTable}
+        onPermanentDeleteTable={permanentDeleteTable}
+        onRestoreSector={restoreSector}
+        onPermanentDeleteSector={permanentDeleteSector}
+        isRestoring={isRestoringTable || isRestoringSector}
+        isDeleting={isPermanentDeletingTable || isPermanentDeletingSector}
+      />
     </div>
   );
 }

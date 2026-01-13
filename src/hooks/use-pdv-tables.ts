@@ -51,6 +51,25 @@ export function usePDVTables() {
     enabled: !!user,
   });
 
+  // Query para mesas deletadas (lixeira)
+  const { data: deletedTables, isLoading: isLoadingDeleted } = useQuery({
+    queryKey: ["pdv-tables-deleted", user?.id],
+    queryFn: async () => {
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { data, error } = await supabase
+        .from("pdv_tables")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("is_active", false)
+        .order("updated_at", { ascending: false });
+
+      if (error) throw error;
+      return data as PDVTable[];
+    },
+    enabled: !!user,
+  });
+
   const createTable = useMutation({
     mutationFn: async (table: Omit<PDVTable, "id" | "user_id" | "created_at" | "updated_at">) => {
       if (!user) throw new Error("Usuário não autenticado");
@@ -126,10 +145,48 @@ export function usePDVTables() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
-      toast.success("Mesa removida com sucesso");
+      queryClient.invalidateQueries({ queryKey: ["pdv-tables-deleted"] });
+      toast.success("Mesa movida para a lixeira");
     },
     onError: (error: any) => {
       toast.error("Erro ao remover mesa: " + error.message);
+    },
+  });
+
+  const restoreTable = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("pdv_tables")
+        .update({ is_active: true })
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
+      queryClient.invalidateQueries({ queryKey: ["pdv-tables-deleted"] });
+      toast.success("Mesa restaurada com sucesso");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao restaurar mesa: " + error.message);
+    },
+  });
+
+  const permanentDeleteTable = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("pdv_tables")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-tables-deleted"] });
+      toast.success("Mesa excluída permanentemente");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao excluir mesa: " + error.message);
     },
   });
 
@@ -191,12 +248,18 @@ export function usePDVTables() {
   return {
     tables: tables || [],
     isLoading,
+    deletedTables: deletedTables || [],
+    isLoadingDeleted,
     createTable: createTable.mutate,
     isCreating: createTable.isPending,
     updateTable: updateTable.mutate,
     isUpdating: updateTable.isPending,
     deleteTable: deleteTable.mutate,
     isDeleting: deleteTable.isPending,
+    restoreTable: restoreTable.mutate,
+    isRestoring: restoreTable.isPending,
+    permanentDeleteTable: permanentDeleteTable.mutate,
+    isPermanentDeleting: permanentDeleteTable.isPending,
     mergeTables: mergeTables.mutate,
     isMerging: mergeTables.isPending,
     unmergeTables: unmergeTables.mutate,
