@@ -80,11 +80,30 @@ export function usePDVSectors() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pdv-sectors"] });
+    // Optimistic update - atualiza cache ANTES da requisição
+    onMutate: async ({ id, updates }) => {
+      await queryClient.cancelQueries({ queryKey: ["pdv-sectors", user?.id] });
+      
+      const previousSectors = queryClient.getQueryData<PDVSector[]>(["pdv-sectors", user?.id]);
+      
+      queryClient.setQueryData<PDVSector[]>(["pdv-sectors", user?.id], (old) => {
+        if (!old) return old;
+        return old.map(sector => 
+          sector.id === id ? { ...sector, ...updates } : sector
+        );
+      });
+      
+      return { previousSectors };
     },
-    onError: (error: any) => {
+    onError: (error: any, _variables, context) => {
+      // Rollback em caso de erro
+      if (context?.previousSectors) {
+        queryClient.setQueryData(["pdv-sectors", user?.id], context.previousSectors);
+      }
       toast.error("Erro ao atualizar setor: " + error.message);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-sectors"] });
     },
   });
 
