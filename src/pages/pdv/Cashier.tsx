@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingDown, TrendingUp, Lock, Unlock, ArrowDownUp } from "lucide-react";
+import { Lock } from "lucide-react";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
 import { OpenCashierDialog } from "@/components/pdv/OpenCashierDialog";
 import { CloseCashierDialog } from "@/components/pdv/CloseCashierDialog";
 import { CashMovementDialog } from "@/components/pdv/CashMovementDialog";
 import { CashMovementsList } from "@/components/pdv/CashMovementsList";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { CashierHeader } from "@/components/pdv/cashier/CashierHeader";
+import { CashierActionsSidebar } from "@/components/pdv/cashier/CashierActionsSidebar";
+import { CashierSummaryFooter } from "@/components/pdv/cashier/CashierSummaryFooter";
 
 export default function PDVCashier() {
   const {
@@ -27,6 +27,7 @@ export default function PDVCashier() {
   const [openDialog, setOpenDialog] = useState(false);
   const [closeDialog, setCloseDialog] = useState(false);
   const [movementDialog, setMovementDialog] = useState(false);
+  const [movementType, setMovementType] = useState<"sangria" | "reforco">("reforco");
 
   const handleOpenCashier = (openingBalance: number) => {
     openCashier({ openingBalance });
@@ -48,138 +49,109 @@ export default function PDVCashier() {
     setMovementDialog(false);
   };
 
-  const currentBalance = activeSession
-    ? activeSession.opening_balance +
-      activeSession.total_cash -
-      activeSession.total_withdrawals
-    : 0;
+  const handleOpenMovementDialog = (type: "sangria" | "reforco") => {
+    setMovementType(type);
+    setMovementDialog(true);
+  };
+
+  // Calcular valores
+  const openingBalance = activeSession?.opening_balance || 0;
+  const totalCash = activeSession?.total_cash || 0;
+  const totalCard = activeSession?.total_card || 0;
+  const totalPix = activeSession?.total_pix || 0;
+  const totalWithdrawals = activeSession?.total_withdrawals || 0;
+  const totalSales = activeSession?.total_sales || 0;
+  
+  // Calcular reforços a partir dos movimentos
+  const totalReinforcements = movements
+    .filter((m) => m.type === "reforco")
+    .reduce((acc, m) => acc + m.amount, 0);
+
+  const currentBalance = openingBalance + totalCash + totalReinforcements - totalWithdrawals;
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <Skeleton className="h-9 w-48" />
-          <Skeleton className="h-10 w-40" />
+      <div className="container mx-auto p-4 space-y-4">
+        <Skeleton className="h-20 w-full" />
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <Skeleton className="h-96 lg:col-span-3" />
+          <Skeleton className="h-96" />
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
-        </div>
-        <Skeleton className="h-96" />
+        <Skeleton className="h-32 w-full" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Caixa</h1>
-          <p className="text-muted-foreground">
-            {activeSession
-              ? `Aberto em ${format(new Date(activeSession.opened_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`
-              : "Controle de movimentações e fechamento de caixa"}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {activeSession ? (
-            <>
-              <Button variant="outline" onClick={() => setMovementDialog(true)}>
-                <ArrowDownUp className="h-4 w-4 mr-2" />
-                Movimentação
-              </Button>
-              <Button variant="destructive" onClick={() => setCloseDialog(true)}>
-                <Lock className="h-4 w-4 mr-2" />
-                Fechar Caixa
-              </Button>
-            </>
-          ) : (
-            <Button onClick={() => setOpenDialog(true)}>
-              <Unlock className="h-4 w-4 mr-2" />
-              Abrir Caixa
-            </Button>
-          )}
-        </div>
-      </div>
+    <div className="container mx-auto p-4 space-y-4">
+      {/* Header */}
+      <CashierHeader
+        isOpen={!!activeSession}
+        openedAt={activeSession?.opened_at || null}
+      />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo Atual</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Tabela de Movimentações */}
+        <Card className="lg:col-span-3">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Movimentações</CardTitle>
+            <CardDescription>
+              {activeSession
+                ? "Histórico de entradas e saídas do caixa atual"
+                : "Abra o caixa para registrar movimentações"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              R$ {currentBalance.toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {activeSession ? "Em dinheiro no caixa" : "Caixa fechado"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total de Vendas
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              R$ {(activeSession?.total_sales || 0).toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Dinheiro: R$ {(activeSession?.total_cash || 0).toFixed(2)} | 
-              Cartão: R$ {(activeSession?.total_card || 0).toFixed(2)} | 
-              PIX: R$ {(activeSession?.total_pix || 0).toFixed(2)}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Sangrias</CardTitle>
-            <TrendingDown className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              R$ {(activeSession?.total_withdrawals || 0).toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {movements.filter((m) => m.type === "sangria").length} retiradas
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Movimentações</CardTitle>
-          <CardDescription>
-            {activeSession
-              ? "Histórico de entradas e saídas do caixa atual"
-              : "Abra o caixa para registrar movimentações"}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {activeSession ? (
-            <CashMovementsList movements={movements} />
-          ) : (
-            <div className="min-h-[300px] flex items-center justify-center">
-              <div className="text-center space-y-4 text-muted-foreground">
-                <Lock className="h-12 w-12 mx-auto" />
-                <div>
-                  <p className="font-medium">Caixa fechado</p>
-                  <p className="text-sm">Abra o caixa para começar</p>
+            {activeSession ? (
+              <div className="max-h-[400px] overflow-auto">
+                <CashMovementsList movements={movements} />
+              </div>
+            ) : (
+              <div className="min-h-[300px] flex items-center justify-center">
+                <div className="text-center space-y-4 text-muted-foreground">
+                  <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto">
+                    <Lock className="h-8 w-8" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Caixa fechado</p>
+                    <p className="text-sm">Clique em "Abrir Caixa" para começar</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
 
+        {/* Sidebar de Ações */}
+        <Card>
+          <CardContent className="p-4 h-full">
+            <CashierActionsSidebar
+              isOpen={!!activeSession}
+              isLoading={isOpeningCashier || isClosingCashier || isAddingMovement}
+              onOpenCashier={() => setOpenDialog(true)}
+              onCloseCashier={() => setCloseDialog(true)}
+              onAddReinforcement={() => handleOpenMovementDialog("reforco")}
+              onAddWithdrawal={() => handleOpenMovementDialog("sangria")}
+            />
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Footer com Resumo */}
+      <CashierSummaryFooter
+        openingBalance={openingBalance}
+        totalCash={totalCash}
+        totalCard={totalCard}
+        totalPix={totalPix}
+        totalWithdrawals={totalWithdrawals}
+        totalReinforcements={totalReinforcements}
+        totalSales={totalSales}
+        currentBalance={currentBalance}
+        isOpen={!!activeSession}
+      />
+
+      {/* Dialogs */}
       <OpenCashierDialog
         open={openDialog}
         onOpenChange={setOpenDialog}
@@ -200,6 +172,7 @@ export default function PDVCashier() {
         onOpenChange={setMovementDialog}
         onAddMovement={handleAddMovement}
         isAdding={isAddingMovement}
+        defaultType={movementType}
       />
     </div>
   );
