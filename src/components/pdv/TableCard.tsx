@@ -1,6 +1,4 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Users, Clock, DollarSign } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { PDVTable } from "@/hooks/use-pdv-tables";
 import { cn } from "@/lib/utils";
 
@@ -13,83 +11,184 @@ interface TableCardProps {
 
 const STATUS_CONFIG = {
   livre: {
-    label: "Livre",
-    variant: "secondary" as const,
-    className: "bg-muted hover:bg-muted/80 border-2",
+    tableColor: "bg-muted",
+    chairColor: "bg-muted-foreground/20",
+    textColor: "text-muted-foreground",
+    dotColor: "bg-green-500",
   },
   ocupada: {
-    label: "Ocupada",
-    variant: "destructive" as const,
-    className: "bg-destructive/10 hover:bg-destructive/20 border-2 border-destructive",
+    tableColor: "bg-orange-400",
+    chairColor: "bg-orange-500",
+    textColor: "text-white",
+    dotColor: "bg-orange-500",
   },
   aguardando_pedido: {
-    label: "Aguardando",
-    variant: "default" as const,
-    className: "bg-primary/10 hover:bg-primary/20 border-2 border-primary",
+    tableColor: "bg-amber-300",
+    chairColor: "bg-amber-400",
+    textColor: "text-amber-900",
+    dotColor: "bg-amber-500",
   },
   aguardando_cozinha: {
-    label: "Na Cozinha",
-    variant: "secondary" as const,
-    className: "bg-yellow-500/10 hover:bg-yellow-500/20 border-2 border-yellow-500",
+    tableColor: "bg-orange-300",
+    chairColor: "bg-orange-400",
+    textColor: "text-orange-900",
+    dotColor: "bg-orange-400",
   },
   pediu_conta: {
-    label: "Pediu Conta",
-    variant: "default" as const,
-    className: "bg-blue-500/10 hover:bg-blue-500/20 border-2 border-blue-500",
+    tableColor: "bg-red-500",
+    chairColor: "bg-red-600",
+    textColor: "text-white",
+    dotColor: "bg-red-500",
   },
   pendente_pagamento: {
-    label: "Pagamento",
-    variant: "secondary" as const,
-    className: "bg-purple-500/10 hover:bg-purple-500/20 border-2 border-purple-500",
+    tableColor: "bg-purple-400",
+    chairColor: "bg-purple-500",
+    textColor: "text-white",
+    dotColor: "bg-purple-500",
   },
 };
 
+function Chair({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn(
+        "rounded-sm transition-colors",
+        className
+      )}
+    />
+  );
+}
+
+function getChairLayout(capacity: number, shape: string = "square") {
+  // Returns chair positions: top, right, bottom, left arrays
+  if (shape === "round") {
+    const perSide = Math.ceil(capacity / 4);
+    return {
+      top: Math.min(perSide, capacity),
+      right: Math.min(perSide, Math.max(0, capacity - perSide)),
+      bottom: Math.min(perSide, Math.max(0, capacity - perSide * 2)),
+      left: Math.max(0, capacity - perSide * 3),
+    };
+  }
+
+  if (shape === "rectangle") {
+    const halfCapacity = Math.ceil(capacity / 2);
+    return {
+      top: halfCapacity,
+      right: 0,
+      bottom: capacity - halfCapacity,
+      left: 0,
+    };
+  }
+
+  // Square layout
+  if (capacity <= 2) {
+    return { top: 1, right: 0, bottom: 1, left: 0 };
+  }
+  if (capacity <= 4) {
+    return { top: 1, right: 1, bottom: 1, left: 1 };
+  }
+  if (capacity <= 6) {
+    return { top: 2, right: 1, bottom: 2, left: 1 };
+  }
+  // 8+
+  return { top: 2, right: 2, bottom: 2, left: 2 };
+}
+
 export function TableCard({ table, orderTotal, orderTime, onClick }: TableCardProps) {
   const statusConfig = STATUS_CONFIG[table.status] || STATUS_CONFIG.livre;
+  const shape = (table as any).shape || "square";
+  const chairLayout = getChairLayout(table.capacity, shape);
+
+  const isOccupied = table.status !== "livre";
 
   return (
     <Card
-      className={cn(
-        "cursor-pointer transition-all hover:shadow-lg",
-        statusConfig.className
-      )}
+      className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 p-4 bg-card border-0 shadow-sm"
       onClick={() => onClick(table)}
     >
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="text-2xl font-bold">Mesa {table.table_number}</h3>
-              <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                <Users className="h-3 w-3" />
-                <span>{table.capacity} lugares</span>
-              </div>
-            </div>
-            <Badge variant={statusConfig.variant} className="text-xs">
-              {statusConfig.label}
-            </Badge>
+      <div className="flex flex-col items-center gap-2">
+        {/* Status dot */}
+        <div className="w-full flex justify-end">
+          <div className={cn("w-2.5 h-2.5 rounded-full", statusConfig.dotColor)} />
+        </div>
+
+        {/* Table with chairs */}
+        <div className="relative flex flex-col items-center gap-1">
+          {/* Top chairs */}
+          <div className="flex gap-1 justify-center">
+            {Array.from({ length: chairLayout.top }).map((_, i) => (
+              <Chair
+                key={`top-${i}`}
+                className={cn("w-6 h-3", statusConfig.chairColor)}
+              />
+            ))}
           </div>
 
-          {table.status !== "livre" && (
-            <div className="space-y-2 pt-2 border-t">
-              {orderTime && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-muted-foreground">
-                    {orderTime}
-                  </span>
-                </div>
+          {/* Middle row: left chairs + table + right chairs */}
+          <div className="flex items-center gap-1">
+            {/* Left chairs */}
+            <div className="flex flex-col gap-1">
+              {Array.from({ length: chairLayout.left }).map((_, i) => (
+                <Chair
+                  key={`left-${i}`}
+                  className={cn("w-3 h-6", statusConfig.chairColor)}
+                />
+              ))}
+            </div>
+
+            {/* Table */}
+            <div
+              className={cn(
+                "flex flex-col items-center justify-center transition-colors",
+                shape === "round" ? "rounded-full" : "rounded-lg",
+                statusConfig.tableColor,
+                // Size based on capacity
+                table.capacity <= 4 ? "w-20 h-20" : "w-24 h-20"
               )}
-              {orderTotal !== undefined && (
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <DollarSign className="h-4 w-4" />
-                  <span>R$ {orderTotal.toFixed(2)}</span>
-                </div>
+            >
+              <span className={cn("text-lg font-bold", statusConfig.textColor)}>
+                T{table.table_number}
+              </span>
+              {isOccupied && orderTotal !== undefined && (
+                <span className={cn("text-xs font-medium", statusConfig.textColor)}>
+                  R$ {orderTotal.toFixed(0)}
+                </span>
+              )}
+              {isOccupied && orderTime && (
+                <span className={cn("text-[10px] opacity-80", statusConfig.textColor)}>
+                  {orderTime}
+                </span>
               )}
             </div>
-          )}
+
+            {/* Right chairs */}
+            <div className="flex flex-col gap-1">
+              {Array.from({ length: chairLayout.right }).map((_, i) => (
+                <Chair
+                  key={`right-${i}`}
+                  className={cn("w-3 h-6", statusConfig.chairColor)}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom chairs */}
+          <div className="flex gap-1 justify-center">
+            {Array.from({ length: chairLayout.bottom }).map((_, i) => (
+              <Chair
+                key={`bottom-${i}`}
+                className={cn("w-6 h-3", statusConfig.chairColor)}
+              />
+            ))}
+          </div>
         </div>
-      </CardContent>
+
+        {/* Capacity label */}
+        <span className="text-xs text-muted-foreground mt-1">
+          {table.capacity} lugares
+        </span>
+      </div>
     </Card>
   );
 }
