@@ -7,7 +7,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Keyboard, Unlock, TrendingUp, TrendingDown, Lock, HelpCircle } from "lucide-react";
+import { Keyboard, Unlock, TrendingUp, TrendingDown, Lock, HelpCircle, Receipt } from "lucide-react";
 
 interface KeyboardShortcutsDialogProps {
   open: boolean;
@@ -27,6 +27,7 @@ const shortcuts = [
       { key: "F2", description: "Adicionar Reforço", icon: TrendingUp, color: "text-green-600" },
       { key: "F3", description: "Realizar Sangria", icon: TrendingDown, color: "text-orange-600" },
       { key: "F4", description: "Fechar Caixa", icon: Lock, color: "text-red-600" },
+      { key: "F5", description: "Cobrar Comanda/Mesa", icon: Receipt, color: "text-primary" },
     ],
   },
   {

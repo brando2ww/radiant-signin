@@ -1,4 +1,4 @@
-import { Unlock, Lock, TrendingUp, TrendingDown, HelpCircle } from "lucide-react";
+import { Unlock, Lock, TrendingUp, TrendingDown, HelpCircle, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface CashierActionsSidebarProps {
@@ -8,6 +8,7 @@ interface CashierActionsSidebarProps {
   onCloseCashier: () => void;
   onAddReinforcement: () => void;
   onAddWithdrawal: () => void;
+  onCharge: () => void;
   onShowHelp: () => void;
 }
 
@@ -18,6 +19,7 @@ export function CashierActionsSidebar({
   onCloseCashier,
   onAddReinforcement,
   onAddWithdrawal,
+  onCharge,
   onShowHelp,
 }: CashierActionsSidebarProps) {
   return (
@@ -58,6 +60,17 @@ export function CashierActionsSidebar({
             <TrendingDown className="h-6 w-6 text-orange-600" />
             <span className="text-sm font-medium">Sangria</span>
             <kbd className="text-[10px] opacity-50 bg-muted px-1.5 py-0.5 rounded">F3</kbd>
+          </Button>
+
+          <Button
+            onClick={onCharge}
+            disabled={isLoading}
+            variant="outline"
+            className="h-20 flex-col gap-1 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+          >
+            <Receipt className="h-6 w-6 text-primary" />
+            <span className="text-sm font-medium">Cobrar</span>
+            <kbd className="text-[10px] opacity-50 bg-muted px-1.5 py-0.5 rounded">F5</kbd>
           </Button>
 
           <div className="flex-1" />
