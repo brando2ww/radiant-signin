@@ -31,6 +31,7 @@ import DeliveryPersonalization from "./pdv/delivery/Personalization";
 import DeliveryCoupons from "./pdv/delivery/Coupons";
 import DeliverySettings from "./pdv/delivery/Settings";
 import DeliveryReports from "./pdv/delivery/Reports";
+import ComandasPage from "./pdv/Comandas";
 
 export default function PDV() {
   return (
@@ -78,6 +79,7 @@ export default function PDV() {
               <Route path="balcao" element={<PDVBalcao />} />
               <Route path="caixa" element={<PDVCashier />} />
               <Route path="cozinha" element={<PDVKitchen />} />
+              <Route path="comandas" element={<ComandasPage />} />
               
               {/* Delivery */}
               <Route path="delivery/pedidos" element={<DeliveryOrders />} />
