@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
@@ -68,6 +68,50 @@ export default function PDVCashier() {
     .reduce((acc, m) => acc + m.amount, 0);
 
   const currentBalance = openingBalance + totalCash + totalReinforcements - totalWithdrawals;
+
+  // Atalhos de teclado para ações rápidas
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignorar se estiver em input/textarea
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      // Ignorar se algum dialog estiver aberto
+      if (openDialog || closeDialog || movementDialog) {
+        return;
+      }
+
+      // Ignorar se estiver processando
+      const isProcessing = isOpeningCashier || isClosingCashier || isAddingMovement;
+      if (isProcessing) return;
+
+      switch (e.key) {
+        case "F1":
+          e.preventDefault();
+          if (!activeSession) setOpenDialog(true);
+          break;
+        case "F2":
+          e.preventDefault();
+          if (activeSession) handleOpenMovementDialog("reforco");
+          break;
+        case "F3":
+          e.preventDefault();
+          if (activeSession) handleOpenMovementDialog("sangria");
+          break;
+        case "F4":
+          e.preventDefault();
+          if (activeSession) setCloseDialog(true);
+          break;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeSession, openDialog, closeDialog, movementDialog, isOpeningCashier, isClosingCashier, isAddingMovement]);
 
   if (isLoading) {
     return (
