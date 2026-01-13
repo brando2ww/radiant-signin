@@ -148,7 +148,7 @@ export function TableCard({ table, orderTotal, orderTime, onClick }: TableCardPr
               )}
             >
               <span className={cn("text-lg font-bold", statusConfig.textColor)}>
-                T{table.table_number}
+                M{table.table_number}
               </span>
               {isOccupied && orderTotal !== undefined && (
                 <span className={cn("text-xs font-medium", statusConfig.textColor)}>
