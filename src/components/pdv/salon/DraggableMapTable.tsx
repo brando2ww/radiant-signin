@@ -1,8 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { PDVTable } from "@/hooks/use-pdv-tables";
-import { Card } from "@/components/ui/card";
-import { Users, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DraggableMapTableProps {
@@ -15,36 +13,71 @@ interface DraggableMapTableProps {
 
 const STATUS_CONFIG = {
   livre: {
-    table: "bg-emerald-100 border-emerald-300 dark:bg-emerald-950 dark:border-emerald-800",
+    table: "bg-emerald-100 border-emerald-300 dark:bg-emerald-900/50 dark:border-emerald-700",
+    chair: "bg-emerald-200 dark:bg-emerald-800",
     text: "text-emerald-700 dark:text-emerald-300",
     dot: "bg-emerald-500",
   },
   ocupada: {
-    table: "bg-blue-100 border-blue-300 dark:bg-blue-950 dark:border-blue-800",
+    table: "bg-blue-100 border-blue-300 dark:bg-blue-900/50 dark:border-blue-700",
+    chair: "bg-blue-200 dark:bg-blue-800",
     text: "text-blue-700 dark:text-blue-300",
     dot: "bg-blue-500",
   },
   aguardando_pedido: {
-    table: "bg-amber-100 border-amber-300 dark:bg-amber-950 dark:border-amber-800",
+    table: "bg-amber-100 border-amber-300 dark:bg-amber-900/50 dark:border-amber-700",
+    chair: "bg-amber-200 dark:bg-amber-800",
     text: "text-amber-700 dark:text-amber-300",
     dot: "bg-amber-500 animate-pulse",
   },
   aguardando_cozinha: {
-    table: "bg-orange-100 border-orange-300 dark:bg-orange-950 dark:border-orange-800",
+    table: "bg-orange-100 border-orange-300 dark:bg-orange-900/50 dark:border-orange-700",
+    chair: "bg-orange-200 dark:bg-orange-800",
     text: "text-orange-700 dark:text-orange-300",
     dot: "bg-orange-500",
   },
   pediu_conta: {
-    table: "bg-purple-100 border-purple-300 dark:bg-purple-950 dark:border-purple-800",
+    table: "bg-purple-100 border-purple-300 dark:bg-purple-900/50 dark:border-purple-700",
+    chair: "bg-purple-200 dark:bg-purple-800",
     text: "text-purple-700 dark:text-purple-300",
     dot: "bg-purple-500 animate-pulse",
   },
   pendente_pagamento: {
-    table: "bg-red-100 border-red-300 dark:bg-red-950 dark:border-red-800",
+    table: "bg-red-100 border-red-300 dark:bg-red-900/50 dark:border-red-700",
+    chair: "bg-red-200 dark:bg-red-800",
     text: "text-red-700 dark:text-red-300",
     dot: "bg-red-500 animate-pulse",
   },
 };
+
+function Chair({ className, horizontal = true }: { className?: string; horizontal?: boolean }) {
+  return (
+    <div
+      className={cn(
+        "rounded-sm",
+        horizontal ? "w-4 h-2" : "w-2 h-4",
+        className
+      )}
+    />
+  );
+}
+
+function getChairLayout(capacity: number, shape: string) {
+  if (shape === "round") {
+    const perSide = Math.ceil(capacity / 4);
+    return { top: perSide, right: perSide, bottom: perSide, left: perSide };
+  }
+  
+  if (shape === "rectangle") {
+    const longSide = Math.ceil(capacity / 2);
+    const shortSide = Math.floor(capacity / 4);
+    return { top: longSide, right: shortSide, bottom: longSide, left: shortSide };
+  }
+  
+  // Square
+  const perSide = Math.ceil(capacity / 4);
+  return { top: perSide, right: perSide, bottom: perSide, left: perSide };
+}
 
 export function DraggableMapTable({ 
   table, 
@@ -60,6 +93,7 @@ export function DraggableMapTable({
 
   const config = STATUS_CONFIG[table.status] || STATUS_CONFIG.livre;
   const scale = zoom / 100;
+  const chairLayout = getChairLayout(table.capacity, table.shape);
 
   const style = {
     position: 'absolute' as const,
@@ -70,7 +104,16 @@ export function DraggableMapTable({
     cursor: isDragging ? 'grabbing' : 'grab',
   };
 
-  const tableSize = table.shape === "rectangle" ? "w-32 h-20" : "w-24 h-24";
+  const getTableShape = () => {
+    switch (table.shape) {
+      case "round":
+        return "rounded-full w-14 h-14";
+      case "rectangle":
+        return "rounded-lg w-20 h-12";
+      default:
+        return "rounded-lg w-14 h-14";
+    }
+  };
 
   return (
     <div
@@ -78,49 +121,86 @@ export function DraggableMapTable({
       style={style}
       {...listeners}
       {...attributes}
+      onClick={(e) => {
+        if (!isDragging) {
+          e.stopPropagation();
+          onClick();
+        }
+      }}
+      className={cn(
+        "select-none transition-all duration-200",
+        isDragging && "opacity-80 scale-105"
+      )}
     >
-      <Card
-        className={cn(
-          "border-2 transition-all duration-200 select-none",
-          tableSize,
-          config.table,
-          isDragging && "opacity-80 shadow-2xl scale-105 ring-2 ring-primary",
-          "hover:shadow-lg"
-        )}
-        onClick={(e) => {
-          if (!isDragging) {
-            e.stopPropagation();
-            onClick();
-          }
-        }}
-      >
-        <div className="h-full flex flex-col items-center justify-center p-2 gap-1">
-          <div className="flex items-center gap-1.5">
-            <div className={cn("w-2 h-2 rounded-full", config.dot)} />
-            <span className={cn("font-bold text-sm", config.text)}>
-              {table.table_number}
-            </span>
-          </div>
-          
-          <div className={cn("flex items-center gap-1 text-xs", config.text)}>
-            <Users className="h-3 w-3" />
-            <span>{table.capacity}</span>
-          </div>
-          
-          {orderTotal !== undefined && orderTotal > 0 && (
-            <span className={cn("text-xs font-medium", config.text)}>
-              R$ {orderTotal.toFixed(2)}
-            </span>
-          )}
-          
-          {orderTime && (
-            <div className={cn("flex items-center gap-1 text-xs", config.text)}>
-              <Clock className="h-3 w-3" />
-              <span>{orderTime}</span>
-            </div>
-          )}
+      <div className="flex flex-col items-center gap-0.5">
+        {/* Status dot */}
+        <div className="w-full flex justify-end pr-1">
+          <div className={cn("w-2 h-2 rounded-full", config.dot)} />
         </div>
-      </Card>
+
+        {/* Table with chairs */}
+        <div className="relative flex flex-col items-center gap-0.5">
+          {/* Top chairs */}
+          <div className="flex gap-0.5 justify-center">
+            {Array.from({ length: chairLayout.top }).map((_, i) => (
+              <Chair key={`top-${i}`} className={config.chair} horizontal />
+            ))}
+          </div>
+
+          {/* Middle row: left chairs + table + right chairs */}
+          <div className="flex items-center gap-0.5">
+            {/* Left chairs */}
+            <div className="flex flex-col gap-0.5">
+              {Array.from({ length: chairLayout.left }).map((_, i) => (
+                <Chair key={`left-${i}`} className={config.chair} horizontal={false} />
+              ))}
+            </div>
+
+            {/* Table */}
+            <div
+              className={cn(
+                "flex flex-col items-center justify-center border-2 transition-all",
+                getTableShape(),
+                config.table,
+                isDragging && "ring-2 ring-primary shadow-xl"
+              )}
+            >
+              <span className={cn("font-bold text-xs", config.text)}>
+                M{table.table_number}
+              </span>
+              {orderTotal !== undefined && orderTotal > 0 && (
+                <span className={cn("text-[10px] font-medium", config.text)}>
+                  R$ {orderTotal.toFixed(0)}
+                </span>
+              )}
+              {orderTime && (
+                <span className={cn("text-[10px]", config.text)}>
+                  {orderTime}
+                </span>
+              )}
+            </div>
+
+            {/* Right chairs */}
+            <div className="flex flex-col gap-0.5">
+              {Array.from({ length: chairLayout.right }).map((_, i) => (
+                <Chair key={`right-${i}`} className={config.chair} horizontal={false} />
+              ))}
+            </div>
+          </div>
+
+          {/* Bottom chairs */}
+          <div className="flex gap-0.5 justify-center">
+            {Array.from({ length: chairLayout.bottom }).map((_, i) => (
+              <Chair key={`bottom-${i}`} className={config.chair} horizontal />
+            ))}
+          </div>
+        </div>
+
+        {/* Capacity label */}
+        <span className={cn("text-[10px] font-medium", config.text)}>
+          {table.capacity} lugares
+        </span>
+      </div>
     </div>
   );
 }
