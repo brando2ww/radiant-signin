@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Grid3x3 } from "lucide-react";
+import { Plus, Grid3x3, Map } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { usePDVTables, PDVTable } from "@/hooks/use-pdv-tables";
 import { usePDVOrders } from "@/hooks/use-pdv-orders";
 import { TableCard, SortableTableCard } from "@/components/pdv/TableCard";
@@ -9,6 +10,7 @@ import { TableDialog } from "@/components/pdv/TableDialog";
 import { TableDetailsDialog } from "@/components/pdv/TableDetailsDialog";
 import { OrderDetailsDialog } from "@/components/pdv/OrderDetailsDialog";
 import { SalonFilters } from "@/components/pdv/SalonFilters";
+import { SalonMapView } from "@/components/pdv/salon/SalonMapView";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -60,6 +62,7 @@ export default function PDVSalon() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [orderedTables, setOrderedTables] = useState<PDVTable[]>([]);
+  const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
 
   // Sensors for drag and drop
   const sensors = useSensors(
@@ -156,9 +159,13 @@ export default function PDVSalon() {
     }
   };
 
-  const handleTableClick = (table: any) => {
+  const handleTableClick = (table: PDVTable) => {
     setSelectedTableForDetails(table);
     setTableDetailsOpen(true);
+  };
+
+  const handleMapPositionChange = (id: string, x: number, y: number) => {
+    updateTable({ id, updates: { position_x: x, position_y: y } });
   };
 
   const handleCreateOrder = (tableId: string) => {
@@ -256,10 +263,25 @@ export default function PDVSalon() {
             Gerencie suas mesas e atendimentos
           </p>
         </div>
-        <Button onClick={handleCreateTable}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Mesa
-        </Button>
+        <div className="flex items-center gap-2">
+          <ToggleGroup 
+            type="single" 
+            value={viewMode} 
+            onValueChange={(value) => value && setViewMode(value as "grid" | "map")}
+          >
+            <ToggleGroupItem value="grid" aria-label="Visualização em grid">
+              <Grid3x3 className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="map" aria-label="Visualização em mapa">
+              <Map className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
+          
+          <Button onClick={handleCreateTable}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Mesa
+          </Button>
+        </div>
       </div>
 
       <SalonFilters
@@ -297,6 +319,13 @@ export default function PDVSalon() {
             </div>
           </CardContent>
         </Card>
+      ) : viewMode === "map" ? (
+        <SalonMapView
+          tables={orderedTables}
+          orders={salonOrders}
+          onTableClick={handleTableClick}
+          onPositionChange={handleMapPositionChange}
+        />
       ) : (
         <DndContext
           sensors={sensors}
