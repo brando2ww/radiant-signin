@@ -1,4 +1,4 @@
-import { DollarSign } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,7 +22,7 @@ export function CashierStatus() {
             size="sm" 
             className="flex items-center gap-2 h-10 px-3"
           >
-            <DollarSign className="h-4 w-4" />
+            <span className="text-sm font-semibold">R$</span>
             <span className="hidden sm:inline text-sm font-medium">
               R$ {currentBalance.toFixed(2)}
             </span>
