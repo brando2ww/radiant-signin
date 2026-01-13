@@ -110,17 +110,22 @@ export function TableCard({ table, orderTotal, orderTime, onClick, isDragging, s
   return (
     <Card
       className={cn(
-        "cursor-pointer transition-all p-4 bg-card border-0 shadow-sm relative",
+        "cursor-pointer transition-all p-4 bg-card shadow-sm relative",
         isDragging 
           ? "opacity-50 scale-105 shadow-2xl" 
           : "hover:shadow-lg hover:scale-105"
       )}
+      style={{
+        borderWidth: sectorColor ? '2px' : '0',
+        borderColor: sectorColor || 'transparent',
+        borderStyle: 'solid'
+      }}
       onClick={() => onClick(table)}
     >
-      {/* Sector badge */}
+      {/* Sector badge - pequeno e discreto */}
       {sectorColor && sectorName && (
         <div 
-          className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-medium text-white shadow-sm z-10"
+          className="absolute -top-2 left-3 px-2 py-0.5 rounded text-[9px] font-semibold text-white shadow-sm z-10"
           style={{ backgroundColor: sectorColor }}
         >
           {sectorName}

@@ -221,13 +221,6 @@ export function DraggableMapTable({
           </div>
         </div>
 
-        {/* Sector color indicator */}
-        {sectorColor && (
-          <div 
-            className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3/4 h-1.5 rounded-full shadow-sm"
-            style={{ backgroundColor: sectorColor }}
-          />
-        )}
 
         {/* Capacity label */}
         <span className={cn("text-[10px] font-medium", config.text)}>
