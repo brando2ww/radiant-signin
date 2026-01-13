@@ -5,10 +5,12 @@ import { cn } from "@/lib/utils";
 
 interface DraggableMapTableProps {
   table: PDVTable;
+  mergedTable?: PDVTable | null;
   orderTotal?: number;
   orderTime?: string;
-  onClick: () => void;
+  onClick: (e: React.MouseEvent) => void;
   zoom: number;
+  isSelectedForMerge?: boolean;
 }
 
 const STATUS_CONFIG = {
@@ -81,10 +83,12 @@ function getChairLayout(capacity: number, shape: string) {
 
 export function DraggableMapTable({ 
   table, 
+  mergedTable,
   orderTotal, 
   orderTime, 
   onClick,
-  zoom 
+  zoom,
+  isSelectedForMerge = false
 }: DraggableMapTableProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: table.id,
@@ -93,18 +97,23 @@ export function DraggableMapTable({
 
   const config = STATUS_CONFIG[table.status] || STATUS_CONFIG.livre;
   const scale = zoom / 100;
-  const chairLayout = getChairLayout(table.capacity, table.shape);
+  const isMerged = !!mergedTable;
+  const totalCapacity = isMerged ? table.capacity + mergedTable.capacity : table.capacity;
+  const chairLayout = getChairLayout(totalCapacity, isMerged ? "rectangle" : table.shape);
 
   const style = {
     position: 'absolute' as const,
     left: (table.position_x ?? 0) * scale,
     top: (table.position_y ?? 0) * scale,
     transform: CSS.Translate.toString(transform),
-    zIndex: isDragging ? 1000 : 1,
+    zIndex: isDragging ? 1000 : isSelectedForMerge ? 500 : 1,
     cursor: isDragging ? 'grabbing' : 'grab',
   };
 
   const getTableShape = () => {
+    if (isMerged) {
+      return "rounded-lg w-28 h-14"; // Wider for merged tables
+    }
     switch (table.shape) {
       case "round":
         return "rounded-full w-14 h-14";
@@ -113,6 +122,13 @@ export function DraggableMapTable({
       default:
         return "rounded-lg w-14 h-14";
     }
+  };
+
+  const getTableLabel = () => {
+    if (isMerged) {
+      return `M${table.table_number}+${mergedTable.table_number}`;
+    }
+    return `M${table.table_number}`;
   };
 
   return (
@@ -124,14 +140,20 @@ export function DraggableMapTable({
       onClick={(e) => {
         if (!isDragging) {
           e.stopPropagation();
-          onClick();
+          onClick(e);
         }
       }}
       className={cn(
         "select-none transition-all duration-200",
-        isDragging && "opacity-80 scale-105"
+        isDragging && "opacity-80 scale-105",
+        isSelectedForMerge && "animate-pulse"
       )}
     >
+      {/* Selection ring for merge */}
+      {isSelectedForMerge && (
+        <div className="absolute -inset-2 rounded-xl border-2 border-blue-500 bg-blue-500/10 pointer-events-none" />
+      )}
+      
       <div className="flex flex-col items-center gap-0.5">
         {/* Status dot */}
         <div className="w-full flex justify-end pr-1">
@@ -162,11 +184,12 @@ export function DraggableMapTable({
                 "flex flex-col items-center justify-center border-2 transition-all",
                 getTableShape(),
                 config.table,
-                isDragging && "ring-2 ring-primary shadow-xl"
+                isDragging && "ring-2 ring-primary shadow-xl",
+                isMerged && "border-dashed border-2"
               )}
             >
               <span className={cn("font-bold text-xs", config.text)}>
-                M{table.table_number}
+                {getTableLabel()}
               </span>
               {orderTotal !== undefined && orderTotal > 0 && (
                 <span className={cn("text-[10px] font-medium", config.text)}>
@@ -198,7 +221,7 @@ export function DraggableMapTable({
 
         {/* Capacity label */}
         <span className={cn("text-[10px] font-medium", config.text)}>
-          {table.capacity} lugares
+          {totalCapacity} lugares
         </span>
       </div>
     </div>

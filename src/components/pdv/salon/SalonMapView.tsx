@@ -5,12 +5,14 @@ import { DraggableMapTable } from "./DraggableMapTable";
 import { MapControls } from "./MapControls";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface SalonMapViewProps {
   tables: PDVTable[];
   orders: any[];
   onTableClick: (table: PDVTable) => void;
   onPositionChange: (id: string, x: number, y: number) => void;
+  onMergeTables?: (tableId1: string, tableId2: string) => void;
 }
 
 const MAP_WIDTH = 1200;
@@ -21,13 +23,27 @@ export function SalonMapView({
   tables, 
   orders, 
   onTableClick, 
-  onPositionChange 
+  onPositionChange,
+  onMergeTables 
 }: SalonMapViewProps) {
   const [zoom, setZoom] = useState(100);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [mergeSourceTable, setMergeSourceTable] = useState<PDVTable | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Cancel merge selection on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && mergeSourceTable) {
+        setMergeSourceTable(null);
+        toast.info("Seleção de união cancelada");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mergeSourceTable]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -55,6 +71,43 @@ export function SalonMapView({
     const hours = Math.floor(diffMins / 60);
     const mins = diffMins % 60;
     return `${hours}h${mins > 0 ? ` ${mins}min` : ""}`;
+  };
+
+  const getMergedTable = (tableId: string | null) => {
+    if (!tableId) return null;
+    return tables.find(t => t.id === tableId) || null;
+  };
+
+  const handleTableClickWithMerge = (table: PDVTable, event: React.MouseEvent) => {
+    // If Shift is pressed and onMergeTables is available
+    if (event.shiftKey && onMergeTables) {
+      // Only square tables can be merged
+      if (table.shape !== "square") {
+        toast.error("Apenas mesas quadradas podem ser unidas");
+        return;
+      }
+
+      // Table already merged
+      if (table.merged_with) {
+        toast.error("Esta mesa já está unida a outra");
+        return;
+      }
+
+      if (!mergeSourceTable) {
+        // First table selected
+        setMergeSourceTable(table);
+        toast.info(`Mesa M${table.table_number} selecionada. Shift+Click em outra mesa quadrada para unir.`);
+      } else if (mergeSourceTable.id !== table.id) {
+        // Second table - perform merge
+        onMergeTables(mergeSourceTable.id, table.id);
+        setMergeSourceTable(null);
+      }
+      return;
+    }
+
+    // Normal click - cancel merge selection and open table
+    setMergeSourceTable(null);
+    onTableClick(table);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -198,19 +251,35 @@ export function SalonMapView({
             sensors={sensors}
             onDragEnd={handleDragEnd}
           >
-            {tables.map(table => {
-              const order = getOrderForTable(table.id);
-              return (
-                <DraggableMapTable
-                  key={table.id}
-                  table={table}
-                  orderTotal={order?.total}
-                  orderTime={order ? formatOrderTime(order.created_at) : undefined}
-                  onClick={() => onTableClick(table)}
-                  zoom={zoom}
-                />
-              );
-            })}
+            {tables
+              .filter(table => !table.merged_with || tables.find(t => t.merged_with === table.id))
+              .map(table => {
+                // Skip tables that are merged INTO another (they'll show as part of the primary)
+                const isPrimaryMerged = table.merged_with && tables.some(t => t.id === table.merged_with && t.merged_with === table.id);
+                const mergedTable = getMergedTable(table.merged_with);
+                
+                // If this table has a lower ID and is merged, it's the "secondary" - skip it
+                if (table.merged_with && mergedTable && table.id > mergedTable.id) {
+                  return null;
+                }
+
+                const order = getOrderForTable(table.id);
+                const mergedOrder = mergedTable ? getOrderForTable(mergedTable.id) : null;
+                const combinedTotal = (order?.total || 0) + (mergedOrder?.total || 0);
+
+                return (
+                  <DraggableMapTable
+                    key={table.id}
+                    table={table}
+                    mergedTable={mergedTable}
+                    orderTotal={combinedTotal > 0 ? combinedTotal : order?.total}
+                    orderTime={order ? formatOrderTime(order.created_at) : undefined}
+                    onClick={(e) => handleTableClickWithMerge(table, e)}
+                    zoom={zoom}
+                    isSelectedForMerge={mergeSourceTable?.id === table.id}
+                  />
+                );
+              })}
           </DndContext>
         </div>
         
@@ -223,7 +292,7 @@ export function SalonMapView({
         
         {/* Instructions */}
         <div className="absolute bottom-4 left-4 text-xs text-muted-foreground bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2">
-          <p>Arraste as mesas para posicioná-las • Ctrl + Scroll para zoom • Arraste o fundo para navegar</p>
+          <p>Arraste as mesas para posicioná-las • Shift+Click para unir mesas quadradas • Ctrl + Scroll para zoom</p>
         </div>
       </Card>
     </div>

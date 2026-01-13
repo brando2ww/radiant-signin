@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Grid3x3, Map } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { toast } from "sonner";
 import { usePDVTables, PDVTable } from "@/hooks/use-pdv-tables";
 import { usePDVOrders } from "@/hooks/use-pdv-orders";
 import { TableCard, SortableTableCard } from "@/components/pdv/TableCard";
@@ -40,6 +41,8 @@ export default function PDVSalon() {
     isUpdating,
     deleteTable,
     isDeleting,
+    mergeTables,
+    isMerging,
   } = usePDVTables();
 
   const {
@@ -166,6 +169,25 @@ export default function PDVSalon() {
 
   const handleMapPositionChange = (id: string, x: number, y: number) => {
     updateTable({ id, updates: { position_x: x, position_y: y } });
+  };
+
+  const handleMergeTables = (tableId1: string, tableId2: string) => {
+    const table1 = tables.find(t => t.id === tableId1);
+    const table2 = tables.find(t => t.id === tableId2);
+
+    if (!table1 || !table2) return;
+
+    if (table1.shape !== "square" || table2.shape !== "square") {
+      toast.error("Apenas mesas quadradas podem ser unidas");
+      return;
+    }
+
+    if (table1.merged_with || table2.merged_with) {
+      toast.error("Uma das mesas já está unida a outra");
+      return;
+    }
+
+    mergeTables({ tableId1, tableId2 });
   };
 
   const handleCreateOrder = (tableId: string) => {
@@ -325,6 +347,7 @@ export default function PDVSalon() {
           orders={salonOrders}
           onTableClick={handleTableClick}
           onPositionChange={handleMapPositionChange}
+          onMergeTables={handleMergeTables}
         />
       ) : (
         <DndContext
