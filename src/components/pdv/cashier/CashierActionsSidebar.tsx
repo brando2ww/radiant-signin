@@ -1,4 +1,4 @@
-import { Unlock, Lock, TrendingUp, TrendingDown } from "lucide-react";
+import { Unlock, Lock, TrendingUp, TrendingDown, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface CashierActionsSidebarProps {
@@ -8,6 +8,7 @@ interface CashierActionsSidebarProps {
   onCloseCashier: () => void;
   onAddReinforcement: () => void;
   onAddWithdrawal: () => void;
+  onShowHelp: () => void;
 }
 
 export function CashierActionsSidebar({
@@ -17,6 +18,7 @@ export function CashierActionsSidebar({
   onCloseCashier,
   onAddReinforcement,
   onAddWithdrawal,
+  onShowHelp,
 }: CashierActionsSidebarProps) {
   return (
     <div className="flex flex-col gap-3 h-full">
@@ -72,6 +74,20 @@ export function CashierActionsSidebar({
           </Button>
         </>
       )}
+
+      {/* Botão de Ajuda */}
+      <div className="mt-auto pt-4 border-t">
+        <Button
+          onClick={onShowHelp}
+          variant="ghost"
+          size="sm"
+          className="w-full gap-2 text-muted-foreground hover:text-foreground justify-start"
+        >
+          <HelpCircle className="h-4 w-4" />
+          <span className="text-sm">Atalhos</span>
+          <kbd className="text-[10px] opacity-50 bg-muted px-1.5 py-0.5 rounded ml-auto">F12</kbd>
+        </Button>
+      </div>
     </div>
   );
 }

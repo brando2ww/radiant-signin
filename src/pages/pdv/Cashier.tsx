@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CashierHeader } from "@/components/pdv/cashier/CashierHeader";
 import { CashierActionsSidebar } from "@/components/pdv/cashier/CashierActionsSidebar";
 import { CashierSummaryFooter } from "@/components/pdv/cashier/CashierSummaryFooter";
+import { KeyboardShortcutsDialog } from "@/components/pdv/cashier/KeyboardShortcutsDialog";
 
 export default function PDVCashier() {
   const {
@@ -28,6 +29,7 @@ export default function PDVCashier() {
   const [closeDialog, setCloseDialog] = useState(false);
   const [movementDialog, setMovementDialog] = useState(false);
   const [movementType, setMovementType] = useState<"sangria" | "reforco">("reforco");
+  const [shortcutsDialog, setShortcutsDialog] = useState(false);
 
   const handleOpenCashier = (openingBalance: number) => {
     openCashier({ openingBalance });
@@ -80,8 +82,12 @@ export default function PDVCashier() {
         return;
       }
 
-      // Ignorar se algum dialog estiver aberto
+      // Ignorar se algum dialog estiver aberto (exceto F12 que pode fechar o shortcuts dialog)
       if (openDialog || closeDialog || movementDialog) {
+        if (e.key === "F12") {
+          e.preventDefault();
+          setShortcutsDialog(false);
+        }
         return;
       }
 
@@ -106,12 +112,16 @@ export default function PDVCashier() {
           e.preventDefault();
           if (activeSession) setCloseDialog(true);
           break;
+        case "F12":
+          e.preventDefault();
+          setShortcutsDialog(prev => !prev);
+          break;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeSession, openDialog, closeDialog, movementDialog, isOpeningCashier, isClosingCashier, isAddingMovement]);
+  }, [activeSession, openDialog, closeDialog, movementDialog, shortcutsDialog, isOpeningCashier, isClosingCashier, isAddingMovement]);
 
   if (isLoading) {
     return (
@@ -177,6 +187,7 @@ export default function PDVCashier() {
               onCloseCashier={() => setCloseDialog(true)}
               onAddReinforcement={() => handleOpenMovementDialog("reforco")}
               onAddWithdrawal={() => handleOpenMovementDialog("sangria")}
+              onShowHelp={() => setShortcutsDialog(true)}
             />
           </CardContent>
         </Card>
@@ -217,6 +228,11 @@ export default function PDVCashier() {
         onAddMovement={handleAddMovement}
         isAdding={isAddingMovement}
         defaultType={movementType}
+      />
+
+      <KeyboardShortcutsDialog
+        open={shortcutsDialog}
+        onOpenChange={setShortcutsDialog}
       />
     </div>
   );
