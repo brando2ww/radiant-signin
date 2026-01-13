@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ interface CashMovementDialogProps {
   onOpenChange: (open: boolean) => void;
   onAddMovement: (type: "sangria" | "reforco", amount: number, description?: string) => void;
   isAdding: boolean;
+  defaultType?: "sangria" | "reforco";
 }
 
 export function CashMovementDialog({
@@ -25,10 +26,16 @@ export function CashMovementDialog({
   onOpenChange,
   onAddMovement,
   isAdding,
+  defaultType = "sangria",
 }: CashMovementDialogProps) {
-  const [type, setType] = useState<"sangria" | "reforco">("sangria");
+  const [type, setType] = useState<"sangria" | "reforco">(defaultType);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+
+  // Atualizar tipo quando defaultType mudar
+  useEffect(() => {
+    setType(defaultType);
+  }, [defaultType]);
 
   const handleAdd = () => {
     const value = parseFloat(amount);
