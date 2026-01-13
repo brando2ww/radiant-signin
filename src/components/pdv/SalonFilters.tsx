@@ -6,6 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PDVSector } from "@/hooks/use-pdv-sectors";
 
 interface SalonFiltersProps {
   statusFilter: string;
@@ -14,6 +15,9 @@ interface SalonFiltersProps {
   filteredCount: number;
   occupiedCount: number;
   availableCount: number;
+  sectors?: PDVSector[];
+  sectorFilter?: string;
+  onSectorFilterChange?: (value: string) => void;
 }
 
 export function SalonFilters({
@@ -23,6 +27,9 @@ export function SalonFilters({
   filteredCount,
   occupiedCount,
   availableCount,
+  sectors = [],
+  sectorFilter = "all",
+  onSectorFilterChange,
 }: SalonFiltersProps) {
   return (
     <div className="space-y-4">
@@ -39,19 +46,38 @@ export function SalonFilters({
           </Badge>
         </div>
 
-        <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas</SelectItem>
-            <SelectItem value="livre">Livres</SelectItem>
-            <SelectItem value="ocupada">Ocupadas</SelectItem>
-            <SelectItem value="aguardando_pedido">Aguardando Pedido</SelectItem>
-            <SelectItem value="aguardando_cozinha">Na Cozinha</SelectItem>
-            <SelectItem value="pediu_conta">Pediu Conta</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          {onSectorFilterChange && (
+            <Select value={sectorFilter} onValueChange={onSectorFilterChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Setor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os setores</SelectItem>
+                <SelectItem value="none">Sem setor</SelectItem>
+                {sectors.map((sector) => (
+                  <SelectItem key={sector.id} value={sector.id}>
+                    {sector.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas</SelectItem>
+              <SelectItem value="livre">Livres</SelectItem>
+              <SelectItem value="ocupada">Ocupadas</SelectItem>
+              <SelectItem value="aguardando_pedido">Aguardando Pedido</SelectItem>
+              <SelectItem value="aguardando_cozinha">Na Cozinha</SelectItem>
+              <SelectItem value="pediu_conta">Pediu Conta</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </div>
   );

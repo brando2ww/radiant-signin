@@ -22,6 +22,7 @@ export interface PDVTable {
   shape: string;
   current_order_id: string | null;
   merged_with: string | null;
+  sector_id: string | null;
   created_at: string;
   updated_at: string;
 }
