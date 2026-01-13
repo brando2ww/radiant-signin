@@ -81,11 +81,32 @@ export function usePDVTables() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
+    onMutate: async ({ id, updates }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ["pdv-tables", user?.id] });
+      
+      // Snapshot previous value for rollback
+      const previousTables = queryClient.getQueryData<PDVTable[]>(["pdv-tables", user?.id]);
+      
+      // Optimistically update the cache
+      queryClient.setQueryData<PDVTable[]>(
+        ["pdv-tables", user?.id],
+        (old) => old?.map(table => 
+          table.id === id ? { ...table, ...updates } : table
+        ) ?? []
+      );
+      
+      return { previousTables };
     },
-    onError: (error: any) => {
+    onError: (error: any, _variables, context) => {
+      // Rollback on error
+      if (context?.previousTables) {
+        queryClient.setQueryData(["pdv-tables", user?.id], context.previousTables);
+      }
       toast.error("Erro ao atualizar mesa: " + error.message);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
     },
   });
 
