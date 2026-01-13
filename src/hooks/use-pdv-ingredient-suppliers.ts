@@ -205,51 +205,50 @@ export function usePDVIngredientSuppliers(ingredientId?: string) {
 }
 
 // Hook to get all ingredients with their suppliers count
+interface IngredientWithSuppliers {
+  id: string;
+  name: string;
+  unit: string;
+  current_stock: number | null;
+  min_stock: number | null;
+  suppliersCount: number;
+}
+
 export function useIngredientsWithSuppliers() {
   const { user } = useAuth();
 
   return useQuery({
     queryKey: ['pdv-ingredients-with-suppliers', user?.id],
-    queryFn: async () => {
+    queryFn: async (): Promise<IngredientWithSuppliers[]> => {
       if (!user) return [];
 
       const { data: ingredients, error: ingredientsError } = await supabase
-        .from('pdv_ingredients')
+        .from('pdv_ingredients' as 'pdv_ingredients')
         .select('id, name, unit, current_stock, min_stock')
         .eq('user_id', user.id)
         .eq('is_active', true)
-        .order('name');
-
+        .order('name') as unknown as { data: { id: string; name: string; unit: string; current_stock: number | null; min_stock: number | null }[] | null; error: Error | null };
+      
       if (ingredientsError) throw ingredientsError;
 
       const { data: links, error: linksError } = await supabase
-        .from('pdv_ingredient_suppliers')
+        .from('pdv_ingredient_suppliers' as 'pdv_ingredient_suppliers')
         .select('ingredient_id, supplier_id')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id) as unknown as { data: { ingredient_id: string; supplier_id: string }[] | null; error: Error | null };
 
       if (linksError) throw linksError;
 
-      // Count suppliers per ingredient
       const supplierCounts: Record<string, number> = {};
-      (links || []).forEach((link) => {
+      links.forEach((link) => {
         supplierCounts[link.ingredient_id] = (supplierCounts[link.ingredient_id] || 0) + 1;
       });
 
-      return (ingredients || []).map((ingredient) => ({
-        ...ingredient,
-        suppliersCount: supplierCounts[ingredient.id] || 0,
-      }));
-    },
-    enabled: !!user,
-  });
-}
-      const supplierCounts = links.reduce((acc, link) => {
-        acc[link.ingredient_id] = (acc[link.ingredient_id] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
       return ingredients.map((ingredient) => ({
-        ...ingredient,
+        id: ingredient.id,
+        name: ingredient.name,
+        unit: ingredient.unit,
+        current_stock: ingredient.current_stock,
+        min_stock: ingredient.min_stock,
         suppliersCount: supplierCounts[ingredient.id] || 0,
       }));
     },
