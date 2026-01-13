@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus } from "lucide-react";
-import { SectorQuickDialog } from "./SectorQuickDialog";
+import { SectorDialog } from "./SectorDialog";
 
 interface TableDialogProps {
   open: boolean;
@@ -38,7 +38,7 @@ interface TableDialogProps {
   onSubmit: (data: any) => void;
   isSubmitting: boolean;
   sectors?: PDVSector[];
-  onCreateSector?: (name: string) => Promise<any>;
+  onCreateSector?: (data: { name: string; color?: string }) => Promise<any>;
   isCreatingSector?: boolean;
 }
 
@@ -93,9 +93,9 @@ export function TableDialog({
     form.reset();
   });
 
-  const handleCreateSector = async (name: string) => {
+  const handleCreateSector = async (data: { name: string; color: string }) => {
     if (onCreateSector) {
-      const newSector = await onCreateSector(name);
+      const newSector = await onCreateSector(data);
       if (newSector) {
         form.setValue("sector_id", newSector.id);
       }
@@ -246,7 +246,7 @@ export function TableDialog({
       </Dialog>
 
       {onCreateSector && (
-        <SectorQuickDialog
+        <SectorDialog
           open={sectorDialogOpen}
           onOpenChange={setSectorDialogOpen}
           onSubmit={handleCreateSector}

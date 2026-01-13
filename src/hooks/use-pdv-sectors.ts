@@ -7,6 +7,11 @@ export interface PDVSector {
   id: string;
   user_id: string;
   name: string;
+  color: string;
+  position_x: number;
+  position_y: number;
+  width: number;
+  height: number;
   is_active: boolean;
   created_at: string;
 }
@@ -34,17 +39,25 @@ export function usePDVSectors() {
   });
 
   const createSector = useMutation({
-    mutationFn: async (name: string) => {
+    mutationFn: async (data: { name: string; color?: string; position_x?: number; position_y?: number; width?: number; height?: number }) => {
       if (!user) throw new Error("Usuário não autenticado");
 
-      const { data, error } = await supabase
+      const { data: result, error } = await supabase
         .from("pdv_sectors")
-        .insert({ name, user_id: user.id })
+        .insert({ 
+          name: data.name, 
+          color: data.color || '#6366f1',
+          position_x: data.position_x ?? 0,
+          position_y: data.position_y ?? 0,
+          width: data.width ?? 300,
+          height: data.height ?? 200,
+          user_id: user.id 
+        })
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return result;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pdv-sectors"] });
@@ -56,12 +69,12 @@ export function usePDVSectors() {
   });
 
   const updateSector = useMutation({
-    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<Omit<PDVSector, 'id' | 'user_id' | 'created_at'>> }) => {
       if (!user) throw new Error("Usuário não autenticado");
 
       const { error } = await supabase
         .from("pdv_sectors")
-        .update({ name })
+        .update(updates)
         .eq("id", id)
         .eq("user_id", user.id);
 
@@ -69,7 +82,6 @@ export function usePDVSectors() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pdv-sectors"] });
-      toast.success("Setor atualizado com sucesso");
     },
     onError: (error: any) => {
       toast.error("Erro ao atualizar setor: " + error.message);
