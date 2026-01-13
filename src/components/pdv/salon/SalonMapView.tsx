@@ -27,7 +27,6 @@ export function SalonMapView({
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const sensors = useSensors(
@@ -60,7 +59,6 @@ export function SalonMapView({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, delta } = event;
-    setActiveDragId(null);
     
     if (!delta.x && !delta.y) return;
 
@@ -79,10 +77,6 @@ export function SalonMapView({
     newY = Math.max(0, Math.min(newY, MAP_HEIGHT - 100));
     
     onPositionChange(active.id as string, newX, newY);
-  };
-
-  const handleDragStart = (event: any) => {
-    setActiveDragId(event.active.id);
   };
 
   // Handle panning
@@ -154,8 +148,6 @@ export function SalonMapView({
     });
   };
 
-  const activeTable = activeDragId ? tables.find(t => t.id === activeDragId) : null;
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">
@@ -204,7 +196,6 @@ export function SalonMapView({
         >
           <DndContext
             sensors={sensors}
-            onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
             {tables.map(table => {
@@ -220,14 +211,6 @@ export function SalonMapView({
                 />
               );
             })}
-            
-            <DragOverlay>
-              {activeTable && (
-                <div className="opacity-50">
-                  <Card className="w-24 h-24 bg-primary/20 border-2 border-primary" />
-                </div>
-              )}
-            </DragOverlay>
           </DndContext>
         </div>
         
