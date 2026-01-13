@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Receipt, ClipboardList } from "lucide-react";
+import { Plus, Receipt, ClipboardList, ChevronUp, ChevronDown } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { StandaloneComandaCard } from "./StandaloneComandaCard";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface Comanda {
   id: string;
@@ -25,6 +27,7 @@ export function StandaloneComandasBar({
   onComandaClick,
   onCreateComanda,
 }: StandaloneComandasBarProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const comandaCount = comandas.length;
 
   return (
@@ -47,46 +50,95 @@ export function StandaloneComandasBar({
           </div>
         </div>
 
-        <Button
-          size="sm"
-          onClick={onCreateComanda}
-        >
-          <Plus className="h-4 w-4 mr-1" />
-          Nova Comanda
-        </Button>
+        <div className="flex items-center gap-2">
+          {comandaCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="gap-1"
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronDown className="h-4 w-4" />
+                  Recolher
+                </>
+              ) : (
+                <>
+                  <ChevronUp className="h-4 w-4" />
+                  Expandir
+                </>
+              )}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            onClick={onCreateComanda}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Nova Comanda
+          </Button>
+        </div>
       </div>
 
       {/* Content */}
-      <div className="px-4 py-3">
+      <motion.div
+        className="px-4 py-3 overflow-hidden"
+        animate={{ height: isExpanded ? "40vh" : "auto" }}
+        transition={{ duration: 0.3, ease: "easeInOut" }}
+      >
         <AnimatePresence mode="wait">
           {comandaCount > 0 ? (
-            <motion.div
-              key="comandas-list"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <ScrollArea className="w-full">
-                <div className="flex gap-3 pb-2">
-                  {comandas.map((comanda, index) => (
-                    <StandaloneComandaCard
-                      key={comanda.id}
-                      comanda={comanda}
-                      onClick={onComandaClick}
-                      index={index}
-                    />
-                  ))}
-                </div>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
-            </motion.div>
+            isExpanded ? (
+              <motion.div
+                key="comandas-grid"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="h-full"
+              >
+                <ScrollArea className="h-[calc(40vh-1.5rem)]">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 pr-4">
+                    {comandas.map((comanda, index) => (
+                      <StandaloneComandaCard
+                        key={comanda.id}
+                        comanda={comanda}
+                        onClick={onComandaClick}
+                        index={index}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="comandas-list"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <ScrollArea className="w-full">
+                  <div className="flex gap-3 pb-2">
+                    {comandas.map((comanda, index) => (
+                      <StandaloneComandaCard
+                        key={comanda.id}
+                        comanda={comanda}
+                        onClick={onComandaClick}
+                        index={index}
+                      />
+                    ))}
+                  </div>
+                  <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+              </motion.div>
+            )
           ) : (
             <motion.div
               key="empty-state"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex flex-col items-center justify-center py-4 text-center"
+              className="flex flex-col items-center justify-center py-6 text-center"
             >
               <div className="flex items-center justify-center w-14 h-14 rounded-full bg-muted mb-3">
                 <ClipboardList className="h-7 w-7 text-muted-foreground" />
@@ -100,7 +152,7 @@ export function StandaloneComandasBar({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </div>
   );
 }
