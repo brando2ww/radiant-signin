@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Settings as SettingsIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GeneralTab } from "@/components/pdv/settings/GeneralTab";
+import { VisualTab } from "@/components/pdv/settings/VisualTab";
 import { FinancialTab } from "@/components/pdv/settings/FinancialTab";
 import { OrdersTab } from "@/components/pdv/settings/OrdersTab";
 import { NotificationsTab } from "@/components/pdv/settings/NotificationsTab";
@@ -46,8 +47,9 @@ export default function PDVSettings() {
       </div>
 
       <Tabs defaultValue="general" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-6">
           <TabsTrigger value="general">Geral</TabsTrigger>
+          <TabsTrigger value="visual">Visual</TabsTrigger>
           <TabsTrigger value="financial">Financeiro</TabsTrigger>
           <TabsTrigger value="orders">Pedidos</TabsTrigger>
           <TabsTrigger value="notifications">Notificações</TabsTrigger>
@@ -60,6 +62,10 @@ export default function PDVSettings() {
             onSave={handleSubmit}
             isSubmitting={isUpdating}
           />
+        </TabsContent>
+
+        <TabsContent value="visual">
+          <VisualTab />
         </TabsContent>
 
         <TabsContent value="financial">
