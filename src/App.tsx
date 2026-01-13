@@ -2,33 +2,15 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "next-themes";
 import { PreferencesProvider } from "@/components/PreferencesProvider";
-import { TransactionDialogProvider } from "@/contexts/TransactionDialogContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import Reports from "./pages/Reports";
-import Plans from "./pages/Plans";
-import Calendar from "./pages/Calendar";
-import Tasks from "./pages/Tasks";
-import Goals from "./pages/Goals";
-import Transactions from "./pages/Transactions";
-import CreditCards from "./pages/CreditCards";
-import BankAccounts from "./pages/BankAccounts";
-import WhatsApp from "./pages/WhatsApp";
-import CRM from "./pages/CRM";
-import LeadDetail from "./pages/LeadDetail";
-import Settings from "./pages/Settings";
-import Evaluations from "./pages/Evaluations";
-import PublicEvaluation from "./pages/PublicEvaluation";
-import PublicMenu from "./pages/PublicMenu";
-
 import PDV from "./pages/PDV";
+import PublicMenu from "./pages/PublicMenu";
 import InstallApp from "./pages/InstallApp";
-import Vendas from "./pages/Vendas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,138 +24,22 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
-              <TransactionDialogProvider>
-                <Routes>
-            <Route path="/" element={<Index />} />
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/reports" 
-              element={
-                <ProtectedRoute>
-                  <Reports />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/plans" 
-              element={
-                <ProtectedRoute>
-                  <Plans />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/calendar" 
-              element={
-                <ProtectedRoute>
-                  <Calendar />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/tasks" 
-              element={
-                <ProtectedRoute>
-                  <Tasks />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/goals" 
-              element={
-                <ProtectedRoute>
-                  <Goals />
-                </ProtectedRoute>
-              } 
-            />
-            <Route
-              path="/transactions" 
-              element={
-                <ProtectedRoute>
-                  <Transactions />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/credit-cards" 
-              element={
-                <ProtectedRoute>
-                  <CreditCards />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/bank-accounts" 
-              element={
-                <ProtectedRoute>
-                  <BankAccounts />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/whatsapp" 
-              element={
-                <ProtectedRoute>
-                  <WhatsApp />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/crm" 
-              element={
-                <ProtectedRoute>
-                  <CRM />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/crm/lead/:id" 
-              element={
-                <ProtectedRoute>
-                  <LeadDetail />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/settings" 
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/avaliacoes" 
-              element={
-                <ProtectedRoute>
-                  <Evaluations />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/pdv/*" 
-              element={
-                <ProtectedRoute>
-                  <PDV />
-                </ProtectedRoute>
-              } 
-            />
-            {/* Public routes - no authentication required */}
-            <Route path="/avaliar/:userId" element={<PublicEvaluation />} />
-            <Route path="/cardapio/:userId" element={<PublicMenu />} />
-            <Route path="/instalar-app" element={<InstallApp />} />
-            <Route path="/vendas" element={<Vendas />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </TransactionDialogProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route 
+                  path="/pdv/*" 
+                  element={
+                    <ProtectedRoute>
+                      <PDV />
+                    </ProtectedRoute>
+                  } 
+                />
+                {/* Public routes - no authentication required */}
+                <Route path="/cardapio/:userId" element={<PublicMenu />} />
+                <Route path="/instalar-app" element={<InstallApp />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
             </BrowserRouter>
           </TooltipProvider>
         </PreferencesProvider>
