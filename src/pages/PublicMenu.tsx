@@ -3,7 +3,6 @@ import { PublicMenuHeader } from "@/components/public-menu/PublicMenuHeader";
 import { CategoryNav } from "@/components/public-menu/CategoryNav";
 import { ProductList } from "@/components/public-menu/ProductList";
 import { ShoppingCart } from "@/components/public-menu/ShoppingCart";
-import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { useState, useEffect } from "react";
 import { usePublicCategories, usePublicProducts } from "@/hooks/use-public-menu";
 import { useQuery } from "@tanstack/react-query";
@@ -178,8 +177,6 @@ const PublicMenu = () => {
         onClearCart={clearCart}
         userId={userId}
       />
-
-      <InstallPrompt />
     </div>
   );
 };
