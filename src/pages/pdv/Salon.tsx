@@ -6,16 +6,27 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
 import { usePDVTables, PDVTable } from "@/hooks/use-pdv-tables";
 import { usePDVOrders } from "@/hooks/use-pdv-orders";
-import { usePDVSectors } from "@/hooks/use-pdv-sectors";
+import { usePDVSectors, PDVSector } from "@/hooks/use-pdv-sectors";
 import { TableCard, SortableTableCard } from "@/components/pdv/TableCard";
 import { TableDialog } from "@/components/pdv/TableDialog";
 import { TableDetailsDialog } from "@/components/pdv/TableDetailsDialog";
 import { OrderDetailsDialog } from "@/components/pdv/OrderDetailsDialog";
 import { SalonFilters } from "@/components/pdv/SalonFilters";
 import { SalonMapView } from "@/components/pdv/salon/SalonMapView";
+import { SectorDialog } from "@/components/pdv/SectorDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DndContext,
   closestCenter,
@@ -65,6 +76,10 @@ export default function PDVSalon() {
     isLoading: isLoadingSectors,
     createSector,
     isCreating: isCreatingSector,
+    updateSector,
+    isUpdating: isUpdatingSector,
+    deleteSector,
+    isDeleting: isDeletingSector,
   } = usePDVSectors();
 
   const [tableDialog, setTableDialog] = useState(false);
@@ -77,6 +92,11 @@ export default function PDVSalon() {
   const [sectorFilter, setSectorFilter] = useState("all");
   const [orderedTables, setOrderedTables] = useState<PDVTable[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
+  
+  // Sector dialog state
+  const [sectorDialogOpen, setSectorDialogOpen] = useState(false);
+  const [selectedSectorForEdit, setSelectedSectorForEdit] = useState<PDVSector | null>(null);
+  const [sectorToDelete, setSectorToDelete] = useState<string | null>(null);
 
   // Sensors for drag and drop
   const sensors = useSensors(
@@ -278,6 +298,48 @@ export default function PDVSalon() {
     );
   };
 
+  // Sector handlers
+  const handleOpenSectorDialog = () => {
+    setSelectedSectorForEdit(null);
+    setSectorDialogOpen(true);
+  };
+
+  const handleEditSector = (sector: PDVSector) => {
+    setSelectedSectorForEdit(sector);
+    setSectorDialogOpen(true);
+  };
+
+  const handleSubmitSector = async (data: { name: string; color: string }) => {
+    if (selectedSectorForEdit) {
+      await updateSector({ 
+        id: selectedSectorForEdit.id, 
+        updates: { name: data.name, color: data.color } 
+      });
+      toast.success("Setor atualizado com sucesso");
+    } else {
+      await createSector(data);
+    }
+  };
+
+  const handleSectorDrag = (id: string, x: number, y: number) => {
+    updateSector({ id, updates: { position_x: x, position_y: y } });
+  };
+
+  const handleSectorResize = (id: string, width: number, height: number) => {
+    updateSector({ id, updates: { width, height } });
+  };
+
+  const handleDeleteSector = (id: string) => {
+    setSectorToDelete(id);
+  };
+
+  const confirmDeleteSector = () => {
+    if (sectorToDelete) {
+      deleteSector(sectorToDelete);
+      setSectorToDelete(null);
+    }
+  };
+
   if (isLoadingTables || isLoadingOrders || isLoadingSectors) {
     return (
       <div className="w-full px-4 md:px-6 lg:px-8 py-6 space-y-6">
@@ -366,9 +428,15 @@ export default function PDVSalon() {
         <SalonMapView
           tables={orderedTables}
           orders={salonOrders}
+          sectors={sectors}
           onTableClick={handleTableClick}
           onPositionChange={handleMapPositionChange}
           onMergeTables={handleMergeTables}
+          onSectorDrag={handleSectorDrag}
+          onSectorResize={handleSectorResize}
+          onSectorEdit={handleEditSector}
+          onSectorDelete={handleDeleteSector}
+          onCreateSector={handleOpenSectorDialog}
         />
       ) : (
         <DndContext
@@ -383,6 +451,7 @@ export default function PDVSalon() {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-6">
               {orderedTables.map((table) => {
                 const order = getTableOrder(table.id);
+                const sector = sectors.find(s => s.id === table.sector_id);
                 return (
                   <SortableTableCard
                     key={table.id}
@@ -394,6 +463,8 @@ export default function PDVSalon() {
                         : undefined
                     }
                     onClick={handleTableClick}
+                    sectorColor={sector?.color}
+                    sectorName={sector?.name}
                   />
                 );
               })}
@@ -454,6 +525,31 @@ export default function PDVSalon() {
         onClose={handleCloseOrder}
         onCancel={handleCancelOrder}
       />
+
+      <SectorDialog
+        open={sectorDialogOpen}
+        onOpenChange={setSectorDialogOpen}
+        onSubmit={handleSubmitSector}
+        isSubmitting={isCreatingSector || isUpdatingSector}
+        sector={selectedSectorForEdit}
+      />
+
+      <AlertDialog open={!!sectorToDelete} onOpenChange={() => setSectorToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Setor</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir este setor? As mesas associadas não serão excluídas, apenas desvinculadas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeleteSector}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

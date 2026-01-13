@@ -201,7 +201,7 @@ export function IngredientDialog({
   };
 
   const handleCreateSector = async (name: string) => {
-    await createSector(name);
+    await createSector({ name });
     form.setValue("sector", name);
   };
 

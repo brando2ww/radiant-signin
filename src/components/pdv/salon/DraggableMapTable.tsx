@@ -11,6 +11,7 @@ interface DraggableMapTableProps {
   onClick: (e: React.MouseEvent) => void;
   zoom: number;
   isSelectedForMerge?: boolean;
+  sectorColor?: string;
 }
 
 const STATUS_CONFIG = {
@@ -88,7 +89,8 @@ export function DraggableMapTable({
   orderTime, 
   onClick,
   zoom,
-  isSelectedForMerge = false
+  isSelectedForMerge = false,
+  sectorColor
 }: DraggableMapTableProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: table.id,
@@ -218,6 +220,14 @@ export function DraggableMapTable({
             ))}
           </div>
         </div>
+
+        {/* Sector color indicator */}
+        {sectorColor && (
+          <div 
+            className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-3/4 h-1.5 rounded-full shadow-sm"
+            style={{ backgroundColor: sectorColor }}
+          />
+        )}
 
         {/* Capacity label */}
         <span className={cn("text-[10px] font-medium", config.text)}>

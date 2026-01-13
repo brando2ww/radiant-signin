@@ -2594,25 +2594,40 @@ export type Database = {
       }
       pdv_sectors: {
         Row: {
+          color: string | null
           created_at: string | null
+          height: number | null
           id: string
           is_active: boolean | null
           name: string
+          position_x: number | null
+          position_y: number | null
           user_id: string
+          width: number | null
         }
         Insert: {
+          color?: string | null
           created_at?: string | null
+          height?: number | null
           id?: string
           is_active?: boolean | null
           name: string
+          position_x?: number | null
+          position_y?: number | null
           user_id: string
+          width?: number | null
         }
         Update: {
+          color?: string | null
           created_at?: string | null
+          height?: number | null
           id?: string
           is_active?: boolean | null
           name?: string
+          position_x?: number | null
+          position_y?: number | null
           user_id?: string
+          width?: number | null
         }
         Relationships: []
       }
