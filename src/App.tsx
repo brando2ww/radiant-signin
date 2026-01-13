@@ -10,7 +10,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import PDV from "./pages/PDV";
 import PublicMenu from "./pages/PublicMenu";
-import InstallApp from "./pages/InstallApp";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,7 +35,6 @@ const App = () => (
                 />
                 {/* Public routes - no authentication required */}
                 <Route path="/cardapio/:userId" element={<PublicMenu />} />
-                <Route path="/instalar-app" element={<InstallApp />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
