@@ -125,20 +125,23 @@ export function useSettings() {
         const newSettings = { ...settings, ...updates };
         setSettings(newSettings);
 
-        const { error } = await supabase.from("user_settings").upsert({
-          user_id: user.id,
-          language: newSettings.general.language,
-          date_format: newSettings.general.date_format,
-          time_format: newSettings.general.time_format,
-          timezone: newSettings.general.timezone,
-          currency: newSettings.general.currency,
-          theme: newSettings.general.theme,
-          density: newSettings.general.density,
-          sidebar_expanded: newSettings.general.sidebar_expanded,
-          notifications: newSettings.notifications,
-          financial_settings: newSettings.financial,
-          security_settings: newSettings.security,
-        });
+        const { error } = await supabase.from("user_settings").upsert(
+          {
+            user_id: user.id,
+            language: newSettings.general.language,
+            date_format: newSettings.general.date_format,
+            time_format: newSettings.general.time_format,
+            timezone: newSettings.general.timezone,
+            currency: newSettings.general.currency,
+            theme: newSettings.general.theme,
+            density: newSettings.general.density,
+            sidebar_expanded: newSettings.general.sidebar_expanded,
+            notifications: newSettings.notifications,
+            financial_settings: newSettings.financial,
+            security_settings: newSettings.security,
+          },
+          { onConflict: 'user_id' }
+        );
 
         if (error) throw error;
 
