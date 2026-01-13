@@ -194,8 +194,8 @@ export function TableDialog({
                       <FormLabel>Setor</FormLabel>
                       <div className="flex gap-2">
                         <Select
-                          onValueChange={field.onChange}
-                          value={field.value || ""}
+                          onValueChange={(value) => field.onChange(value === "none" ? "" : value)}
+                          value={field.value || "none"}
                         >
                           <FormControl>
                             <SelectTrigger className="flex-1">
@@ -203,8 +203,8 @@ export function TableDialog({
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Sem setor</SelectItem>
-                            {sectors.map((sector) => (
+                            <SelectItem value="none">Sem setor</SelectItem>
+                            {sectors.filter(s => s.id && s.id.trim() !== "").map((sector) => (
                               <SelectItem key={sector.id} value={sector.id}>
                                 {sector.name}
                               </SelectItem>
