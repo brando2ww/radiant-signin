@@ -1,10 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Grid3x3 } from "lucide-react";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { usePDVOrders } from "@/hooks/use-pdv-orders";
-import { TableCard } from "@/components/pdv/TableCard";
+import { TableCard, SortableTableCard } from "@/components/pdv/TableCard";
 import { TableDialog } from "@/components/pdv/TableDialog";
 import { TableDetailsDialog } from "@/components/pdv/TableDetailsDialog";
 import { OrderDetailsDialog } from "@/components/pdv/OrderDetailsDialog";
@@ -12,6 +12,21 @@ import { SalonFilters } from "@/components/pdv/SalonFilters";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
 
 export default function PDVSalon() {
   const {
@@ -44,6 +59,19 @@ export default function PDVSalon() {
   const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [orderedTables, setOrderedTables] = useState<typeof tables>([]);
+
+  // Sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Filtrar pedidos do salão
   const salonOrders = useMemo(() => {
@@ -64,6 +92,34 @@ export default function PDVSalon() {
       return table.status === statusFilter;
     });
   }, [tables, statusFilter]);
+
+  // Sync ordered tables with filtered tables
+  useEffect(() => {
+    setOrderedTables(filteredTables);
+  }, [filteredTables]);
+
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = orderedTables.findIndex((t) => t.id === active.id);
+      const newIndex = orderedTables.findIndex((t) => t.id === over.id);
+
+      const newOrder = arrayMove(orderedTables, oldIndex, newIndex);
+      setOrderedTables(newOrder);
+
+      // Persist positions to database
+      newOrder.forEach((table, index) => {
+        if (table.position_x !== index) {
+          updateTable({
+            id: table.id,
+            updates: { position_x: index },
+          });
+        }
+      });
+    }
+  };
 
   const getTableOrder = (tableId: string) => {
     return salonOrders.find(
@@ -242,24 +298,35 @@ export default function PDVSalon() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-6">
-          {filteredTables.map((table) => {
-            const order = getTableOrder(table.id);
-            return (
-              <TableCard
-                key={table.id}
-                table={table}
-                orderTotal={order?.total}
-                orderTime={
-                  order
-                    ? format(parseISO(order.opened_at), "HH:mm", { locale: ptBR })
-                    : undefined
-                }
-                onClick={handleTableClick}
-              />
-            );
-          })}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={orderedTables.map((t) => t.id)}
+            strategy={rectSortingStrategy}
+          >
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-6">
+              {orderedTables.map((table) => {
+                const order = getTableOrder(table.id);
+                return (
+                  <SortableTableCard
+                    key={table.id}
+                    table={table}
+                    orderTotal={order?.total}
+                    orderTime={
+                      order
+                        ? format(parseISO(order.opened_at), "HH:mm", { locale: ptBR })
+                        : undefined
+                    }
+                    onClick={handleTableClick}
+                  />
+                );
+              })}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       <TableDialog
