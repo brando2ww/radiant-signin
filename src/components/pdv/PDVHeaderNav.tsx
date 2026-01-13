@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
+import { useState } from "react";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -33,8 +34,25 @@ import {
   Tag,
   Palette,
   Store,
+  Megaphone,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+
+interface Announcement {
+  id: string;
+  title: string;
+  message: string;
+  date: string;
+}
+
+const announcements: Announcement[] = [
+  {
+    id: "1",
+    title: "Bem-vindo ao Velara PDV!",
+    message: "Configure suas mesas e produtos para começar.",
+    date: "13/01/2026",
+  },
+];
 
 interface NavItem {
   title: string;
@@ -104,6 +122,40 @@ const sectionItems: Section[] = [
 export function PDVHeaderNav() {
   const location = useLocation();
   const pathname = location.pathname;
+  const [dismissedAnnouncements, setDismissedAnnouncements] = useState<string[]>([]);
+
+  const visibleAnnouncements = announcements.filter(
+    (a) => !dismissedAnnouncements.includes(a.id)
+  );
+
+  const renderNavLinks = (items: NavItem[]) => (
+    <ul className="grid gap-1 p-2 md:grid-cols-2">
+      {items.map((item) => {
+        const ItemIcon = item.icon;
+        const isActive = pathname === item.url;
+
+        return (
+          <li key={item.url}>
+            <NavigationMenuLink asChild>
+              <NavLink
+                to={item.url}
+                className={cn(
+                  "flex items-center gap-3 select-none rounded-md p-3",
+                  "text-sm leading-none no-underline outline-none transition-colors",
+                  "hover:bg-accent hover:text-accent-foreground",
+                  "focus:bg-accent focus:text-accent-foreground",
+                  isActive && "bg-accent text-accent-foreground font-medium"
+                )}
+              >
+                <ItemIcon className="h-4 w-4 shrink-0" />
+                <span>{item.title}</span>
+              </NavLink>
+            </NavigationMenuLink>
+          </li>
+        );
+      })}
+    </ul>
+  );
 
   return (
     <NavigationMenu>
@@ -113,6 +165,7 @@ export function PDVHeaderNav() {
             (item) => pathname === item.url || pathname.startsWith(item.url + "/")
           );
           const SectionIcon = section.icon;
+          const isAdminSection = section.title === "Administrador";
 
           return (
             <NavigationMenuItem key={section.title}>
@@ -126,32 +179,41 @@ export function PDVHeaderNav() {
                 <span className="hidden lg:inline">{section.title}</span>
               </NavigationMenuTrigger>
               <NavigationMenuContent>
-                <ul className="grid w-[280px] gap-1 p-2 md:w-[400px] md:grid-cols-2">
-                  {section.items.map((item) => {
-                    const ItemIcon = item.icon;
-                    const isActive = pathname === item.url;
-
-                    return (
-                      <li key={item.url}>
-                        <NavigationMenuLink asChild>
-                          <NavLink
-                            to={item.url}
-                            className={cn(
-                              "flex items-center gap-3 select-none rounded-md p-3",
-                              "text-sm leading-none no-underline outline-none transition-colors",
-                              "hover:bg-accent hover:text-accent-foreground",
-                              "focus:bg-accent focus:text-accent-foreground",
-                              isActive && "bg-accent text-accent-foreground font-medium"
-                            )}
+                {isAdminSection && visibleAnnouncements.length > 0 ? (
+                  <div className="flex w-[280px] md:w-[550px]">
+                    {/* Coluna Esquerda - Comunicados */}
+                    <div className="w-[180px] border-r border-border p-3 bg-primary/5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Megaphone className="h-4 w-4 text-primary" />
+                        <span className="font-medium text-sm">Comunicados</span>
+                      </div>
+                      <div className="space-y-2">
+                        {visibleAnnouncements.map((announcement) => (
+                          <div
+                            key={announcement.id}
+                            className="rounded-md bg-background p-2 text-xs"
                           >
-                            <ItemIcon className="h-4 w-4 shrink-0" />
-                            <span>{item.title}</span>
-                          </NavLink>
-                        </NavigationMenuLink>
-                      </li>
-                    );
-                  })}
-                </ul>
+                            <p className="font-medium text-foreground">{announcement.title}</p>
+                            <p className="text-muted-foreground mt-1">
+                              {announcement.message}
+                            </p>
+                            <span className="text-muted-foreground/70 text-[10px]">
+                              {announcement.date}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    {/* Coluna Direita - Links */}
+                    <div className="flex-1">
+                      {renderNavLinks(section.items)}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-[280px] md:w-[400px]">
+                    {renderNavLinks(section.items)}
+                  </div>
+                )}
               </NavigationMenuContent>
             </NavigationMenuItem>
           );
