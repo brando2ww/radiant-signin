@@ -12,6 +12,7 @@ interface TableCardProps {
   isDragging?: boolean;
   sectorColor?: string;
   sectorName?: string;
+  comandaCount?: number;
 }
 
 const STATUS_CONFIG = {
@@ -100,7 +101,7 @@ function getChairLayout(capacity: number, shape: string = "square") {
   return { top: 2, right: 2, bottom: 2, left: 2 };
 }
 
-export function TableCard({ table, orderTotal, orderTime, onClick, isDragging, sectorColor, sectorName }: TableCardProps) {
+export function TableCard({ table, orderTotal, orderTime, onClick, isDragging, sectorColor, sectorName, comandaCount }: TableCardProps) {
   const statusConfig = STATUS_CONFIG[table.status] || STATUS_CONFIG.livre;
   const shape = (table as any).shape || "square";
   const chairLayout = getChairLayout(table.capacity, shape);
@@ -185,6 +186,11 @@ export function TableCard({ table, orderTotal, orderTime, onClick, isDragging, s
                   {orderTime}
                 </span>
               )}
+              {isOccupied && comandaCount !== undefined && comandaCount > 0 && (
+                <span className={cn("text-[9px] opacity-70", statusConfig.textColor)}>
+                  {comandaCount} cmd
+                </span>
+              )}
             </div>
 
             {/* Right chairs */}
@@ -219,7 +225,7 @@ export function TableCard({ table, orderTotal, orderTime, onClick, isDragging, s
 }
 
 // Sortable wrapper for drag and drop
-export function SortableTableCard(props: TableCardProps) {
+export function SortableTableCard(props: TableCardProps & { comandaCount?: number }) {
   const {
     attributes,
     listeners,
@@ -237,7 +243,7 @@ export function SortableTableCard(props: TableCardProps) {
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <TableCard {...props} isDragging={isDragging} />
+      <TableCard {...props} isDragging={isDragging} comandaCount={props.comandaCount} />
     </div>
   );
 }

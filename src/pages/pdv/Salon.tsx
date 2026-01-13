@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { usePDVTables, PDVTable } from "@/hooks/use-pdv-tables";
 import { usePDVOrders } from "@/hooks/use-pdv-orders";
 import { usePDVSectors, PDVSector } from "@/hooks/use-pdv-sectors";
+import { usePDVComandas, Comanda } from "@/hooks/use-pdv-comandas";
 import { TableCard, SortableTableCard } from "@/components/pdv/TableCard";
 import { TableDialog } from "@/components/pdv/TableDialog";
 import { TableDetailsDialog } from "@/components/pdv/TableDetailsDialog";
@@ -16,6 +17,10 @@ import { SalonFilters } from "@/components/pdv/SalonFilters";
 import { SalonMapView } from "@/components/pdv/salon/SalonMapView";
 import { SectorDialog } from "@/components/pdv/SectorDialog";
 import { TrashDialog } from "@/components/pdv/TrashDialog";
+import { StandaloneComandasBar } from "@/components/pdv/StandaloneComandasBar";
+import { ComandaDialog } from "@/components/pdv/ComandaDialog";
+import { ComandaDetailsDialog } from "@/components/pdv/ComandaDetailsDialog";
+import { ComandaAddItemDialog } from "@/components/pdv/ComandaAddItemDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -94,6 +99,27 @@ export default function PDVSalon() {
     isPermanentDeleting: isPermanentDeletingSector,
   } = usePDVSectors();
 
+  // Comandas hook
+  const {
+    comandas,
+    comandaItems,
+    isLoading: isLoadingComandas,
+    getStandaloneComandas,
+    getItemsByComanda,
+    getComandasByOrder,
+    createComanda,
+    isCreating: isCreatingComanda,
+    updateComanda,
+    closeComanda,
+    cancelComanda,
+    addItem: addComandaItem,
+    isAddingItem: isAddingComandaItem,
+    updateItem: updateComandaItem,
+    removeItem: removeComandaItem,
+    sendToKitchen,
+    transferItem,
+  } = usePDVComandas();
+
   const [tableDialog, setTableDialog] = useState(false);
   const [selectedTable, setSelectedTable] = useState<any>(null);
   const [tableDetailsOpen, setTableDetailsOpen] = useState(false);
@@ -113,6 +139,13 @@ export default function PDVSalon() {
   // Trash dialog state
   const [trashDialogOpen, setTrashDialogOpen] = useState(false);
   const trashCount = deletedTables.length + deletedSectors.length;
+
+  // Comanda dialog states
+  const [comandaDialogOpen, setComandaDialogOpen] = useState(false);
+  const [comandaDetailsOpen, setComandaDetailsOpen] = useState(false);
+  const [selectedComanda, setSelectedComanda] = useState<Comanda | null>(null);
+  const [comandaAddItemOpen, setComandaAddItemOpen] = useState(false);
+  const [comandaForTable, setComandaForTable] = useState<{ orderId: string; tableNumber: number } | null>(null);
 
   // Sensors for drag and drop
   const sensors = useSensors(
@@ -376,7 +409,59 @@ export default function PDVSalon() {
     }
   };
 
-  if (isLoadingTables || isLoadingOrders || isLoadingSectors) {
+  // Comanda handlers
+  const handleOpenStandaloneComandaDialog = () => {
+    setComandaForTable(null);
+    setComandaDialogOpen(true);
+  };
+
+  const handleOpenTableComandaDialog = (orderId: string, tableNumber: number) => {
+    setComandaForTable({ orderId, tableNumber });
+    setComandaDialogOpen(true);
+  };
+
+  const handleComandaClick = (comanda: Comanda) => {
+    setSelectedComanda(comanda);
+    setComandaDetailsOpen(true);
+  };
+
+  const handleCreateComanda = async (data: { customerName?: string; personNumber?: number; notes?: string; orderId?: string | null }) => {
+    await createComanda({
+      customerName: data.customerName,
+      personNumber: data.personNumber,
+      notes: data.notes,
+      orderId: data.orderId,
+    });
+    setComandaDialogOpen(false);
+    setComandaForTable(null);
+  };
+
+  const handleAddComandaItem = async (data: { productId: string; productName: string; quantity: number; unitPrice: number; notes?: string }) => {
+    if (!selectedComanda) return;
+    await addComandaItem({
+      comandaId: selectedComanda.id,
+      productId: data.productId,
+      productName: data.productName,
+      quantity: data.quantity,
+      unitPrice: data.unitPrice,
+      notes: data.notes,
+    });
+    setComandaAddItemOpen(false);
+  };
+
+  const getTableComandas = (orderId: string | null | undefined) => {
+    if (!orderId) return [];
+    return getComandasByOrder(orderId);
+  };
+
+  // Get comanda count for a table
+  const getTableComandaCount = (tableId: string) => {
+    const order = getTableOrder(tableId);
+    if (!order) return 0;
+    return getComandasByOrder(order.id).length;
+  };
+
+  if (isLoadingTables || isLoadingOrders || isLoadingSectors || isLoadingComandas) {
     return (
       <div className="w-full px-4 md:px-6 lg:px-8 py-6 space-y-6">
         <div className="flex items-center justify-between">
@@ -393,140 +478,153 @@ export default function PDVSalon() {
   }
 
   return (
-    <div className="w-full px-4 md:px-6 lg:px-8 py-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Salão</h1>
-          <p className="text-muted-foreground">
-            Gerencie suas mesas e atendimentos
-          </p>
+    <div className="flex flex-col h-[calc(100vh-4rem)]">
+      {/* Main content */}
+      <div className="flex-1 overflow-auto px-4 md:px-6 lg:px-8 py-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Salão</h1>
+            <p className="text-muted-foreground">
+              Gerencie suas mesas e atendimentos
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <ToggleGroup 
+              type="single" 
+              value={viewMode} 
+              onValueChange={(value) => value && setViewMode(value as "grid" | "map")}
+            >
+              <ToggleGroupItem value="grid" aria-label="Visualização em grid">
+                <Grid3x3 className="h-4 w-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="map" aria-label="Visualização em mapa">
+                <Map className="h-4 w-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
+            
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setTrashDialogOpen(true)}
+              className="relative"
+              title="Lixeira"
+            >
+              <Trash2 className="h-4 w-4" />
+              {trashCount > 0 && (
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
+                >
+                  {trashCount}
+                </Badge>
+              )}
+            </Button>
+            
+            <Button onClick={handleCreateTable}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Mesa
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <ToggleGroup 
-            type="single" 
-            value={viewMode} 
-            onValueChange={(value) => value && setViewMode(value as "grid" | "map")}
+
+        <SalonFilters
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          totalTables={tables.length}
+          filteredCount={filteredTables.length}
+          occupiedCount={occupiedCount}
+          availableCount={availableCount}
+          sectors={sectors}
+          sectorFilter={sectorFilter}
+          onSectorFilterChange={setSectorFilter}
+        />
+
+        {filteredTables.length === 0 ? (
+          <Card>
+            <CardContent className="min-h-[400px] flex items-center justify-center">
+              <div className="text-center space-y-4">
+                <Grid3x3 className="h-16 w-16 mx-auto text-muted-foreground" />
+                <div>
+                  <h3 className="text-lg font-medium">
+                    {tables.length === 0
+                      ? "Nenhuma mesa cadastrada"
+                      : "Nenhuma mesa encontrada"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {tables.length === 0
+                      ? "Comece adicionando suas primeiras mesas"
+                      : "Ajuste os filtros para ver outras mesas"}
+                  </p>
+                </div>
+                {tables.length === 0 && (
+                  <Button onClick={handleCreateTable}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar Mesa
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ) : viewMode === "map" ? (
+          <SalonMapView
+            tables={orderedTables}
+            orders={salonOrders}
+            sectors={sectors}
+            onTableClick={handleTableClick}
+            onPositionChange={handleMapPositionChange}
+            onMergeTables={handleMergeTables}
+            onSectorDrag={handleSectorDrag}
+            onSectorResize={handleSectorResize}
+            onSectorEdit={handleEditSector}
+            onSectorDelete={handleDeleteSector}
+            onCreateSector={handleOpenSectorDialog}
+          />
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
           >
-            <ToggleGroupItem value="grid" aria-label="Visualização em grid">
-              <Grid3x3 className="h-4 w-4" />
-            </ToggleGroupItem>
-            <ToggleGroupItem value="map" aria-label="Visualização em mapa">
-              <Map className="h-4 w-4" />
-            </ToggleGroupItem>
-          </ToggleGroup>
-          
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setTrashDialogOpen(true)}
-            className="relative"
-            title="Lixeira"
-          >
-            <Trash2 className="h-4 w-4" />
-            {trashCount > 0 && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-xs"
-              >
-                {trashCount}
-              </Badge>
-            )}
-          </Button>
-          
-          <Button onClick={handleCreateTable}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nova Mesa
-          </Button>
-        </div>
+            <SortableContext
+              items={orderedTables.map((t) => t.id)}
+              strategy={rectSortingStrategy}
+            >
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-6">
+                {orderedTables.map((table) => {
+                  const order = getTableOrder(table.id);
+                  const sector = sectors.find(s => s.id === table.sector_id);
+                  const comandaCount = getTableComandaCount(table.id);
+                  return (
+                    <SortableTableCard
+                      key={table.id}
+                      table={table}
+                      orderTotal={order?.total}
+                      orderTime={
+                        order
+                          ? format(parseISO(order.opened_at), "HH:mm", { locale: ptBR })
+                          : undefined
+                      }
+                      onClick={handleTableClick}
+                      sectorColor={sector?.color}
+                      sectorName={sector?.name}
+                      comandaCount={comandaCount}
+                    />
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
       </div>
 
-      <SalonFilters
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        totalTables={tables.length}
-        filteredCount={filteredTables.length}
-        occupiedCount={occupiedCount}
-        availableCount={availableCount}
-        sectors={sectors}
-        sectorFilter={sectorFilter}
-        onSectorFilterChange={setSectorFilter}
+      {/* Standalone comandas bar - fixed at bottom */}
+      <StandaloneComandasBar
+        comandas={getStandaloneComandas()}
+        onComandaClick={handleComandaClick}
+        onCreateComanda={handleOpenStandaloneComandaDialog}
       />
 
-      {filteredTables.length === 0 ? (
-        <Card>
-          <CardContent className="min-h-[400px] flex items-center justify-center">
-            <div className="text-center space-y-4">
-              <Grid3x3 className="h-16 w-16 mx-auto text-muted-foreground" />
-              <div>
-                <h3 className="text-lg font-medium">
-                  {tables.length === 0
-                    ? "Nenhuma mesa cadastrada"
-                    : "Nenhuma mesa encontrada"}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {tables.length === 0
-                    ? "Comece adicionando suas primeiras mesas"
-                    : "Ajuste os filtros para ver outras mesas"}
-                </p>
-              </div>
-              {tables.length === 0 && (
-                <Button onClick={handleCreateTable}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar Mesa
-                </Button>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ) : viewMode === "map" ? (
-        <SalonMapView
-          tables={orderedTables}
-          orders={salonOrders}
-          sectors={sectors}
-          onTableClick={handleTableClick}
-          onPositionChange={handleMapPositionChange}
-          onMergeTables={handleMergeTables}
-          onSectorDrag={handleSectorDrag}
-          onSectorResize={handleSectorResize}
-          onSectorEdit={handleEditSector}
-          onSectorDelete={handleDeleteSector}
-          onCreateSector={handleOpenSectorDialog}
-        />
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={orderedTables.map((t) => t.id)}
-            strategy={rectSortingStrategy}
-          >
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-6">
-              {orderedTables.map((table) => {
-                const order = getTableOrder(table.id);
-                const sector = sectors.find(s => s.id === table.sector_id);
-                return (
-                  <SortableTableCard
-                    key={table.id}
-                    table={table}
-                    orderTotal={order?.total}
-                    orderTime={
-                      order
-                        ? format(parseISO(order.opened_at), "HH:mm", { locale: ptBR })
-                        : undefined
-                    }
-                    onClick={handleTableClick}
-                    sectorColor={sector?.color}
-                    sectorName={sector?.name}
-                  />
-                );
-              })}
-            </div>
-          </SortableContext>
-        </DndContext>
-      )}
-
+      {/* Table Dialog */}
       <TableDialog
         open={tableDialog}
         onOpenChange={setTableDialog}
@@ -538,6 +636,7 @@ export default function PDVSalon() {
         isCreatingSector={isCreatingSector}
       />
 
+      {/* Table Details Dialog with Comandas */}
       <TableDetailsDialog
         open={tableDetailsOpen}
         onOpenChange={setTableDetailsOpen}
@@ -566,8 +665,20 @@ export default function PDVSalon() {
         onEditTable={handleEditTable}
         onDeleteTable={deleteTable}
         onUnmergeTables={handleUnmergeTables}
+        tableComandas={selectedTableForDetails ? getTableComandas(selectedTableForDetails.current_order_id) : []}
+        onCreateComanda={
+          selectedTableForDetails?.current_order_id
+            ? () => handleOpenTableComandaDialog(
+                selectedTableForDetails.current_order_id!,
+                selectedTableForDetails.table_number
+              )
+            : undefined
+        }
+        onViewComanda={handleComandaClick}
+        isCreatingComanda={isCreatingComanda}
       />
 
+      {/* Order Details Dialog */}
       <OrderDetailsDialog
         open={orderDetailsOpen}
         onOpenChange={setOrderDetailsOpen}
@@ -580,6 +691,7 @@ export default function PDVSalon() {
         onCancel={handleCancelOrder}
       />
 
+      {/* Sector Dialog */}
       <SectorDialog
         open={sectorDialogOpen}
         onOpenChange={setSectorDialogOpen}
@@ -588,6 +700,7 @@ export default function PDVSalon() {
         sector={selectedSectorForEdit}
       />
 
+      {/* Delete Sector Confirmation */}
       <AlertDialog open={!!sectorToDelete} onOpenChange={() => setSectorToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -606,6 +719,7 @@ export default function PDVSalon() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Trash Dialog */}
       <TrashDialog
         open={trashDialogOpen}
         onOpenChange={setTrashDialogOpen}
@@ -617,6 +731,38 @@ export default function PDVSalon() {
         onPermanentDeleteSector={permanentDeleteSector}
         isRestoring={isRestoringTable || isRestoringSector}
         isDeleting={isPermanentDeletingTable || isPermanentDeletingSector}
+      />
+
+      {/* Comanda Dialog - for creating new comandas */}
+      <ComandaDialog
+        open={comandaDialogOpen}
+        onOpenChange={setComandaDialogOpen}
+        onSubmit={handleCreateComanda}
+        orderId={comandaForTable?.orderId || null}
+        isLoading={isCreatingComanda}
+        tableNumber={comandaForTable?.tableNumber}
+      />
+
+      {/* Comanda Details Dialog */}
+      <ComandaDetailsDialog
+        open={comandaDetailsOpen}
+        onOpenChange={setComandaDetailsOpen}
+        comanda={selectedComanda}
+        items={selectedComanda ? getItemsByComanda(selectedComanda.id) : []}
+        onAddItem={() => setComandaAddItemOpen(true)}
+        onUpdateItem={(id, updates) => updateComandaItem({ id, ...updates })}
+        onRemoveItem={(id) => removeComandaItem(id)}
+        onSendToKitchen={(itemIds) => sendToKitchen(itemIds)}
+        onClose={() => selectedComanda && closeComanda(selectedComanda.id)}
+        onCancel={() => selectedComanda && cancelComanda(selectedComanda.id)}
+      />
+
+      {/* Add Item to Comanda Dialog */}
+      <ComandaAddItemDialog
+        open={comandaAddItemOpen}
+        onOpenChange={setComandaAddItemOpen}
+        onAddItem={handleAddComandaItem}
+        isLoading={isAddingComandaItem}
       />
     </div>
   );
