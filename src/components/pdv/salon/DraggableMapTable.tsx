@@ -53,7 +53,7 @@ const STATUS_CONFIG = {
   },
 };
 
-function Chair({ className, horizontal = true }: { className?: string; horizontal?: boolean }) {
+function Chair({ className, horizontal = true, style }: { className?: string; horizontal?: boolean; style?: React.CSSProperties }) {
   return (
     <div
       className={cn(
@@ -61,6 +61,7 @@ function Chair({ className, horizontal = true }: { className?: string; horizonta
         horizontal ? "w-4 h-2" : "w-2 h-4",
         className
       )}
+      style={style}
     />
   );
 }
@@ -82,6 +83,16 @@ function getChairLayout(capacity: number, shape: string) {
   return { top: perSide, right: perSide, bottom: perSide, left: perSide };
 }
 
+// Helper to generate styles based on sector color
+const getSectorStyles = (color: string) => ({
+  tableStyle: { 
+    backgroundColor: `${color}20`, // 12% opacity
+    borderColor: color 
+  },
+  chairStyle: { backgroundColor: `${color}50` }, // 31% opacity
+  textStyle: { color: color }
+});
+
 export function DraggableMapTable({ 
   table, 
   mergedTable,
@@ -98,6 +109,8 @@ export function DraggableMapTable({
   });
 
   const config = STATUS_CONFIG[table.status] || STATUS_CONFIG.livre;
+  const hasSectorColor = !!sectorColor;
+  const sectorStyles = hasSectorColor ? getSectorStyles(sectorColor) : null;
   const scale = zoom / 100;
   const isMerged = !!mergedTable;
   const totalCapacity = isMerged ? table.capacity + mergedTable.capacity : table.capacity;
@@ -167,7 +180,7 @@ export function DraggableMapTable({
           {/* Top chairs */}
           <div className="flex gap-0.5 justify-center">
             {Array.from({ length: chairLayout.top }).map((_, i) => (
-              <Chair key={`top-${i}`} className={config.chair} horizontal />
+              <Chair key={`top-${i}`} className={!hasSectorColor ? config.chair : undefined} style={sectorStyles?.chairStyle} horizontal />
             ))}
           </div>
 
@@ -176,7 +189,7 @@ export function DraggableMapTable({
             {/* Left chairs */}
             <div className="flex flex-col gap-0.5">
               {Array.from({ length: chairLayout.left }).map((_, i) => (
-                <Chair key={`left-${i}`} className={config.chair} horizontal={false} />
+                <Chair key={`left-${i}`} className={!hasSectorColor ? config.chair : undefined} style={sectorStyles?.chairStyle} horizontal={false} />
               ))}
             </div>
 
@@ -185,21 +198,22 @@ export function DraggableMapTable({
               className={cn(
                 "flex flex-col items-center justify-center border-2 transition-all",
                 getTableShape(),
-                config.table,
+                !hasSectorColor && config.table,
                 isDragging && "ring-2 ring-primary shadow-xl",
                 isMerged && "border-dashed border-2"
               )}
+              style={sectorStyles?.tableStyle}
             >
-              <span className={cn("font-bold text-xs", config.text)}>
+              <span className={cn("font-bold text-xs", !hasSectorColor && config.text)} style={sectorStyles?.textStyle}>
                 {getTableLabel()}
               </span>
               {orderTotal !== undefined && orderTotal > 0 && (
-                <span className={cn("text-[10px] font-medium", config.text)}>
+                <span className={cn("text-[10px] font-medium", !hasSectorColor && config.text)} style={sectorStyles?.textStyle}>
                   R$ {orderTotal.toFixed(0)}
                 </span>
               )}
               {orderTime && (
-                <span className={cn("text-[10px]", config.text)}>
+                <span className={cn("text-[10px]", !hasSectorColor && config.text)} style={sectorStyles?.textStyle}>
                   {orderTime}
                 </span>
               )}
@@ -208,7 +222,7 @@ export function DraggableMapTable({
             {/* Right chairs */}
             <div className="flex flex-col gap-0.5">
               {Array.from({ length: chairLayout.right }).map((_, i) => (
-                <Chair key={`right-${i}`} className={config.chair} horizontal={false} />
+                <Chair key={`right-${i}`} className={!hasSectorColor ? config.chair : undefined} style={sectorStyles?.chairStyle} horizontal={false} />
               ))}
             </div>
           </div>
@@ -216,14 +230,14 @@ export function DraggableMapTable({
           {/* Bottom chairs */}
           <div className="flex gap-0.5 justify-center">
             {Array.from({ length: chairLayout.bottom }).map((_, i) => (
-              <Chair key={`bottom-${i}`} className={config.chair} horizontal />
+              <Chair key={`bottom-${i}`} className={!hasSectorColor ? config.chair : undefined} style={sectorStyles?.chairStyle} horizontal />
             ))}
           </div>
         </div>
 
 
         {/* Capacity label */}
-        <span className={cn("text-[10px] font-medium", config.text)}>
+        <span className={cn("text-[10px] font-medium", !hasSectorColor && config.text)} style={sectorStyles?.textStyle}>
           {totalCapacity} lugares
         </span>
       </div>
