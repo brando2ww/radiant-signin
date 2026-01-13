@@ -1,16 +1,1 @@
 project_id = "frbziqazwhymwsrtneoy"
-
-[functions.send-whatsapp-code]
-verify_jwt = false
-
-[functions.verify-whatsapp-code]
-verify_jwt = false
-
-[functions.whatsapp-transactions]
-verify_jwt = false
-
-[functions.send-2fa-code]
-verify_jwt = false
-
-[functions.verify-2fa-code]
-verify_jwt = false
