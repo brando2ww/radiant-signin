@@ -1593,6 +1593,112 @@ export type Database = {
         }
         Relationships: []
       }
+      pdv_comanda_items: {
+        Row: {
+          comanda_id: string
+          created_at: string
+          id: string
+          kitchen_status: string
+          modifiers: Json | null
+          notes: string | null
+          product_id: string
+          product_name: string
+          quantity: number
+          ready_at: string | null
+          sent_to_kitchen_at: string | null
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          comanda_id: string
+          created_at?: string
+          id?: string
+          kitchen_status?: string
+          modifiers?: Json | null
+          notes?: string | null
+          product_id: string
+          product_name: string
+          quantity?: number
+          ready_at?: string | null
+          sent_to_kitchen_at?: string | null
+          subtotal: number
+          unit_price: number
+        }
+        Update: {
+          comanda_id?: string
+          created_at?: string
+          id?: string
+          kitchen_status?: string
+          modifiers?: Json | null
+          notes?: string | null
+          product_id?: string
+          product_name?: string
+          quantity?: number
+          ready_at?: string | null
+          sent_to_kitchen_at?: string | null
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_comanda_items_comanda_id_fkey"
+            columns: ["comanda_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_comandas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_comandas: {
+        Row: {
+          comanda_number: string
+          created_at: string
+          customer_name: string | null
+          id: string
+          notes: string | null
+          order_id: string | null
+          person_number: number | null
+          status: string
+          subtotal: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comanda_number: string
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          person_number?: number | null
+          status?: string
+          subtotal?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comanda_number?: string
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          person_number?: number | null
+          status?: string
+          subtotal?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_comandas_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_cost_centers: {
         Row: {
           created_at: string | null
