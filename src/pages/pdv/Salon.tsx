@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Grid3x3 } from "lucide-react";
-import { usePDVTables } from "@/hooks/use-pdv-tables";
+import { usePDVTables, PDVTable } from "@/hooks/use-pdv-tables";
 import { usePDVOrders } from "@/hooks/use-pdv-orders";
 import { TableCard, SortableTableCard } from "@/components/pdv/TableCard";
 import { TableDialog } from "@/components/pdv/TableDialog";
@@ -59,7 +59,7 @@ export default function PDVSalon() {
   const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState("all");
-  const [orderedTables, setOrderedTables] = useState<typeof tables>([]);
+  const [orderedTables, setOrderedTables] = useState<PDVTable[]>([]);
 
   // Sensors for drag and drop
   const sensors = useSensors(
