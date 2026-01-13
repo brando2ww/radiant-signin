@@ -71,7 +71,7 @@ export default function PDVCashier() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-4 min-h-[calc(100vh-3.5rem)] flex flex-col gap-4">
+      <div className="w-full px-4 md:px-6 lg:px-8 py-4 min-h-[calc(100vh-3.5rem)] flex flex-col gap-4">
         <Skeleton className="h-20 w-full" />
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1">
           <Skeleton className="lg:col-span-3" />
@@ -83,7 +83,7 @@ export default function PDVCashier() {
   }
 
   return (
-    <div className="container mx-auto p-4 min-h-[calc(100vh-3.5rem)] flex flex-col gap-4">
+    <div className="w-full px-4 md:px-6 lg:px-8 py-4 min-h-[calc(100vh-3.5rem)] flex flex-col gap-4">
       {/* Header */}
       <CashierHeader
         isOpen={!!activeSession}
