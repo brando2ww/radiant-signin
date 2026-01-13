@@ -2907,6 +2907,7 @@ export type Database = {
           merged_with: string | null
           position_x: number | null
           position_y: number | null
+          sector_id: string | null
           shape: string | null
           status: Database["public"]["Enums"]["pdv_table_status"] | null
           table_number: string
@@ -2921,6 +2922,7 @@ export type Database = {
           merged_with?: string | null
           position_x?: number | null
           position_y?: number | null
+          sector_id?: string | null
           shape?: string | null
           status?: Database["public"]["Enums"]["pdv_table_status"] | null
           table_number: string
@@ -2935,6 +2937,7 @@ export type Database = {
           merged_with?: string | null
           position_x?: number | null
           position_y?: number | null
+          sector_id?: string | null
           shape?: string | null
           status?: Database["public"]["Enums"]["pdv_table_status"] | null
           table_number?: string
@@ -2947,6 +2950,13 @@ export type Database = {
             columns: ["merged_with"]
             isOneToOne: false
             referencedRelation: "pdv_tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_tables_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_sectors"
             referencedColumns: ["id"]
           },
         ]

@@ -6,6 +6,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
 import { usePDVTables, PDVTable } from "@/hooks/use-pdv-tables";
 import { usePDVOrders } from "@/hooks/use-pdv-orders";
+import { usePDVSectors } from "@/hooks/use-pdv-sectors";
 import { TableCard, SortableTableCard } from "@/components/pdv/TableCard";
 import { TableDialog } from "@/components/pdv/TableDialog";
 import { TableDetailsDialog } from "@/components/pdv/TableDetailsDialog";
@@ -59,6 +60,13 @@ export default function PDVSalon() {
     cancelOrder,
   } = usePDVOrders();
 
+  const {
+    sectors,
+    isLoading: isLoadingSectors,
+    createSector,
+    isCreating: isCreatingSector,
+  } = usePDVSectors();
+
   const [tableDialog, setTableDialog] = useState(false);
   const [selectedTable, setSelectedTable] = useState<any>(null);
   const [tableDetailsOpen, setTableDetailsOpen] = useState(false);
@@ -66,6 +74,7 @@ export default function PDVSalon() {
   const [orderDetailsOpen, setOrderDetailsOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [sectorFilter, setSectorFilter] = useState("all");
   const [orderedTables, setOrderedTables] = useState<PDVTable[]>([]);
   const [viewMode, setViewMode] = useState<"grid" | "map">("grid");
 
@@ -96,10 +105,13 @@ export default function PDVSalon() {
   // Mesas filtradas
   const filteredTables = useMemo(() => {
     return tables.filter((table) => {
-      if (statusFilter === "all") return true;
-      return table.status === statusFilter;
+      const matchesStatus = statusFilter === "all" || table.status === statusFilter;
+      const matchesSector = 
+        sectorFilter === "all" || 
+        (sectorFilter === "none" ? !table.sector_id : table.sector_id === sectorFilter);
+      return matchesStatus && matchesSector;
     });
-  }, [tables, statusFilter]);
+  }, [tables, statusFilter, sectorFilter]);
 
   // Sync ordered tables with filtered tables
   useEffect(() => {
@@ -266,7 +278,7 @@ export default function PDVSalon() {
     );
   };
 
-  if (isLoadingTables || isLoadingOrders) {
+  if (isLoadingTables || isLoadingOrders || isLoadingSectors) {
     return (
       <div className="w-full px-4 md:px-6 lg:px-8 py-6 space-y-6">
         <div className="flex items-center justify-between">
@@ -319,6 +331,9 @@ export default function PDVSalon() {
         filteredCount={filteredTables.length}
         occupiedCount={occupiedCount}
         availableCount={availableCount}
+        sectors={sectors}
+        sectorFilter={sectorFilter}
+        onSectorFilterChange={setSectorFilter}
       />
 
       {filteredTables.length === 0 ? (
@@ -393,6 +408,9 @@ export default function PDVSalon() {
         table={selectedTable}
         onSubmit={handleSubmitTable}
         isSubmitting={isCreating || isUpdating}
+        sectors={sectors}
+        onCreateSector={createSector}
+        isCreatingSector={isCreatingSector}
       />
 
       <TableDetailsDialog

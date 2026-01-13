@@ -55,10 +55,56 @@ export function usePDVSectors() {
     },
   });
 
+  const updateSector = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { error } = await supabase
+        .from("pdv_sectors")
+        .update({ name })
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-sectors"] });
+      toast.success("Setor atualizado com sucesso");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao atualizar setor: " + error.message);
+    },
+  });
+
+  const deleteSector = useMutation({
+    mutationFn: async (id: string) => {
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { error } = await supabase
+        .from("pdv_sectors")
+        .update({ is_active: false })
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-sectors"] });
+      toast.success("Setor removido com sucesso");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao remover setor: " + error.message);
+    },
+  });
+
   return {
     sectors: sectors || [],
     isLoading,
     createSector: createSector.mutateAsync,
     isCreating: createSector.isPending,
+    updateSector: updateSector.mutateAsync,
+    isUpdating: updateSector.isPending,
+    deleteSector: deleteSector.mutateAsync,
+    isDeleting: deleteSector.isPending,
   };
 }
