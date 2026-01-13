@@ -1,9 +1,10 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ModuleGuard } from "@/components/ModuleGuard";
-import { PDVSidebar } from "@/components/pdv/PDVSidebar";
+import { PDVHeaderNav } from "@/components/pdv/PDVHeaderNav";
 import { PDVUserMenu } from "@/components/pdv/PDVUserMenu";
 import { PDVNotifications } from "@/components/pdv/PDVNotifications";
 import { CashierStatus } from "@/components/pdv/CashierStatus";
+import { Logo } from "@/components/ui/logo";
 import PDVDashboard from "./pdv/Dashboard";
 import PDVSalon from "./pdv/Salon";
 import PDVBalcao from "./pdv/Balcao";
@@ -34,27 +35,31 @@ import DeliveryReports from "./pdv/delivery/Reports";
 export default function PDV() {
   return (
     <ModuleGuard module="pdv">
-      <div className="flex min-h-screen w-full">
-        <PDVSidebar />
-        
-        <div className="flex flex-col flex-1 w-full ml-14">
-          {/* Header */}
-          <header className="sticky top-0 z-40 w-full border-b bg-background">
-            <div className="flex h-14 items-center px-4 gap-4">
-              <div className="flex-1" />
-              
-              {/* Actions */}
-              <div className="flex items-center gap-2">
-                <CashierStatus />
-                <PDVNotifications />
-                <PDVUserMenu />
-              </div>
+      <div className="flex flex-col min-h-screen w-full">
+        {/* Header com navegação */}
+        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex h-14 items-center px-4 gap-4">
+            {/* Logo */}
+            <Logo size="md" className="h-8 shrink-0" />
+            
+            {/* Navegação */}
+            <PDVHeaderNav />
+            
+            {/* Spacer */}
+            <div className="flex-1" />
+            
+            {/* Ações */}
+            <div className="flex items-center gap-2">
+              <CashierStatus />
+              <PDVNotifications />
+              <PDVUserMenu />
             </div>
-          </header>
+          </div>
+        </header>
 
-          {/* Main Content */}
-          <main className="flex-1 overflow-auto">
-            <Routes>
+        {/* Conteúdo Principal */}
+        <main className="flex-1 overflow-auto">
+          <Routes>
               <Route index element={<Navigate to="/pdv/dashboard" replace />} />
               
               {/* Financeiro */}
@@ -89,10 +94,9 @@ export default function PDV() {
               <Route path="fornecedores" element={<PDVSuppliers />} />
               <Route path="notas-fiscais" element={<Invoices />} />
               <Route path="relatorios" element={<PDVReports />} />
-              <Route path="configuracoes" element={<PDVSettings />} />
+            <Route path="configuracoes" element={<PDVSettings />} />
             </Routes>
           </main>
-        </div>
       </div>
     </ModuleGuard>
   );
