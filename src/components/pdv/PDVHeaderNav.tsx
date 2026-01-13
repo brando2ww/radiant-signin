@@ -68,21 +68,6 @@ interface Section {
 
 const sectionItems: Section[] = [
   {
-    title: "Financeiro",
-    icon: DollarSign,
-    items: [
-      { title: "Lançamentos", url: "/pdv/financeiro/lancamentos", icon: FileText },
-      { title: "Contas a Pagar", url: "/pdv/financeiro/contas-pagar", icon: TrendingDown },
-      { title: "Contas a Receber", url: "/pdv/financeiro/contas-receber", icon: TrendingUp },
-      { title: "Fluxo de Caixa", url: "/pdv/financeiro/fluxo-caixa", icon: ArrowLeftRight },
-      { title: "Plano de Contas", url: "/pdv/financeiro/plano-contas", icon: FolderTree },
-      { title: "Centros de Custo", url: "/pdv/financeiro/centros-custo", icon: Target },
-      { title: "DRE", url: "/pdv/financeiro/dre", icon: FileBarChart },
-      { title: "CMV Produtos", url: "/pdv/financeiro/cmv-produtos", icon: PackageSearch },
-      { title: "CMV Geral", url: "/pdv/financeiro/cmv-geral", icon: PieChart },
-    ],
-  },
-  {
     title: "Frente de Caixa",
     icon: Store,
     items: [
@@ -115,6 +100,21 @@ const sectionItems: Section[] = [
       { title: "Notas Fiscais", url: "/pdv/notas-fiscais", icon: Receipt },
       { title: "Relatórios", url: "/pdv/relatorios", icon: BarChart3 },
       { title: "Configurações", url: "/pdv/configuracoes", icon: Settings },
+    ],
+  },
+  {
+    title: "Financeiro",
+    icon: DollarSign,
+    items: [
+      { title: "Lançamentos", url: "/pdv/financeiro/lancamentos", icon: FileText },
+      { title: "Contas a Pagar", url: "/pdv/financeiro/contas-pagar", icon: TrendingDown },
+      { title: "Contas a Receber", url: "/pdv/financeiro/contas-receber", icon: TrendingUp },
+      { title: "Fluxo de Caixa", url: "/pdv/financeiro/fluxo-caixa", icon: ArrowLeftRight },
+      { title: "Plano de Contas", url: "/pdv/financeiro/plano-contas", icon: FolderTree },
+      { title: "Centros de Custo", url: "/pdv/financeiro/centros-custo", icon: Target },
+      { title: "DRE", url: "/pdv/financeiro/dre", icon: FileBarChart },
+      { title: "CMV Produtos", url: "/pdv/financeiro/cmv-produtos", icon: PackageSearch },
+      { title: "CMV Geral", url: "/pdv/financeiro/cmv-geral", icon: PieChart },
     ],
   },
 ];
