@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { PDVSector } from "@/hooks/use-pdv-sectors";
 import { cn } from "@/lib/utils";
 import { GripVertical, Trash2, Edit2 } from "lucide-react";
@@ -32,7 +32,17 @@ export function SectorArea({
   const [isResizing, setIsResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
+  // Temporary local state for smooth drag/resize
+  const [tempPosition, setTempPosition] = useState<{ x: number; y: number } | null>(null);
+  const [tempDimensions, setTempDimensions] = useState<{ w: number; h: number } | null>(null);
+  
   const scale = zoom / 100;
+  
+  // Visual position = temp during drag, real when not dragging
+  const visualX = tempPosition?.x ?? sector.position_x;
+  const visualY = tempPosition?.y ?? sector.position_y;
+  const visualWidth = tempDimensions?.w ?? sector.width;
+  const visualHeight = tempDimensions?.h ?? sector.height;
   
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (isResizing) return;
@@ -46,16 +56,26 @@ export function SectorArea({
     
     setIsDragging(true);
     
+    let lastX = startPosX;
+    let lastY = startPosY;
+    
     const onMouseMove = (e: MouseEvent) => {
       const deltaX = (e.clientX - startX) / scale;
       const deltaY = (e.clientY - startY) / scale;
       const newX = Math.max(0, Math.round((startPosX + deltaX) / 10) * 10);
       const newY = Math.max(0, Math.round((startPosY + deltaY) / 10) * 10);
-      onDrag(sector.id, newX, newY);
+      lastX = newX;
+      lastY = newY;
+      setTempPosition({ x: newX, y: newY }); // Local state only - smooth movement
     };
     
     const onMouseUp = () => {
       setIsDragging(false);
+      setTempPosition(null);
+      // Persist only on mouse up
+      if (lastX !== startPosX || lastY !== startPosY) {
+        onDrag(sector.id, lastX, lastY);
+      }
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
     };
@@ -77,6 +97,11 @@ export function SectorArea({
     const startPosY = sector.position_y;
     
     setIsResizing(true);
+    
+    let lastWidth = startWidth;
+    let lastHeight = startHeight;
+    let lastX = startPosX;
+    let lastY = startPosY;
     
     const onMouseMove = (e: MouseEvent) => {
       const deltaX = (e.clientX - startX) / scale;
@@ -113,14 +138,31 @@ export function SectorArea({
       newX = Math.max(0, Math.round(newX / 10) * 10);
       newY = Math.max(0, Math.round(newY / 10) * 10);
       
+      lastWidth = newWidth;
+      lastHeight = newHeight;
+      lastX = newX;
+      lastY = newY;
+      
+      // Update local state for smooth resize
+      setTempDimensions({ w: newWidth, h: newHeight });
       if (newX !== startPosX || newY !== startPosY) {
-        onDrag(sector.id, newX, newY);
+        setTempPosition({ x: newX, y: newY });
       }
-      onResize(sector.id, newWidth, newHeight);
     };
     
     const onMouseUp = () => {
       setIsResizing(false);
+      setTempDimensions(null);
+      setTempPosition(null);
+      
+      // Persist only on mouse up
+      if (lastX !== startPosX || lastY !== startPosY) {
+        onDrag(sector.id, lastX, lastY);
+      }
+      if (lastWidth !== startWidth || lastHeight !== startHeight) {
+        onResize(sector.id, lastWidth, lastHeight);
+      }
+      
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
     };
@@ -141,10 +183,10 @@ export function SectorArea({
         isSelected && "ring-2 ring-primary ring-offset-2"
       )}
       style={{
-        left: (sector.position_x * scale) + pan.x,
-        top: (sector.position_y * scale) + pan.y,
-        width: sector.width * scale,
-        height: sector.height * scale,
+        left: (visualX * scale) + pan.x,
+        top: (visualY * scale) + pan.y,
+        width: visualWidth * scale,
+        height: visualHeight * scale,
         backgroundColor: `${sector.color}15`,
         border: `2px solid ${sector.color}60`,
         zIndex: isSelected ? 5 : 1,
