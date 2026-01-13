@@ -110,13 +110,23 @@ export function TableCard({ table, orderTotal, orderTime, onClick, isDragging, s
   return (
     <Card
       className={cn(
-        "cursor-pointer transition-all p-4 bg-card border-0 shadow-sm",
+        "cursor-pointer transition-all p-4 bg-card border-0 shadow-sm relative",
         isDragging 
           ? "opacity-50 scale-105 shadow-2xl" 
           : "hover:shadow-lg hover:scale-105"
       )}
       onClick={() => onClick(table)}
     >
+      {/* Sector badge */}
+      {sectorColor && sectorName && (
+        <div 
+          className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-medium text-white shadow-sm z-10"
+          style={{ backgroundColor: sectorColor }}
+        >
+          {sectorName}
+        </div>
+      )}
+
       <div className="flex flex-col items-center gap-2">
         {/* Status dot */}
         <div className="w-full flex justify-end">
@@ -193,16 +203,6 @@ export function TableCard({ table, orderTotal, orderTime, onClick, isDragging, s
             ))}
           </div>
         </div>
-
-        {/* Sector badge */}
-        {sectorColor && sectorName && (
-          <div 
-            className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-medium text-white shadow-sm"
-            style={{ backgroundColor: sectorColor }}
-          >
-            {sectorName}
-          </div>
-        )}
 
         {/* Capacity label */}
         <span className="text-xs text-muted-foreground mt-1">
