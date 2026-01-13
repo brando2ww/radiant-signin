@@ -3472,6 +3472,54 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_notification_preferences: {
+        Row: {
+          bills_days_before: number
+          bills_reminder: boolean
+          created_at: string
+          credit_cards_days_before: number
+          credit_cards_reminder: boolean
+          daily_summary: boolean
+          daily_summary_time: string
+          id: string
+          monthly_report: boolean
+          updated_at: string
+          user_id: string
+          weekly_report: boolean
+          weekly_report_day: number
+        }
+        Insert: {
+          bills_days_before?: number
+          bills_reminder?: boolean
+          created_at?: string
+          credit_cards_days_before?: number
+          credit_cards_reminder?: boolean
+          daily_summary?: boolean
+          daily_summary_time?: string
+          id?: string
+          monthly_report?: boolean
+          updated_at?: string
+          user_id: string
+          weekly_report?: boolean
+          weekly_report_day?: number
+        }
+        Update: {
+          bills_days_before?: number
+          bills_reminder?: boolean
+          created_at?: string
+          credit_cards_days_before?: number
+          credit_cards_reminder?: boolean
+          daily_summary?: boolean
+          daily_summary_time?: string
+          id?: string
+          monthly_report?: boolean
+          updated_at?: string
+          user_id?: string
+          weekly_report?: boolean
+          weekly_report_day?: number
+        }
+        Relationships: []
+      }
       whatsapp_session_context: {
         Row: {
           conversation_state: string | null
