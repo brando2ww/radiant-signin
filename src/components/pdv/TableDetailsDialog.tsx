@@ -10,8 +10,6 @@ import { PDVTable } from "@/hooks/use-pdv-tables";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Users, Clock, DollarSign, Plus, Edit, Trash2, Unlink } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +20,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { TableComandasSection } from "./TableComandasSection";
+
+interface Comanda {
+  id: string;
+  comanda_number: string;
+  customer_name?: string | null;
+  person_number?: number | null;
+  subtotal: number;
+  created_at: string;
+  status: string;
+}
 
 interface TableDetailsDialogProps {
   open: boolean;
@@ -35,6 +44,10 @@ interface TableDetailsDialogProps {
   onEditTable: (table: PDVTable) => void;
   onDeleteTable: (tableId: string) => void;
   onUnmergeTables?: (tableId: string) => void;
+  tableComandas?: Comanda[];
+  onCreateComanda?: () => void;
+  onViewComanda?: (comanda: Comanda) => void;
+  isCreatingComanda?: boolean;
 }
 
 const STATUS_CONFIG = {
@@ -58,6 +71,10 @@ export function TableDetailsDialog({
   onEditTable,
   onDeleteTable,
   onUnmergeTables,
+  tableComandas = [],
+  onCreateComanda,
+  onViewComanda,
+  isCreatingComanda,
 }: TableDetailsDialogProps) {
   const [deleteDialog, setDeleteDialog] = useState(false);
 
@@ -69,7 +86,7 @@ export function TableDetailsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
               <DialogTitle>Mesa {table.table_number}</DialogTitle>
@@ -107,6 +124,19 @@ export function TableDetailsDialog({
                     </div>
                   )}
                 </div>
+
+                {/* Comandas section for occupied tables */}
+                {onCreateComanda && onViewComanda && (
+                  <>
+                    <Separator />
+                    <TableComandasSection
+                      comandas={tableComandas}
+                      onCreateComanda={onCreateComanda}
+                      onViewComanda={onViewComanda}
+                      isCreating={isCreatingComanda}
+                    />
+                  </>
+                )}
               </>
             )}
 
