@@ -1,12 +1,15 @@
 import { Card } from "@/components/ui/card";
 import { PDVTable } from "@/hooks/use-pdv-tables";
 import { cn } from "@/lib/utils";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface TableCardProps {
   table: PDVTable;
   orderTotal?: number;
   orderTime?: string;
   onClick: (table: PDVTable) => void;
+  isDragging?: boolean;
 }
 
 const STATUS_CONFIG = {
@@ -95,7 +98,7 @@ function getChairLayout(capacity: number, shape: string = "square") {
   return { top: 2, right: 2, bottom: 2, left: 2 };
 }
 
-export function TableCard({ table, orderTotal, orderTime, onClick }: TableCardProps) {
+export function TableCard({ table, orderTotal, orderTime, onClick, isDragging }: TableCardProps) {
   const statusConfig = STATUS_CONFIG[table.status] || STATUS_CONFIG.livre;
   const shape = (table as any).shape || "square";
   const chairLayout = getChairLayout(table.capacity, shape);
@@ -104,7 +107,12 @@ export function TableCard({ table, orderTotal, orderTime, onClick }: TableCardPr
 
   return (
     <Card
-      className="cursor-pointer transition-all hover:shadow-lg hover:scale-105 p-4 bg-card border-0 shadow-sm"
+      className={cn(
+        "cursor-pointer transition-all p-4 bg-card border-0 shadow-sm",
+        isDragging 
+          ? "opacity-50 scale-105 shadow-2xl" 
+          : "hover:shadow-lg hover:scale-105"
+      )}
       onClick={() => onClick(table)}
     >
       <div className="flex flex-col items-center gap-2">
@@ -190,5 +198,29 @@ export function TableCard({ table, orderTotal, orderTime, onClick }: TableCardPr
         </span>
       </div>
     </Card>
+  );
+}
+
+// Sortable wrapper for drag and drop
+export function SortableTableCard(props: TableCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: props.table.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 1000 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <TableCard {...props} isDragging={isDragging} />
+    </div>
   );
 }

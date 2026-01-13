@@ -38,6 +38,7 @@ export function usePDVTables() {
         .from("pdv_tables")
         .select("*")
         .eq("user_id", user.id)
+        .order("position_x", { ascending: true, nullsFirst: false })
         .order("table_number");
 
       if (error) throw error;
