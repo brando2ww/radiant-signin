@@ -10,6 +10,8 @@ interface TableCardProps {
   orderTime?: string;
   onClick: (table: PDVTable) => void;
   isDragging?: boolean;
+  sectorColor?: string;
+  sectorName?: string;
 }
 
 const STATUS_CONFIG = {
@@ -98,7 +100,7 @@ function getChairLayout(capacity: number, shape: string = "square") {
   return { top: 2, right: 2, bottom: 2, left: 2 };
 }
 
-export function TableCard({ table, orderTotal, orderTime, onClick, isDragging }: TableCardProps) {
+export function TableCard({ table, orderTotal, orderTime, onClick, isDragging, sectorColor, sectorName }: TableCardProps) {
   const statusConfig = STATUS_CONFIG[table.status] || STATUS_CONFIG.livre;
   const shape = (table as any).shape || "square";
   const chairLayout = getChairLayout(table.capacity, shape);
@@ -191,6 +193,16 @@ export function TableCard({ table, orderTotal, orderTime, onClick, isDragging }:
             ))}
           </div>
         </div>
+
+        {/* Sector badge */}
+        {sectorColor && sectorName && (
+          <div 
+            className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-medium text-white shadow-sm"
+            style={{ backgroundColor: sectorColor }}
+          >
+            {sectorName}
+          </div>
+        )}
 
         {/* Capacity label */}
         <span className="text-xs text-muted-foreground mt-1">
