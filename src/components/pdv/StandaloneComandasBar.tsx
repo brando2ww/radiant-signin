@@ -51,26 +51,24 @@ export function StandaloneComandasBar({
         </div>
 
         <div className="flex items-center gap-2">
-          {comandaCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="gap-1"
-            >
-              {isExpanded ? (
-                <>
-                  <ChevronDown className="h-4 w-4" />
-                  Recolher
-                </>
-              ) : (
-                <>
-                  <ChevronUp className="h-4 w-4" />
-                  Expandir
-                </>
-              )}
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="gap-1"
+          >
+            {isExpanded ? (
+              <>
+                <ChevronDown className="h-4 w-4" />
+                Recolher
+              </>
+            ) : (
+              <>
+                <ChevronUp className="h-4 w-4" />
+                Expandir
+              </>
+            )}
+          </Button>
           <Button
             size="sm"
             onClick={onCreateComanda}
