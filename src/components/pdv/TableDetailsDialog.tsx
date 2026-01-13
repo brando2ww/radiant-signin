@@ -9,7 +9,7 @@ import {
 import { PDVTable } from "@/hooks/use-pdv-tables";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Users, Clock, DollarSign, Plus, Edit, Trash2 } from "lucide-react";
+import { Users, Clock, DollarSign, Plus, Edit, Trash2, Unlink } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -34,6 +34,7 @@ interface TableDetailsDialogProps {
   onCloseTable: (tableId: string) => void;
   onEditTable: (table: PDVTable) => void;
   onDeleteTable: (tableId: string) => void;
+  onUnmergeTables?: (tableId: string) => void;
 }
 
 const STATUS_CONFIG = {
@@ -56,6 +57,7 @@ export function TableDetailsDialog({
   onCloseTable,
   onEditTable,
   onDeleteTable,
+  onUnmergeTables,
 }: TableDetailsDialogProps) {
   const [deleteDialog, setDeleteDialog] = useState(false);
 
@@ -146,6 +148,20 @@ export function TableDetailsDialog({
                     Fechar Mesa
                   </Button>
                 </>
+              )}
+
+              {table.merged_with && onUnmergeTables && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    onUnmergeTables(table.id);
+                    onOpenChange(false);
+                  }}
+                >
+                  <Unlink className="h-4 w-4 mr-2" />
+                  Separar Mesas
+                </Button>
               )}
 
               <Separator />
