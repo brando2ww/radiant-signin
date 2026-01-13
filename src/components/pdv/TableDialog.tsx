@@ -110,6 +110,7 @@ export function TableDialog({
                       placeholder="4"
                       {...field}
                       onChange={(e) => field.onChange(Number(e.target.value))}
+                      onFocus={(e) => e.target.select()}
                     />
                   </FormControl>
                   <FormDescription>
