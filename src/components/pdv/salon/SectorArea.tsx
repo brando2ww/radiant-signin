@@ -70,12 +70,13 @@ export function SectorArea({
     };
     
     const onMouseUp = () => {
-      setIsDragging(false);
-      setTempPosition(null);
-      // Persist only on mouse up
+      // Persist FIRST (optimistic update will update cache immediately)
       if (lastX !== startPosX || lastY !== startPosY) {
         onDrag(sector.id, lastX, lastY);
       }
+      // THEN clear temp state (cache already has new value)
+      setIsDragging(false);
+      setTempPosition(null);
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
     };
@@ -151,17 +152,17 @@ export function SectorArea({
     };
     
     const onMouseUp = () => {
-      setIsResizing(false);
-      setTempDimensions(null);
-      setTempPosition(null);
-      
-      // Persist only on mouse up
+      // Persist FIRST (optimistic update will update cache immediately)
       if (lastX !== startPosX || lastY !== startPosY) {
         onDrag(sector.id, lastX, lastY);
       }
       if (lastWidth !== startWidth || lastHeight !== startHeight) {
         onResize(sector.id, lastWidth, lastHeight);
       }
+      // THEN clear temp state (cache already has new values)
+      setIsResizing(false);
+      setTempDimensions(null);
+      setTempPosition(null);
       
       document.removeEventListener('mousemove', onMouseMove);
       document.removeEventListener('mouseup', onMouseUp);
