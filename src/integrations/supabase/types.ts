@@ -2230,6 +2230,39 @@ export type Database = {
           },
         ]
       }
+      pdv_notifications: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pdv_order_items: {
         Row: {
           added_at: string | null
@@ -2596,6 +2629,7 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string | null
+          deleted_at: string | null
           height: number | null
           id: string
           is_active: boolean | null
@@ -2608,6 +2642,7 @@ export type Database = {
         Insert: {
           color?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           height?: number | null
           id?: string
           is_active?: boolean | null
@@ -2620,6 +2655,7 @@ export type Database = {
         Update: {
           color?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           height?: number | null
           id?: string
           is_active?: boolean | null
@@ -2918,6 +2954,7 @@ export type Database = {
           capacity: number
           created_at: string | null
           current_order_id: string | null
+          deleted_at: string | null
           id: string
           is_active: boolean | null
           merged_with: string | null
@@ -2934,6 +2971,7 @@ export type Database = {
           capacity?: number
           created_at?: string | null
           current_order_id?: string | null
+          deleted_at?: string | null
           id?: string
           is_active?: boolean | null
           merged_with?: string | null
@@ -2950,6 +2988,7 @@ export type Database = {
           capacity?: number
           created_at?: string | null
           current_order_id?: string | null
+          deleted_at?: string | null
           id?: string
           is_active?: boolean | null
           merged_with?: string | null

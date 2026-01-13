@@ -21,9 +21,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PDVTable } from "@/hooks/use-pdv-tables";
 import { PDVSector } from "@/hooks/use-pdv-sectors";
-import { Trash2, RotateCcw, TableIcon, Layers, Loader2 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { Trash2, RotateCcw, TableIcon, Layers, Loader2, AlertTriangle } from "lucide-react";
+import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface TrashDialogProps {
   open: boolean;
@@ -122,7 +123,7 @@ export function TrashDialog({
                     key={table.id}
                     title={`Mesa ${table.table_number}`}
                     subtitle={`${table.capacity} lugares • ${table.shape === "round" ? "Redonda" : "Quadrada"}`}
-                    updatedAt={table.updated_at}
+                    deletedAt={table.deleted_at}
                     onRestore={() => onRestoreTable(table.id)}
                     onDelete={() => handlePermanentDelete("table", table.id, `Mesa ${table.table_number}`)}
                     isRestoring={isRestoring}
@@ -142,7 +143,7 @@ export function TrashDialog({
                     title={sector.name}
                     subtitle="Setor"
                     color={sector.color}
-                    updatedAt={sector.created_at}
+                    deletedAt={sector.deleted_at}
                     onRestore={() => onRestoreSector(sector.id)}
                     onDelete={() => handlePermanentDelete("sector", sector.id, sector.name)}
                     isRestoring={isRestoring}
@@ -183,7 +184,7 @@ interface TrashItemProps {
   title: string;
   subtitle: string;
   color?: string;
-  updatedAt: string;
+  deletedAt: string | null;
   onRestore: () => void;
   onDelete: () => void;
   isRestoring: boolean;
@@ -194,18 +195,28 @@ function TrashItem({
   title,
   subtitle,
   color,
-  updatedAt,
+  deletedAt,
   onRestore,
   onDelete,
   isRestoring,
   isDeleting,
 }: TrashItemProps) {
-  const formattedDate = format(parseISO(updatedAt), "dd/MM/yyyy 'às' HH:mm", {
-    locale: ptBR,
-  });
+  const formattedDate = deletedAt
+    ? format(parseISO(deletedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+    : "Data desconhecida";
+
+  // Calcular dias restantes até exclusão automática (30 dias após deleted_at)
+  const daysUntilDeletion = deletedAt
+    ? Math.max(0, 30 - differenceInDays(new Date(), parseISO(deletedAt)))
+    : null;
+
+  const isUrgent = daysUntilDeletion !== null && daysUntilDeletion <= 7;
 
   return (
-    <div className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+    <div className={cn(
+      "flex items-center gap-3 p-3 rounded-lg border bg-card",
+      isUrgent && "border-yellow-500/50 bg-yellow-500/5"
+    )}>
       {color && (
         <div
           className="h-8 w-2 rounded-full shrink-0"
@@ -216,6 +227,19 @@ function TrashItem({
         <p className="font-medium truncate">{title}</p>
         <p className="text-xs text-muted-foreground">{subtitle}</p>
         <p className="text-xs text-muted-foreground">Excluído em {formattedDate}</p>
+        {daysUntilDeletion !== null && (
+          <div className={cn(
+            "flex items-center gap-1 text-xs mt-1",
+            isUrgent ? "text-yellow-600" : "text-muted-foreground"
+          )}>
+            {isUrgent && <AlertTriangle className="h-3 w-3" />}
+            <span>
+              {daysUntilDeletion === 0
+                ? "Será excluído hoje"
+                : `Será excluído em ${daysUntilDeletion} dia${daysUntilDeletion !== 1 ? "s" : ""}`}
+            </span>
+          </div>
+        )}
       </div>
       <div className="flex gap-1 shrink-0">
         <Button

@@ -14,6 +14,7 @@ export interface PDVSector {
   height: number;
   is_active: boolean;
   created_at: string;
+  deleted_at: string | null;
 }
 
 export function usePDVSectors() {
