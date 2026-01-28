@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
       )
     }
 
-    // ACTION: Disconnect
+    // ACTION: Disconnect (just logout, keep instance)
     if (action === 'disconnect') {
       console.log(`[whatsapp-qrcode] Disconnecting instance: ${instanceName}`)
 
@@ -232,8 +232,51 @@ Deno.serve(async (req) => {
       )
     }
 
+    // ACTION: Delete (remove instance completely)
+    if (action === 'delete') {
+      console.log(`[whatsapp-qrcode] Deleting instance: ${instanceName}`)
+
+      // 1. Logout from Evolution API (ignore errors)
+      try {
+        await fetch(
+          `${evolutionApiUrl}/instance/logout/${instanceName}`,
+          { 
+            method: 'DELETE',
+            headers: { 'apikey': evolutionApiKey } 
+          }
+        )
+      } catch (e) {
+        console.log('[whatsapp-qrcode] Logout error (ignored):', e)
+      }
+
+      // 2. Delete instance from Evolution API
+      const deleteResponse = await fetch(
+        `${evolutionApiUrl}/instance/delete/${instanceName}`,
+        { 
+          method: 'DELETE',
+          headers: { 'apikey': evolutionApiKey } 
+        }
+      )
+      console.log('[whatsapp-qrcode] Delete instance response status:', deleteResponse.status)
+
+      // 3. Delete from database
+      const { error: dbError } = await supabase.from('whatsapp_connections')
+        .delete()
+        .eq('user_id', userId)
+        .eq('instance_name', instanceName)
+
+      if (dbError) {
+        console.error('[whatsapp-qrcode] Error deleting from DB:', dbError)
+      }
+
+      return new Response(
+        JSON.stringify({ status: 'deleted' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     return new Response(
-      JSON.stringify({ error: 'Invalid action. Use: generate, status, or disconnect' }),
+      JSON.stringify({ error: 'Invalid action. Use: generate, status, disconnect, or delete' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 

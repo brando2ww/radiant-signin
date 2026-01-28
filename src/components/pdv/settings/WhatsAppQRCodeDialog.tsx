@@ -23,7 +23,9 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
     qrCode,
     isPolling,
     isGenerating,
+    isDisconnecting,
     generateQRCode,
+    disconnect,
     stopPolling,
     setQrCode
   } = useWhatsAppConnection();
@@ -66,7 +68,7 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <WhatsAppIcon className="h-5 w-5 text-green-500" />
+              <WhatsAppIcon className="h-5 w-5" />
               WhatsApp Conectado
             </DialogTitle>
           </DialogHeader>
@@ -99,9 +101,26 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
               </div>
             )}
 
-            <Button onClick={handleClose} className="w-full">
-              Concluir
-            </Button>
+            <div className="flex flex-col gap-2 w-full">
+              <Button onClick={handleClose} className="w-full">
+                Concluir
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => disconnect()}
+                disabled={isDisconnecting}
+                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                {isDisconnecting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Desconectando...
+                  </>
+                ) : (
+                  'Desconectar WhatsApp'
+                )}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -115,7 +134,7 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <WhatsAppIcon className="h-5 w-5 text-green-500" />
+              <WhatsAppIcon className="h-5 w-5" />
               Conectar WhatsApp
             </DialogTitle>
             <DialogDescription>
@@ -167,9 +186,9 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
     return (
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <WhatsAppIcon className="h-5 w-5 text-green-500" />
+              <WhatsAppIcon className="h-5 w-5" />
               Conectar WhatsApp
             </DialogTitle>
           </DialogHeader>
@@ -191,7 +210,7 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <WhatsAppIcon className="h-5 w-5 text-green-500" />
+            <WhatsAppIcon className="h-5 w-5" />
             Conectar WhatsApp
           </DialogTitle>
           <DialogDescription>
