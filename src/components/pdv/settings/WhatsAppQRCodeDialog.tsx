@@ -201,7 +201,7 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
 
         <div className="flex flex-col items-center gap-4 py-4">
           {/* QR Code Display */}
-          <div className="relative flex h-64 w-64 items-center justify-center rounded-lg border-2 border-dashed bg-accent">
+          <div className="relative flex h-64 w-64 items-center justify-center rounded-lg border-2 border-dashed bg-yellow-400">
             {isGenerating ? (
               <div className="flex flex-col items-center gap-2 rounded-lg bg-white/80 p-4">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
