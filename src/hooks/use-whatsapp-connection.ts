@@ -53,14 +53,12 @@ export function useWhatsAppConnection() {
   // Generate instance name from connection name
   const generateInstanceName = (connectionName: string) => {
     if (!user) return '';
-    const slug = connectionName
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 20);
-    return `velara-${user.id.slice(0, 8)}-${slug}`;
+    // Usar o nome da conexão diretamente, apenas removendo caracteres especiais inválidos
+    // A Evolution API aceita espaços e letras maiúsculas no instanceName
+    return connectionName
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .slice(0, 50);
   };
 
   // Fetch current connection from database
