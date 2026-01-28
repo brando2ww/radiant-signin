@@ -1,10 +1,12 @@
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { usePDVIngredientSuppliers } from "@/hooks/use-pdv-ingredient-suppliers";
 import { supabase } from "@/integrations/supabase/client";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ChevronsUpDown } from "lucide-react";
 
 interface SupplierItem {
   id: string;
@@ -31,6 +33,7 @@ export function QuotationItemSuppliers({
   selectedSuppliers,
   onSuppliersChange,
 }: QuotationItemSuppliersProps) {
+  const [open, setOpen] = useState(false);
   const { ingredientSuppliers, isLoading: isLoadingMultiple } = usePDVIngredientSuppliers(ingredientId);
 
   // Fetch the ingredient with its direct supplier
@@ -116,6 +119,7 @@ export function QuotationItemSuppliers({
     }
   };
 
+
   if (isLoading) {
     return (
       <div className="text-xs text-muted-foreground mt-2 pl-2">
@@ -137,52 +141,68 @@ export function QuotationItemSuppliers({
     );
   }
 
+  const selectedCount = selectedSuppliers.length;
+
   return (
     <div className="mt-2 pl-2 space-y-1">
       <span className="text-xs text-muted-foreground font-medium">Fornecedores:</span>
-      <div className="space-y-1">
-        {suppliers.map((link) => {
-          const supplier = link.supplier;
-          const hasPhone = !!supplier.phone;
-          const isSelected = selectedSuppliers.includes(link.supplier_id);
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between text-xs h-8"
+          >
+            {selectedCount === 0
+              ? "Selecione os fornecedores..."
+              : `${selectedCount} fornecedor${selectedCount > 1 ? "es" : ""} selecionado${selectedCount > 1 ? "s" : ""}`}
+            <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-1 bg-popover" align="start">
+          <div className="max-h-60 overflow-auto">
+            {suppliers.map((link) => {
+              const supplier = link.supplier;
+              const hasPhone = !!supplier.phone;
+              const isSelected = selectedSuppliers.includes(link.supplier_id);
 
-          return (
-            <div
-              key={link.id}
-              className={`flex items-center gap-2 p-1.5 rounded text-xs ${
-                !hasPhone ? "opacity-50" : "cursor-pointer hover:bg-muted/50"
-              } ${isSelected ? "bg-primary/5" : ""}`}
-              onClick={() => hasPhone && handleToggle(link.supplier_id)}
-            >
-              <Checkbox
-                checked={isSelected}
-                disabled={!hasPhone}
-                onCheckedChange={() => hasPhone && handleToggle(link.supplier_id)}
-                className="h-3.5 w-3.5"
-              />
-              <span className="flex-1">{supplier.name}</span>
-              {link.is_direct && (
-                <Badge variant="default" className="text-[10px] py-0 px-1">
-                  Principal
-                </Badge>
-              )}
-              {link.is_preferred && !link.is_direct && (
-                <Badge variant="secondary" className="text-[10px] py-0 px-1">
-                  Preferido
-                </Badge>
-              )}
-              {!hasPhone && (
-                <Badge variant="outline" className="text-[10px] py-0 px-1 text-amber-600">
-                  Sem WhatsApp
-                </Badge>
-              )}
-              {hasPhone && (
-                <span className="text-muted-foreground">{supplier.phone}</span>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              return (
+                <div
+                  key={link.id}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs ${
+                    !hasPhone ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:bg-muted"
+                  }`}
+                  onClick={() => hasPhone && handleToggle(link.supplier_id)}
+                >
+                  <Checkbox
+                    checked={isSelected}
+                    disabled={!hasPhone}
+                    onCheckedChange={() => hasPhone && handleToggle(link.supplier_id)}
+                    className="h-3.5 w-3.5"
+                  />
+                  <span className="flex-1 truncate">{supplier.name}</span>
+                  {link.is_direct && (
+                    <Badge variant="default" className="text-[10px] py-0 px-1">
+                      Principal
+                    </Badge>
+                  )}
+                  {link.is_preferred && !link.is_direct && (
+                    <Badge variant="secondary" className="text-[10px] py-0 px-1">
+                      Preferido
+                    </Badge>
+                  )}
+                  {!hasPhone && (
+                    <Badge variant="outline" className="text-[10px] py-0 px-1 text-amber-600">
+                      Sem WhatsApp
+                    </Badge>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
