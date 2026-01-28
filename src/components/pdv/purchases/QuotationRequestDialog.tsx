@@ -188,6 +188,8 @@ export function QuotationRequestDialog({
                     onSelect={(date) => date && setDeadline(date)}
                     disabled={(date) => date < new Date()}
                     initialFocus
+                    locale={ptBR}
+                    className="pointer-events-auto"
                   />
                 </PopoverContent>
               </Popover>
