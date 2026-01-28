@@ -61,19 +61,24 @@ export function useWhatsAppConnection() {
       .slice(0, 50);
   };
 
-  // Fetch current connection from database
+  // Fetch current connection from database (prioritize 'open' status)
   const { data: connection, isLoading } = useQuery({
     queryKey: ['whatsapp-connection', user?.id],
     queryFn: async () => {
       if (!user) return null;
       
-      const { data, error } = await (supabase as any)
+      // Order by connection_status desc ('open' comes before 'connecting'/'disconnected' alphabetically)
+      // Then by updated_at desc to get most recent
+      const { data, error } = await supabase
         .from('whatsapp_connections')
         .select('*')
         .eq('user_id', user.id)
-        .single();
+        .order('connection_status', { ascending: false })
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
       
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching connection:', error);
         return null;
       }
