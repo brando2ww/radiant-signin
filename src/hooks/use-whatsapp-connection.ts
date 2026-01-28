@@ -10,6 +10,7 @@ export interface WhatsAppConnection {
   id: string;
   user_id: string;
   instance_name: string;
+  connection_name: string | null;
   phone_number: string | null;
   connection_status: ConnectionStatus;
   profile_name: string | null;
@@ -35,6 +36,11 @@ export interface StatusResponse {
   phone_number?: string | null;
 }
 
+export interface GenerateQRCodeParams {
+  connectionName: string;
+  phoneNumber: string;
+}
+
 export function useWhatsAppConnection() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -42,8 +48,20 @@ export function useWhatsAppConnection() {
   const [isPolling, setIsPolling] = useState(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const currentInstanceRef = useRef<string>('');
 
-  const instanceName = user ? `velara-${user.id.slice(0, 8)}` : '';
+  // Generate instance name from connection name
+  const generateInstanceName = (connectionName: string) => {
+    if (!user) return '';
+    const slug = connectionName
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 20);
+    return `velara-${user.id.slice(0, 8)}-${slug}`;
+  };
 
   // Fetch current connection from database
   const { data: connection, isLoading } = useQuery({
@@ -69,13 +87,21 @@ export function useWhatsAppConnection() {
 
   const isConnected = connection?.connection_status === 'open';
 
-  // Generate QR Code
+  // Generate QR Code with connection name and phone
   const generateQRCode = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (params: GenerateQRCodeParams) => {
       if (!user) throw new Error('User not authenticated');
 
+      const instanceName = generateInstanceName(params.connectionName);
+      currentInstanceRef.current = instanceName;
+
       const { data, error } = await supabase.functions.invoke('whatsapp-qrcode/generate', {
-        body: { userId: user.id, instanceName }
+        body: { 
+          userId: user.id, 
+          instanceName,
+          connectionName: params.connectionName,
+          phoneNumber: params.phoneNumber.replace(/\D/g, '')
+        }
       });
 
       if (error) throw error;
@@ -98,11 +124,11 @@ export function useWhatsAppConnection() {
 
   // Check connection status
   const checkStatus = useCallback(async () => {
-    if (!user) return null;
+    if (!user || !currentInstanceRef.current) return null;
 
     try {
       const { data, error } = await supabase.functions.invoke('whatsapp-qrcode/status', {
-        body: { userId: user.id, instanceName }
+        body: { userId: user.id, instanceName: currentInstanceRef.current }
       });
 
       if (error) throw error;
@@ -111,7 +137,7 @@ export function useWhatsAppConnection() {
       console.error('Error checking status:', error);
       return null;
     }
-  }, [user, instanceName]);
+  }, [user]);
 
   // Start polling for connection status
   const startPolling = useCallback(() => {
@@ -162,9 +188,10 @@ export function useWhatsAppConnection() {
   const disconnect = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('User not authenticated');
+      if (!connection?.instance_name) throw new Error('No connection found');
 
       const { data, error } = await supabase.functions.invoke('whatsapp-qrcode/disconnect', {
-        body: { userId: user.id, instanceName }
+        body: { userId: user.id, instanceName: connection.instance_name }
       });
 
       if (error) throw error;

@@ -3821,6 +3821,7 @@ export type Database = {
       whatsapp_connections: {
         Row: {
           connected_at: string | null
+          connection_name: string | null
           connection_status: string | null
           created_at: string | null
           id: string
@@ -3834,6 +3835,7 @@ export type Database = {
         }
         Insert: {
           connected_at?: string | null
+          connection_name?: string | null
           connection_status?: string | null
           created_at?: string | null
           id?: string
@@ -3847,6 +3849,7 @@ export type Database = {
         }
         Update: {
           connected_at?: string | null
+          connection_name?: string | null
           connection_status?: string | null
           created_at?: string | null
           id?: string
