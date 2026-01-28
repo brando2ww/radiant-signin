@@ -1,25 +1,14 @@
 
 
-## Plano: Corrigir Exibição de Fornecedores Vinculados na Cotação
+## Plano: Alterar Seleção de Fornecedores para Menu Suspenso (Dropdown)
 
-### Problema Identificado
+### Problema Atual
 
-O sistema possui duas formas de vincular fornecedores a ingredientes:
-
-1. **Vínculo direto**: Campo `supplier_id` na tabela `pdv_ingredients` (forma antiga/simples)
-2. **Vínculo múltiplo**: Tabela `pdv_ingredient_suppliers` (forma nova para múltiplos fornecedores)
-
-O componente `QuotationItemSuppliers` busca apenas na tabela de vínculo múltiplo, ignorando o fornecedor vinculado diretamente no ingrediente.
-
-### Dados Atuais no Banco
-
-| Ingrediente | supplier_id (direto) | pdv_ingredient_suppliers |
-|-------------|---------------------|--------------------------|
-| SALMÃO 2K | CARLOS EDUARDO... | (vazio) |
+A seleção de fornecedores usa checkboxes em lista, ocupando muito espaço vertical e sendo menos intuitivo para o usuário que espera um dropdown padrão.
 
 ### Solução
 
-Modificar o componente `QuotationItemSuppliers` para também considerar o fornecedor vinculado diretamente ao ingrediente (`supplier_id`).
+Substituir a lista de checkboxes por um componente de Select multi-seleção usando o Popover com checkboxes dentro (padrão comum para multi-select).
 
 ---
 
@@ -27,71 +16,84 @@ Modificar o componente `QuotationItemSuppliers` para também considerar o fornec
 
 **Arquivo:** `src/components/pdv/purchases/QuotationItemSuppliers.tsx`
 
-1. **Buscar dados do ingrediente incluindo o fornecedor direto**:
-   - Fazer uma query adicional para buscar o `supplier_id` do ingrediente
-   - Ou receber o ingrediente como prop (já temos o `ingredientId`)
+#### Estrutura do Novo Componente:
 
-2. **Combinar fornecedores de ambas as fontes**:
-   - Fornecedores da tabela `pdv_ingredient_suppliers`
-   - Fornecedor do campo `supplier_id` de `pdv_ingredients`
-   - Evitar duplicatas (mesmo fornecedor nas duas fontes)
+```
+┌──────────────────────────────────────────────────────────────┐
+│ Fornecedores: [Selecione os fornecedores...            ▼]   │
+│               ou                                             │
+│               [2 fornecedores selecionados             ▼]   │
+└──────────────────────────────────────────────────────────────┘
 
-3. **Marcar o fornecedor direto como "Principal"**:
-   - Exibir badge indicando que é o fornecedor principal do ingrediente
+Ao abrir o dropdown:
+┌──────────────────────────────────────────────────────────────┐
+│ ☑ CARLOS EDUARDO... (54) 99223-2827        [Principal]      │
+│ ☐ Outro Fornecedor  (11) 99999-9999        [Preferido]      │
+│ ☐ Sem WhatsApp                             [Sem WhatsApp]   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+#### Implementação:
+
+1. **Substituir imports**:
+   - Remover `Checkbox` como componente principal
+   - Adicionar `Popover`, `PopoverTrigger`, `PopoverContent`
+   - Adicionar `Command`, `CommandGroup`, `CommandItem` (para lista pesquisável)
+   - Manter `Checkbox` para uso dentro do dropdown
+
+2. **Criar trigger do dropdown**:
+   - Botão que mostra "Selecione os fornecedores..." ou "X fornecedores selecionados"
+   - Estilo consistente com outros selects do sistema
+
+3. **Conteúdo do dropdown**:
+   - Lista de fornecedores com checkbox ao lado de cada um
+   - Badges para "Principal", "Preferido", "Sem WhatsApp"
+   - Fornecedores sem WhatsApp ficam desabilitados
+
+4. **Manter lógica existente**:
+   - Auto-seleção de fornecedores preferidos/principais
+   - Toggle de seleção
+   - Validação de WhatsApp
 
 ---
 
-### Implementação
-
-Modificar o componente para:
+### Código da Nova UI
 
 ```typescript
-// Buscar o ingrediente com seu fornecedor direto
-const { data: ingredientData } = useQuery({
-  queryKey: ['ingredient-direct-supplier', ingredientId],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from('pdv_ingredients')
-      .select(`
-        id,
-        supplier_id,
-        supplier:pdv_suppliers(id, name, phone, email, contact_name)
-      `)
-      .eq('id', ingredientId)
-      .single();
-    return data;
-  },
-  enabled: !!ingredientId,
-});
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Check, ChevronsUpDown } from "lucide-react";
 
-// Combinar fornecedores (direto + múltiplos)
-const allSuppliers = useMemo(() => {
-  const result = [];
-  
-  // Adicionar fornecedor direto do ingrediente
-  if (ingredientData?.supplier) {
-    result.push({
-      id: `direct-${ingredientData.supplier.id}`,
-      supplier_id: ingredientData.supplier.id,
-      supplier: ingredientData.supplier,
-      is_preferred: true, // fornecedor principal
-      is_direct: true,    // flag para identificar
-    });
-  }
-  
-  // Adicionar fornecedores da tabela de vínculo múltiplo
-  ingredientSuppliers.forEach(is => {
-    // Evitar duplicata
-    if (!result.some(r => r.supplier_id === is.supplier_id)) {
-      result.push({
-        ...is,
-        is_direct: false,
-      });
-    }
-  });
-  
-  return result;
-}, [ingredientData, ingredientSuppliers]);
+// No render:
+<Popover>
+  <PopoverTrigger asChild>
+    <Button
+      variant="outline"
+      role="combobox"
+      className="w-full justify-between text-xs h-8"
+    >
+      {selectedSuppliers.length === 0
+        ? "Selecione os fornecedores..."
+        : `${selectedSuppliers.length} fornecedor${selectedSuppliers.length > 1 ? "es" : ""} selecionado${selectedSuppliers.length > 1 ? "s" : ""}`}
+      <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+    </Button>
+  </PopoverTrigger>
+  <PopoverContent className="w-full p-0" align="start">
+    <div className="max-h-60 overflow-auto p-1">
+      {suppliers.map((link) => (
+        <div
+          key={link.id}
+          className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
+          onClick={() => hasPhone && handleToggle(link.supplier_id)}
+        >
+          <Checkbox checked={isSelected} disabled={!hasPhone} />
+          <span className="flex-1 text-sm">{supplier.name}</span>
+          {/* Badges */}
+        </div>
+      ))}
+    </div>
+  </PopoverContent>
+</Popover>
 ```
 
 ---
@@ -100,22 +102,15 @@ const allSuppliers = useMemo(() => {
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/pdv/purchases/QuotationItemSuppliers.tsx` | Adicionar busca do fornecedor direto e combinar com múltiplos |
+| `src/components/pdv/purchases/QuotationItemSuppliers.tsx` | Substituir lista de checkboxes por Popover dropdown com multi-select |
 
 ---
 
-### Resultado Esperado
+### Comportamento
 
-Ao selecionar "SALMÃO 2K" na cotação, o sistema exibirá:
-
-```
-Fornecedores:
-☑ CARLOS EDUARDO MALHEIROS BENVINDA (54) 99223-2827  [Principal]
-```
-
-Em vez de:
-
-```
-⚠️ Nenhum fornecedor vinculado a este ingrediente
-```
+- **Fechado**: Mostra quantidade de fornecedores selecionados
+- **Aberto**: Lista com checkboxes para selecionar múltiplos
+- **Auto-seleção**: Mantém comportamento de pré-selecionar fornecedores principais
+- **Sem WhatsApp**: Item aparece mas fica desabilitado com indicador visual
+- **Badges**: Principal, Preferido, Sem WhatsApp visíveis dentro do dropdown
 
