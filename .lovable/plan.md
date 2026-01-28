@@ -1,12 +1,22 @@
 
 
-## Plano: Deixar QR Code Sempre Amarelo
+## Plano: QR Code Amarelo com Fundo Branco
 
 ### Problema
-O QR Code e uma imagem base64 gerada pela Evolution API e nao pode ser alterada na origem. A cor precisa ser modificada via CSS.
+A implementacao anterior deixou o fundo amarelo e o QR code preto. O usuario quer o inverso: fundo branco e o QR code (os padroes/quadrados) em amarelo.
 
 ### Solucao
-Aplicar filtros CSS na imagem para converter para tons amarelos. Como QR Codes sao preto e branco, usaremos uma tecnica de `mix-blend-mode` com um container amarelo.
+Usar filtros CSS para transformar as partes pretas do QR Code em amarelo, mantendo o fundo branco.
+
+---
+
+### Tecnica CSS
+
+Aplicar uma combinacao de filtros CSS que converte preto em amarelo:
+- `invert(1)`: Inverte preto para branco e branco para preto
+- `sepia(1)`: Aplica tom sepia
+- `saturate(5)`: Aumenta saturacao
+- `hue-rotate(5deg)`: Ajusta matiz para amarelo puro
 
 ---
 
@@ -14,37 +24,34 @@ Aplicar filtros CSS na imagem para converter para tons amarelos. Como QR Codes s
 
 **Arquivo:** `src/components/pdv/settings/WhatsAppQRCodeDialog.tsx`
 
-**Linha 101-119 - Modificar container e imagem do QR Code:**
-
-De:
+**Container do QR Code:**
 ```tsx
-<div className="relative flex h-64 w-64 items-center justify-center rounded-lg border-2 border-dashed bg-muted/50">
-  {/* ... */}
-  <img 
-    src={`data:image/png;base64,${qrCode}`} 
-    alt="QR Code WhatsApp" 
-    className="h-full w-full object-contain p-2"
-  />
+// De:
+<div className="... bg-yellow-400">
+
+// Para:
+<div className="... bg-white">
 ```
 
-Para:
+**Imagem do QR Code:**
 ```tsx
-<div className="relative flex h-64 w-64 items-center justify-center rounded-lg border-2 border-dashed bg-yellow-400">
-  {/* ... */}
-  <img 
-    src={`data:image/png;base64,${qrCode}`} 
-    alt="QR Code WhatsApp" 
-    className="h-full w-full object-contain p-2 mix-blend-multiply"
-  />
+// De:
+<img className="... mix-blend-multiply" />
+
+// Para:
+<img 
+  className="h-full w-full object-contain p-2"
+  style={{ filter: 'invert(1) sepia(1) saturate(5) hue-rotate(5deg)' }}
+/>
 ```
 
-### Explicacao Tecnica
-
-- **`bg-yellow-400`**: Define o fundo amarelo no container
-- **`mix-blend-multiply`**: Modo de mesclagem que multiplica as cores - as partes brancas do QR Code ficam amarelas, as partes pretas permanecem pretas
+---
 
 ### Resultado Visual
-- Fundo do QR Code: Amarelo
-- Quadrados/padroes do QR Code: Preto
-- O QR Code continua funcional para leitura
+
+| Elemento | Cor |
+|----------|-----|
+| Fundo do container | Branco |
+| Padroes do QR Code | Amarelo |
+| QR Code funcional | Sim |
 
