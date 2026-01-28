@@ -1,138 +1,98 @@
 
-
-## Plano: Criar Instância Antes de Gerar QR Code
+## Plano: Usar Nome da Conexão Diretamente como Instance Name
 
 ### Problema Atual
-O fluxo atual:
-1. Usuário clica em "Gerar QR Code"
-2. Sistema cria instância automaticamente com nome fixo (`velara-{userId}`)
-3. Tenta gerar QR Code imediatamente
-
-O que o usuário quer:
-1. Usuário digita **nome da conexão** e **número de telefone**
-2. Sistema cria a instância na Evolution API
-3. Após criar com sucesso, gera o QR Code
-
----
-
-### Alterações Necessárias
-
-#### 1. Modificar o Dialog de Conexão
-
-**Arquivo:** `src/components/pdv/settings/WhatsAppQRCodeDialog.tsx`
-
-Adicionar um formulário inicial com dois campos antes de mostrar o QR Code:
-
-```text
-┌──────────────────────────────────────┐
-│  Conectar WhatsApp                   │
-├──────────────────────────────────────┤
-│                                      │
-│  Nome da conexão:                    │
-│  ┌────────────────────────────────┐  │
-│  │ Ex: Loja Principal             │  │
-│  └────────────────────────────────┘  │
-│                                      │
-│  Número do WhatsApp:                 │
-│  ┌────────────────────────────────┐  │
-│  │ (11) 99999-9999                │  │
-│  └────────────────────────────────┘  │
-│                                      │
-│  ┌────────────────────────────────┐  │
-│  │     Conectar WhatsApp          │  │
-│  └────────────────────────────────┘  │
-│                                      │
-└──────────────────────────────────────┘
+O código atual gera o nome da instância assim:
+```typescript
+// Linha 54-64 de use-whatsapp-connection.ts
+const generateInstanceName = (connectionName: string) => {
+  const slug = connectionName
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 20);
+  return `velara-${user.id.slice(0, 8)}-${slug}`;  // ← Problema aqui
+};
 ```
 
-Após clicar em "Conectar WhatsApp":
-1. Salva os dados no banco (whatsapp_connections)
-2. Cria a instância na Evolution API
-3. Só então mostra o QR Code
+Resultado: `velara-a0f02206-loja-1` (feio e técnico)
+
+O usuário quer que apareça como as outras instâncias na Evolution API: `VELARA MEI`, `DINCONNECT`, etc. (nome limpo e legível).
 
 ---
 
-#### 2. Atualizar o Hook de Conexão
+### Solucao
+
+Mudar a função `generateInstanceName` para usar o nome da conexão diretamente, apenas formatando para ser um identificador válido:
+
+| Antes | Depois |
+|-------|--------|
+| `velara-a0f02206-loja-1` | `Loja 1` |
+| `velara-a0f02206-restaurante-centro` | `Restaurante Centro` |
+
+---
+
+### Alteracao
 
 **Arquivo:** `src/hooks/use-whatsapp-connection.ts`
 
-Modificar a mutation `generateQRCode` para aceitar parâmetros:
-- `connectionName`: Nome personalizado da conexão
-- `phoneNumber`: Número de telefone do WhatsApp
+**De:**
+```typescript
+const generateInstanceName = (connectionName: string) => {
+  if (!user) return '';
+  const slug = connectionName
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 20);
+  return `velara-${user.id.slice(0, 8)}-${slug}`;
+};
+```
 
-O `instanceName` será gerado como: `velara-{userId}-{slug do connectionName}`
-
----
-
-#### 3. Atualizar a Edge Function
-
-**Arquivo:** `supabase/functions/whatsapp-qrcode/index.ts`
-
-Modificar a action `generate` para:
-1. Receber `connectionName` e `phoneNumber` no body
-2. Criar o registro no banco com esses dados ANTES de criar na Evolution API
-3. Só gerar QR Code após instância criada com sucesso
-
----
-
-### Novo Fluxo
-
-```text
-Estado Inicial
-     │
-     ▼
-┌─────────────┐
-│ Formulário  │  ← Nome + Número
-└─────────────┘
-     │
-     ▼
-┌─────────────┐
-│ Criar       │  ← Evolution API: instance/create
-│ Instância   │
-└─────────────┘
-     │
-     ▼
-┌─────────────┐
-│ Gerar       │  ← Evolution API: instance/connect
-│ QR Code     │
-└─────────────┘
-     │
-     ▼
-┌─────────────┐
-│ Aguardar    │  ← Polling: status
-│ Conexão     │
-└─────────────┘
-     │
-     ▼
-┌─────────────┐
-│ Conectado!  │
-└─────────────┘
+**Para:**
+```typescript
+const generateInstanceName = (connectionName: string) => {
+  if (!user) return '';
+  // Usar o nome da conexão diretamente, apenas removendo caracteres especiais inválidos
+  // A Evolution API aceita espaços e letras maiúsculas no instanceName
+  return connectionName
+    .trim()
+    .replace(/[^\w\s-]/g, '')  // Remove apenas caracteres especiais (mantém letras, números, espaços e hífens)
+    .slice(0, 50);  // Limita o tamanho
+};
 ```
 
 ---
 
-### Arquivos a Modificar
+### Resultado Esperado
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/pdv/settings/WhatsAppQRCodeDialog.tsx` | Adicionar formulário com campos nome/número antes do QR |
-| `src/hooks/use-whatsapp-connection.ts` | Aceitar parâmetros na mutation generateQRCode |
-| `supabase/functions/whatsapp-qrcode/index.ts` | Receber e salvar dados adicionais |
+| Nome digitado pelo usuário | Instance Name na Evolution |
+|---------------------------|---------------------------|
+| `Loja 1` | `Loja 1` |
+| `Restaurante Centro` | `Restaurante Centro` |
+| `WhatsApp Vendas` | `WhatsApp Vendas` |
+
+O nome aparecerá exatamente como o usuário digitou no painel da Evolution API.
 
 ---
 
-### Detalhes Técnicos
+### Observacao
 
-**Dialog - Estados:**
-1. `form` - Mostra formulário de nome + número
-2. `generating` - Criando instância e gerando QR
-3. `qrcode` - Mostrando QR Code para escanear
-4. `connected` - Conexão estabelecida
+Se a Evolution API não aceitar espaços no nome (dependendo da versão), podemos usar uma alternativa com MAIÚSCULAS e sem espaços:
 
-**Validações:**
-- Nome da conexão: obrigatório, mínimo 3 caracteres
-- Número: obrigatório, formato telefone brasileiro
+```typescript
+return connectionName
+  .trim()
+  .toUpperCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^A-Z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '')
+  .slice(0, 50);
+```
 
-**Banco de dados:**
-- Adicionar coluna `connection_name` na tabela `whatsapp_connections` para armazenar o nome amigável
-
+Isso transformaria "Loja Principal" em "LOJA-PRINCIPAL" (similar ao estilo "DINCONNECT").
