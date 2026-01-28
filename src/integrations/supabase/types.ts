@@ -2939,6 +2939,45 @@ export type Database = {
           },
         ]
       }
+      pdv_quotation_item_suppliers: {
+        Row: {
+          created_at: string | null
+          id: string
+          quotation_item_id: string
+          sent_at: string | null
+          supplier_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          quotation_item_id: string
+          sent_at?: string | null
+          supplier_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          quotation_item_id?: string
+          sent_at?: string | null
+          supplier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_quotation_item_suppliers_quotation_item_id_fkey"
+            columns: ["quotation_item_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_quotation_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_quotation_item_suppliers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_quotation_items: {
         Row: {
           created_at: string | null

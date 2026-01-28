@@ -64,6 +64,7 @@ export interface CreateQuotationData {
     quantity_needed: number;
     unit: string;
     notes?: string;
+    selected_suppliers?: string[];
   }[];
 }
 
@@ -150,16 +151,45 @@ export function usePDVQuotations() {
       if (requestError) throw requestError;
 
       // Create items
-      const items = data.items.map((item) => ({
+      const itemsToInsert = data.items.map((item) => ({
         quotation_request_id: request.id,
-        ...item,
+        ingredient_id: item.ingredient_id,
+        quantity_needed: item.quantity_needed,
+        unit: item.unit,
+        notes: item.notes,
       }));
 
-      const { error: itemsError } = await supabase
+      const { data: createdItems, error: itemsError } = await supabase
         .from('pdv_quotation_items')
-        .insert(items);
+        .insert(itemsToInsert)
+        .select('id, ingredient_id');
 
       if (itemsError) throw itemsError;
+
+      // Insert selected suppliers for each item
+      if (createdItems && createdItems.length > 0) {
+        const supplierLinks: { quotation_item_id: string; supplier_id: string }[] = [];
+
+        createdItems.forEach((createdItem) => {
+          const originalItem = data.items.find(i => i.ingredient_id === createdItem.ingredient_id);
+          if (originalItem?.selected_suppliers) {
+            originalItem.selected_suppliers.forEach((supplierId) => {
+              supplierLinks.push({
+                quotation_item_id: createdItem.id,
+                supplier_id: supplierId,
+              });
+            });
+          }
+        });
+
+        if (supplierLinks.length > 0) {
+          const { error: suppliersError } = await supabase
+            .from('pdv_quotation_item_suppliers')
+            .insert(supplierLinks);
+
+          if (suppliersError) throw suppliersError;
+        }
+      }
 
       return request;
     },
