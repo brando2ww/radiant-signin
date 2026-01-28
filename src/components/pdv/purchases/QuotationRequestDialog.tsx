@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -32,6 +32,7 @@ import { usePDVIngredients } from "@/hooks/use-pdv-ingredients";
 import { generateQuotationMessage } from "@/lib/whatsapp-message";
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
+import { QuotationItemSuppliers } from "./QuotationItemSuppliers";
 
 interface QuotationItem {
   ingredient_id: string;
@@ -39,12 +40,13 @@ interface QuotationItem {
   quantity_needed: number;
   unit: string;
   notes?: string;
+  selected_suppliers: string[];
 }
 
 interface QuotationRequestDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  preselectedItems?: QuotationItem[];
+  preselectedItems?: Omit<QuotationItem, "selected_suppliers">[];
 }
 
 export function QuotationRequestDialog({
@@ -63,7 +65,7 @@ export function QuotationRequestDialog({
   // Initialize with preselected items
   useEffect(() => {
     if (open && preselectedItems && preselectedItems.length > 0) {
-      setItems(preselectedItems);
+      setItems(preselectedItems.map((item) => ({ ...item, selected_suppliers: [] })));
     }
   }, [open, preselectedItems]);
 
@@ -90,6 +92,7 @@ export function QuotationRequestDialog({
         ingredient_name: "",
         quantity_needed: 1,
         unit: "un",
+        selected_suppliers: [],
       },
     ]);
   };
@@ -98,7 +101,7 @@ export function QuotationRequestDialog({
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const handleItemChange = (index: number, field: keyof QuotationItem, value: string | number) => {
+  const handleItemChange = (index: number, field: keyof QuotationItem, value: string | number | string[]) => {
     const newItems = [...items];
     if (field === "ingredient_id") {
       const ingredient = ingredients.find((i) => i.id === value);
@@ -108,10 +111,13 @@ export function QuotationRequestDialog({
           ingredient_id: ingredient.id,
           ingredient_name: ingredient.name,
           unit: ingredient.unit,
+          selected_suppliers: [], // Reset suppliers when ingredient changes
         };
       }
     } else if (field === "quantity_needed") {
       newItems[index] = { ...newItems[index], quantity_needed: value as number };
+    } else if (field === "selected_suppliers") {
+      newItems[index] = { ...newItems[index], selected_suppliers: value as string[] };
     }
     setItems(newItems);
   };
@@ -131,6 +137,7 @@ export function QuotationRequestDialog({
           quantity_needed: item.quantity_needed,
           unit: item.unit,
           notes: item.notes,
+          selected_suppliers: item.selected_suppliers,
         })),
       },
       {
@@ -153,6 +160,12 @@ export function QuotationRequestDialog({
     onOpenChange(false);
     resetForm();
   };
+
+  // Count total selected suppliers
+  const totalSelectedSuppliers = items.reduce(
+    (acc, item) => acc + item.selected_suppliers.length,
+    0
+  );
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -214,58 +227,71 @@ export function QuotationRequestDialog({
                   {items.map((item, index) => (
                     <div
                       key={index}
-                      className="grid grid-cols-12 gap-2 items-end p-3 border rounded-md"
+                      className="p-3 border rounded-md space-y-2"
                     >
-                      <div className="col-span-5">
-                        <Label className="text-xs">Ingrediente</Label>
-                        <Select
-                          value={item.ingredient_id}
-                          onValueChange={(value) =>
-                            handleItemChange(index, "ingredient_id", value)
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ingredients.map((ing) => (
-                              <SelectItem key={ing.id} value={ing.id}>
-                                {ing.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                      <div className="grid grid-cols-12 gap-2 items-end">
+                        <div className="col-span-5">
+                          <Label className="text-xs">Ingrediente</Label>
+                          <Select
+                            value={item.ingredient_id}
+                            onValueChange={(value) =>
+                              handleItemChange(index, "ingredient_id", value)
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ingredients.map((ing) => (
+                                <SelectItem key={ing.id} value={ing.id}>
+                                  {ing.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="col-span-3">
+                          <Label className="text-xs">Quantidade</Label>
+                          <Input
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            value={item.quantity_needed}
+                            onChange={(e) =>
+                              handleItemChange(
+                                index,
+                                "quantity_needed",
+                                parseFloat(e.target.value) || 0
+                              )
+                            }
+                          />
+                        </div>
+                        <div className="col-span-3">
+                          <Label className="text-xs">Unidade</Label>
+                          <Input value={item.unit} disabled />
+                        </div>
+                        <div className="col-span-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveItem(index)}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="col-span-3">
-                        <Label className="text-xs">Quantidade</Label>
-                        <Input
-                          type="number"
-                          min="0.01"
-                          step="0.01"
-                          value={item.quantity_needed}
-                          onChange={(e) =>
-                            handleItemChange(
-                              index,
-                              "quantity_needed",
-                              parseFloat(e.target.value) || 0
-                            )
+
+                      {/* Supplier Selection */}
+                      {item.ingredient_id && (
+                        <QuotationItemSuppliers
+                          ingredientId={item.ingredient_id}
+                          selectedSuppliers={item.selected_suppliers}
+                          onSuppliersChange={(suppliers) =>
+                            handleItemChange(index, "selected_suppliers", suppliers)
                           }
                         />
-                      </div>
-                      <div className="col-span-3">
-                        <Label className="text-xs">Unidade</Label>
-                        <Input value={item.unit} disabled />
-                      </div>
-                      <div className="col-span-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveItem(index)}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -309,7 +335,7 @@ export function QuotationRequestDialog({
             onClick={handleSubmit}
             disabled={items.length === 0 || items.some((item) => !item.ingredient_id) || createQuotation.isPending}
           >
-            {createQuotation.isPending ? "Criando..." : "Criar Cotação"}
+            {createQuotation.isPending ? "Criando..." : `Criar Cotação${totalSelectedSuppliers > 0 ? ` (${totalSelectedSuppliers} fornecedores)` : ""}`}
           </Button>
         </DialogFooter>
       </DialogContent>

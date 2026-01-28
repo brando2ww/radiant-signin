@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { MessageCircle, Check, X } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { MessageCircle, Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,8 @@ import { QuotationRequest } from "@/hooks/use-pdv-quotations";
 import { usePDVIngredientSuppliers } from "@/hooks/use-pdv-ingredient-suppliers";
 import { generateQuotationMessage, openWhatsApp } from "@/lib/whatsapp-message";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 interface WhatsAppSendDialogProps {
   open: boolean;
@@ -42,20 +44,47 @@ export function WhatsAppSendDialog({
   const { ingredientSuppliers } = usePDVIngredientSuppliers();
   const [selectedSuppliers, setSelectedSuppliers] = useState<Set<string>>(new Set());
 
+  // Fetch saved suppliers for this quotation's items
+  const { data: savedItemSuppliers = [] } = useQuery({
+    queryKey: ["quotation-item-suppliers", quotation.id],
+    queryFn: async () => {
+      const itemIds = quotation.items?.map((i) => i.id) || [];
+      if (itemIds.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from("pdv_quotation_item_suppliers")
+        .select(`
+          id,
+          quotation_item_id,
+          supplier_id,
+          sent_at,
+          supplier:pdv_suppliers(id, name, phone)
+        `)
+        .in("quotation_item_id", itemIds);
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && !!quotation.items?.length,
+  });
+
+  // Check if we have saved suppliers or should fallback to ingredient suppliers
+  const hasSavedSuppliers = savedItemSuppliers.length > 0;
+
   // Get suppliers for each ingredient in the quotation
   const suppliersWithItems = useMemo(() => {
     const supplierMap = new Map<string, SupplierWithItems>();
 
-    quotation.items?.forEach((item) => {
-      // Find all suppliers linked to this ingredient
-      const linkedSuppliers = ingredientSuppliers.filter(
-        (is) => is.ingredient_id === item.ingredient_id && is.supplier?.phone
-      );
+    if (hasSavedSuppliers) {
+      // Use saved suppliers from pdv_quotation_item_suppliers
+      savedItemSuppliers.forEach((itemSupplier) => {
+        const item = quotation.items?.find((i) => i.id === itemSupplier.quotation_item_id);
+        if (!item || !itemSupplier.supplier) return;
 
-      linkedSuppliers.forEach((link) => {
-        if (!link.supplier) return;
+        const supplier = itemSupplier.supplier as { id: string; name: string; phone: string | null };
+        if (!supplier.phone) return;
 
-        const existing = supplierMap.get(link.supplier_id);
+        const existing = supplierMap.get(supplier.id);
         if (existing) {
           existing.items.push({
             ingredientId: item.ingredient_id,
@@ -64,10 +93,10 @@ export function WhatsAppSendDialog({
             unit: item.unit,
           });
         } else {
-          supplierMap.set(link.supplier_id, {
-            id: link.supplier_id,
-            name: link.supplier.name,
-            phone: link.supplier.phone,
+          supplierMap.set(supplier.id, {
+            id: supplier.id,
+            name: supplier.name,
+            phone: supplier.phone,
             items: [
               {
                 ingredientId: item.ingredient_id,
@@ -79,10 +108,52 @@ export function WhatsAppSendDialog({
           });
         }
       });
-    });
+    } else {
+      // Fallback: use all ingredient suppliers (old behavior)
+      quotation.items?.forEach((item) => {
+        const linkedSuppliers = ingredientSuppliers.filter(
+          (is) => is.ingredient_id === item.ingredient_id && is.supplier?.phone
+        );
+
+        linkedSuppliers.forEach((link) => {
+          if (!link.supplier) return;
+
+          const existing = supplierMap.get(link.supplier_id);
+          if (existing) {
+            existing.items.push({
+              ingredientId: item.ingredient_id,
+              ingredientName: item.ingredient?.name || "",
+              quantity: item.quantity_needed,
+              unit: item.unit,
+            });
+          } else {
+            supplierMap.set(link.supplier_id, {
+              id: link.supplier_id,
+              name: link.supplier.name,
+              phone: link.supplier.phone,
+              items: [
+                {
+                  ingredientId: item.ingredient_id,
+                  ingredientName: item.ingredient?.name || "",
+                  quantity: item.quantity_needed,
+                  unit: item.unit,
+                },
+              ],
+            });
+          }
+        });
+      });
+    }
 
     return Array.from(supplierMap.values());
-  }, [quotation.items, ingredientSuppliers]);
+  }, [quotation.items, ingredientSuppliers, savedItemSuppliers, hasSavedSuppliers]);
+
+  // Auto-select all suppliers when dialog opens (if we have saved suppliers)
+  useEffect(() => {
+    if (open && hasSavedSuppliers && suppliersWithItems.length > 0) {
+      setSelectedSuppliers(new Set(suppliersWithItems.map((s) => s.id)));
+    }
+  }, [open, hasSavedSuppliers, suppliersWithItems]);
 
   const handleToggleSupplier = (supplierId: string) => {
     const newSelected = new Set(selectedSuppliers);
@@ -102,24 +173,38 @@ export function WhatsAppSendDialog({
     }
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const deadline = quotation.deadline ? new Date(quotation.deadline) : new Date();
 
-    suppliersWithItems
-      .filter((s) => selectedSuppliers.has(s.id) && s.phone)
-      .forEach((supplier) => {
-        const message = quotation.message_template || generateQuotationMessage(
-          supplier.items.map((item) => ({
-            ingredientName: item.ingredientName,
-            quantity: item.quantity,
-            unit: item.unit,
-          })),
-          deadline
-        );
+    const suppliersToSend = suppliersWithItems.filter(
+      (s) => selectedSuppliers.has(s.id) && s.phone
+    );
 
-        // Open WhatsApp for each supplier
-        openWhatsApp(supplier.phone!, message);
-      });
+    for (const supplier of suppliersToSend) {
+      const message = quotation.message_template || generateQuotationMessage(
+        supplier.items.map((item) => ({
+          ingredientName: item.ingredientName,
+          quantity: item.quantity,
+          unit: item.unit,
+        })),
+        deadline
+      );
+
+      // Open WhatsApp for each supplier
+      openWhatsApp(supplier.phone!, message);
+    }
+
+    // Mark as sent in database
+    if (hasSavedSuppliers) {
+      const itemIds = quotation.items?.map((i) => i.id) || [];
+      const supplierIds = Array.from(selectedSuppliers);
+      
+      await supabase
+        .from("pdv_quotation_item_suppliers")
+        .update({ sent_at: new Date().toISOString() })
+        .in("quotation_item_id", itemIds)
+        .in("supplier_id", supplierIds);
+    }
 
     onOpenChange(false);
   };
@@ -145,6 +230,12 @@ export function WhatsAppSendDialog({
             </div>
           ) : (
             <>
+              {hasSavedSuppliers && (
+                <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+                  Mostrando apenas os fornecedores selecionados durante a criação da cotação.
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
                   {selectedSuppliers.size} de {suppliersWithItems.length} selecionado(s)
