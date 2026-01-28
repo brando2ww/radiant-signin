@@ -3818,6 +3818,48 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_connections: {
+        Row: {
+          connected_at: string | null
+          connection_status: string | null
+          created_at: string | null
+          id: string
+          instance_name: string
+          last_seen_at: string | null
+          phone_number: string | null
+          profile_name: string | null
+          profile_picture_url: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          connected_at?: string | null
+          connection_status?: string | null
+          created_at?: string | null
+          id?: string
+          instance_name: string
+          last_seen_at?: string | null
+          phone_number?: string | null
+          profile_name?: string | null
+          profile_picture_url?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          connected_at?: string | null
+          connection_status?: string | null
+          created_at?: string | null
+          id?: string
+          instance_name?: string
+          last_seen_at?: string | null
+          phone_number?: string | null
+          profile_name?: string | null
+          profile_picture_url?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       whatsapp_notification_preferences: {
         Row: {
           bills_days_before: number

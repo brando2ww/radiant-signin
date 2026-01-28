@@ -8,6 +8,7 @@ import { Link2, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react";
 import { useIFoodIntegration } from "@/hooks/use-ifood-integration";
 import { IFoodConnectionDialog } from "./IFoodConnectionDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { WhatsAppConnectionCard } from "./WhatsAppConnectionCard";
 
 export function IntegrationsTab() {
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
@@ -42,6 +43,9 @@ export function IntegrationsTab() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* WhatsApp Connection Card */}
+          <WhatsAppConnectionCard />
+
           <div className="rounded-lg border p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
