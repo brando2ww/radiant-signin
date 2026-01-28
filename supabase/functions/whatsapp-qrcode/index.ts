@@ -42,6 +42,16 @@ Deno.serve(async (req) => {
       console.log(`[whatsapp-qrcode] Generating QR for instance: ${instanceName}`)
       console.log(`[whatsapp-qrcode] Connection name: ${connectionName}, Phone: ${phoneNumber}`)
 
+      // 0. Clean up old non-open connections to prevent duplicates
+      const { error: cleanupError } = await supabase.from('whatsapp_connections')
+        .delete()
+        .eq('user_id', userId)
+        .neq('connection_status', 'open')
+      
+      if (cleanupError) {
+        console.log('[whatsapp-qrcode] Cleanup old connections error (ignored):', cleanupError)
+      }
+
       // 1. First, save the connection data to database
       const { error: upsertError } = await supabase.from('whatsapp_connections').upsert({
         user_id: userId,
