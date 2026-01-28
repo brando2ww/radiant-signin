@@ -41,6 +41,8 @@ import { CategoryQuickDialog } from "./CategoryQuickDialog";
 import { SectorQuickDialog } from "./SectorQuickDialog";
 import { CostCenterQuickDialog } from "./CostCenterQuickDialog";
 import { SupplierDialog } from "./SupplierDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface IngredientDialogProps {
   open: boolean;
@@ -80,6 +82,7 @@ export function IngredientDialog({
   onSubmit,
   isSubmitting,
 }: IngredientDialogProps) {
+  const { user } = useAuth();
   const { suppliers } = usePDVSuppliers();
   const { mutate: createSupplier, isPending: isCreatingSupplier } = useCreateSupplier();
   const { categories, createCategory, isCreating: isCreatingCategory } = useIngredientCategories();
@@ -92,6 +95,23 @@ export function IngredientDialog({
   const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
 
   const activeSuppliers = suppliers.filter(s => s.is_active);
+
+  // Função para gerar código automático sequencial
+  const generateCode = async (): Promise<string> => {
+    const { data } = await supabase
+      .from("pdv_ingredients")
+      .select("code")
+      .eq("user_id", user?.id)
+      .like("code", "INS-%")
+      .order("code", { ascending: false })
+      .limit(1);
+
+    if (data && data.length > 0 && data[0].code) {
+      const lastNumber = parseInt(data[0].code.replace("INS-", ""), 10);
+      return `INS-${String(lastNumber + 1).padStart(5, "0")}`;
+    }
+    return "INS-00001";
+  };
 
   const form = useForm({
     defaultValues: {
@@ -179,13 +199,19 @@ export function IngredientDialog({
     }
   }, [ingredient, open]);
 
-  const handleSubmit = form.handleSubmit((data) => {
+  const handleSubmit = form.handleSubmit(async (data) => {
     const avgCost = data.unit_cost * (1 + data.loss_percentage / 100);
     const currentBalance = data.current_stock * avgCost;
     
+    // Gerar código automático se não informado (apenas para novos insumos)
+    let code = data.code?.trim() || null;
+    if (!code && !ingredient) {
+      code = await generateCode();
+    }
+    
     onSubmit({
       ...data,
-      code: data.code?.trim() || null,
+      code,
       supplier_id: data.supplier_id === "none" ? null : data.supplier_id,
       category: data.category || null,
       sector: data.sector || null,
