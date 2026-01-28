@@ -98,9 +98,9 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
 
         <div className="flex flex-col items-center gap-4 py-4">
           {/* QR Code Display */}
-          <div className="relative flex h-64 w-64 items-center justify-center rounded-lg border-2 border-dashed bg-muted/50">
+          <div className="relative flex h-64 w-64 items-center justify-center rounded-lg border-2 border-dashed bg-yellow-400">
             {isGenerating ? (
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-2 rounded-lg bg-background/80 p-4">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 <p className="text-sm text-muted-foreground">Gerando QR Code...</p>
               </div>
@@ -108,7 +108,7 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
               <img 
                 src={`data:image/png;base64,${qrCode}`} 
                 alt="QR Code WhatsApp" 
-                className="h-full w-full object-contain p-2"
+                className="h-full w-full object-contain p-2 mix-blend-multiply"
               />
             ) : (
               <div className="flex flex-col items-center gap-2">
