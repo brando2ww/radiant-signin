@@ -1,98 +1,46 @@
 
-## Plano: Usar Nome da Conexão Diretamente como Instance Name
+
+## Plano: Corrigir QR Code para Padroes Amarelos
 
 ### Problema Atual
-O código atual gera o nome da instância assim:
-```typescript
-// Linha 54-64 de use-whatsapp-connection.ts
-const generateInstanceName = (connectionName: string) => {
-  const slug = connectionName
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 20);
-  return `velara-${user.id.slice(0, 8)}-${slug}`;  // ← Problema aqui
-};
+O codigo atual usa:
+```tsx
+<div className="... bg-accent">
+  <img className="... mix-blend-screen" />
+</div>
 ```
 
-Resultado: `velara-a0f02206-loja-1` (feio e técnico)
-
-O usuário quer que apareça como as outras instâncias na Evolution API: `VELARA MEI`, `DINCONNECT`, etc. (nome limpo e legível).
-
----
+O `bg-accent` no tema claro e uma cor muito clara (quase branca), entao o `mix-blend-screen` nao tem efeito visivel - o QR Code aparece com padrao branco/transparente.
 
 ### Solucao
 
-Mudar a função `generateInstanceName` para usar o nome da conexão diretamente, apenas formatando para ser um identificador válido:
+Usar um fundo **amarelo solido** (`bg-yellow-400`) para que o blend mode funcione corretamente:
 
-| Antes | Depois |
-|-------|--------|
-| `velara-a0f02206-loja-1` | `Loja 1` |
-| `velara-a0f02206-restaurante-centro` | `Restaurante Centro` |
-
----
+| Cor do Fundo | Pixel Preto do QR | Pixel Branco do QR |
+|--------------|-------------------|-------------------|
+| Amarelo | Vira amarelo | Permanece branco |
 
 ### Alteracao
 
-**Arquivo:** `src/hooks/use-whatsapp-connection.ts`
+**Arquivo:** `src/components/pdv/settings/WhatsAppQRCodeDialog.tsx`
 
-**De:**
-```typescript
-const generateInstanceName = (connectionName: string) => {
-  if (!user) return '';
-  const slug = connectionName
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 20);
-  return `velara-${user.id.slice(0, 8)}-${slug}`;
-};
+**Linha 204 - De:**
+```tsx
+<div className="relative flex h-64 w-64 items-center justify-center rounded-lg border-2 border-dashed bg-accent">
 ```
 
 **Para:**
-```typescript
-const generateInstanceName = (connectionName: string) => {
-  if (!user) return '';
-  // Usar o nome da conexão diretamente, apenas removendo caracteres especiais inválidos
-  // A Evolution API aceita espaços e letras maiúsculas no instanceName
-  return connectionName
-    .trim()
-    .replace(/[^\w\s-]/g, '')  // Remove apenas caracteres especiais (mantém letras, números, espaços e hífens)
-    .slice(0, 50);  // Limita o tamanho
-};
+```tsx
+<div className="relative flex h-64 w-64 items-center justify-center rounded-lg border-2 border-dashed bg-yellow-400">
 ```
 
----
+### Resultado Visual
 
-### Resultado Esperado
+| Elemento | Antes | Depois |
+|----------|-------|--------|
+| Fundo do container | Cor do accent (quase branco) | Amarelo (#facc15) |
+| Padroes do QR | Branco/invisivel | Amarelo |
+| Fundo do QR | Branco | Branco |
 
-| Nome digitado pelo usuário | Instance Name na Evolution |
-|---------------------------|---------------------------|
-| `Loja 1` | `Loja 1` |
-| `Restaurante Centro` | `Restaurante Centro` |
-| `WhatsApp Vendas` | `WhatsApp Vendas` |
+O `mix-blend-screen` ja esta aplicado na imagem (linha 214), entao a unica mudanca necessaria e trocar a cor de fundo do container para amarelo solido.
 
-O nome aparecerá exatamente como o usuário digitou no painel da Evolution API.
-
----
-
-### Observacao
-
-Se a Evolution API não aceitar espaços no nome (dependendo da versão), podemos usar uma alternativa com MAIÚSCULAS e sem espaços:
-
-```typescript
-return connectionName
-  .trim()
-  .toUpperCase()
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .replace(/[^A-Z0-9]+/g, '-')
-  .replace(/^-+|-+$/g, '')
-  .slice(0, 50);
-```
-
-Isso transformaria "Loja Principal" em "LOJA-PRINCIPAL" (similar ao estilo "DINCONNECT").
