@@ -1,102 +1,98 @@
 
 
-## Plano: Selecionar Fornecedores por Item na Criação da Cotação
+## Plano: Corrigir Exibição de Fornecedores Vinculados na Cotação
 
-### Problema Atual
+### Problema Identificado
 
-Atualmente, ao criar uma cotação:
-1. O usuário adiciona itens (ingredientes + quantidade)
-2. A cotação é criada no banco de dados
-3. **Depois**, no card da cotação, o usuário clica em "Enviar WhatsApp" e aí escolhe os fornecedores
+O sistema possui duas formas de vincular fornecedores a ingredientes:
 
-O usuário deseja poder **selecionar os fornecedores de cada item já no momento da criação**, para ter controle de quais fornecedores receberão a mensagem.
+1. **Vínculo direto**: Campo `supplier_id` na tabela `pdv_ingredients` (forma antiga/simples)
+2. **Vínculo múltiplo**: Tabela `pdv_ingredient_suppliers` (forma nova para múltiplos fornecedores)
 
----
+O componente `QuotationItemSuppliers` busca apenas na tabela de vínculo múltiplo, ignorando o fornecedor vinculado diretamente no ingrediente.
+
+### Dados Atuais no Banco
+
+| Ingrediente | supplier_id (direto) | pdv_ingredient_suppliers |
+|-------------|---------------------|--------------------------|
+| SALMÃO 2K | CARLOS EDUARDO... | (vazio) |
 
 ### Solução
 
-Adicionar seleção de fornecedores no dialog de criação de cotação (`QuotationRequestDialog`), mostrando os fornecedores vinculados a cada ingrediente e permitindo selecionar quais receberão a cotação.
+Modificar o componente `QuotationItemSuppliers` para também considerar o fornecedor vinculado diretamente ao ingrediente (`supplier_id`).
 
 ---
 
-### Alterações Necessárias
+### Alterações Técnicas
 
-#### 1. Criar Tabela para Armazenar Fornecedores Selecionados por Item
+**Arquivo:** `src/components/pdv/purchases/QuotationItemSuppliers.tsx`
 
-```sql
-CREATE TABLE pdv_quotation_item_suppliers (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  quotation_item_id UUID NOT NULL REFERENCES pdv_quotation_items(id) ON DELETE CASCADE,
-  supplier_id UUID NOT NULL REFERENCES pdv_suppliers(id) ON DELETE CASCADE,
-  sent_at TIMESTAMPTZ,  -- quando foi enviada a mensagem
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(quotation_item_id, supplier_id)
-);
-```
+1. **Buscar dados do ingrediente incluindo o fornecedor direto**:
+   - Fazer uma query adicional para buscar o `supplier_id` do ingrediente
+   - Ou receber o ingrediente como prop (já temos o `ingredientId`)
 
-Habilitar RLS com política para o usuário acessar apenas seus dados.
+2. **Combinar fornecedores de ambas as fontes**:
+   - Fornecedores da tabela `pdv_ingredient_suppliers`
+   - Fornecedor do campo `supplier_id` de `pdv_ingredients`
+   - Evitar duplicatas (mesmo fornecedor nas duas fontes)
+
+3. **Marcar o fornecedor direto como "Principal"**:
+   - Exibir badge indicando que é o fornecedor principal do ingrediente
 
 ---
 
-#### 2. Modificar Interface `QuotationItem` 
+### Implementação
 
-Adicionar campo para armazenar fornecedores selecionados:
+Modificar o componente para:
 
 ```typescript
-interface QuotationItem {
-  ingredient_id: string;
-  ingredient_name: string;
-  quantity_needed: number;
-  unit: string;
-  notes?: string;
-  selected_suppliers: string[];  // IDs dos fornecedores selecionados
-}
+// Buscar o ingrediente com seu fornecedor direto
+const { data: ingredientData } = useQuery({
+  queryKey: ['ingredient-direct-supplier', ingredientId],
+  queryFn: async () => {
+    const { data } = await supabase
+      .from('pdv_ingredients')
+      .select(`
+        id,
+        supplier_id,
+        supplier:pdv_suppliers(id, name, phone, email, contact_name)
+      `)
+      .eq('id', ingredientId)
+      .single();
+    return data;
+  },
+  enabled: !!ingredientId,
+});
+
+// Combinar fornecedores (direto + múltiplos)
+const allSuppliers = useMemo(() => {
+  const result = [];
+  
+  // Adicionar fornecedor direto do ingrediente
+  if (ingredientData?.supplier) {
+    result.push({
+      id: `direct-${ingredientData.supplier.id}`,
+      supplier_id: ingredientData.supplier.id,
+      supplier: ingredientData.supplier,
+      is_preferred: true, // fornecedor principal
+      is_direct: true,    // flag para identificar
+    });
+  }
+  
+  // Adicionar fornecedores da tabela de vínculo múltiplo
+  ingredientSuppliers.forEach(is => {
+    // Evitar duplicata
+    if (!result.some(r => r.supplier_id === is.supplier_id)) {
+      result.push({
+        ...is,
+        is_direct: false,
+      });
+    }
+  });
+  
+  return result;
+}, [ingredientData, ingredientSuppliers]);
 ```
-
----
-
-#### 3. Alterar `QuotationRequestDialog.tsx`
-
-- Importar `usePDVIngredientSuppliers` para buscar fornecedores de cada ingrediente
-- Para cada item, exibir lista de fornecedores vinculados com checkboxes
-- Armazenar seleção em estado local
-- Enviar seleção na criação da cotação
-
-**Layout proposto para cada item:**
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│ Ingrediente: [SALMÃO 2K ▼]   Qtd: [15]   Un: kg    [🗑]        │
-│                                                                 │
-│ Fornecedores:                                                   │
-│ ☑ Pescados do Mar (11 99999-1111)                              │
-│ ☑ Distribuidora Peixes SA (11 88888-2222)                      │
-│ ☐ Frigorífico Central (sem WhatsApp)                           │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-#### 4. Modificar Hook `usePDVQuotations.ts`
-
-- Atualizar tipo `CreateQuotationData` para incluir fornecedores por item
-- Na mutação `createQuotation`, após criar os itens, inserir os fornecedores selecionados na nova tabela
-
----
-
-#### 5. Modificar `WhatsAppSendDialog.tsx`
-
-- Usar os fornecedores selecionados salvos no banco ao invés de buscar todos os fornecedores vinculados
-- Mostrar apenas os fornecedores que foram selecionados na criação
-
----
-
-### Fluxo Final
-
-1. **Criar Cotação**: Usuário adiciona itens e, para cada item, seleciona os fornecedores que devem receber
-2. **Salvar**: Sistema salva cotação + itens + fornecedores selecionados
-3. **Enviar**: No dialog de WhatsApp, mostra apenas os fornecedores previamente selecionados
-4. **Marcar Enviado**: Ao enviar, registra timestamp em `sent_at`
 
 ---
 
@@ -104,17 +100,22 @@ interface QuotationItem {
 
 | Arquivo | Alteração |
 |---------|-----------|
-| Banco de dados | Criar tabela `pdv_quotation_item_suppliers` |
-| `src/hooks/use-pdv-quotations.ts` | Atualizar tipos e mutação de criação |
-| `src/components/pdv/purchases/QuotationRequestDialog.tsx` | Adicionar UI de seleção de fornecedores por item |
-| `src/components/pdv/purchases/WhatsAppSendDialog.tsx` | Usar fornecedores selecionados do banco |
+| `src/components/pdv/purchases/QuotationItemSuppliers.tsx` | Adicionar busca do fornecedor direto e combinar com múltiplos |
 
 ---
 
-### Comportamento de Seleção
+### Resultado Esperado
 
-- **Ao selecionar ingrediente**: Carrega automaticamente os fornecedores vinculados a ele
-- **Fornecedores preferidos**: Pré-selecionados automaticamente
-- **Sem fornecedor**: Mostra aviso "Nenhum fornecedor vinculado a este ingrediente"
-- **Sem WhatsApp**: Checkbox desabilitado com indicador visual
+Ao selecionar "SALMÃO 2K" na cotação, o sistema exibirá:
+
+```
+Fornecedores:
+☑ CARLOS EDUARDO MALHEIROS BENVINDA (54) 99223-2827  [Principal]
+```
+
+Em vez de:
+
+```
+⚠️ Nenhum fornecedor vinculado a este ingrediente
+```
 
