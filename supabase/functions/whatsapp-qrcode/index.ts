@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json()
-    const { userId, instanceName } = body
+    const { userId, instanceName, connectionName, phoneNumber } = body
 
     if (!userId || !instanceName) {
       return new Response(
@@ -40,8 +40,22 @@ Deno.serve(async (req) => {
     // ACTION: Generate QR Code
     if (action === 'generate') {
       console.log(`[whatsapp-qrcode] Generating QR for instance: ${instanceName}`)
+      console.log(`[whatsapp-qrcode] Connection name: ${connectionName}, Phone: ${phoneNumber}`)
 
-      // 1. First, try to fetch instance to check if it exists
+      // 1. First, save the connection data to database
+      const { error: upsertError } = await supabase.from('whatsapp_connections').upsert({
+        user_id: userId,
+        instance_name: instanceName,
+        connection_name: connectionName || null,
+        phone_number: phoneNumber || null,
+        connection_status: 'connecting'
+      }, { onConflict: 'user_id,instance_name' })
+
+      if (upsertError) {
+        console.error('[whatsapp-qrcode] Error saving connection:', upsertError)
+      }
+
+      // 2. Check if instance already exists
       const fetchResponse = await fetch(
         `${evolutionApiUrl}/instance/fetchInstances?instanceName=${instanceName}`,
         { headers: { 'apikey': evolutionApiKey } }
@@ -60,15 +74,16 @@ Deno.serve(async (req) => {
         // Get profile info if available
         const profileName = instance?.instance?.profileName || instance?.profileName || null
         const profilePictureUrl = instance?.instance?.profilePictureUrl || instance?.profilePictureUrl || null
-        const phoneNumber = instance?.instance?.ownerJid?.split('@')[0] || instance?.ownerJid?.split('@')[0] || null
+        const connectedPhone = instance?.instance?.ownerJid?.split('@')[0] || instance?.ownerJid?.split('@')[0] || phoneNumber
 
         await supabase.from('whatsapp_connections').upsert({
           user_id: userId,
           instance_name: instanceName,
+          connection_name: connectionName || null,
           connection_status: 'open',
           profile_name: profileName,
           profile_picture_url: profilePictureUrl,
-          phone_number: phoneNumber,
+          phone_number: connectedPhone,
           connected_at: new Date().toISOString(),
           last_seen_at: new Date().toISOString()
         }, { onConflict: 'user_id,instance_name' })
@@ -78,13 +93,13 @@ Deno.serve(async (req) => {
             status: 'connected',
             profile_name: profileName,
             profile_picture_url: profilePictureUrl,
-            phone_number: phoneNumber
+            phone_number: connectedPhone
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
 
-      // 2. If instance doesn't exist, create it
+      // 3. If instance doesn't exist, create it
       if (!instance || !Array.isArray(instances) || instances.length === 0) {
         console.log('[whatsapp-qrcode] Creating new instance')
         const createResponse = await fetch(
@@ -98,15 +113,26 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               instanceName: instanceName,
               integration: 'WHATSAPP-BAILEYS',
-              qrcode: true
+              qrcode: true,
+              number: phoneNumber || undefined
             })
           }
         )
         const createData = await createResponse.json()
         console.log('[whatsapp-qrcode] Create instance response:', JSON.stringify(createData))
+
+        // Check if QR code came in the create response
+        if (createData.qrcode?.base64 || createData.base64) {
+          const base64 = createData.qrcode?.base64?.split(',').pop() || createData.base64?.split(',').pop() || createData.qrcode?.base64 || createData.base64
+          
+          return new Response(
+            JSON.stringify({ status: 'pending', qrcode: base64 }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
       }
 
-      // 3. Connect instance to generate QR code
+      // 4. Connect instance to generate QR code
       console.log('[whatsapp-qrcode] Connecting instance to get QR code')
       const connectResponse = await fetch(
         `${evolutionApiUrl}/instance/connect/${instanceName}`,
@@ -119,13 +145,6 @@ Deno.serve(async (req) => {
       if (connectData.base64 || connectData.code) {
         // Extract clean base64 (remove data:image/png;base64, prefix if present)
         const base64 = connectData.base64?.split(',').pop() || connectData.base64 || connectData.code
-
-        // Update DB with connecting status
-        await supabase.from('whatsapp_connections').upsert({
-          user_id: userId,
-          instance_name: instanceName,
-          connection_status: 'connecting'
-        }, { onConflict: 'user_id,instance_name' })
 
         return new Response(
           JSON.stringify({ status: 'pending', qrcode: base64 }),
@@ -157,26 +176,24 @@ Deno.serve(async (req) => {
         // Get profile info
         const profileName = instance?.instance?.profileName || instance?.profileName || null
         const profilePictureUrl = instance?.instance?.profilePictureUrl || instance?.profilePictureUrl || null
-        const phoneNumber = instance?.instance?.ownerJid?.split('@')[0] || instance?.ownerJid?.split('@')[0] || null
+        const connectedPhone = instance?.instance?.ownerJid?.split('@')[0] || instance?.ownerJid?.split('@')[0] || null
 
         // Update DB
-        await supabase.from('whatsapp_connections').upsert({
-          user_id: userId,
-          instance_name: instanceName,
+        await supabase.from('whatsapp_connections').update({
           connection_status: 'open',
           profile_name: profileName,
           profile_picture_url: profilePictureUrl,
-          phone_number: phoneNumber,
+          phone_number: connectedPhone || phoneNumber,
           connected_at: new Date().toISOString(),
           last_seen_at: new Date().toISOString()
-        }, { onConflict: 'user_id,instance_name' })
+        }).eq('user_id', userId).eq('instance_name', instanceName)
 
         return new Response(
           JSON.stringify({ 
             status: 'open',
             profile_name: profileName,
             profile_picture_url: profilePictureUrl,
-            phone_number: phoneNumber
+            phone_number: connectedPhone
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
@@ -205,7 +222,6 @@ Deno.serve(async (req) => {
       // Update DB
       await supabase.from('whatsapp_connections').update({
         connection_status: 'disconnected',
-        phone_number: null,
         profile_name: null,
         profile_picture_url: null
       }).eq('user_id', userId).eq('instance_name', instanceName)

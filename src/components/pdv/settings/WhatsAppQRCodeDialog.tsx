@@ -1,14 +1,20 @@
+import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Loader2, CheckCircle2, RefreshCw, Smartphone } from "lucide-react";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { useWhatsAppConnection } from "@/hooks/use-whatsapp-connection";
 
 interface WhatsAppQRCodeDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+type DialogStep = 'form' | 'generating' | 'qrcode' | 'connected';
 
 export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialogProps) {
   const {
@@ -22,16 +28,36 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
     setQrCode
   } = useWhatsAppConnection();
 
+  const [connectionName, setConnectionName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [step, setStep] = useState<DialogStep>('form');
+
   const handleClose = () => {
     stopPolling();
     setQrCode(null);
+    setStep('form');
+    setConnectionName("");
+    setPhoneNumber("");
     onOpenChange(false);
+  };
+
+  const handleSubmitForm = () => {
+    if (!connectionName.trim() || connectionName.length < 3) return;
+    if (!phoneNumber.trim() || phoneNumber.replace(/\D/g, '').length < 10) return;
+    
+    setStep('generating');
+    generateQRCode({ connectionName: connectionName.trim(), phoneNumber });
   };
 
   const handleGenerateNew = () => {
     setQrCode(null);
-    generateQRCode();
+    generateQRCode({ connectionName: connectionName.trim(), phoneNumber });
   };
+
+  // Update step when QR code is received
+  if (qrCode && step === 'generating') {
+    setStep('qrcode');
+  }
 
   // Connection success view
   if (isConnected || (connection?.connection_status === 'open')) {
@@ -63,7 +89,7 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium">{connection.profile_name || 'WhatsApp'}</p>
+                  <p className="font-medium">{connection.profile_name || connection.connection_name || 'WhatsApp'}</p>
                   {connection.phone_number && (
                     <p className="text-sm text-muted-foreground">
                       +{connection.phone_number}
@@ -76,6 +102,83 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
             <Button onClick={handleClose} className="w-full">
               Concluir
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Form view - initial step
+  if (step === 'form') {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <WhatsAppIcon className="h-5 w-5 text-green-500" />
+              Conectar WhatsApp
+            </DialogTitle>
+            <DialogDescription>
+              Preencha os dados para criar sua conexão
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="connection-name">Nome da conexão</Label>
+              <Input
+                id="connection-name"
+                placeholder="Ex: Loja Principal"
+                value={connectionName}
+                onChange={(e) => setConnectionName(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Um nome para identificar esta conexão
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone-number">Número do WhatsApp</Label>
+              <PhoneInput
+                value={phoneNumber}
+                onChange={setPhoneNumber}
+              />
+              <p className="text-xs text-muted-foreground">
+                O número que será conectado
+              </p>
+            </div>
+
+            <Button 
+              onClick={handleSubmitForm}
+              disabled={!connectionName.trim() || connectionName.length < 3 || phoneNumber.replace(/\D/g, '').length < 10}
+              className="w-full gap-2 mt-2"
+            >
+              <WhatsAppIcon className="h-4 w-4" />
+              Conectar WhatsApp
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Generating view
+  if (step === 'generating' && !qrCode) {
+    return (
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <WhatsAppIcon className="h-5 w-5 text-green-500" />
+              Conectar WhatsApp
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="flex flex-col items-center gap-4 py-8">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-center text-muted-foreground">
+              Criando instância e gerando QR Code...
+            </p>
           </div>
         </DialogContent>
       </Dialog>
@@ -98,7 +201,7 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
 
         <div className="flex flex-col items-center gap-4 py-4">
           {/* QR Code Display */}
-          <div className="relative flex h-64 w-64 items-center justify-center rounded-lg border-2 border-dashed bg-yellow-400">
+          <div className="relative flex h-64 w-64 items-center justify-center rounded-lg border-2 border-dashed bg-accent">
             {isGenerating ? (
               <div className="flex flex-col items-center gap-2 rounded-lg bg-white/80 p-4">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -113,7 +216,7 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
             ) : (
               <div className="flex flex-col items-center gap-2">
                 <WhatsAppIcon className="h-12 w-12 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Clique para gerar</p>
+                <p className="text-sm text-muted-foreground">Erro ao gerar QR Code</p>
               </div>
             )}
           </div>
@@ -145,16 +248,6 @@ export function WhatsAppQRCodeDialog({ open, onOpenChange }: WhatsAppQRCodeDialo
 
           {/* Actions */}
           <div className="flex w-full gap-2">
-            {!qrCode && !isGenerating && (
-              <Button 
-                onClick={() => generateQRCode()} 
-                className="w-full gap-2"
-              >
-                <WhatsAppIcon className="h-4 w-4" />
-                Gerar QR Code
-              </Button>
-            )}
-            
             {qrCode && (
               <Button 
                 variant="outline" 
