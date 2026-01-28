@@ -185,6 +185,7 @@ export function IngredientDialog({
     
     onSubmit({
       ...data,
+      code: data.code?.trim() || null,
       supplier_id: data.supplier_id === "none" ? null : data.supplier_id,
       category: data.category || null,
       sector: data.sector || null,
@@ -192,7 +193,7 @@ export function IngredientDialog({
       average_cost: avgCost,
       current_balance: currentBalance,
     });
-    form.reset();
+    // Não fazer reset aqui - o useEffect já reseta quando o dialog fecha com sucesso
   });
 
   const handleCreateCategory = async (name: string) => {
