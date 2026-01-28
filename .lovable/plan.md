@@ -1,57 +1,57 @@
 
 
-## Plano: QR Code Amarelo com Fundo Branco
+## Plano: QR Code Amarelo sem Fundo Preto
 
-### Problema
-A implementacao anterior deixou o fundo amarelo e o QR code preto. O usuario quer o inverso: fundo branco e o QR code (os padroes/quadrados) em amarelo.
+### Problema Identificado
+O filtro CSS atual usa `invert(1)` que inverte TODAS as cores:
+- Fundo branco → Fundo preto (indesejado)
+- Padrões pretos → Padrões amarelos (desejado)
 
-### Solucao
-Usar filtros CSS para transformar as partes pretas do QR Code em amarelo, mantendo o fundo branco.
-
----
-
-### Tecnica CSS
-
-Aplicar uma combinacao de filtros CSS que converte preto em amarelo:
-- `invert(1)`: Inverte preto para branco e branco para preto
-- `sepia(1)`: Aplica tom sepia
-- `saturate(5)`: Aumenta saturacao
-- `hue-rotate(5deg)`: Ajusta matiz para amarelo puro
+### Solução
+Usar `mix-blend-mode: screen` com container amarelo. O blend mode "screen" funciona assim:
+- Branco + Amarelo = Branco (mantém o branco)
+- Preto + Amarelo = Amarelo (transforma preto em amarelo)
 
 ---
 
-### Alteracao
+### Alteração
 
 **Arquivo:** `src/components/pdv/settings/WhatsAppQRCodeDialog.tsx`
 
-**Container do QR Code:**
+**De:**
 ```tsx
-// De:
-<div className="... bg-yellow-400">
-
-// Para:
 <div className="... bg-white">
+  <img 
+    style={{ filter: 'invert(1) sepia(1) saturate(5) hue-rotate(5deg)' }}
+  />
+</div>
 ```
 
-**Imagem do QR Code:**
+**Para:**
 ```tsx
-// De:
-<img className="... mix-blend-multiply" />
-
-// Para:
-<img 
-  className="h-full w-full object-contain p-2"
-  style={{ filter: 'invert(1) sepia(1) saturate(5) hue-rotate(5deg)' }}
-/>
+<div className="... bg-yellow-400">
+  <img 
+    className="... mix-blend-screen"
+    // Sem filter
+  />
+</div>
 ```
 
 ---
 
 ### Resultado Visual
 
-| Elemento | Cor |
-|----------|-----|
-| Fundo do container | Branco |
-| Padroes do QR Code | Amarelo |
-| QR Code funcional | Sim |
+| Elemento | Antes | Depois |
+|----------|-------|--------|
+| Fundo | Preto (invertido) | Branco |
+| Padrões QR | Amarelo | Amarelo |
+| Funcionalidade | OK | OK |
+
+---
+
+### Explicação Técnica
+
+O `mix-blend-mode: screen` clareia a imagem baseado na cor de fundo:
+- Pixels brancos do QR permanecem brancos (mais claros que amarelo)
+- Pixels pretos do QR ficam amarelos (absorvem a cor do fundo)
 
