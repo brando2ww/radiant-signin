@@ -182,13 +182,13 @@ export function useWhatsAppConnection() {
     }
   }, []);
 
-  // Disconnect WhatsApp
+  // Disconnect and delete WhatsApp instance completely
   const disconnect = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('User not authenticated');
       if (!connection?.instance_name) throw new Error('No connection found');
 
-      const { data, error } = await supabase.functions.invoke('whatsapp-qrcode/disconnect', {
+      const { data, error } = await supabase.functions.invoke('whatsapp-qrcode/delete', {
         body: { userId: user.id, instanceName: connection.instance_name }
       });
 
@@ -196,11 +196,11 @@ export function useWhatsAppConnection() {
       return data;
     },
     onSuccess: () => {
-      toast.success('WhatsApp desconectado');
+      toast.success('WhatsApp desconectado e instância removida');
       queryClient.invalidateQueries({ queryKey: ['whatsapp-connection'] });
     },
     onError: (error) => {
-      console.error('Error disconnecting:', error);
+      console.error('Error deleting connection:', error);
       toast.error('Erro ao desconectar');
     }
   });
