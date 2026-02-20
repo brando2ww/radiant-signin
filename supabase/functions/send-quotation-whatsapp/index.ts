@@ -91,8 +91,11 @@ Deno.serve(async (req) => {
         continue
       }
 
-      // Format phone: digits only
-      const formattedPhone = phone.replace(/\D/g, '')
+      // Format phone: digits only + ensure Brazil country code (55)
+      let formattedPhone = phone.replace(/\D/g, '')
+      if (!formattedPhone.startsWith('55') && formattedPhone.length >= 10) {
+        formattedPhone = '55' + formattedPhone
+      }
 
       try {
         const response = await fetch(
