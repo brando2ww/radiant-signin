@@ -887,11 +887,12 @@ async function createTransaction(userId: string, accountId: string, data: Record
 }
 
 // Envia mensagem via WhatsApp
-async function sendWhatsAppMessage(remoteJid: string, message: string) {
-  console.log(`📤 Enviando mensagem para ${remoteJid}`);
+async function sendWhatsAppMessage(remoteJid: string, message: string, instanceName?: string) {
+  const targetInstance = instanceName || evolutionInstanceName;
+  console.log(`📤 Enviando mensagem para ${remoteJid} via instância ${targetInstance}`);
   
   try {
-    const response = await fetch(`${evolutionApiUrl}/message/sendText/${evolutionInstanceName}`, {
+    const response = await fetch(`${evolutionApiUrl}/message/sendText/${encodeURIComponent(targetInstance)}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1318,12 +1319,14 @@ async function processMessage(remoteJid: string, messageText: string, instanceNa
       if (savedItems.length > 0) {
         await sendWhatsAppMessage(
           remoteJid,
-          `✅ Obrigado pela cotação!\n\nRecebemos os seguintes valores:\n${savedItems.join('\n')}\n\nRetornaremos em breve com a decisão. 😊`
+          `✅ Obrigado pela cotação!\n\nRecebemos os seguintes valores:\n${savedItems.join('\n')}\n\nRetornaremos em breve com a decisão. 😊`,
+          instanceName
         );
       } else {
         await sendWhatsAppMessage(
           remoteJid,
-          `✅ Mensagem recebida! Nosso time irá analisar sua proposta e retornar em breve. 😊`
+          `✅ Mensagem recebida! Nosso time irá analisar sua proposta e retornar em breve. 😊`,
+          instanceName
         );
       }
       return;
