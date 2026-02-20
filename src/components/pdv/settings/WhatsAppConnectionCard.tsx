@@ -2,15 +2,18 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { CheckCircle2, ExternalLink, Smartphone, Loader2 } from "lucide-react";
+import { CheckCircle2, ExternalLink, Smartphone, Loader2, Webhook } from "lucide-react";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { useWhatsAppConnection } from "@/hooks/use-whatsapp-connection";
 import { WhatsAppQRCodeDialog } from "./WhatsAppQRCodeDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export function WhatsAppConnectionCard() {
   const [showQRDialog, setShowQRDialog] = useState(false);
+  const [isRegisteringWebhook, setIsRegisteringWebhook] = useState(false);
   const {
     connection,
     isLoading,
@@ -18,6 +21,26 @@ export function WhatsAppConnectionCard() {
     isDisconnecting,
     disconnect
   } = useWhatsAppConnection();
+
+  const handleRegisterWebhook = async () => {
+    setIsRegisteringWebhook(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("register-whatsapp-webhook");
+      if (error) throw error;
+      if (data?.code === "NO_WHATSAPP_CONNECTION") {
+        toast.error("Nenhuma conexão WhatsApp ativa encontrada.");
+        return;
+      }
+      toast.success(`Webhook configurado com sucesso para "${data?.instanceName}"!`);
+    } catch (err: unknown) {
+      const message = err && typeof err === "object" && "message" in err
+        ? (err as { message: string }).message
+        : "Erro ao configurar webhook";
+      toast.error(message);
+    } finally {
+      setIsRegisteringWebhook(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -61,20 +84,41 @@ export function WhatsAppConnectionCard() {
           </div>
           
           {isConnected ? (
-            <Button
-              variant="outline"
-              onClick={() => disconnect()}
-              disabled={isDisconnecting}
-            >
-              {isDisconnecting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Desconectando...
-                </>
-              ) : (
-                "Desconectar"
-              )}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegisterWebhook}
+                disabled={isRegisteringWebhook}
+                title="Registrar/atualizar webhook para receber respostas de fornecedores"
+              >
+                {isRegisteringWebhook ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Configurando...
+                  </>
+                ) : (
+                  <>
+                    <Webhook className="mr-2 h-4 w-4" />
+                    Configurar Webhook
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => disconnect()}
+                disabled={isDisconnecting}
+              >
+                {isDisconnecting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Desconectando...
+                  </>
+                ) : (
+                  "Desconectar"
+                )}
+              </Button>
+            </div>
           ) : (
             <Button onClick={() => setShowQRDialog(true)} className="gap-2">
               <ExternalLink className="h-4 w-4" />

@@ -150,6 +150,19 @@ export function WhatsAppSendDialog({
     return Array.from(supplierMap.values());
   }, [quotation.items, ingredientSuppliers, savedItemSuppliers, hasSavedSuppliers]);
 
+  // Registra webhook automaticamente ao abrir o diálogo (garante que a instância receberá respostas)
+  useEffect(() => {
+    if (open) {
+      supabase.functions.invoke("register-whatsapp-webhook").then(({ data, error }) => {
+        if (error) {
+          console.warn("⚠️ Falha ao registrar webhook ao abrir diálogo:", error);
+        } else if (data?.success) {
+          console.log(`✅ Webhook auto-registrado para "${data.instanceName}" ao abrir diálogo`);
+        }
+      });
+    }
+  }, [open]);
+
   // Auto-select all suppliers when dialog opens (if we have saved suppliers)
   useEffect(() => {
     if (open && hasSavedSuppliers && suppliersWithItems.length > 0) {
