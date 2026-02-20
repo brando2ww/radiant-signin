@@ -1,175 +1,134 @@
 
-## Plano: Rastrear Respostas de Cotação via WhatsApp
+## Problema: Múltiplas Lojas — Rastreamento de Instância Incorreto
 
-### Problema Central
-
-Quando o fornecedor recebe a cotação e responde via WhatsApp, o sistema não sabe:
-- Que aquela resposta é referente a uma cotação específica
-- Qual item da cotação está sendo respondido
-- Qual valor foi informado
-
-Atualmente, o usuário precisa registrar manualmente cada resposta no diálogo de "Registrar Resposta", sem contexto automático do que o fornecedor disse.
-
-### Estratégia da Solução
-
-Existem 2 abordagens complementares que serão implementadas juntas:
+Com múltiplas lojas conectadas via WhatsApp, existem 3 falhas encadeadas que precisam ser corrigidas:
 
 ---
 
-### Abordagem 1: Incluir número da cotação na mensagem enviada
+### Falha 1: Coluna errada no JOIN (bug crítico)
 
-Adicionar o número da cotação (ex: `COT-2026-0001`) diretamente no texto enviado ao fornecedor. Assim, quando ele responder, a mensagem de resposta deverá conter esse código, permitindo rastreamento.
+Na função `findPendingQuotationsForSupplier`, o Supabase está tentando fazer join usando uma coluna chamada `quotation_id` dentro de `pdv_quotation_items`, mas o nome real no banco é `quotation_request_id`.
 
-Mensagem atual:
-```
-Olá! Estamos solicitando cotação para os seguintes produtos:
-
-1. SALMÃO 2K: 15 kg
-...
-```
-
-Mensagem melhorada:
-```
-Olá! [Nome do Negócio]
-Ref. Cotação: COT-2026-0001
-
-Estamos solicitando cotação para os seguintes produtos:
-
-1. SALMÃO 2K: 15 kg
-
-Por favor, informe para cada item:
-• Preço unitário
-• Validade do produto
-• Prazo de entrega
-• Pedido mínimo (se houver)
-
-Aguardamos retorno até 31/01/2026.
-Obrigado!
-```
+Resultado: o join retorna `quotation: null` em todos os registros → nenhuma cotação pendente é encontrada → a IA nunca é acionada.
 
 ---
 
-### Abordagem 2: Webhook WhatsApp com IA para interpretar respostas de fornecedores
+### Falha 2: Webhook não sabe de qual loja a mensagem veio
 
-Estender a edge function `whatsapp-transactions` (que já recebe webhooks) para detectar quando uma mensagem recebida é de um fornecedor vinculado a uma cotação pendente, e usar IA (OpenAI) para extrair os valores informados.
+Quando a Evolution API chama o webhook, o payload inclui o campo `instance` com o nome da instância que recebeu a mensagem:
 
-**Fluxo:**
+```json
+{
+  "event": "messages.upsert",
+  "instance": "LOJA 2",
+  "data": { "key": { "remoteJid": "5554..." }, ... }
+}
 ```
-Fornecedor responde no WhatsApp
-        ↓
-webhook → whatsapp-transactions
-        ↓
-Verificar se o remetente é um fornecedor cadastrado
-        ↓  (Sim)
-Verificar se existe cotação pendente/em andamento para esse fornecedor
-        ↓  (Sim)
-Extrair valores com IA (preço unitário, prazo, validade, etc.)
-        ↓
-Salvar automaticamente em pdv_quotation_responses
-        ↓
-Responder ao fornecedor confirmando o recebimento
-        ↓
-Notificar o usuário da plataforma
-```
+
+O código atual **ignora** esse campo `instance`. Quando um fornecedor responde, o sistema não sabe que aquela resposta veio da "LOJA 2" — e com múltiplas lojas, pode confundir fornecedores de lojas diferentes que tenham números parecidos.
 
 ---
 
-### Alterações Técnicas
+### Falha 3: Webhook não configurado automaticamente para novas instâncias
 
-#### 1. Atualizar `src/lib/whatsapp-message.ts`
+Quando o usuário conecta uma nova loja pelo painel, o webhook não é registrado automaticamente na Evolution API para aquela instância. É preciso configurar manualmente — o que é inviável com muitas lojas.
 
-Modificar `generateQuotationMessage` para aceitar e incluir:
-- `requestNumber: string` — número da cotação (ex: `COT-2026-0001`)
-- `businessName?: string` — nome do negócio (já existia)
+---
 
-Formato da referência no início da mensagem:
-```
-📋 *Ref.: COT-2026-0001*
-```
+### Solução Completa
 
-#### 2. Atualizar `src/components/pdv/purchases/WhatsAppSendDialog.tsx`
+#### Parte 1 — Corrigir o nome da coluna (1 linha)
 
-Passar `quotation.request_number` para o `generateQuotationMessage` ao construir o payload de envio.
+Arquivo: `supabase/functions/whatsapp-transactions/index.ts`
 
-#### 3. Estender `supabase/functions/whatsapp-transactions/index.ts`
-
-Adicionar nova lógica de processamento para mensagens de fornecedores:
-
-**a) Verificar se remetente é fornecedor cadastrado:**
 ```typescript
-async function findSupplierByPhone(phoneNumber: string) {
-  // Busca em pdv_suppliers pelo campo phone
-  // Formata o número para comparação (remove +55, DDI, etc.)
-}
+// ANTES (errado):
+quotation_item:pdv_quotation_items(
+  id,
+  quotation_id,   ← não existe
+  ...
+
+// DEPOIS (correto):
+quotation_item:pdv_quotation_items(
+  id,
+  quotation_request_id,   ← nome real no banco
+  ...
 ```
 
-**b) Encontrar cotações pendentes para esse fornecedor:**
+#### Parte 2 — Usar `instance` do webhook para rastrear a loja correta
+
+No corpo do webhook recebido, extrair `body.instance` (nome da instância Evolution API). Com esse nome, buscar qual `user_id` é dono daquela instância na tabela `whatsapp_connections`:
+
 ```typescript
-async function findPendingQuotationsForSupplier(supplierId: string) {
-  // Busca pdv_quotation_item_suppliers com sent_at preenchido
-  // Junta com pdv_quotation_requests com status 'pending' ou 'in_progress'
-  // Retorna os itens aguardando resposta desse fornecedor
-}
+// No handler do webhook:
+const instanceName = body.instance  // ex: "LOJA 2"
+
+// Buscar o dono dessa instância:
+const { data: connection } = await supabase
+  .from('whatsapp_connections')
+  .select('user_id')
+  .eq('instance_name', instanceName)
+  .maybeSingle()
+
+// Passar userId para findPendingQuotationsForSupplier — 
+// garantindo que só buscamos cotações DAQUELA loja específica
 ```
 
-**c) Usar IA para extrair valores da resposta:**
-```typescript
-async function extractQuotationResponse(message: string, pendingItems: QuotationItem[]) {
-  // Prompt para OpenAI:
-  // "Dado que o fornecedor recebeu uma cotação com os seguintes itens: [lista]
-  //  e respondeu com: '[mensagem]'
-  //  Extraia os preços informados por item em JSON"
-  // Retorna: { items: [{ ingredient: string, unit_price: number, delivery_days: number, ... }] }
-}
-```
+Isso garante que:
+- Resposta recebida na "LOJA 2" → busca só cotações do dono da "LOJA 2"
+- Resposta recebida na "VELARA MEI" → busca só cotações do dono da "VELARA MEI"
+- Fornecedores com números parecidos entre lojas diferentes não se cruzam
 
-**d) Salvar respostas automaticamente:**
+A função `processMessage` também precisa receber o `userId` como parâmetro para repassar a todas as sub-funções de cotação.
+
+#### Parte 3 — Registrar webhook automaticamente ao enviar cotação
+
+No `send-quotation-whatsapp`, após enviar com sucesso, chamar a Evolution API para registrar o webhook da instância usada, caso ainda não esteja configurado:
+
 ```typescript
-// Para cada item com preço extraído:
-await supabase.from('pdv_quotation_responses').insert({
-  quotation_item_id: item.id,
-  supplier_id: supplierId,
-  unit_price: extracted.unit_price,
-  total_price: extracted.unit_price * item.quantity_needed,
-  delivery_days: extracted.delivery_days,
-  notes: originalMessage,
+// Depois de enviar mensagens:
+await fetch(`${evolutionApiUrl}/webhook/set/${instanceName}`, {
+  method: 'POST',
+  headers: { 'apikey': evolutionApiKey, 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    url: `${supabaseUrl}/functions/v1/whatsapp-transactions`,
+    events: ['messages.upsert'],
+    enabled: true,
+    webhookByEvents: false,
+  })
 })
 ```
 
-**e) Responder ao fornecedor confirmando:**
-```typescript
-await sendWhatsAppMessage(remoteJid,
-  `✅ Obrigado! Recebemos sua cotação para:\n` +
-  `• Salmão 2K: R$ 45,00/kg\n\n` +
-  `Retornaremos em breve com a decisão.`
-)
-```
+Isso garante que toda loja que enviar uma cotação automaticamente passa a receber as respostas.
 
 ---
 
-### Alterações por Arquivo
+### Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/lib/whatsapp-message.ts` | Adicionar `requestNumber` ao `generateQuotationMessage` |
-| `src/components/pdv/purchases/WhatsAppSendDialog.tsx` | Passar `request_number` para a geração da mensagem |
-| `supabase/functions/whatsapp-transactions/index.ts` | Adicionar detecção de fornecedores + extração IA de cotações |
+| `supabase/functions/whatsapp-transactions/index.ts` | (1) Corrigir `quotation_id` → `quotation_request_id`; (2) Extrair `instance` do payload e resolver `user_id` via `whatsapp_connections`; (3) Passar `userId` para `processMessage` e `findPendingQuotationsForSupplier` |
+| `supabase/functions/send-quotation-whatsapp/index.ts` | (3) Após envio bem-sucedido, registrar webhook da instância usada na Evolution API |
 
 ---
 
-### Comportamento Final
+### Fluxo Final (com múltiplas lojas)
 
-1. Mensagem enviada ao fornecedor inclui `📋 Ref.: COT-2026-0001`
-2. Fornecedor responde livremente, ex: *"Salmão: R$ 45/kg, entrego em 2 dias"*
-3. Webhook recebe a mensagem e identifica que o número é do fornecedor X
-4. Sistema encontra a cotação pendente COT-2026-0001 com itens aguardando resposta
-5. IA extrai preços e prazos da mensagem livre
-6. Resposta é salva automaticamente em `pdv_quotation_responses`
-7. Fornecedor recebe confirmação automática
-8. Usuário vê a resposta registrada no painel de comparação de cotações
+```text
+Loja A envia cotação via WhatsApp (instância "LOJA A")
+  → send-quotation-whatsapp registra webhook da "LOJA A"
 
----
+Loja B envia cotação via WhatsApp (instância "LOJA B")
+  → send-quotation-whatsapp registra webhook da "LOJA B"
 
-### Consideração Importante sobre o Webhook
+Fornecedor responde para "LOJA A"
+  → webhook chega com body.instance = "LOJA A"
+  → sistema resolve user_id do dono da "LOJA A"
+  → busca cotações APENAS do user_id correto
+  → IA extrai preços → salva resposta → confirma ao fornecedor ✅
 
-A edge function `whatsapp-transactions` atualmente só processa mensagens de usuários **verificados** (tabela `whatsapp_verifications`). A nova lógica precisará de uma verificação paralela: se o remetente NÃO é um usuário verificado mas É um fornecedor cadastrado com cotação pendente, processar como resposta de cotação — sem interferir no fluxo atual de transações financeiras.
+Fornecedor responde para "LOJA B"
+  → webhook chega com body.instance = "LOJA B"
+  → sistema resolve user_id do dono da "LOJA B"
+  → sem cruzamento entre lojas ✅
+```
