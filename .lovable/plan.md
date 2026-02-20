@@ -1,112 +1,71 @@
 
-## Diagnóstico Confirmado pelos Logs
+## Problema Identificado
 
-### Bug 1 (Principal): O `ilike` falha por causa da formatação do telefone com traço
+A função `sendWhatsAppMessage` (linha 890) usa **sempre** a variável de ambiente `evolutionInstanceName` para enviar mensagens:
 
-O número do CARLOS no banco é `(54) 99223-2827`. O código extrai os últimos 8 dígitos do número recebido (`5554992232827`) que são `92232827`. Porém o `ilike('%92232827%')` busca essa sequência dentro de `(54) 99223-2827` — e ela **não existe contiguamente**: o traço interrompe (`99223` + `-` + `2827`).
+```typescript
+// LINHA 894 - PROBLEMA
+const response = await fetch(`${evolutionApiUrl}/message/sendText/${evolutionInstanceName}`, {
+```
 
-A busca deveria remover os não-dígitos do campo `phone` do banco antes de comparar, mas o `ilike` compara diretamente no valor formatado. Solução: usar os **últimos 8 dígitos do número limpo** do banco na comparação, o que requer buscar todos os fornecedores do usuário e filtrar no código (como já é feito no debug log), em vez de usar `ilike` no banco.
-
-### Bug 2 (Consequência): O agente Velara responde ao fornecedor
-
-Quando `findSupplierByPhone` retorna `null`, o código passa para `findUserByPhone`. Se o número do fornecedor (CARLOS) coincide com um número verificado na tabela `whatsapp_verifications`, o agente Velara responde ao fornecedor como se fosse um usuário — exatamente o que aconteceu na imagem.
-
-A correção do Bug 1 elimina o Bug 2. Mas como salvaguarda adicional, quando a instância recebida é de uma loja (`LOJA 2`), o sistema já deve saber que qualquer mensagem recebida **naquele número de WhatsApp comercial** provavelmente é de um fornecedor ou cliente, e não do próprio usuário dono da loja — então não deve nunca acionar o agente de finanças para mensagens recebidas nas instâncias de loja.
+`evolutionInstanceName` é a instância do agente pessoal (Eduardo Brando / +55 54 99166-3821). Quando o fornecedor CARLOS responde na `LOJA 2`, o sistema processa corretamente, salva a cotação, mas ao enviar a confirmação "✅ Obrigado pela cotação!" usa a instância errada — enviando pelo número pessoal em vez do número da loja.
 
 ---
 
-## Correções
+## Solução
 
-### Correção 1 — `findSupplierByPhone`: busca correta por dígitos
-
-Em vez de `ilike` no campo formatado, buscar por `user_id` do usuário dono da instância e filtrar no lado do Deno comparando os últimos 8 dígitos do número limpo do banco com os últimos 8 do número recebido:
+### Mudança 1 — Adicionar parâmetro `instanceName` na função `sendWhatsAppMessage`
 
 ```typescript
-async function findSupplierByPhone(phoneNumber: string, userId?: string) {
-  const incomingClean = phoneNumber.replace(/\D/g, '');
-  const incomingLast8 = incomingClean.slice(-8);
+// ANTES:
+async function sendWhatsAppMessage(remoteJid: string, message: string)
 
-  // Busca todos fornecedores do usuário com telefone preenchido
-  const query = supabase
-    .from('pdv_suppliers')
-    .select('id, name, phone, user_id')
-    .not('phone', 'is', null);
-
-  if (userId) query.eq('user_id', userId);
-
-  const { data } = await query;
-
-  // Compara os últimos 8 dígitos ignorando formatação
-  const match = data?.find(s => {
-    const clean = s.phone?.replace(/\D/g, '') || '';
-    return clean.slice(-8) === incomingLast8;
-  });
-
-  return match || null;
-}
+// DEPOIS:
+async function sendWhatsAppMessage(remoteJid: string, message: string, instanceName?: string)
 ```
 
-Isso resolve o problema do traço na formatação do telefone.
-
-### Correção 2 — Passar `userId` resolvido para `findSupplierByPhone`
-
-Em `processMessage`, quando a instância é conhecida, resolver o `userId` **antes** de buscar o fornecedor, e passar esse `userId` para a busca — garantindo que apenas fornecedores do dono daquela instância sejam considerados:
+Internamente, usar o `instanceName` recebido, ou `evolutionInstanceName` como fallback (para o agente pessoal):
 
 ```typescript
-async function processMessage(remoteJid, messageText, instanceName) {
-  const formattedPhone = formatPhoneNumber(remoteJid);
-  
-  // Resolve o user_id da instância primeiro
-  const resolvedUserId = instanceName
-    ? await resolveUserIdByInstance(instanceName)
-    : null;
-
-  // Busca fornecedor com filtro por userId da loja
-  const supplier = await findSupplierByPhone(formattedPhone, resolvedUserId);
-  
-  if (supplier) {
-    // ... processa cotação e retorna — NUNCA aciona o agente Velara
-    return;
-  }
-
-  // Só aciona o agente Velara se NÃO for fornecedor
-  const user = await findUserByPhone(formattedPhone);
-  ...
-}
+const targetInstance = instanceName || evolutionInstanceName;
+const response = await fetch(`${evolutionApiUrl}/message/sendText/${encodeURIComponent(targetInstance)}`, {
 ```
 
-### Correção 3 — Salvaguarda: ignorar mensagens de instância de loja que não são de usuário verificado
+### Mudança 2 — Passar o `instanceName` em `processMessage`
 
-Quando a mensagem vem de uma instância de loja (`LOJA 2`) e o remetente não é um fornecedor reconhecido, **não acionar o agente Velara** — apenas ignorar silenciosamente. O agente de finanças só deve responder quando o usuário envia mensagem para seu próprio WhatsApp pessoal verificado, não para o número comercial da loja.
+A função `processMessage` já recebe o `instanceName` e já resolve o `resolvedUserId`. Basta passar o `instanceName` para todas as chamadas de `sendWhatsAppMessage` dentro do fluxo de cotação (linhas 1319-1327):
 
 ```typescript
-// Se a mensagem veio de uma instância de loja (não pessoal)
-// e não era um fornecedor com cotação → ignorar
-if (resolvedUserId && !supplier) {
-  console.log('⏭️ Mensagem recebida na instância da loja por não-fornecedor — ignorando');
-  return;
-}
+// Envio da confirmação da cotação — usando a instância da loja
+await sendWhatsAppMessage(
+  remoteJid,
+  `✅ Obrigado pela cotação!...`,
+  instanceName  // ← passa a instância da loja (ex: "LOJA 2")
+);
 ```
+
+### Mudança 3 — Manter o agente pessoal inalterado
+
+Todas as outras chamadas `sendWhatsAppMessage` (agente Velara, agenda, finanças) continuam sem o parâmetro, usando `evolutionInstanceName` como fallback. Isso garante que o agente pessoal funcione normalmente.
 
 ---
 
 ## Arquivo a Modificar
 
-| Arquivo | Alterações |
-|---------|-----------|
-| `supabase/functions/whatsapp-transactions/index.ts` | (1) Refatorar `findSupplierByPhone` para comparar últimos 8 dígitos do campo limpo; (2) Resolver `userId` antes de buscar fornecedor; (3) Adicionar salvaguarda para ignorar mensagens de instância de loja que não sejam de fornecedor |
+| Arquivo | Linhas alteradas |
+|---------|-----------------|
+| `supabase/functions/whatsapp-transactions/index.ts` | Linha 890: assinatura da função + linha 894: usar instância dinâmica; Linhas 1319-1327: passar `instanceName` nas confirmações de cotação |
 
 ---
 
 ## Fluxo Correto Após a Correção
 
 ```text
-Mensagem recebida na LOJA 2 de (54) 99223-2827
-  → Resolve userId = dono da LOJA 2
-  → Busca fornecedor: limpa número do banco "(54) 99223-2827" → "54992232827" → últimos 8 "92232827"
-  → Compara com últimos 8 do número recebido "5554992232827" → "92232827" ✅ MATCH!
-  → Encontrou: CARLOS EDUARDO MALHEIROS BENVINDA
-  → Busca cotações pendentes para CARLOS no user_id correto
-  → IA extrai preços → salva em pdv_quotation_responses → confirma ao CARLOS ✅
-  → NÃO aciona o agente Velara ✅
+Fornecedor CARLOS responde na LOJA 2
+  → processMessage(remoteJid, texto, "LOJA 2")
+  → findSupplierByPhone → CARLOS encontrado ✅
+  → IA extrai preços e salva cotação ✅
+  → sendWhatsAppMessage(remoteJid, confirmação, "LOJA 2")  ← instância correta!
+  → Mensagem de confirmação sai pelo número da LOJA 2 (Eduardo Brando) ✅
+  → NÃO usa +55 54 99166-3821 ✅
 ```
