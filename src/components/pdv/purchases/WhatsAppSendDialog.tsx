@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { MessageCircle, Check } from "lucide-react";
+import { MessageCircle, Check, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,10 +13,11 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { QuotationRequest } from "@/hooks/use-pdv-quotations";
 import { usePDVIngredientSuppliers } from "@/hooks/use-pdv-ingredient-suppliers";
-import { generateQuotationMessage, openWhatsApp } from "@/lib/whatsapp-message";
+import { generateQuotationMessage } from "@/lib/whatsapp-message";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface WhatsAppSendDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ export function WhatsAppSendDialog({
 }: WhatsAppSendDialogProps) {
   const { ingredientSuppliers } = usePDVIngredientSuppliers();
   const [selectedSuppliers, setSelectedSuppliers] = useState<Set<string>>(new Set());
+  const [isSending, setIsSending] = useState(false);
 
   // Fetch saved suppliers for this quotation's items
   const { data: savedItemSuppliers = [] } = useQuery({
@@ -180,7 +182,7 @@ export function WhatsAppSendDialog({
       (s) => selectedSuppliers.has(s.id) && s.phone
     );
 
-    for (const supplier of suppliersToSend) {
+    const suppliersPayload = suppliersToSend.map((supplier) => {
       const message = quotation.message_template || generateQuotationMessage(
         supplier.items.map((item) => ({
           ingredientName: item.ingredientName,
@@ -189,24 +191,52 @@ export function WhatsAppSendDialog({
         })),
         deadline
       );
+      return {
+        supplierId: supplier.id,
+        phone: supplier.phone!,
+        message,
+      };
+    });
 
-      // Open WhatsApp for each supplier
-      openWhatsApp(supplier.phone!, message);
+    const itemIds = quotation.items?.map((i) => i.id) || [];
+
+    setIsSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-quotation-whatsapp", {
+        body: {
+          quotationId: quotation.id,
+          suppliers: suppliersPayload,
+          itemIds,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.code === "NO_WHATSAPP_CONNECTION") {
+        toast.error("WhatsApp não conectado. Conecte nas configurações antes de enviar.");
+        return;
+      }
+
+      if (data?.sent > 0) {
+        toast.success(
+          `${data.sent} mensagem${data.sent > 1 ? "s" : ""} enviada${data.sent > 1 ? "s" : ""} com sucesso!`
+        );
+      }
+
+      if (data?.errors?.length > 0) {
+        toast.warning(`${data.errors.length} envio(s) falharam. Verifique os logs.`);
+      }
+
+      onOpenChange(false);
+    } catch (err: unknown) {
+      console.error("Error sending quotation via WhatsApp:", err);
+      const message = err && typeof err === "object" && "message" in err
+        ? (err as { message: string }).message
+        : "Erro ao enviar mensagens";
+      toast.error(message);
+    } finally {
+      setIsSending(false);
     }
-
-    // Mark as sent in database
-    if (hasSavedSuppliers) {
-      const itemIds = quotation.items?.map((i) => i.id) || [];
-      const supplierIds = Array.from(selectedSuppliers);
-      
-      await supabase
-        .from("pdv_quotation_item_suppliers")
-        .update({ sent_at: new Date().toISOString() })
-        .in("quotation_item_id", itemIds)
-        .in("supplier_id", supplierIds);
-    }
-
-    onOpenChange(false);
   };
 
   return (
@@ -299,28 +329,30 @@ export function WhatsAppSendDialog({
                 </div>
               </ScrollArea>
 
-              <div className="text-xs text-muted-foreground bg-muted p-3 rounded-md">
-                <p>
-                  <strong>Dica:</strong> O sistema abrirá o WhatsApp Web para cada
-                  fornecedor selecionado com a mensagem pronta. Você precisará clicar
-                  em "Enviar" para cada um.
-                </p>
-              </div>
             </>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSending}>
             Cancelar
           </Button>
           <Button
             onClick={handleSend}
-            disabled={selectedSuppliers.size === 0}
-            className="bg-green-600 hover:bg-green-700"
+            disabled={selectedSuppliers.size === 0 || isSending}
+            className="bg-green-600 hover:bg-green-700 text-white"
           >
-            <WhatsAppIcon className="h-4 w-4 mr-2" />
-            Abrir WhatsApp ({selectedSuppliers.size})
+            {isSending ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Enviando...
+              </>
+            ) : (
+              <>
+                <WhatsAppIcon className="h-4 w-4 mr-2" />
+                Enviar via WhatsApp ({selectedSuppliers.size})
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
