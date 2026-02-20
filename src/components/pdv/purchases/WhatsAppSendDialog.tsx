@@ -189,7 +189,9 @@ export function WhatsAppSendDialog({
           quantity: item.quantity,
           unit: item.unit,
         })),
-        deadline
+        deadline,
+        undefined,
+        quotation.request_number || undefined
       );
       return {
         supplierId: supplier.id,
