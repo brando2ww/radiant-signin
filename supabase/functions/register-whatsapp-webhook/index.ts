@@ -81,10 +81,12 @@ Deno.serve(async (req) => {
           'apikey': evolutionApiKey,
         },
         body: JSON.stringify({
-          url: webhookUrl,
-          events: ['messages.upsert'],
-          enabled: true,
-          webhookByEvents: false,
+          webhook: {
+            url: webhookUrl,
+            events: ['messages.upsert'],
+            enabled: true,
+            webhookByEvents: false,
+          }
         }),
       }
     )
