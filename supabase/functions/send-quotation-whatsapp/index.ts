@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               webhook: {
                 url: webhookUrl,
-                events: ['messages.upsert'],
+                events: ['MESSAGES_UPSERT'],
                 enabled: true,
                 webhookByEvents: false,
               }
