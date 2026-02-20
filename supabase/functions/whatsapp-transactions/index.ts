@@ -1067,47 +1067,39 @@ function normalizePhoneForComparison(phone: string): string[] {
   return variants;
 }
 
-// Busca fornecedor pelo número de telefone
-async function findSupplierByPhone(phoneNumber: string) {
-  console.log(`🏭 Buscando fornecedor pelo telefone: ${phoneNumber}`);
-  const phoneVariants = normalizePhoneForComparison(phoneNumber);
-  const last8 = phoneVariants[0].slice(-8);
+// Busca fornecedor pelo número de telefone (comparando últimos 8 dígitos do número limpo)
+async function findSupplierByPhone(phoneNumber: string, userId?: string) {
+  console.log(`🏭 Buscando fornecedor pelo telefone: ${phoneNumber} (userId filtro: ${userId || 'nenhum'})`);
+  const incomingClean = phoneNumber.replace(/\D/g, '');
+  const incomingLast8 = incomingClean.slice(-8);
+  console.log(`🔍 Últimos 8 dígitos do número recebido: ${incomingLast8}`);
 
-  console.log(`🔍 Variantes de número testadas: ${phoneVariants.join(', ')}`);
-  console.log(`🔍 Últimos 8 dígitos para busca: ${last8}`);
-
-  const { data, error } = await supabase
+  // Busca todos fornecedores do usuário com telefone preenchido
+  let query = supabase
     .from('pdv_suppliers')
     .select('id, name, phone, user_id')
-    .ilike('phone', `%${last8}%`)
-    .limit(5);
+    .not('phone', 'is', null);
+
+  if (userId) query = query.eq('user_id', userId);
+
+  const { data, error } = await query;
 
   if (error) {
-    console.error(`❌ Erro ao buscar fornecedor: ${error.message}`);
+    console.error(`❌ Erro ao buscar fornecedores: ${error.message}`);
     return null;
   }
 
-  if (data && data.length > 0) {
-    console.log(`✅ Fornecedor(es) encontrado(s): ${data.map(d => `${d.name} (${d.phone})`).join(', ')}`);
-    console.log(`✅ Usando primeiro resultado: ${data[0].name} | phone no banco: "${data[0].phone}" | user_id: ${data[0].user_id}`);
-    return data[0];
-  }
+  // Compara os últimos 8 dígitos ignorando formatação
+  const match = data?.find(s => {
+    const cleanDb = s.phone?.replace(/\D/g, '') || '';
+    const dbLast8 = cleanDb.slice(-8);
+    console.log(`   - ${s.name}: "${s.phone}" → limpo: "${cleanDb}" → últimos 8: "${dbLast8}" | incoming: "${incomingLast8}" | match: ${dbLast8 === incomingLast8}`);
+    return dbLast8 === incomingLast8;
+  });
 
-  // Log de debug: busca todos fornecedores para comparação
-  const { data: allSuppliers } = await supabase
-    .from('pdv_suppliers')
-    .select('name, phone')
-    .not('phone', 'is', null)
-    .limit(20);
-
-  if (allSuppliers && allSuppliers.length > 0) {
-    console.log(`⚠️ Fornecedores cadastrados com telefone (primeiros 20):`);
-    allSuppliers.forEach(s => {
-      const cleanPhone = s.phone?.replace(/\D/g, '') || '';
-      console.log(`   - ${s.name}: "${s.phone}" → limpo: "${cleanPhone}" → últimos 8: "${cleanPhone.slice(-8)}"`);
-    });
-  } else {
-    console.log(`⚠️ Nenhum fornecedor com telefone cadastrado encontrado`);
+  if (match) {
+    console.log(`✅ Fornecedor encontrado: ${match.name} (phone: "${match.phone}", user_id: ${match.user_id})`);
+    return match;
   }
 
   console.log('❌ Nenhum fornecedor encontrado para este número');
@@ -1297,17 +1289,18 @@ async function processMessage(remoteJid: string, messageText: string, instanceNa
   const formattedPhone = formatPhoneNumber(remoteJid);
   console.log(`📱 Processando mensagem de ${formattedPhone} (instância: ${instanceName || 'desconhecida'}): ${messageText}`);
 
+  // Resolve o user_id da instância PRIMEIRO (antes de buscar fornecedor)
+  const resolvedUserId = instanceName
+    ? await resolveUserIdByInstance(instanceName)
+    : null;
+
   // ---- VERIFICAÇÃO: remetente é fornecedor com cotação pendente? ----
-  const supplier = await findSupplierByPhone(formattedPhone);
+  const supplier = await findSupplierByPhone(formattedPhone, resolvedUserId || undefined);
   if (supplier) {
     console.log(`🏭 Remetente é fornecedor: ${supplier.name}`);
 
-    // Resolve o user_id pelo nome da instância (multi-loja) ou cai para o user_id do fornecedor
-    const resolvedUserId = instanceName
-      ? (await resolveUserIdByInstance(instanceName)) ?? supplier.user_id
-      : supplier.user_id;
-
-    const pendingItems = await findPendingQuotationsForSupplier(supplier.id, resolvedUserId);
+    const effectiveUserId = resolvedUserId ?? supplier.user_id;
+    const pendingItems = await findPendingQuotationsForSupplier(supplier.id, effectiveUserId);
 
     if (pendingItems.length > 0) {
       console.log(`📋 Processando resposta de cotação do fornecedor ${supplier.name}`);
@@ -1337,6 +1330,14 @@ async function processMessage(remoteJid: string, messageText: string, instanceNa
     }
   }
   // ---- FIM VERIFICAÇÃO FORNECEDOR ----
+
+  // Salvaguarda: se a mensagem veio de uma instância de loja (resolvedUserId != null)
+  // e o remetente NÃO é um fornecedor reconhecido → ignorar silenciosamente.
+  // O agente Velara só deve responder ao usuário no WhatsApp pessoal verificado.
+  if (resolvedUserId && !supplier) {
+    console.log(`⏭️ Mensagem recebida na instância da loja por não-fornecedor — ignorando (remoteJid: ${remoteJid})`);
+    return;
+  }
 
   // Busca usuário verificado
   const user = await findUserByPhone(formattedPhone);
