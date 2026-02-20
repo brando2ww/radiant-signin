@@ -1,116 +1,117 @@
 
-
-## Plano: Alterar Seleção de Fornecedores para Menu Suspenso (Dropdown)
+## Plano: Enviar Mensagens via Evolution API (Sem Abrir WhatsApp Web)
 
 ### Problema Atual
 
-A seleção de fornecedores usa checkboxes em lista, ocupando muito espaço vertical e sendo menos intuitivo para o usuário que espera um dropdown padrão.
+O botão "Abrir WhatsApp" usa `window.open()` para abrir o WhatsApp Web no navegador para cada fornecedor — exigindo que o usuário clique "Enviar" manualmente em cada aba. Isso é ineficiente.
 
 ### Solução
 
-Substituir a lista de checkboxes por um componente de Select multi-seleção usando o Popover com checkboxes dentro (padrão comum para multi-select).
+Substituir a abertura do WhatsApp Web por envio direto das mensagens via Evolution API, usando a instância WhatsApp já conectada do usuário. O botão passará a chamar uma Edge Function que envia as mensagens automaticamente para todos os fornecedores selecionados.
+
+---
+
+### Fluxo da Solução
+
+```text
+[WhatsAppSendDialog]
+    ↓ clica "Enviar"
+[Edge Function: send-quotation-whatsapp]
+    ↓ busca instância do usuário em whatsapp_connections
+    ↓ para cada fornecedor selecionado:
+        POST /message/sendText/{instanceName}
+        body: { number: phone, text: message }
+    ↓ atualiza sent_at na tabela pdv_quotation_item_suppliers
+    ↓ retorna { success, sent: N, errors: [] }
+[Dialog fecha / toast de sucesso]
+```
 
 ---
 
 ### Alterações Técnicas
 
-**Arquivo:** `src/components/pdv/purchases/QuotationItemSuppliers.tsx`
+#### 1. Nova Edge Function: `send-quotation-whatsapp`
 
-#### Estrutura do Novo Componente:
+Arquivo: `supabase/functions/send-quotation-whatsapp/index.ts`
 
+Responsabilidades:
+- Receber lista de fornecedores com telefone e mensagem
+- Buscar a instância WhatsApp conectada do usuário em `whatsapp_connections`
+- Enviar mensagem para cada fornecedor via `POST /message/sendText/{instanceName}`
+- Atualizar `sent_at` nos registros de `pdv_quotation_item_suppliers`
+- Retornar resultado detalhado (quantos enviados, erros)
+
+Payload de entrada:
+```json
+{
+  "quotationId": "uuid",
+  "suppliers": [
+    {
+      "supplierId": "uuid",
+      "phone": "5554999999999",
+      "message": "Olá! Estamos solicitando cotação..."
+    }
+  ],
+  "itemIds": ["uuid1", "uuid2"]
+}
 ```
-┌──────────────────────────────────────────────────────────────┐
-│ Fornecedores: [Selecione os fornecedores...            ▼]   │
-│               ou                                             │
-│               [2 fornecedores selecionados             ▼]   │
-└──────────────────────────────────────────────────────────────┘
 
-Ao abrir o dropdown:
-┌──────────────────────────────────────────────────────────────┐
-│ ☑ CARLOS EDUARDO... (54) 99223-2827        [Principal]      │
-│ ☐ Outro Fornecedor  (11) 99999-9999        [Preferido]      │
-│ ☐ Sem WhatsApp                             [Sem WhatsApp]   │
-└──────────────────────────────────────────────────────────────┘
-```
+Usa os secrets já configurados: `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
 
-#### Implementação:
+#### 2. Modificar `WhatsAppSendDialog.tsx`
 
-1. **Substituir imports**:
-   - Remover `Checkbox` como componente principal
-   - Adicionar `Popover`, `PopoverTrigger`, `PopoverContent`
-   - Adicionar `Command`, `CommandGroup`, `CommandItem` (para lista pesquisável)
-   - Manter `Checkbox` para uso dentro do dropdown
+- Remover imports de `openWhatsApp` e `generateQuotationMessage` (ou manter generateQuotationMessage)
+- Adicionar estado `isSending` para feedback visual
+- Substituir a lógica `handleSend` por uma chamada à nova edge function via `supabase.functions.invoke()`
+- Alterar o botão:
+  - Texto: "Enviar via WhatsApp (N)" ao invés de "Abrir WhatsApp (N)"
+  - Adicionar estado de loading com spinner
+  - Mostrar toast de sucesso/erro após envio
+- Remover a nota de dica sobre "você precisará clicar em Enviar para cada um"
 
-2. **Criar trigger do dropdown**:
-   - Botão que mostra "Selecione os fornecedores..." ou "X fornecedores selecionados"
-   - Estilo consistente com outros selects do sistema
+#### 3. Verificação da Conexão WhatsApp
 
-3. **Conteúdo do dropdown**:
-   - Lista de fornecedores com checkbox ao lado de cada um
-   - Badges para "Principal", "Preferido", "Sem WhatsApp"
-   - Fornecedores sem WhatsApp ficam desabilitados
-
-4. **Manter lógica existente**:
-   - Auto-seleção de fornecedores preferidos/principais
-   - Toggle de seleção
-   - Validação de WhatsApp
+A edge function verifica se o usuário tem uma conexão WhatsApp com `connection_status = 'open'`. Se não tiver, retorna erro 400 com mensagem explicativa para o usuário conectar o WhatsApp nas configurações.
 
 ---
 
-### Código da Nova UI
+### Exemplo do Envio (Evolution API)
+
+Seguindo o padrão já usado em `send-whatsapp-code/index.ts`:
 
 ```typescript
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Check, ChevronsUpDown } from "lucide-react";
-
-// No render:
-<Popover>
-  <PopoverTrigger asChild>
-    <Button
-      variant="outline"
-      role="combobox"
-      className="w-full justify-between text-xs h-8"
-    >
-      {selectedSuppliers.length === 0
-        ? "Selecione os fornecedores..."
-        : `${selectedSuppliers.length} fornecedor${selectedSuppliers.length > 1 ? "es" : ""} selecionado${selectedSuppliers.length > 1 ? "s" : ""}`}
-      <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
-    </Button>
-  </PopoverTrigger>
-  <PopoverContent className="w-full p-0" align="start">
-    <div className="max-h-60 overflow-auto p-1">
-      {suppliers.map((link) => (
-        <div
-          key={link.id}
-          className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer"
-          onClick={() => hasPhone && handleToggle(link.supplier_id)}
-        >
-          <Checkbox checked={isSelected} disabled={!hasPhone} />
-          <span className="flex-1 text-sm">{supplier.name}</span>
-          {/* Badges */}
-        </div>
-      ))}
-    </div>
-  </PopoverContent>
-</Popover>
+const response = await fetch(
+  `${evolutionApiUrl}/message/sendText/${instanceName}`,
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': evolutionApiKey,
+    },
+    body: JSON.stringify({
+      number: formattedPhone,  // ex: "5554999999999"
+      text: message,
+    }),
+  }
+);
 ```
 
 ---
 
-### Arquivos a Modificar
+### Arquivos a Modificar/Criar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/pdv/purchases/QuotationItemSuppliers.tsx` | Substituir lista de checkboxes por Popover dropdown com multi-select |
+| `supabase/functions/send-quotation-whatsapp/index.ts` | Criar nova edge function |
+| `src/components/pdv/purchases/WhatsAppSendDialog.tsx` | Substituir lógica de abertura por chamada à edge function |
 
 ---
 
-### Comportamento
+### Comportamento Final
 
-- **Fechado**: Mostra quantidade de fornecedores selecionados
-- **Aberto**: Lista com checkboxes para selecionar múltiplos
-- **Auto-seleção**: Mantém comportamento de pré-selecionar fornecedores principais
-- **Sem WhatsApp**: Item aparece mas fica desabilitado com indicador visual
-- **Badges**: Principal, Preferido, Sem WhatsApp visíveis dentro do dropdown
-
+- Usuário seleciona fornecedores e clica "Enviar via WhatsApp"
+- Botão fica em loading enquanto envia
+- Sistema envia mensagens automaticamente para todos os selecionados via Evolution API
+- Toast: "X mensagens enviadas com sucesso!" ou detalhes de erro
+- Dialog fecha após envio
+- Se usuário não tiver WhatsApp conectado: toast de erro com link para configurações
