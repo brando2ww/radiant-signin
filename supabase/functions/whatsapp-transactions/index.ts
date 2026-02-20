@@ -1055,16 +1055,245 @@ async function transcribeAudio(audioBase64: string): Promise<string | null> {
   }
 }
 
+
+// ==================== COTAÇÕES: DETECÇÃO DE FORNECEDORES ====================
+
+// Normaliza número de telefone para comparação
+function normalizePhoneForComparison(phone: string): string[] {
+  const digits = phone.replace(/\D/g, '');
+  const variants: string[] = [digits];
+  if (digits.startsWith('55') && digits.length > 11) variants.push(digits.slice(2));
+  if (!digits.startsWith('55') && digits.length >= 10) variants.push('55' + digits);
+  return variants;
+}
+
+// Busca fornecedor pelo número de telefone
+async function findSupplierByPhone(phoneNumber: string) {
+  console.log(`🏭 Buscando fornecedor pelo telefone: ${phoneNumber}`);
+  const phoneVariants = normalizePhoneForComparison(phoneNumber);
+  const last8 = phoneVariants[0].slice(-8);
+
+  const { data } = await supabase
+    .from('pdv_suppliers')
+    .select('id, name, phone, user_id')
+    .ilike('phone', `%${last8}%`)
+    .limit(5);
+
+  if (data && data.length > 0) {
+    console.log(`✅ Fornecedor encontrado: ${data[0].name}`);
+    return data[0];
+  }
+  console.log('❌ Nenhum fornecedor encontrado para este número');
+  return null;
+}
+
+// Busca cotações pendentes para um fornecedor específico
+async function findPendingQuotationsForSupplier(supplierId: string, userId: string) {
+  console.log(`📋 Buscando cotações pendentes para fornecedor: ${supplierId}`);
+
+  const { data, error } = await supabase
+    .from('pdv_quotation_item_suppliers')
+    .select(`
+      id,
+      quotation_item_id,
+      supplier_id,
+      sent_at,
+      quotation_item:pdv_quotation_items(
+        id,
+        quotation_id,
+        ingredient_id,
+        quantity_needed,
+        unit,
+        ingredient:pdv_ingredients(id, name),
+        quotation:pdv_quotation_requests(
+          id,
+          request_number,
+          status,
+          deadline,
+          user_id
+        )
+      )
+    `)
+    .eq('supplier_id', supplierId)
+    .not('sent_at', 'is', null);
+
+  if (error || !data) {
+    console.error('Erro ao buscar cotações:', error);
+    return [];
+  }
+
+  const pending = data.filter((record) => {
+    const item = record.quotation_item as Record<string, unknown> | null;
+    if (!item) return false;
+    const quotation = item.quotation as Record<string, unknown> | null;
+    if (!quotation) return false;
+    const status = quotation.status as string;
+    const quotationUserId = quotation.user_id as string;
+    return (status === 'pending' || status === 'in_progress') && quotationUserId === userId;
+  });
+
+  console.log(`📋 ${pending.length} itens de cotação pendentes encontrados`);
+  return pending;
+}
+
+// Usa IA para extrair preços da resposta do fornecedor
+async function extractQuotationPrices(
+  messageText: string,
+  pendingItems: Array<{ quotation_item_id: string; quotation_item: Record<string, unknown> }>
+) {
+  const itemsList = pendingItems.map((record) => {
+    const item = record.quotation_item as Record<string, unknown>;
+    const ingredient = item.ingredient as Record<string, unknown> | null;
+    return {
+      quotation_item_id: record.quotation_item_id,
+      ingredient_name: ingredient?.name || 'Desconhecido',
+      quantity: item.quantity_needed,
+      unit: item.unit,
+    };
+  });
+
+  const systemPrompt = `Você é um assistente que extrai informações de respostas de cotações de fornecedores.
+Itens da cotação enviada ao fornecedor:
+${itemsList.map((it, i) => `${i + 1}. ${it.ingredient_name}: ${it.quantity} ${it.unit} (quotation_item_id: ${it.quotation_item_id})`).join('\n')}
+
+Extraia os preços da resposta do fornecedor e retorne JSON no formato:
+{
+  "items": [
+    {
+      "quotation_item_id": "uuid do item",
+      "ingredient_name": "nome do ingrediente",
+      "unit_price": número ou null,
+      "delivery_days": número ou null,
+      "notes": "observações ou null"
+    }
+  ],
+  "general_notes": "observações gerais ou null"
+}
+Se o fornecedor não informou preço para um item, coloque unit_price: null.`;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${openaiApiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: messageText }
+        ],
+        temperature: 0.1,
+      }),
+    });
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+    console.log(`📝 Extração IA cotação: ${content}`);
+    try {
+      return JSON.parse(content);
+    } catch {
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) return JSON.parse(jsonMatch[0]);
+      return { items: [] };
+    }
+  } catch (error) {
+    console.error('Erro ao extrair preços:', error);
+    return { items: [] };
+  }
+}
+
+// Salva respostas de cotação automaticamente
+async function saveQuotationResponses(
+  extraction: { items: Array<Record<string, unknown>>; general_notes?: string },
+  pendingItems: Array<{ quotation_item_id: string; quotation_item: Record<string, unknown> }>,
+  supplierId: string,
+  originalMessage: string
+) {
+  const savedItems: string[] = [];
+
+  for (const extractedItem of extraction.items) {
+    if (!extractedItem.unit_price) continue;
+    const pendingRecord = pendingItems.find((p) => p.quotation_item_id === extractedItem.quotation_item_id);
+    if (!pendingRecord) continue;
+
+    const item = pendingRecord.quotation_item as Record<string, unknown>;
+    const quantityNeeded = Number(item.quantity_needed || 0);
+    const unitPrice = Number(extractedItem.unit_price);
+
+    const { data: existing } = await supabase
+      .from('pdv_quotation_responses')
+      .select('id')
+      .eq('quotation_item_id', extractedItem.quotation_item_id as string)
+      .eq('supplier_id', supplierId)
+      .maybeSingle();
+
+    const responseData = {
+      quotation_item_id: extractedItem.quotation_item_id as string,
+      supplier_id: supplierId,
+      unit_price: unitPrice,
+      total_price: unitPrice * quantityNeeded,
+      delivery_days: extractedItem.delivery_days ? Number(extractedItem.delivery_days) : null,
+      notes: `${originalMessage}${extraction.general_notes ? `\n\nObs: ${extraction.general_notes}` : ''}`,
+    };
+
+    if (existing) {
+      await supabase.from('pdv_quotation_responses').update(responseData).eq('id', existing.id);
+    } else {
+      await supabase.from('pdv_quotation_responses').insert(responseData);
+    }
+
+    const ingredient = item.ingredient as Record<string, unknown> | null;
+    savedItems.push(`• ${ingredient?.name || 'Item'}: R$ ${unitPrice.toFixed(2).replace('.', ',')}/${item.unit}`);
+  }
+
+  return savedItems;
+}
+
+// ==================== FIM COTAÇÕES ====================
+
 // Processa a mensagem recebida
 async function processMessage(remoteJid: string, messageText: string) {
   const formattedPhone = formatPhoneNumber(remoteJid);
   console.log(`📱 Processando mensagem de ${formattedPhone}: ${messageText}`);
 
+  // ---- VERIFICAÇÃO: remetente é fornecedor com cotação pendente? ----
+  const supplier = await findSupplierByPhone(formattedPhone);
+  if (supplier) {
+    console.log(`🏭 Remetente é fornecedor: ${supplier.name}`);
+    const pendingItems = await findPendingQuotationsForSupplier(supplier.id, supplier.user_id);
+
+    if (pendingItems.length > 0) {
+      console.log(`📋 Processando resposta de cotação do fornecedor ${supplier.name}`);
+      const extraction = await extractQuotationPrices(messageText, pendingItems as Array<{
+        quotation_item_id: string;
+        quotation_item: Record<string, unknown>;
+      }>);
+      const savedItems = await saveQuotationResponses(
+        extraction,
+        pendingItems as Array<{ quotation_item_id: string; quotation_item: Record<string, unknown> }>,
+        supplier.id,
+        messageText
+      );
+
+      if (savedItems.length > 0) {
+        await sendWhatsAppMessage(
+          remoteJid,
+          `✅ Obrigado pela cotação!\n\nRecebemos os seguintes valores:\n${savedItems.join('\n')}\n\nRetornaremos em breve com a decisão. 😊`
+        );
+      } else {
+        await sendWhatsAppMessage(
+          remoteJid,
+          `✅ Mensagem recebida! Nosso time irá analisar sua proposta e retornar em breve. 😊`
+        );
+      }
+      return;
+    }
+  }
+  // ---- FIM VERIFICAÇÃO FORNECEDOR ----
+
   // Busca usuário verificado
   const user = await findUserByPhone(formattedPhone);
   if (!user) {
     console.log('❌ Usuário não cadastrado ou WhatsApp não verificado');
-    return; // Ignora mensagens de usuários não verificados
+    return;
   }
 
   // Busca contexto da sessão

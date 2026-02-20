@@ -43,14 +43,21 @@ export function generateWhatsAppLink(phone: string, message: string): string {
 export function generateQuotationMessage(
   items: QuotationItem[],
   deadline: Date,
-  businessName?: string
+  businessName?: string,
+  requestNumber?: string
 ): string {
   const formattedDeadline = deadline.toLocaleDateString('pt-BR');
   
   let message = `Olá! `;
   
   if (businessName) {
-    message += `Aqui é do ${businessName}. `;
+    message += `Aqui é do *${businessName}*.\n`;
+  }
+  
+  if (requestNumber) {
+    message += `📋 *Ref.: ${requestNumber}*\n\n`;
+  } else {
+    message += `\n`;
   }
   
   message += `Estamos solicitando cotação para os seguintes produtos:\n\n`;
@@ -59,7 +66,7 @@ export function generateQuotationMessage(
     message += `${index + 1}. ${item.ingredientName}: ${item.quantity} ${item.unit}\n`;
   });
   
-  message += `\nPor favor, informe:\n`;
+  message += `\nPor favor, informe para cada item:\n`;
   message += `• Preço unitário\n`;
   message += `• Validade do produto\n`;
   message += `• Prazo de entrega\n`;
