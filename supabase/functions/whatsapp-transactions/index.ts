@@ -1100,7 +1100,7 @@ async function findPendingQuotationsForSupplier(supplierId: string, userId: stri
       sent_at,
       quotation_item:pdv_quotation_items(
         id,
-        quotation_id,
+        quotation_request_id,
         ingredient_id,
         quantity_needed,
         unit,
@@ -1249,16 +1249,38 @@ async function saveQuotationResponses(
 
 // ==================== FIM COTAÇÕES ====================
 
+// Busca o user_id dono de uma instância WhatsApp pelo nome da instância
+async function resolveUserIdByInstance(instanceName: string): Promise<string | null> {
+  if (!instanceName) return null;
+  const { data } = await supabase
+    .from('whatsapp_connections')
+    .select('user_id')
+    .eq('instance_name', instanceName)
+    .maybeSingle();
+  if (data?.user_id) {
+    console.log(`🏪 Instância "${instanceName}" pertence ao user_id: ${data.user_id}`);
+    return data.user_id;
+  }
+  console.log(`⚠️ Nenhuma loja encontrada para instância "${instanceName}"`);
+  return null;
+}
+
 // Processa a mensagem recebida
-async function processMessage(remoteJid: string, messageText: string) {
+async function processMessage(remoteJid: string, messageText: string, instanceName?: string) {
   const formattedPhone = formatPhoneNumber(remoteJid);
-  console.log(`📱 Processando mensagem de ${formattedPhone}: ${messageText}`);
+  console.log(`📱 Processando mensagem de ${formattedPhone} (instância: ${instanceName || 'desconhecida'}): ${messageText}`);
 
   // ---- VERIFICAÇÃO: remetente é fornecedor com cotação pendente? ----
   const supplier = await findSupplierByPhone(formattedPhone);
   if (supplier) {
     console.log(`🏭 Remetente é fornecedor: ${supplier.name}`);
-    const pendingItems = await findPendingQuotationsForSupplier(supplier.id, supplier.user_id);
+
+    // Resolve o user_id pelo nome da instância (multi-loja) ou cai para o user_id do fornecedor
+    const resolvedUserId = instanceName
+      ? (await resolveUserIdByInstance(instanceName)) ?? supplier.user_id
+      : supplier.user_id;
+
+    const pendingItems = await findPendingQuotationsForSupplier(supplier.id, resolvedUserId);
 
     if (pendingItems.length > 0) {
       console.log(`📋 Processando resposta de cotação do fornecedor ${supplier.name}`);
@@ -2585,6 +2607,9 @@ serve(async (req) => {
     // Valida se é uma mensagem de texto
     const event = body.event;
     const data = body.data;
+    // Captura o nome da instância para rastreamento multi-loja
+    const incomingInstance: string = body.instance || '';
+    console.log(`🏪 Instância recebida no webhook: "${incomingInstance}"`);
 
     if (event !== 'messages.upsert') {
       console.log('⏭️ Evento ignorado:', event);
@@ -2666,8 +2691,8 @@ serve(async (req) => {
       });
     }
 
-    // Processa a mensagem de forma assíncrona
-    processMessage(remoteJid, messageText).catch(err => {
+    // Processa a mensagem de forma assíncrona, passando a instância para rastreamento multi-loja
+    processMessage(remoteJid, messageText, incomingInstance).catch(err => {
       console.error('Erro ao processar mensagem:', err);
     });
 

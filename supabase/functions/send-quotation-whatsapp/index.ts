@@ -141,6 +141,39 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Auto-registra o webhook da instância usada na Evolution API (suporte multi-loja)
+    // Garante que respostas dos fornecedores cheguem corretamente ao whatsapp-transactions
+    if (sent.length > 0) {
+      try {
+        const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-transactions`
+        const webhookResponse = await fetch(
+          `${evolutionApiUrl}/webhook/set/${instanceName}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': evolutionApiKey,
+            },
+            body: JSON.stringify({
+              url: webhookUrl,
+              events: ['messages.upsert'],
+              enabled: true,
+              webhookByEvents: false,
+            }),
+          }
+        )
+        if (webhookResponse.ok) {
+          console.log(`✅ Webhook registrado para instância "${instanceName}": ${webhookUrl}`)
+        } else {
+          const errText = await webhookResponse.text()
+          console.warn(`⚠️ Falha ao registrar webhook para "${instanceName}": ${errText}`)
+        }
+      } catch (webhookErr) {
+        // Não bloqueia o fluxo principal se o registro do webhook falhar
+        console.warn('⚠️ Erro ao registrar webhook (não crítico):', webhookErr)
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
