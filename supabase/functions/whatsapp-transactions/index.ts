@@ -1073,16 +1073,43 @@ async function findSupplierByPhone(phoneNumber: string) {
   const phoneVariants = normalizePhoneForComparison(phoneNumber);
   const last8 = phoneVariants[0].slice(-8);
 
-  const { data } = await supabase
+  console.log(`🔍 Variantes de número testadas: ${phoneVariants.join(', ')}`);
+  console.log(`🔍 Últimos 8 dígitos para busca: ${last8}`);
+
+  const { data, error } = await supabase
     .from('pdv_suppliers')
     .select('id, name, phone, user_id')
     .ilike('phone', `%${last8}%`)
     .limit(5);
 
+  if (error) {
+    console.error(`❌ Erro ao buscar fornecedor: ${error.message}`);
+    return null;
+  }
+
   if (data && data.length > 0) {
-    console.log(`✅ Fornecedor encontrado: ${data[0].name}`);
+    console.log(`✅ Fornecedor(es) encontrado(s): ${data.map(d => `${d.name} (${d.phone})`).join(', ')}`);
+    console.log(`✅ Usando primeiro resultado: ${data[0].name} | phone no banco: "${data[0].phone}" | user_id: ${data[0].user_id}`);
     return data[0];
   }
+
+  // Log de debug: busca todos fornecedores para comparação
+  const { data: allSuppliers } = await supabase
+    .from('pdv_suppliers')
+    .select('name, phone')
+    .not('phone', 'is', null)
+    .limit(20);
+
+  if (allSuppliers && allSuppliers.length > 0) {
+    console.log(`⚠️ Fornecedores cadastrados com telefone (primeiros 20):`);
+    allSuppliers.forEach(s => {
+      const cleanPhone = s.phone?.replace(/\D/g, '') || '';
+      console.log(`   - ${s.name}: "${s.phone}" → limpo: "${cleanPhone}" → últimos 8: "${cleanPhone.slice(-8)}"`);
+    });
+  } else {
+    console.log(`⚠️ Nenhum fornecedor com telefone cadastrado encontrado`);
+  }
+
   console.log('❌ Nenhum fornecedor encontrado para este número');
   return null;
 }
