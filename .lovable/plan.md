@@ -1,105 +1,52 @@
 
-## Problema: Múltiplas Lojas — Rastreamento de Instância Incorreto
+## Diagnóstico Final — Por Que a Resposta Não É Reconhecida
 
-Com múltiplas lojas conectadas via WhatsApp, existem 3 falhas encadeadas que precisam ser corrigidas:
+### O Que os Logs Revelam
 
----
-
-### Falha 1: Coluna errada no JOIN (bug crítico)
-
-Na função `findPendingQuotationsForSupplier`, o Supabase está tentando fazer join usando uma coluna chamada `quotation_id` dentro de `pdv_quotation_items`, mas o nome real no banco é `quotation_request_id`.
-
-Resultado: o join retorna `quotation: null` em todos os registros → nenhuma cotação pendente é encontrada → a IA nunca é acionada.
+Analisando os logs da edge function e os dados do banco, foram identificadas **2 causas raízes independentes**:
 
 ---
 
-### Falha 2: Webhook não sabe de qual loja a mensagem veio
+### Causa 1: Webhook da instância `LOJA 2` não está registrado na Evolution API
 
-Quando a Evolution API chama o webhook, o payload inclui o campo `instance` com o nome da instância que recebeu a mensagem:
+O banco de dados confirma:
+- Instância conectada: `LOJA 2` (status: `open`)
+- A cotação foi enviada pela `LOJA 2` com `sent_at: 2026-02-20 13:20:03`
+- O código de registro automático do webhook foi adicionado nesta última atualização — mas a cotação **já tinha sido enviada antes** dessa atualização
 
-```json
-{
-  "event": "messages.upsert",
-  "instance": "LOJA 2",
-  "data": { "key": { "remoteJid": "5554..." }, ... }
-}
-```
+Resultado: **a `LOJA 2` nunca registrou o webhook** na Evolution API. A resposta do CARLOS chegou na `LOJA 2`, ficou lá, e nunca foi encaminhada para a edge function `whatsapp-transactions`. Os logs mostram ZERO chamadas vindas da instância `LOJA 2`.
 
-O código atual **ignora** esse campo `instance`. Quando um fornecedor responde, o sistema não sabe que aquela resposta veio da "LOJA 2" — e com múltiplas lojas, pode confundir fornecedores de lojas diferentes que tenham números parecidos.
+**Solução:** Criar uma nova edge function `register-whatsapp-webhook` ou adicionar um botão nas configurações para registrar o webhook manualmente quando necessário. Também chamar o registro imediatamente ao abrir o `WhatsAppSendDialog`.
 
 ---
 
-### Falha 3: Webhook não configurado automaticamente para novas instâncias
+### Causa 2: Número do CARLOS pode estar diferente no WhatsApp
 
-Quando o usuário conecta uma nova loja pelo painel, o webhook não é registrado automaticamente na Evolution API para aquela instância. É preciso configurar manualmente — o que é inviável com muitas lojas.
+O fornecedor CARLOS está cadastrado como `(54) 99223-2827`, que normalizado seria `5499223-2827` → `54992232827`.
+
+Para que o sistema encontre o fornecedor, os últimos 8 dígitos precisam bater. Os 8 últimos de `54992232827` são `99232827` — mas é necessário confirmar que o número do WhatsApp do CARLOS é exatamente esse.
 
 ---
 
-### Solução Completa
+### Solução: Registro Forçado do Webhook via Botão + Chamada no Envio
 
-#### Parte 1 — Corrigir o nome da coluna (1 linha)
+#### Parte 1 — Endpoint para registrar webhook manualmente
 
-Arquivo: `supabase/functions/whatsapp-transactions/index.ts`
+Criar a chamada de registro do webhook diretamente no frontend ao abrir o diálogo de envio via WhatsApp, garantindo que a `LOJA 2` esteja sempre configurada antes de qualquer envio.
 
-```typescript
-// ANTES (errado):
-quotation_item:pdv_quotation_items(
-  id,
-  quotation_id,   ← não existe
-  ...
+No `WhatsAppSendDialog.tsx`, ao abrir o diálogo, chamar `supabase.functions.invoke('send-quotation-whatsapp')` ou criar um endpoint separado que registre o webhook.
 
-// DEPOIS (correto):
-quotation_item:pdv_quotation_items(
-  id,
-  quotation_request_id,   ← nome real no banco
-  ...
-```
+**Abordagem mais simples:** Criar uma nova edge function `register-whatsapp-webhook` que recebe o `instanceName` e registra o webhook na Evolution API. Chamada ao abrir o diálogo de envio.
 
-#### Parte 2 — Usar `instance` do webhook para rastrear a loja correta
+#### Parte 2 — Adicionar botão "Registrar Webhook" nas Configurações do WhatsApp
 
-No corpo do webhook recebido, extrair `body.instance` (nome da instância Evolution API). Com esse nome, buscar qual `user_id` é dono daquela instância na tabela `whatsapp_connections`:
+Em `src/components/pdv/settings/WhatsAppConnectionCard.tsx`, adicionar um botão que chama a nova edge function para registrar/atualizar o webhook da instância conectada.
 
-```typescript
-// No handler do webhook:
-const instanceName = body.instance  // ex: "LOJA 2"
+Isso resolve o caso de instâncias antigas que foram conectadas antes dessa funcionalidade existir.
 
-// Buscar o dono dessa instância:
-const { data: connection } = await supabase
-  .from('whatsapp_connections')
-  .select('user_id')
-  .eq('instance_name', instanceName)
-  .maybeSingle()
+#### Parte 3 — Log de debug do número do fornecedor
 
-// Passar userId para findPendingQuotationsForSupplier — 
-// garantindo que só buscamos cotações DAQUELA loja específica
-```
-
-Isso garante que:
-- Resposta recebida na "LOJA 2" → busca só cotações do dono da "LOJA 2"
-- Resposta recebida na "VELARA MEI" → busca só cotações do dono da "VELARA MEI"
-- Fornecedores com números parecidos entre lojas diferentes não se cruzam
-
-A função `processMessage` também precisa receber o `userId` como parâmetro para repassar a todas as sub-funções de cotação.
-
-#### Parte 3 — Registrar webhook automaticamente ao enviar cotação
-
-No `send-quotation-whatsapp`, após enviar com sucesso, chamar a Evolution API para registrar o webhook da instância usada, caso ainda não esteja configurado:
-
-```typescript
-// Depois de enviar mensagens:
-await fetch(`${evolutionApiUrl}/webhook/set/${instanceName}`, {
-  method: 'POST',
-  headers: { 'apikey': evolutionApiKey, 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    url: `${supabaseUrl}/functions/v1/whatsapp-transactions`,
-    events: ['messages.upsert'],
-    enabled: true,
-    webhookByEvents: false,
-  })
-})
-```
-
-Isso garante que toda loja que enviar uma cotação automaticamente passa a receber as respostas.
+Adicionar log mais detalhado no `findSupplierByPhone` para mostrar quais variantes de número estão sendo testadas e quais números existem no banco — facilitando identificar incompatibilidades futuras.
 
 ---
 
@@ -107,28 +54,30 @@ Isso garante que toda loja que enviar uma cotação automaticamente passa a rece
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `supabase/functions/whatsapp-transactions/index.ts` | (1) Corrigir `quotation_id` → `quotation_request_id`; (2) Extrair `instance` do payload e resolver `user_id` via `whatsapp_connections`; (3) Passar `userId` para `processMessage` e `findPendingQuotationsForSupplier` |
-| `supabase/functions/send-quotation-whatsapp/index.ts` | (3) Após envio bem-sucedido, registrar webhook da instância usada na Evolution API |
+| `supabase/functions/register-whatsapp-webhook/index.ts` | Nova edge function que registra webhook de uma instância na Evolution API |
+| `src/components/pdv/settings/WhatsAppConnectionCard.tsx` | Botão "Configurar Webhook" que chama a nova edge function |
+| `src/components/pdv/purchases/WhatsAppSendDialog.tsx` | Registrar webhook automaticamente ao abrir o diálogo (antes de enviar) |
+| `supabase/functions/whatsapp-transactions/index.ts` | Melhorar logs do `findSupplierByPhone` para debug de número |
 
 ---
 
-### Fluxo Final (com múltiplas lojas)
+### Fluxo Após a Correção
 
 ```text
-Loja A envia cotação via WhatsApp (instância "LOJA A")
-  → send-quotation-whatsapp registra webhook da "LOJA A"
+Usuário abre diálogo de envio de cotação
+  → Sistema registra automaticamente webhook da LOJA 2 na Evolution API
 
-Loja B envia cotação via WhatsApp (instância "LOJA B")
-  → send-quotation-whatsapp registra webhook da "LOJA B"
+Usuário envia cotação para CARLOS
+  → CARLOS responde no WhatsApp da LOJA 2
 
-Fornecedor responde para "LOJA A"
-  → webhook chega com body.instance = "LOJA A"
-  → sistema resolve user_id do dono da "LOJA A"
-  → busca cotações APENAS do user_id correto
-  → IA extrai preços → salva resposta → confirma ao fornecedor ✅
-
-Fornecedor responde para "LOJA B"
-  → webhook chega com body.instance = "LOJA B"
-  → sistema resolve user_id do dono da "LOJA B"
-  → sem cruzamento entre lojas ✅
+Evolution API (LOJA 2) → webhook → whatsapp-transactions
+  → Sistema encontra CARLOS pelo telefone (54) 99223-2827
+  → IA extrai o preço R$122,00/kg, validade 31/03/2026, entrega 12/03/2026, mínimo 3KG
+  → Salva em pdv_quotation_responses automaticamente ✅
 ```
+
+---
+
+### Sobre o Número do CARLOS
+
+O telefone cadastrado `(54) 99223-2827` tem DDD 54 (Serra Gaúcha). O sistema busca pelos últimos 8 dígitos `99232827`. Se o número no WhatsApp for diferente (ex: com 9 adicional ou outro formato), não será encontrado. Após o webhook da LOJA 2 estar ativo, os logs vão mostrar o número exato que chega e poderemos confirmar.
