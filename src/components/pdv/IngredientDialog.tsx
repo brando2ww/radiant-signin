@@ -31,12 +31,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { BarcodeInput } from "@/components/ui/barcode-input";
-import { Plus } from "lucide-react";
+import { Plus, Star, X, ChevronDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { PDVIngredient } from "@/hooks/use-pdv-ingredients";
 import { usePDVSuppliers, useCreateSupplier } from "@/hooks/use-pdv-suppliers";
 import { useIngredientCategories } from "@/hooks/use-ingredient-categories";
 import { usePDVSectors } from "@/hooks/use-pdv-sectors";
 import { usePDVCostCenters } from "@/hooks/use-pdv-cost-centers";
+import { usePDVIngredientSuppliers } from "@/hooks/use-pdv-ingredient-suppliers";
 import { CategoryQuickDialog } from "./CategoryQuickDialog";
 import { SectorQuickDialog } from "./SectorQuickDialog";
 import { CostCenterQuickDialog } from "./CostCenterQuickDialog";
@@ -50,6 +57,129 @@ interface IngredientDialogProps {
   ingredient: PDVIngredient | null;
   onSubmit: (data: any) => void;
   isSubmitting: boolean;
+}
+
+// Multi-supplier selector component
+interface MultiSupplierSelectorProps {
+  selectedIds: string[];
+  preferredId: string | null;
+  availableSuppliers: Array<{ id: string; name: string }>;
+  onAdd: (supplierId: string) => void;
+  onRemove: (supplierId: string) => void;
+  onSetPreferred: (supplierId: string) => void;
+  onNewSupplier: () => void;
+}
+
+function MultiSupplierSelector({
+  selectedIds,
+  preferredId,
+  availableSuppliers,
+  onAdd,
+  onRemove,
+  onSetPreferred,
+  onNewSupplier,
+}: MultiSupplierSelectorProps) {
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
+  const selected = selectedIds.map((id) =>
+    availableSuppliers.find((s) => s.id === id)
+  ).filter(Boolean) as Array<{ id: string; name: string }>;
+
+  const unselected = availableSuppliers.filter(
+    (s) => !selectedIds.includes(s.id)
+  );
+
+  return (
+    <div className="space-y-2">
+      <Label>Fornecedores</Label>
+
+      {selected.length > 0 && (
+        <div className="border rounded-md divide-y">
+          {selected.map((supplier) => {
+            const isPreferred = supplier.id === preferredId;
+            return (
+              <div
+                key={supplier.id}
+                className="flex items-center gap-2 px-3 py-2"
+              >
+                <button
+                  type="button"
+                  onClick={() => onSetPreferred(supplier.id)}
+                  className="shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                  title={isPreferred ? "Fornecedor preferencial" : "Definir como preferencial"}
+                >
+                  <Star
+                    className="h-4 w-4"
+                    fill={isPreferred ? "currentColor" : "none"}
+                    style={isPreferred ? { color: "hsl(var(--warning, 45 93% 47%))" } : {}}
+                  />
+                </button>
+                <span className="flex-1 text-sm truncate">{supplier.name}</span>
+                {isPreferred && (
+                  <Badge variant="secondary" className="text-xs shrink-0">
+                    Principal
+                  </Badge>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onRemove(supplier.id)}
+                  className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+          <PopoverTrigger asChild>
+            <Button type="button" variant="outline" size="sm" className="gap-1">
+              <Plus className="h-3 w-3" />
+              Adicionar fornecedor
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-1" align="start">
+            {unselected.length === 0 ? (
+              <p className="text-sm text-muted-foreground px-2 py-1.5">
+                Todos os fornecedores já foram adicionados
+              </p>
+            ) : (
+              <div className="max-h-48 overflow-y-auto">
+                {unselected.map((supplier) => (
+                  <button
+                    key={supplier.id}
+                    type="button"
+                    className="w-full text-left text-sm px-2 py-1.5 rounded hover:bg-accent transition-colors"
+                    onClick={() => {
+                      onAdd(supplier.id);
+                      setPopoverOpen(false);
+                    }}
+                  >
+                    {supplier.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </PopoverContent>
+        </Popover>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1"
+          onClick={onNewSupplier}
+        >
+          <Plus className="h-3 w-3" />
+          Novo fornecedor
+        </Button>
+      </div>
+    </div>
+  );
 }
 
 const UNITS = [
@@ -88,11 +218,16 @@ export function IngredientDialog({
   const { categories, createCategory, isCreating: isCreatingCategory } = useIngredientCategories();
   const { sectors, createSector, isCreating: isCreatingSector } = usePDVSectors();
   const { costCenters, createCostCenter, isCreating: isCreatingCostCenter } = usePDVCostCenters();
-  
+  const { ingredientSuppliers, availableSuppliers: allSuppliers } = usePDVIngredientSuppliers(ingredient?.id || undefined);
+
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [sectorDialogOpen, setSectorDialogOpen] = useState(false);
   const [costCenterDialogOpen, setCostCenterDialogOpen] = useState(false);
   const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
+
+  // Multi-supplier state
+  const [selectedSupplierIds, setSelectedSupplierIds] = useState<string[]>([]);
+  const [preferredSupplierId, setPreferredSupplierId] = useState<string | null>(null);
 
   const activeSuppliers = suppliers.filter(s => s.is_active);
 
@@ -141,6 +276,7 @@ export function IngredientDialog({
     },
   });
 
+  // Carrega fornecedores vinculados ao abrir em modo edição
   useEffect(() => {
     if (open) {
       if (ingredient) {
@@ -195,9 +331,53 @@ export function IngredientDialog({
           cost_center: "",
           observations: "",
         });
+        setSelectedSupplierIds([]);
+        setPreferredSupplierId(null);
       }
     }
   }, [ingredient, open]);
+
+  // Popula o estado multi-fornecedor quando os vínculos carregam (modo edição)
+  useEffect(() => {
+    if (open && ingredient && ingredientSuppliers.length > 0) {
+      const ids = ingredientSuppliers.map((is) => is.supplier_id);
+      setSelectedSupplierIds(ids);
+      const preferred = ingredientSuppliers.find((is) => is.is_preferred);
+      setPreferredSupplierId(preferred?.supplier_id || ids[0] || null);
+    }
+  }, [open, ingredient, ingredientSuppliers]);
+
+  // Sincroniza o supplier_id principal com o preferencial
+  useEffect(() => {
+    if (preferredSupplierId) {
+      form.setValue("supplier_id", preferredSupplierId);
+    } else if (selectedSupplierIds.length === 0) {
+      form.setValue("supplier_id", "none");
+    }
+  }, [preferredSupplierId, selectedSupplierIds]);
+
+  const handleAddSupplier = (supplierId: string) => {
+    setSelectedSupplierIds((prev) => {
+      const next = [...prev, supplierId];
+      // Se é o primeiro, define como preferencial
+      if (next.length === 1) setPreferredSupplierId(supplierId);
+      return next;
+    });
+  };
+
+  const handleRemoveSupplier = (supplierId: string) => {
+    setSelectedSupplierIds((prev) => {
+      const next = prev.filter((id) => id !== supplierId);
+      if (preferredSupplierId === supplierId) {
+        setPreferredSupplierId(next[0] || null);
+      }
+      return next;
+    });
+  };
+
+  const handleSetPreferred = (supplierId: string) => {
+    setPreferredSupplierId(supplierId);
+  };
 
   const handleSubmit = form.handleSubmit(async (data) => {
     const avgCost = data.unit_cost * (1 + data.loss_percentage / 100);
@@ -212,14 +392,16 @@ export function IngredientDialog({
     onSubmit({
       ...data,
       code,
-      supplier_id: data.supplier_id === "none" ? null : data.supplier_id,
+      supplier_id: preferredSupplierId || (data.supplier_id === "none" ? null : data.supplier_id),
       category: data.category || null,
       sector: data.sector || null,
       cost_center: data.cost_center || null,
       average_cost: avgCost,
       current_balance: currentBalance,
+      // Dados para sincronização dos vínculos N:N
+      _supplierIds: selectedSupplierIds,
+      _preferredSupplierId: preferredSupplierId,
     });
-    // Não fazer reset aqui - o useEffect já reseta quando o dialog fecha com sucesso
   });
 
   const handleCreateCategory = async (name: string) => {
@@ -240,7 +422,7 @@ export function IngredientDialog({
   const handleCreateSupplier = (data: any) => {
     createSupplier(data, {
       onSuccess: (newSupplier) => {
-        form.setValue("supplier_id", newSupplier.id);
+        handleAddSupplier(newSupplier.id);
         setSupplierDialogOpen(false);
       },
     });
@@ -367,43 +549,14 @@ export function IngredientDialog({
                     />
                   </div>
 
-                  <FormField
-                    control={form.control}
-                    name="supplier_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fornecedor</FormLabel>
-                        <div className="flex gap-2">
-                          <Select
-                            value={field.value}
-                            onValueChange={field.onChange}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione um fornecedor" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="none">Nenhum</SelectItem>
-                              {activeSuppliers.map((supplier) => (
-                                <SelectItem key={supplier.id} value={supplier.id}>
-                                  {supplier.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setSupplierDialogOpen(true)}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                  <MultiSupplierSelector
+                    selectedIds={selectedSupplierIds}
+                    preferredId={preferredSupplierId}
+                    availableSuppliers={activeSuppliers}
+                    onAdd={handleAddSupplier}
+                    onRemove={handleRemoveSupplier}
+                    onSetPreferred={handleSetPreferred}
+                    onNewSupplier={() => setSupplierDialogOpen(true)}
                   />
                 </TabsContent>
 

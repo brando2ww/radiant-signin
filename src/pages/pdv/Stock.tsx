@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Warehouse, AlertTriangle } from "lucide-react";
 import { usePDVIngredients } from "@/hooks/use-pdv-ingredients";
+import { usePDVIngredientSuppliers } from "@/hooks/use-pdv-ingredient-suppliers";
 import { IngredientCard } from "@/components/pdv/IngredientCard";
 import { IngredientDialog } from "@/components/pdv/IngredientDialog";
 import { IngredientFilters } from "@/components/pdv/IngredientFilters";
@@ -32,6 +33,8 @@ export default function PDVStock() {
     adjustStock,
     isAdjusting,
   } = usePDVIngredients();
+
+  const { createLink, deleteLink, ingredientSuppliers: allLinks } = usePDVIngredientSuppliers();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedIngredient, setSelectedIngredient] = useState<any>(null);
@@ -76,6 +79,35 @@ export default function PDVStock() {
     });
   }, [ingredients, search, stockStatus]);
 
+  // Sincroniza vínculos pdv_ingredient_suppliers
+  const syncSupplierLinks = async (
+    ingredientId: string,
+    newSupplierIds: string[],
+    preferredSupplierId: string | null
+  ) => {
+    const existingLinks = allLinks.filter((l) => l.ingredient_id === ingredientId);
+    const existingIds = existingLinks.map((l) => l.supplier_id);
+
+    // Remover vínculos que foram removidos
+    const toRemove = existingLinks.filter((l) => !newSupplierIds.includes(l.supplier_id));
+    for (const link of toRemove) {
+      await deleteLink.mutateAsync(link.id);
+    }
+
+    // Adicionar novos vínculos
+    const toAdd = newSupplierIds.filter((id) => !existingIds.includes(id));
+    for (const supplierId of toAdd) {
+      await createLink.mutateAsync({
+        ingredient_id: ingredientId,
+        supplier_id: supplierId,
+        is_preferred: supplierId === preferredSupplierId,
+      });
+    }
+
+    // Atualizar is_preferred nos existentes
+    // (handled via supplier_id no ingrediente principal — sem necessidade de update aqui)
+  };
+
   const handleCreate = () => {
     setSelectedIngredient(null);
     setDialogOpen(true);
@@ -87,16 +119,26 @@ export default function PDVStock() {
   };
 
   const handleSubmit = (data: any) => {
+    const { _supplierIds = [], _preferredSupplierId, ...ingredientData } = data;
+
     if (selectedIngredient) {
       updateIngredient(
-        { id: selectedIngredient.id, updates: data },
+        { id: selectedIngredient.id, updates: ingredientData },
         {
-          onSuccess: () => setDialogOpen(false),
+          onSuccess: () => {
+            syncSupplierLinks(selectedIngredient.id, _supplierIds, _preferredSupplierId);
+            setDialogOpen(false);
+          },
         }
       );
     } else {
-      createIngredient(data, {
-        onSuccess: () => setDialogOpen(false),
+      createIngredient(ingredientData, {
+        onSuccess: (newIngredient: any) => {
+          if (newIngredient?.id && _supplierIds.length > 0) {
+            syncSupplierLinks(newIngredient.id, _supplierIds, _preferredSupplierId);
+          }
+          setDialogOpen(false);
+        },
       });
     }
   };
