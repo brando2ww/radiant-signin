@@ -1208,6 +1208,56 @@ export type Database = {
         }
         Relationships: []
       }
+      goals: {
+        Row: {
+          bank_account_id: string | null
+          created_at: string
+          current_amount: number
+          description: string | null
+          id: string
+          is_completed: boolean
+          name: string
+          target_amount: number
+          target_date: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bank_account_id?: string | null
+          created_at?: string
+          current_amount?: number
+          description?: string | null
+          id?: string
+          is_completed?: boolean
+          name: string
+          target_amount?: number
+          target_date?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bank_account_id?: string | null
+          created_at?: string
+          current_amount?: number
+          description?: string | null
+          id?: string
+          is_completed?: boolean
+          name?: string
+          target_amount?: number
+          target_date?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monthly_goals: {
         Row: {
           created_at: string | null
@@ -3956,10 +4006,12 @@ export type Database = {
           created_at: string | null
           id: string
           last_account_id: string | null
+          last_message_at: string | null
           pending_delete: Json | null
           pending_edit: Json | null
           pending_event: Json | null
           pending_installment: Json | null
+          pending_messages: Json | null
           pending_receipt: Json | null
           pending_transaction: Json | null
           phone_number: string
@@ -3971,10 +4023,12 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_account_id?: string | null
+          last_message_at?: string | null
           pending_delete?: Json | null
           pending_edit?: Json | null
           pending_event?: Json | null
           pending_installment?: Json | null
+          pending_messages?: Json | null
           pending_receipt?: Json | null
           pending_transaction?: Json | null
           phone_number: string
@@ -3986,10 +4040,12 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_account_id?: string | null
+          last_message_at?: string | null
           pending_delete?: Json | null
           pending_edit?: Json | null
           pending_event?: Json | null
           pending_installment?: Json | null
+          pending_messages?: Json | null
           pending_receipt?: Json | null
           pending_transaction?: Json | null
           phone_number?: string
