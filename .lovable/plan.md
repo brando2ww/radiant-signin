@@ -1,16 +1,46 @@
 
+## Erro: "invalid input syntax for type date: ''"
 
-## Rolagem nos Itens da Cotação
+### Causa Raiz
 
-O dialog já tem um `ScrollArea` geral, mas a lista de itens cresce indefinidamente sem limite de altura. Quando há muitos itens, o dialog inteiro estica e os botões de ação ficam fora da tela.
+No `IngredientDialog.tsx`, o campo `expiration_date` é inicializado como `""` (string vazia):
+
+```typescript
+// Linha 262, 293, 319
+expiration_date: ingredient?.expiration_date || "",
+```
+
+Quando o usuário deixa o campo em branco e clica em "Criar", o valor `""` é enviado para o Supabase, que tenta inserir uma string vazia em uma coluna do tipo `date` — e o PostgreSQL rejeita com o erro:
+
+```
+invalid input syntax for type date: ""
+```
 
 ### Correção
 
-Adicionar `max-h-[300px] overflow-y-auto` no container da lista de itens (linha 226, o `div.space-y-3` que envolve os cards dos itens). Isso garante que a lista de itens tenha rolagem própria quando ultrapassar 300px, mantendo o restante do formulário (prazo, mensagem, observações) sempre acessível.
+A correção é simples: no `handleSubmit`, converter `expiration_date` de `""` para `null` antes de chamar `onSubmit`:
 
-### Arquivo
+```typescript
+// ANTES (linha 392-404):
+onSubmit({
+  ...data,
+  // expiration_date vem como "" se vazio
+});
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/pdv/purchases/QuotationRequestDialog.tsx` | Linha 226: adicionar `max-h-[300px] overflow-y-auto` ao container dos itens |
+// DEPOIS:
+onSubmit({
+  ...data,
+  expiration_date: data.expiration_date || null,  // "" → null
+});
+```
 
+Também vou corrigir os valores padrão de inicialização para ficarem consistentes, usando `null` em vez de `""`.
+
+### Arquivo a Modificar
+
+| Arquivo | Linhas | Mudança |
+|---------|--------|---------|
+| `src/components/pdv/IngredientDialog.tsx` | ~262, ~293, ~319 | Inicializar `expiration_date` como `null` em vez de `""` |
+| `src/components/pdv/IngredientDialog.tsx` | ~392-404 | No `handleSubmit`, garantir `expiration_date: data.expiration_date || null` |
+
+Correção pontual, sem impacto em outras partes do sistema.

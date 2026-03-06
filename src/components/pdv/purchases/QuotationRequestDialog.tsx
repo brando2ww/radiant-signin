@@ -223,7 +223,7 @@ export function QuotationRequestDialog({
                   Nenhum item adicionado. Clique em "Adicionar Item" para começar.
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
                   {items.map((item, index) => (
                     <div
                       key={index}
