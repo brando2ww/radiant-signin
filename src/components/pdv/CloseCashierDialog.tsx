@@ -164,17 +164,15 @@ export function CloseCashierDialog({
     return true;
   }, [closingBalance, isBlocked, isJustificationValid, isConfirmationValid]);
 
-  const printCashierReport = (finalBalance: number, finalNotes: string, finalRisk: RiskLevel) => {
-    const openedAt = session?.opened_at 
-      ? format(new Date(session.opened_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
-      : "—";
-    const closedAt = format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR });
-    const openingBal = session?.opening_balance || 0;
-    const totalCash = session?.total_cash || 0;
-    const totalCard = session?.total_card || 0;
-    const totalPix = session?.total_pix || 0;
-    const totalWithdrawals = session?.total_withdrawals || 0;
-    const totalSales = session?.total_sales || 0;
+  const internalPrint = (finalBalance: number, finalNotes: string, finalRisk: RiskLevel) => {
+    printCashierReport({
+      session,
+      movements,
+      closingBalance: finalBalance,
+      notes: finalNotes,
+      riskLevel: finalRisk,
+    });
+  };
     const totalReinforcements = movements
       .filter((m) => m.type === "reforco")
       .reduce((acc, m) => acc + m.amount, 0);
