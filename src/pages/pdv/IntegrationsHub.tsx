@@ -73,9 +73,7 @@ export default function IntegrationsHub() {
       />
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {integrations.map((item) => {
-          const Icon = item.icon;
-          return (
+        {integrations.map((item) => (
             <div
               key={item.slug}
               className="group relative flex flex-col rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
@@ -88,19 +86,13 @@ export default function IntegrationsHub() {
               </Badge>
 
               <div className="flex items-center gap-3 mb-4">
-                {item.logo ? (
-                  <div className="h-12 w-12 shrink-0 rounded-lg border bg-white p-1.5 flex items-center justify-center">
-                    <img
-                      src={item.logo}
-                      alt={item.name}
-                      className="h-full w-full object-contain"
-                    />
-                  </div>
-                ) : Icon ? (
-                  <div className="h-12 w-12 shrink-0 rounded-lg border bg-muted flex items-center justify-center">
-                    <Icon className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                ) : null}
+                <div className="h-12 w-12 shrink-0 rounded-lg border bg-white p-1.5 flex items-center justify-center">
+                  <img
+                    src={item.logo}
+                    alt={item.name}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
                 <h3 className="text-lg font-semibold leading-tight">{item.name}</h3>
               </div>
 
