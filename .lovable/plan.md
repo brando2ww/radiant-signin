@@ -1,60 +1,32 @@
 
 
-## Implementar Controle de Acesso por Role (Papel)
+## Fix: Garçom Vê Tudo — RLS Bloqueando Consulta de Role
 
-### Problema
-Todos os usuários veem todos os menus e podem acessar todas as rotas, independente do role. Um garçom não deveria ver Financeiro, Configurações, etc.
+### Causa Raiz
+
+A política RLS da tabela `establishment_users` só permite SELECT quando `establishment_owner_id = auth.uid()`. Quando o garçom faz login, seu `auth.uid()` é o `user_id` (não o `establishment_owner_id`), então a query retorna zero linhas. O hook interpreta isso como "não tem registro → é proprietário" e dá acesso total.
 
 ### Solução
 
-Criar um hook que detecta o role do usuário logado, filtrar a navegação e proteger as rotas.
+Adicionar uma nova política RLS que permite usuários lerem **seu próprio registro** na tabela `establishment_users`.
 
-### Mapeamento de Rotas por Role
+### Migração SQL
 
-| Role | Rotas Permitidas |
-|------|-----------------|
-| **proprietario** | Tudo |
-| **gerente** | Tudo exceto `/pdv/usuarios` |
-| **caixa** | `/pdv/caixa`, `/pdv/balcao` |
-| **garcom** | `/pdv/salao`, `/pdv/comandas`, `/pdv/cozinha` |
-| **cozinheiro** | `/pdv/cozinha` |
-| **estoquista** | `/pdv/estoque`, `/pdv/fornecedores`, `/pdv/notas-fiscais`, `/pdv/compras/*` |
-| **financeiro** | `/pdv/financeiro/*`, `/pdv/relatorios` |
-| **atendente_delivery** | `/pdv/delivery/pedidos`, `/pdv/delivery/cardapio`, `/pdv/delivery/cupons` |
+```sql
+CREATE POLICY "Users can view their own record"
+ON public.establishment_users
+FOR SELECT
+TO authenticated
+USING (user_id = auth.uid());
+```
 
-### Mapeamento de Seções do Menu por Role
-
-| Role | Seções Visíveis |
-|------|----------------|
-| **proprietario** | Todas (5 seções) |
-| **gerente** | Todas, mas sem item "Usuários" |
-| **caixa** | Frente de Caixa (só Caixa e Balcão) |
-| **garcom** | Frente de Caixa (só Salão e Cozinha) |
-| **cozinheiro** | Frente de Caixa (só Cozinha) |
-| **estoquista** | Administrador (Estoque, Fornecedores, NFs, Compras) |
-| **financeiro** | Financeiro (completo) + Administrador (Relatórios) |
-| **atendente_delivery** | Delivery (Pedidos, Cardápio, Cupons) |
+Isso permite que o garçom (ou qualquer role) consulte seu próprio registro para descobrir seu papel, sem dar acesso aos registros de outros usuários.
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/hooks/use-user-role.ts` | **Criar** — Hook que consulta `establishment_users` para o `user.id` logado. Se não encontrar, assume `proprietario` (é o dono). Retorna `{ role, isLoading }` |
-| `src/components/pdv/PDVHeaderNav.tsx` | **Modificar** — Filtrar `sectionItems` e seus `items` com base no role do usuário logado |
-| `src/pages/PDV.tsx` | **Modificar** — Adicionar componente `RoleRoute` que redireciona para a rota padrão do role quando o usuário tenta acessar algo não permitido. Rota index redireciona para a primeira rota permitida do role |
+| Nova migração SQL | Adicionar policy `user_id = auth.uid()` para SELECT em `establishment_users` |
 
-### Hook `use-user-role.ts`
-
-- Consulta `establishment_users` onde `user_id = auth.uid()` e `is_active = true`
-- Se encontrar registro, retorna o `role` do registro
-- Se não encontrar (é o proprietário/dono), retorna `'proprietario'`
-- Exporta também `allowedRoutes` e `allowedSections` pré-computados com base no role
-
-### Lógica de Filtragem no Header
-
-Definir um objeto `roleRouteAccess` que mapeia cada role para as URLs permitidas. Filtrar tanto as seções quanto os itens dentro de cada seção. Seções que ficam vazias após filtragem são ocultadas.
-
-### Proteção de Rotas
-
-Criar componente `RoleRoute` que envolve cada `Route` e verifica se o role tem acesso. Se não tiver, redireciona para a rota padrão do role (ex: garçom → `/pdv/salao`, caixa → `/pdv/caixa`).
+Nenhuma mudança no código TypeScript é necessária — o hook `use-user-role.ts` já faz a query correta, só falta a permissão RLS para o próprio usuário ler seu registro.
 
