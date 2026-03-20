@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { supabase } from "@/integrations/supabase/client";
+import { useSuperAdmin } from "@/hooks/use-super-admin";
 
 type FormType = 'login' | 'signup' | 'reset';
 
