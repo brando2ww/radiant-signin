@@ -7,8 +7,10 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "next-themes";
 import { PreferencesProvider } from "@/components/PreferencesProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { SuperAdminGuard } from "@/components/SuperAdminGuard";
 import Index from "./pages/Index";
 import PDV from "./pages/PDV";
+import SuperAdmin from "./pages/SuperAdmin";
 import PublicMenu from "./pages/PublicMenu";
 import NotFound from "./pages/NotFound";
 
@@ -32,6 +34,14 @@ const App = () => (
                       <PDV />
                     </ProtectedRoute>
                   } 
+                />
+                <Route
+                  path="/admin/*"
+                  element={
+                    <SuperAdminGuard>
+                      <SuperAdmin />
+                    </SuperAdminGuard>
+                  }
                 />
                 {/* Public routes - no authentication required */}
                 <Route path="/cardapio/:userId" element={<PublicMenu />} />

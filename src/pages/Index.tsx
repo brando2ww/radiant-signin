@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { supabase } from "@/integrations/supabase/client";
+import { useSuperAdmin } from "@/hooks/use-super-admin";
 
 type FormType = 'login' | 'signup' | 'reset';
 
@@ -34,15 +35,20 @@ const sampleTestimonials: Testimonial[] = [
 
 const Index = () => {
   const { signUp, resetPasswordByDocument, signInWithGoogle, user, loading } = useAuth();
+  const { isSuperAdmin, isLoading: superAdminLoading } = useSuperAdmin();
   const [currentForm, setCurrentForm] = useState<FormType>('login');
   const navigate = useNavigate();
 
-  // Redirecionar se já estiver autenticado - agora para /pdv/dashboard
+  // Redirecionar se já estiver autenticado
   useEffect(() => {
-    if (user && !loading) {
-      navigate('/pdv/dashboard');
+    if (user && !loading && !superAdminLoading) {
+      if (isSuperAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/pdv/dashboard');
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, isSuperAdmin, superAdminLoading, navigate]);
 
   const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

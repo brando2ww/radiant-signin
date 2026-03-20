@@ -1,5 +1,4 @@
 import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
 import { useUserModules, UserModule } from '@/hooks/use-user-modules';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,15 +11,7 @@ interface ModuleGuardProps {
 }
 
 export function ModuleGuard({ module, children, fallback }: ModuleGuardProps) {
-  const { hasModule, isLoading, modules } = useUserModules();
-
-  // Allow development/testing without module restrictions
-  // TODO: Remove or configure this in production
-  const bypassModuleCheck = true;
-
-  if (bypassModuleCheck) {
-    return <>{children}</>;
-  }
+  const { hasModule, isLoading } = useUserModules();
 
   if (isLoading) {
     return (
@@ -49,14 +40,11 @@ export function ModuleGuard({ module, children, fallback }: ModuleGuardProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground text-center">
-              Para acessar este módulo, você precisa adquiri-lo primeiro.
+              Para acessar este módulo, entre em contato com o administrador.
             </p>
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => window.history.back()}>
                 Voltar
-              </Button>
-              <Button className="flex-1" onClick={() => (window.location.href = '/plans')}>
-                Ver Planos
               </Button>
             </div>
           </CardContent>
