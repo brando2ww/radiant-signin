@@ -3,13 +3,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2, GripVertical, FileDown } from "lucide-react";
+import { toast } from "sonner";
 import {
   useCampaignQuestions,
   useCreateCampaignQuestion,
   useUpdateCampaignQuestion,
   useDeleteCampaignQuestion,
 } from "@/hooks/use-evaluation-campaigns";
+
+const RESTAURANT_TEMPLATES = [
+  "Como avalia a qualidade da comida?",
+  "O atendimento foi satisfatório?",
+  "O ambiente estava agradável?",
+  "O tempo de espera foi adequado?",
+  "A relação custo-benefício foi justa?",
+  "A higiene do local estava adequada?",
+];
 
 interface Props {
   campaignId: string;
@@ -34,18 +44,35 @@ export function CampaignQuestionManager({ campaignId }: Props) {
     );
   };
 
+  const handleImportTemplate = async () => {
+    const startPos = (questions?.length || 0) + 1;
+    for (let i = 0; i < RESTAURANT_TEMPLATES.length; i++) {
+      createQuestion.mutate({
+        campaign_id: campaignId,
+        question_text: RESTAURANT_TEMPLATES[i],
+        order_position: startPos + i,
+      });
+    }
+    toast.success("Template de restaurante importado!");
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        <Input
-          value={newQuestion}
-          onChange={(e) => setNewQuestion(e.target.value)}
-          placeholder="Digite uma nova pergunta..."
-          maxLength={200}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-        />
-        <Button onClick={handleAdd} disabled={!newQuestion.trim() || createQuestion.isPending} className="gap-2 shrink-0">
-          <Plus className="h-4 w-4" /> Adicionar
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <Input
+            value={newQuestion}
+            onChange={(e) => setNewQuestion(e.target.value)}
+            placeholder="Digite uma nova pergunta..."
+            maxLength={200}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+          />
+          <Button onClick={handleAdd} disabled={!newQuestion.trim() || createQuestion.isPending} className="gap-2 shrink-0">
+            <Plus className="h-4 w-4" /> Adicionar
+          </Button>
+        </div>
+        <Button variant="outline" onClick={handleImportTemplate} disabled={createQuestion.isPending} className="gap-2 self-start">
+          <FileDown className="h-4 w-4" /> Importar Template Restaurante
         </Button>
       </div>
 

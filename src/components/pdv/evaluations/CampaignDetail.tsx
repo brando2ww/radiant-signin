@@ -14,6 +14,7 @@ import {
 } from "@/hooks/use-evaluation-campaigns";
 import { CampaignQuestionManager } from "./CampaignQuestionManager";
 import { CampaignResponses } from "./CampaignResponses";
+import { CampaignReports } from "./CampaignReports";
 
 interface CampaignDetailProps {
   campaignId: string;
@@ -99,12 +100,16 @@ export function CampaignDetail({ campaignId }: CampaignDetailProps) {
         <TabsList>
           <TabsTrigger value="questions">Perguntas</TabsTrigger>
           <TabsTrigger value="responses">Respostas ({campaign.total_responses})</TabsTrigger>
+          <TabsTrigger value="reports">Relatórios</TabsTrigger>
         </TabsList>
         <TabsContent value="questions" className="mt-4">
           <CampaignQuestionManager campaignId={campaignId} />
         </TabsContent>
         <TabsContent value="responses" className="mt-4">
           <CampaignResponses campaignId={campaignId} />
+        </TabsContent>
+        <TabsContent value="reports" className="mt-4">
+          <CampaignReports campaignId={campaignId} />
         </TabsContent>
       </Tabs>
     </div>

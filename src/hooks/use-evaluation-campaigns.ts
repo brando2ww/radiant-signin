@@ -267,6 +267,7 @@ export const useSubmitCampaignEvaluation = () => {
       customerWhatsapp: string;
       customerBirthDate: string;
       answers: { questionId: string; score: number; comment?: string }[];
+      npsScore: number;
     }) => {
       const evaluationId = crypto.randomUUID();
 
@@ -279,7 +280,7 @@ export const useSubmitCampaignEvaluation = () => {
           customer_whatsapp: data.customerWhatsapp,
           customer_birth_date: data.customerBirthDate,
           campaign_id: data.campaignId,
-          nps_score: null,
+          nps_score: data.npsScore,
         });
 
       if (evalError) throw evalError;
