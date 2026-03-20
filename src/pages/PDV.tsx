@@ -106,6 +106,9 @@ export default function PDV() {
               <Route path="compras/cotacoes" element={<Quotations />} />
               <Route path="compras/pedidos" element={<PurchaseOrders />} />
               <Route path="compras/lista" element={<ShoppingList />} />
+              
+              {/* Integrações */}
+              <Route path="integracoes" element={<Integrations />} />
             </Routes>
           </main>
       </div>

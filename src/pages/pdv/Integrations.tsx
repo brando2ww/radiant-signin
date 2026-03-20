@@ -12,7 +12,6 @@ export default function Integrations() {
       <ResponsivePageHeader
         title="Integrações"
         description="Conecte seu PDV com plataformas de delivery, maquininhas e ferramentas fiscais"
-        icon={Plug}
       />
 
       <div className="grid gap-6 md:grid-cols-2">

@@ -121,6 +121,13 @@ const sectionItems: Section[] = [
       { title: "CMV Geral", url: "/pdv/financeiro/cmv-geral", icon: PieChart },
     ],
   },
+  {
+    title: "Integrações",
+    icon: Plug,
+    items: [
+      { title: "Gerenciar Integrações", url: "/pdv/integracoes", icon: Plug },
+    ],
+  },
 ];
 
 export function PDVHeaderNav() {
