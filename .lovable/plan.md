@@ -1,37 +1,60 @@
 
 
-## Fix: RLS Error ao Criar Usuário
+## Implementar Controle de Acesso por Role (Papel)
 
-### Causa Raiz
-
-Quando `supabase.auth.signUp()` é chamado no client, ele **troca a sessão** para o novo usuário. Na sequência, ao inserir na `establishment_users`, o `auth.uid()` já é o ID do **novo usuário**, não do proprietário. A policy exige `establishment_owner_id = auth.uid()`, causando a violação de RLS.
+### Problema
+Todos os usuários veem todos os menus e podem acessar todas as rotas, independente do role. Um garçom não deveria ver Financeiro, Configurações, etc.
 
 ### Solução
 
-Criar uma **Edge Function** `create-establishment-user` que usa a **service role key** para:
-1. Criar o usuário no Auth (sem trocar a sessão do client)
-2. Inserir na `establishment_users` com o owner_id correto
+Criar um hook que detecta o role do usuário logado, filtrar a navegação e proteger as rotas.
+
+### Mapeamento de Rotas por Role
+
+| Role | Rotas Permitidas |
+|------|-----------------|
+| **proprietario** | Tudo |
+| **gerente** | Tudo exceto `/pdv/usuarios` |
+| **caixa** | `/pdv/caixa`, `/pdv/balcao` |
+| **garcom** | `/pdv/salao`, `/pdv/comandas`, `/pdv/cozinha` |
+| **cozinheiro** | `/pdv/cozinha` |
+| **estoquista** | `/pdv/estoque`, `/pdv/fornecedores`, `/pdv/notas-fiscais`, `/pdv/compras/*` |
+| **financeiro** | `/pdv/financeiro/*`, `/pdv/relatorios` |
+| **atendente_delivery** | `/pdv/delivery/pedidos`, `/pdv/delivery/cardapio`, `/pdv/delivery/cupons` |
+
+### Mapeamento de Seções do Menu por Role
+
+| Role | Seções Visíveis |
+|------|----------------|
+| **proprietario** | Todas (5 seções) |
+| **gerente** | Todas, mas sem item "Usuários" |
+| **caixa** | Frente de Caixa (só Caixa e Balcão) |
+| **garcom** | Frente de Caixa (só Salão e Cozinha) |
+| **cozinheiro** | Frente de Caixa (só Cozinha) |
+| **estoquista** | Administrador (Estoque, Fornecedores, NFs, Compras) |
+| **financeiro** | Financeiro (completo) + Administrador (Relatórios) |
+| **atendente_delivery** | Delivery (Pedidos, Cardápio, Cupons) |
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/functions/create-establishment-user/index.ts` | **Criar** - Edge function que recebe dados do usuário + owner_id do token JWT, cria no Auth com admin API e insere na establishment_users |
-| `src/hooks/use-pdv-users.ts` | **Modificar** - Substituir `supabase.auth.signUp()` + insert por chamada à edge function |
+| `src/hooks/use-user-role.ts` | **Criar** — Hook que consulta `establishment_users` para o `user.id` logado. Se não encontrar, assume `proprietario` (é o dono). Retorna `{ role, isLoading }` |
+| `src/components/pdv/PDVHeaderNav.tsx` | **Modificar** — Filtrar `sectionItems` e seus `items` com base no role do usuário logado |
+| `src/pages/PDV.tsx` | **Modificar** — Adicionar componente `RoleRoute` que redireciona para a rota padrão do role quando o usuário tenta acessar algo não permitido. Rota index redireciona para a primeira rota permitida do role |
 
-### Fluxo
+### Hook `use-user-role.ts`
 
-1. Client chama edge function com `{ display_name, email, phone, role, password }`
-2. Edge function valida o JWT do proprietário (auth header)
-3. Usa `supabase.auth.admin.createUser()` (service role) para criar sem trocar sessão
-4. Insere na `establishment_users` com `establishment_owner_id` = uid do JWT
-5. Retorna sucesso ao client
+- Consulta `establishment_users` onde `user_id = auth.uid()` e `is_active = true`
+- Se encontrar registro, retorna o `role` do registro
+- Se não encontrar (é o proprietário/dono), retorna `'proprietario'`
+- Exporta também `allowedRoutes` e `allowedSections` pré-computados com base no role
 
-### Edge Function (resumo)
+### Lógica de Filtragem no Header
 
-```typescript
-// Valida JWT → extrai owner_id
-// admin.createUser({ email, password, email_confirm: true })
-// Insert establishment_users com owner_id do JWT
-```
+Definir um objeto `roleRouteAccess` que mapeia cada role para as URLs permitidas. Filtrar tanto as seções quanto os itens dentro de cada seção. Seções que ficam vazias após filtragem são ocultadas.
+
+### Proteção de Rotas
+
+Criar componente `RoleRoute` que envolve cada `Route` e verifica se o role tem acesso. Se não tiver, redireciona para a rota padrão do role (ex: garçom → `/pdv/salao`, caixa → `/pdv/caixa`).
 
