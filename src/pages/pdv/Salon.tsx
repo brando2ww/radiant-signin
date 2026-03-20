@@ -307,6 +307,10 @@ export default function PDVSalon() {
   };
 
   const handleCreateOrder = (tableId: string) => {
+    if (!activeSession) {
+      toast.error("Abra o caixa antes de iniciar um atendimento");
+      return;
+    }
     createOrder(
       { source: "salao", table_id: tableId },
       {
