@@ -1,52 +1,41 @@
 
 
-## Melhorar Modal de Usuário + Campo de Senha
+## Criar Página Dedicada para Criar/Editar Usuário (sem modal)
 
-### Mudanças
+### Problema Atual
+O formulário de criar/editar usuário está num modal (`UserDialog`). O usuário quer uma página dedicada. Também quer remover os ícones antes dos nomes das funções (roles) porque ficou feio.
 
-#### 1. `src/components/pdv/users/UserDialog.tsx`
-Redesenhar o modal com layout mais polido e adicionar campo de senha:
+### Solução
 
-- **Layout em duas colunas** (desktop): dados pessoais à esquerda, seleção de role à direita
-- **Campos de dados pessoais**: Nome (required), E-mail (required ao criar), Telefone
-- **Campo de Senha** (apenas ao criar novo usuário, não ao editar): campo de senha com toggle de visibilidade (eye icon), mínimo 6 caracteres
-- **Campo Confirmar Senha**: validação de match
-- **Seleção de role**: cards mais compactos com ícone colorido do role + nome + descrição curta
-- **Seção de permissões**: colapsável ou em accordion, mostrando as permissões do role selecionado
-- **Validação**: email obrigatório ao criar, senha obrigatória ao criar com mínimo 6 chars, confirmação de senha deve conferir
+#### 1. Criar `src/pages/pdv/UserForm.tsx` (nova página)
+- Página completa com o formulário de criar/editar usuário (mesmo conteúdo do modal, mas como página)
+- Layout em duas colunas: dados pessoais à esquerda, seleção de role à direita
+- Header com botão "Voltar" para `/pdv/usuarios`
+- Campos: Nome, E-mail, Telefone, Senha, Confirmar Senha (senha só ao criar)
+- Seleção de role **sem ícones** — apenas radio + nome + descrição
+- Seção de permissões colapsável abaixo
+- Botões "Cancelar" e "Criar Usuário" / "Salvar Alterações" no footer
 
-#### 2. `src/hooks/use-pdv-users.ts`
-- Atualizar `createUser` para aceitar `password` no payload
-- Usar `supabase.auth.signUp()` para criar o usuário real no Supabase Auth com email + senha
-- Após signup, usar o `user.id` retornado para inserir na `establishment_users` (substituindo o placeholder `user.id`)
+#### 2. Modificar `src/pages/pdv/Users.tsx`
+- Remover import e uso do `UserDialog`
+- Botão "Convidar Usuário" agora navega para `/pdv/usuarios/novo`
+- Botão editar no `UserCard` navega para `/pdv/usuarios/:id/editar`
 
-#### 3. `src/pages/pdv/Users.tsx`
-- Passar `password` no `onSave` data type
+#### 3. Modificar `src/pages/PDV.tsx`
+- Alterar rota `usuarios` para `usuarios/*` (suportar sub-rotas)
 
-### Interface Atualizada do onSave
+#### 4. Criar roteamento dentro de `UserForm.tsx`
+- `/pdv/usuarios/novo` → formulário de criação
+- `/pdv/usuarios/:id/editar` → formulário de edição (carrega dados do usuário)
 
-```typescript
-onSave: (data: {
-  display_name: string;
-  email: string;
-  phone: string;
-  role: string;
-  password?: string; // apenas ao criar
-}) => void;
-```
-
-### Fluxo de Criação
-
-1. Proprietário preenche nome, email, telefone, senha, role
-2. `supabase.auth.signUp({ email, password, options: { data: { full_name } } })` cria o usuário no Auth
-3. Insere na `establishment_users` com o `user_id` real retornado pelo signup
-4. Toast de sucesso
+#### 5. Remover ícones dos roles
+- Na seleção de roles da nova página, renderizar apenas o radio button + nome da função + descrição curta, sem o ícone colorido
 
 ### Arquivos
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/pdv/users/UserDialog.tsx` | Redesign completo: 2 colunas, campo senha + confirmar senha com toggle, validação, ícones nos roles |
-| `src/hooks/use-pdv-users.ts` | createUser usa `supabase.auth.signUp` + insere na establishment_users com user_id real |
-| `src/pages/pdv/Users.tsx` | Tipagem atualizada para incluir password |
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/pdv/UserForm.tsx` | Criar — página dedicada de formulário |
+| `src/pages/pdv/Users.tsx` | Modificar — navegação em vez de modal |
+| `src/pages/PDV.tsx` | Modificar — rota `usuarios/*` e importar UserForm |
 
