@@ -114,11 +114,15 @@ export default function IntegrationsHub() {
 
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-12 w-12 shrink-0 rounded-lg border bg-white p-1.5 flex items-center justify-center">
-                  <img
-                    src={item.logo}
-                    alt={item.name}
-                    className="h-full w-full object-contain"
-                  />
+                  {item.logo ? (
+                    <img
+                      src={item.logo}
+                      alt={item.name}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : item.fallbackIcon ? (
+                    <item.fallbackIcon className="h-7 w-7 text-muted-foreground" />
+                  ) : null}
                 </div>
                 <h3 className="text-lg font-semibold leading-tight">{item.name}</h3>
               </div>
