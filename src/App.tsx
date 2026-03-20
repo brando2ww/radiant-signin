@@ -13,6 +13,7 @@ import PDV from "./pages/PDV";
 import Garcom from "./pages/Garcom";
 import SuperAdmin from "./pages/SuperAdmin";
 import PublicMenu from "./pages/PublicMenu";
+import PublicEvaluation from "./pages/PublicEvaluation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
