@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -39,6 +39,7 @@ import {
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useUserRole } from "@/hooks/use-user-role";
 
 interface Announcement {
   id: string;
@@ -136,6 +137,16 @@ export function PDVHeaderNav() {
   const location = useLocation();
   const pathname = location.pathname;
   const [dismissedAnnouncements, setDismissedAnnouncements] = useState<string[]>([]);
+  const { canAccess } = useUserRole();
+
+  const filteredSections = useMemo(() => {
+    return sectionItems
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => canAccess(item.url)),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [canAccess]);
 
   const visibleAnnouncements = announcements.filter(
     (a) => !dismissedAnnouncements.includes(a.id)
@@ -173,7 +184,7 @@ export function PDVHeaderNav() {
   return (
     <NavigationMenu>
       <NavigationMenuList>
-        {sectionItems.map((section) => {
+        {filteredSections.map((section) => {
           const isSectionActive = section.items.some(
             (item) => pathname === item.url || pathname.startsWith(item.url + "/")
           );
