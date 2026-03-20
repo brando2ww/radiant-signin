@@ -22,6 +22,7 @@ import { ComandaDialog } from "@/components/pdv/ComandaDialog";
 import { ComandaDetailsDialog } from "@/components/pdv/ComandaDetailsDialog";
 import { ComandaAddItemDialog } from "@/components/pdv/ComandaAddItemDialog";
 import { PaymentDialog } from "@/components/pdv/cashier/PaymentDialog";
+import { usePDVCashier } from "@/hooks/use-pdv-cashier";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -71,6 +72,8 @@ export default function PDVSalon() {
     unmergeTables,
     isUnmerging,
   } = usePDVTables();
+
+  const { activeSession } = usePDVCashier();
 
   const {
     orders,
@@ -306,6 +309,10 @@ export default function PDVSalon() {
   };
 
   const handleCreateOrder = (tableId: string) => {
+    if (!activeSession) {
+      toast.error("Abra o caixa antes de iniciar um atendimento");
+      return;
+    }
     createOrder(
       { source: "salao", table_id: tableId },
       {
@@ -434,6 +441,10 @@ export default function PDVSalon() {
   };
 
   const handleCreateComanda = async (data: { customerName?: string; personNumber?: number; notes?: string; orderId?: string | null }) => {
+    if (!activeSession) {
+      toast.error("Abra o caixa antes de iniciar um atendimento");
+      return;
+    }
     await createComanda({
       customerName: data.customerName,
       personNumber: data.personNumber,
