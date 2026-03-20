@@ -35,6 +35,7 @@ import {
   Palette,
   Store,
   Megaphone,
+  Plug,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
