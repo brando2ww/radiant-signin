@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { BottomTabBar } from "@/components/garcom/BottomTabBar";
 import { NewOrderSheet } from "@/components/garcom/NewOrderSheet";
+import { ComandaDialog } from "@/components/pdv/ComandaDialog";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import GarcomMesas from "./garcom/GarcomMesas";
 import GarcomComandas from "./garcom/GarcomComandas";
@@ -12,22 +13,30 @@ import GarcomCozinha from "./garcom/GarcomCozinha";
 
 export default function Garcom() {
   const navigate = useNavigate();
-  const { createComanda } = usePDVComandas();
+  const { createComanda, isCreating } = usePDVComandas();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [comandaDialogOpen, setComandaDialogOpen] = useState(false);
 
   const handleSelectMesa = () => {
     setSheetOpen(false);
     navigate("/garcom");
   };
 
-  const handleSelectComandaAvulsa = async () => {
+  const handleSelectComandaAvulsa = () => {
     setSheetOpen(false);
-    try {
-      const comanda = await createComanda({});
-      navigate(`/garcom/comanda/${comanda.id}`);
-    } catch {
-      // toast handled by hook
-    }
+    setComandaDialogOpen(true);
+  };
+
+  const handleCreateComanda = async (data: {
+    customerName?: string;
+    notes?: string;
+    tableNumber?: number;
+  }) => {
+    const comanda = await createComanda({
+      customerName: data.customerName,
+      notes: data.notes,
+    });
+    navigate(`/garcom/comanda/${comanda.id}`);
   };
 
   return (
@@ -46,6 +55,12 @@ export default function Garcom() {
         onOpenChange={setSheetOpen}
         onSelectMesa={handleSelectMesa}
         onSelectComandaAvulsa={handleSelectComandaAvulsa}
+      />
+      <ComandaDialog
+        open={comandaDialogOpen}
+        onOpenChange={setComandaDialogOpen}
+        onSubmit={handleCreateComanda}
+        isLoading={isCreating}
       />
     </div>
   );
