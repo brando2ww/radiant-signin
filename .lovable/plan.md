@@ -1,73 +1,38 @@
 
 
-## Melhorias na Avaliação: Perguntas Step-by-Step, Personalização, e Leads
+## Mover Integrações do Settings para o Hub de Integrações
 
-### 1. Perguntas Step-by-Step no Link Público
+### O que muda
 
-Atualmente todas as perguntas aparecem na mesma tela. Mudar para exibir **uma pergunta por vez** com indicador de progresso (ex: "Pergunta 2 de 6") e animação de transição.
+Mover **WhatsApp Business**, **Uber Eats** e **Delivery Próprio** da aba "Integrações" das Configurações (`IntegrationsTab`) para a página principal de Integrações (`IntegrationsHub`). Remover **iFood** e **Rappi** do hub.
 
-### 2. Personalização Visual da Pesquisa
+### IntegrationsHub — Novos cards
 
-Adicionar uma nova tab "Personalização" dentro do detalhe da campanha (`CampaignDetail`), onde o dono pode configurar:
-- **Logotipo** — upload de imagem (bucket `business-logos`)
-- **Cor de fundo** — color picker para o background da pesquisa
-- **Mensagem de boas-vindas** — texto customizável
-- **Mensagem de agradecimento** — texto final customizável
+Adicionar 3 novos cards ao array de integrações (sem logo/imagem, usando ícone fallback):
 
-Esses campos serão colunas novas na tabela `evaluation_campaigns`:
-- `logo_url text`
-- `background_color text DEFAULT '#ffffff'`
-- `welcome_message text`
-- `thank_you_message text`
+| Card | Categoria | Ação do botão |
+|------|-----------|---------------|
+| WhatsApp Business | Comunicação | Acessar → `/pdv/integracoes/whatsapp` |
+| Uber Eats | Delivery (Em Breve) | Botão desabilitado |
+| Delivery Próprio | Delivery (Ativo) | Acessar → `/pdv/integracoes/delivery-proprio` |
 
-A página pública lê esses dados e aplica o estilo dinamicamente.
+Remover o card do **iFood** do array. O resultado final terá: PagSeguro, Stone, Getnet, NF Automática, Goomer, WhatsApp, Uber Eats, Delivery Próprio.
 
-### 3. Página de Leads Captados
+### IntegrationsTab — Simplificar
 
-Nova tab "Leads" dentro do detalhe da campanha, mostrando uma tabela com todos os clientes que responderam:
-- Nome, Telefone, Data de Nascimento, Data da resposta, NPS
-- Possibilidade de exportar (futuro)
+Remover WhatsApp, Uber Eats e Delivery Próprio da tab. Manter apenas iFood (que já tem lógica de conexão real com hook e dialog). A tab continua existindo para gerenciar a conexão iFood nas configurações.
 
-Também adicionar na página principal de Avaliações uma visão geral de leads (ou acessar via tab na campanha).
+### IntegrationDetail — Adicionar WhatsApp
 
-### Banco de Dados
-
-Migração para adicionar colunas de personalização em `evaluation_campaigns`:
-```sql
-ALTER TABLE public.evaluation_campaigns
-  ADD COLUMN logo_url text,
-  ADD COLUMN background_color text DEFAULT '#ffffff',
-  ADD COLUMN welcome_message text,
-  ADD COLUMN thank_you_message text;
-```
+Adicionar entrada `whatsapp` no registro de integrações do `IntegrationDetail.tsx`, renderizando o `WhatsAppConnectionCard` existente como componente de configuração.
 
 ### Arquivos
 
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---------|------|
-| **Migração SQL** | Adicionar `logo_url`, `background_color`, `welcome_message`, `thank_you_message` em `evaluation_campaigns` |
-| `src/pages/PublicEvaluation.tsx` | Refatorar para step-by-step (1 pergunta por tela), aplicar logo/cor de fundo/mensagens personalizadas, design mais polido |
-| `src/components/pdv/evaluations/CampaignDetail.tsx` | Adicionar tab "Personalização" e tab "Leads" |
-| `src/components/pdv/evaluations/CampaignPersonalization.tsx` | **Criar** — Formulário de personalização: upload logo, color picker, mensagens |
-| `src/components/pdv/evaluations/CampaignLeads.tsx` | **Criar** — Tabela de leads captados (nome, telefone, nascimento, data, NPS) |
-| `src/hooks/use-evaluation-campaigns.ts` | Atualizar `usePublicCampaign` para retornar os novos campos; atualizar `useUpdateCampaign` |
+| `src/pages/pdv/IntegrationsHub.tsx` | Remover iFood do array, adicionar WhatsApp/Uber Eats/Delivery Próprio com ícones (MessageCircle, Bike, Store). Cards "Em Breve" terão botão desabilitado |
+| `src/components/pdv/settings/IntegrationsTab.tsx` | Remover seções WhatsApp, Rappi, Uber Eats e Delivery Próprio. Manter apenas iFood |
+| `src/pages/pdv/IntegrationDetail.tsx` | Adicionar entrada `whatsapp` usando `WhatsAppConnectionCard` como componente |
 
-### Fluxo Público Atualizado
-
-```text
-1. Tela inicial: Logo + mensagem de boas-vindas + nome/telefone/nascimento
-2. Pergunta 1 de N (estrelas 1-5 + campo comentário se nota baixa)
-3. Pergunta 2 de N ...
-4. ...
-5. NPS (0-10)
-6. Tela de agradecimento com mensagem personalizada
-```
-
-Background e logo aplicados em todas as telas via estilo inline dinâmico.
-
-### Tabs do Detalhe da Campanha (atualizado)
-
-```text
-Perguntas | Personalização | Leads | Respostas | Relatórios
-```
+Nenhuma edge function será modificada.
 
