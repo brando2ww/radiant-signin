@@ -1,36 +1,19 @@
 
 
-## Botão "Novo" — Escolher Mesa ou Comanda Avulsa
+## Adicionar Nome do Cliente e Mesa ao Criar Comanda
 
 ### Problema
-Atualmente o botão "Novo" cria uma comanda avulsa diretamente, sem perguntar onde vincular o pedido.
+Ao escolher "Comanda Avulsa" no sheet, a comanda é criada direto sem pedir dados. Precisa solicitar nome do cliente e mesa.
 
 ### Solução
-Ao clicar em "Novo", abrir um **bottom sheet** com duas opções:
-1. **Mesa** — Navega para a tela de mesas (`/garcom`) para o garçom selecionar a mesa
-2. **Comanda Avulsa** — Cria uma comanda sem mesa (balcão, delivery, etc.)
+Usar o `ComandaDialog` já existente (que tem campos de nome, observações, etc.) no fluxo do Garçom. Quando clicar em "Comanda Avulsa", fechar o sheet e abrir o `ComandaDialog`. Após preencher, criar a comanda e navegar para o detalhe.
+
+Também adicionar campo de **número da mesa** ao `ComandaDialog` para comandas avulsas (quando não vem de uma mesa específica).
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/components/garcom/NewOrderSheet.tsx` | **Criar** — Sheet com duas opções: "Abrir em Mesa" e "Comanda Avulsa" |
-| `src/pages/Garcom.tsx` | Substituir `handleNewComanda` direto por state que abre o sheet; passar callbacks para as duas opções |
-| `src/components/garcom/BottomTabBar.tsx` | Sem mudança (já chama `onNewComanda`) |
-
-### UX do Sheet
-```text
-┌──────────────────────────┐
-│   Novo Pedido            │
-│                          │
-│  ┌────────┐ ┌──────────┐ │
-│  │ 🪑     │ │ 📋       │ │
-│  │ Mesa   │ │ Comanda  │ │
-│  │        │ │ Avulsa   │ │
-│  └────────┘ └──────────┘ │
-└──────────────────────────┘
-```
-
-Ao escolher "Mesa" → navega para `/garcom` (grid de mesas).
-Ao escolher "Comanda Avulsa" → cria comanda sem `order_id` e navega para detalhe.
+| `src/components/pdv/ComandaDialog.tsx` | Adicionar campo opcional "Mesa" (número da mesa) quando não há `tableNumber` pré-definido |
+| `src/pages/Garcom.tsx` | Ao escolher "Comanda Avulsa": fechar sheet → abrir `ComandaDialog` → criar comanda com dados → navegar |
 
