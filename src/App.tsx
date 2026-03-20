@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { SuperAdminGuard } from "@/components/SuperAdminGuard";
 import Index from "./pages/Index";
 import PDV from "./pages/PDV";
+import Garcom from "./pages/Garcom";
 import SuperAdmin from "./pages/SuperAdmin";
 import PublicMenu from "./pages/PublicMenu";
 import NotFound from "./pages/NotFound";
