@@ -1,34 +1,64 @@
 
 
-## Adicionar Super Admin (adm@adm.com.br)
+## Redesign do Painel Super Admin com Sidebar
 
-### Situação
-O usuário `adm@adm.com.br` **não existe** no sistema ainda. Preciso criar o usuário no Auth e depois inserir na tabela `super_admins`.
+### Situação Atual
+O painel super admin usa um layout simples com header e conteúdo centralizado. Só tem a seção de Tenants.
 
-### Solução
+### Proposta
+Transformar em um painel administrativo completo com **sidebar fixa**, **dashboard com métricas**, e seções organizadas.
 
-#### 1. Criar Edge Function `create-super-admin`
-Uma edge function que usa a **service role key** para:
-1. Criar o usuário no Auth (`admin.createUser`) com email `adm@adm.com.br` e senha `102030`
-2. Inserir o `user_id` na tabela `super_admins`
+### Estrutura da Sidebar
 
-Essa function será chamada uma única vez (ou por outro super admin no futuro).
+```text
+┌─────────────────┐
+│  Velaro Admin    │
+├─────────────────┤
+│  Dashboard       │
+│  Tenants         │
+│  Planos          │
+│                  │
+│ ──────────────── │
+│  SA (avatar)     │
+│  Sair            │
+└─────────────────┘
+```
 
-#### Alternativa mais simples
-Como é uma operação única, posso usar a edge function `create-establishment-user` existente como referência e criar o usuário diretamente via uma edge function temporária — ou melhor, usar o **SQL Editor do Supabase** para o insert após criar o usuário.
+### Páginas
 
-### Plano Final
+| Rota | Página | Descrição |
+|------|--------|-----------|
+| `/admin` | Dashboard | Cards com total de tenants, tenants ativos, total de usuários, módulos mais usados |
+| `/admin/tenants` | Tenants | Lista existente (já pronta) |
+| `/admin/tenants/novo` | TenantForm | Formulário existente (já pronto) |
+| `/admin/tenants/:id` | TenantDetail | Detalhe existente (já pronto) |
+| `/admin/planos` | Plans | Gerenciar planos disponíveis (visualização dos planos de `data/plans.ts`) |
 
-| Passo | Ação |
-|-------|------|
-| 1 | Criar edge function `create-super-admin/index.ts` que aceita `{ email, password, name }` e cria o usuário + insere em `super_admins`. Protegida para ser chamada apenas se não existir nenhum super admin (bootstrap) ou por um super admin existente |
-| 2 | Chamar a function via curl/test para criar o usuário `adm@adm.com.br` com senha `102030` |
-
-### Arquivo
+### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/functions/create-super-admin/index.ts` | **Criar** — edge function bootstrap para criar super admin |
+| `src/components/ui/sidebar.tsx` | **Criar** — componente Shadcn Sidebar |
+| `src/components/NavLink.tsx` | **Criar** — NavLink com activeClassName |
+| `src/components/super-admin/AdminSidebar.tsx` | **Criar** — Sidebar com itens: Dashboard, Tenants, Planos + logout |
+| `src/pages/SuperAdmin.tsx` | **Reescrever** — Usar SidebarProvider + AdminSidebar + content area (remover header atual) |
+| `src/pages/super-admin/AdminDashboard.tsx` | **Criar** — Dashboard com métricas: total tenants, ativos, total usuários, módulos mais usados |
+| `src/pages/super-admin/Plans.tsx` | **Criar** — Visualização dos planos do sistema |
 
-A function verificará: se não existe nenhum super admin no banco, permite a criação sem autenticação (bootstrap). Se já existir algum, exige que o caller seja super admin.
+### Dashboard (métricas)
+- Total de Tenants
+- Tenants Ativos
+- Total de Usuários (soma de establishment_users)
+- Módulos mais habilitados (contagem por módulo em tenant_modules)
+
+### Layout
+```text
+┌──────────┬────────────────────────────┐
+│          │  Header (trigger + título) │
+│ Sidebar  ├────────────────────────────┤
+│          │                            │
+│          │  Conteúdo da página        │
+│          │                            │
+└──────────┴────────────────────────────┘
+```
 
