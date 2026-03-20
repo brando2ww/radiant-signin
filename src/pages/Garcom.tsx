@@ -10,6 +10,8 @@ import GarcomComandaDetalhe from "./garcom/GarcomComandaDetalhe";
 import GarcomAdicionarItem from "./garcom/GarcomAdicionarItem";
 import GarcomMesaDetalhe from "./garcom/GarcomMesaDetalhe";
 import GarcomCozinha from "./garcom/GarcomCozinha";
+import GarcomItens from "./garcom/GarcomItens";
+import GarcomItemDetalhe from "./garcom/GarcomItemDetalhe";
 
 export default function Garcom() {
   const navigate = useNavigate();
@@ -47,6 +49,8 @@ export default function Garcom() {
         <Route path="comanda/:id" element={<GarcomComandaDetalhe />} />
         <Route path="comanda/:id/adicionar" element={<GarcomAdicionarItem />} />
         <Route path="mesa/:id" element={<GarcomMesaDetalhe />} />
+        <Route path="itens" element={<GarcomItens />} />
+        <Route path="itens/:id" element={<GarcomItemDetalhe />} />
         <Route path="cozinha" element={<GarcomCozinha />} />
       </Routes>
       <BottomTabBar onNewComanda={() => setSheetOpen(true)} />
