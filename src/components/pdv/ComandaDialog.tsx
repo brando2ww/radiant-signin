@@ -20,6 +20,7 @@ interface ComandaDialogProps {
     personNumber?: number;
     notes?: string;
     orderId?: string | null;
+    tableNumber?: number;
   }) => Promise<void>;
   orderId?: string | null;
   isLoading?: boolean;
