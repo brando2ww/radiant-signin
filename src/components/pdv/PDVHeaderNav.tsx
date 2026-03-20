@@ -108,6 +108,7 @@ const sectionItems: Section[] = [
       { title: "Relatórios", url: "/pdv/relatorios", icon: BarChart3 },
       { title: "Configurações", url: "/pdv/configuracoes", icon: Settings },
       { title: "Usuários", url: "/pdv/usuarios", icon: Users },
+      { title: "Avaliações", url: "/pdv/avaliacoes", icon: Star },
     ],
   },
   {

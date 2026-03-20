@@ -124,6 +124,9 @@ export default function PDV() {
               
               {/* Integrações */}
               <Route path="integracoes/*" element={<RoleRoute path="/pdv/integracoes" canAccess={canAccess} defaultRoute={defaultRoute}><Integrations /></RoleRoute>} />
+              
+              {/* Avaliações */}
+              <Route path="avaliacoes" element={<RoleRoute path="/pdv/avaliacoes" canAccess={canAccess} defaultRoute={defaultRoute}><Evaluations /></RoleRoute>} />
             </Routes>
           </main>
       </div>
