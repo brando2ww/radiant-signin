@@ -28,13 +28,30 @@ export function usePDVUsers() {
       email: string;
       phone: string;
       role: string;
+      password: string;
     }) => {
       if (!user?.id) throw new Error("Não autenticado");
+
+      // 1. Create auth user via signUp
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          data: {
+            full_name: userData.display_name,
+          },
+        },
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Erro ao criar conta do usuário");
+
+      // 2. Insert into establishment_users with the real user_id
       const { data, error } = await supabase
         .from("establishment_users")
         .insert({
           establishment_owner_id: user.id,
-          user_id: user.id, // placeholder — will be the invited user's ID in production
+          user_id: authData.user.id,
           display_name: userData.display_name,
           email: userData.email,
           phone: userData.phone,
@@ -47,10 +64,15 @@ export function usePDVUsers() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["establishment-users"] });
-      toast.success("Usuário adicionado com sucesso!");
+      toast.success("Usuário criado com sucesso!");
     },
     onError: (err: any) => {
-      toast.error(err.message || "Erro ao adicionar usuário");
+      const msg = err.message || "Erro ao criar usuário";
+      if (msg.includes("already registered")) {
+        toast.error("Este e-mail já está cadastrado no sistema.");
+      } else {
+        toast.error(msg);
+      }
     },
   });
 
