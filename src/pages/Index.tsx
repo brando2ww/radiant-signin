@@ -69,7 +69,7 @@ const Index = () => {
 
       if (data.user) {
         toast.success('Login realizado com sucesso!');
-        navigate('/pdv/dashboard');
+        // Redirecionamento será feito pelo useEffect baseado no role
       }
     } catch (error: unknown) {
       console.error("Login error:", error);
