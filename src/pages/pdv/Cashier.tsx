@@ -110,6 +110,21 @@ export default function PDVCashier() {
     setSelectedTableItems([]);
   };
 
+  const handleReprintLastCashier = () => {
+    if (!lastClosedSession) return;
+    printCashierReport({
+      session: lastClosedSession,
+      movements: lastClosedMovements,
+      closingBalance: lastClosedSession.closing_balance || 0,
+      notes: lastClosedSession.notes || "",
+      riskLevel: (lastClosedSession as any).fraud_risk_level || "ok",
+    });
+  };
+    setSelectedTable(null);
+    setSelectedTableComandas([]);
+    setSelectedTableItems([]);
+  };
+
   // Calcular valores
   const openingBalance = activeSession?.opening_balance || 0;
   const totalCash = activeSession?.total_cash || 0;
