@@ -5,7 +5,7 @@ import { usePDVCashier } from "@/hooks/use-pdv-cashier";
 import { usePDVComandas, Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
 import { PDVTable } from "@/hooks/use-pdv-tables";
 import { OpenCashierDialog } from "@/components/pdv/OpenCashierDialog";
-import { CloseCashierDialog } from "@/components/pdv/CloseCashierDialog";
+import { CloseCashierDialog, printCashierReport } from "@/components/pdv/CloseCashierDialog";
 import { CashMovementDialog } from "@/components/pdv/CashMovementDialog";
 import { CashMovementsList } from "@/components/pdv/CashMovementsList";
 import { Skeleton } from "@/components/ui/skeleton";
