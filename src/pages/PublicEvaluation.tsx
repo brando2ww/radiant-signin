@@ -13,7 +13,7 @@ import {
   useSubmitCampaignEvaluation,
 } from "@/hooks/use-evaluation-campaigns";
 
-type Step = "info" | "questions" | "done";
+type Step = "info" | "questions" | "nps" | "done";
 
 export default function PublicEvaluation() {
   const { campaignId } = useParams<{ campaignId: string }>();
