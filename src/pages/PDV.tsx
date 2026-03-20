@@ -35,6 +35,7 @@ import ComandasPage from "./pdv/Comandas";
 import Quotations from "./pdv/purchases/Quotations";
 import PurchaseOrders from "./pdv/purchases/PurchaseOrders";
 import ShoppingList from "./pdv/purchases/ShoppingList";
+import Integrations from "./pdv/Integrations";
 
 export default function PDV() {
   return (
@@ -105,6 +106,9 @@ export default function PDV() {
               <Route path="compras/cotacoes" element={<Quotations />} />
               <Route path="compras/pedidos" element={<PurchaseOrders />} />
               <Route path="compras/lista" element={<ShoppingList />} />
+              
+              {/* Integrações */}
+              <Route path="integracoes" element={<Integrations />} />
             </Routes>
           </main>
       </div>

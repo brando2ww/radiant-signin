@@ -35,6 +35,7 @@ import {
   Palette,
   Store,
   Megaphone,
+  Plug,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -118,6 +119,13 @@ const sectionItems: Section[] = [
       { title: "DRE", url: "/pdv/financeiro/dre", icon: FileBarChart },
       { title: "CMV Produtos", url: "/pdv/financeiro/cmv-produtos", icon: PackageSearch },
       { title: "CMV Geral", url: "/pdv/financeiro/cmv-geral", icon: PieChart },
+    ],
+  },
+  {
+    title: "Integrações",
+    icon: Plug,
+    items: [
+      { title: "Gerenciar Integrações", url: "/pdv/integracoes", icon: Plug },
     ],
   },
 ];
