@@ -149,6 +149,8 @@ export function PaymentDialog({
       setInstallments("1");
       setDiscountType("percent");
       setDiscountValue("");
+      setDiscountPassword("");
+      setDiscountAuthorized(false);
       setServiceFeeEnabled(false);
       setSplitEnabled(false);
       setSplitPayments([]);
