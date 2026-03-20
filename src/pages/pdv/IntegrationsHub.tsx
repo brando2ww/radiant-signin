@@ -69,7 +69,7 @@ const integrations: IntegrationItem[] = [
     slug: "whatsapp",
     name: "WhatsApp Business",
     description: "Conecte seu WhatsApp Business para enviar notificações, receber pedidos e se comunicar com clientes.",
-    fallbackIcon: MessageCircle,
+    customIcon: <WhatsAppIcon className="h-7 w-7 text-green-500" />,
     category: "Comunicação",
     categoryColor: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   },
