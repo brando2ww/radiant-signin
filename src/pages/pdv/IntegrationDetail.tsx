@@ -7,7 +7,7 @@ import {
   ArrowLeft, ExternalLink, ShoppingBag, RefreshCw, Clock, CheckCircle2,
   CreditCard, Smartphone, Wifi, Split, Receipt, TrendingUp, FileText,
   Send, XCircle, Mail, Upload, Shield, TabletSmartphone, QrCode,
-  Palette, BarChart3, Menu, Zap, Settings2, type LucideIcon,
+  Palette, BarChart3, Menu, Zap, Settings2, MessageCircle, type LucideIcon,
 } from "lucide-react";
 
 import { IFoodIntegrationCard } from "@/components/pdv/integrations/IFoodIntegrationCard";
