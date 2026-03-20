@@ -1,0 +1,1 @@
+ALTER TABLE public.evaluation_answers DROP CONSTRAINT evaluation_answers_question_id_fkey;
