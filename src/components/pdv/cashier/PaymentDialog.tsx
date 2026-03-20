@@ -135,10 +135,14 @@ export function PaymentDialog({
   const splitTotal = splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const splitRemaining = total - splitTotal;
 
+  // Discount requires password authorization
+  const hasDiscount = discountAmount > 0;
+  const discountNeedsAuth = hasDiscount && !discountAuthorized;
+
   // Validation
-  const canSubmit = splitEnabled
+  const canSubmit = !discountNeedsAuth && (splitEnabled
     ? Math.abs(splitRemaining) < 0.01 && splitPayments.length > 0
-    : selectedMethod !== "dinheiro" || cashReceivedNum >= total;
+    : selectedMethod !== "dinheiro" || cashReceivedNum >= total);
 
   // Reset state when dialog opens
   useEffect(() => {
