@@ -1,6 +1,5 @@
 import { ResponsivePageHeader } from "@/components/ui/responsive-page-header";
 import { IFoodIntegrationCard } from "@/components/pdv/integrations/IFoodIntegrationCard";
-import { IFoodIntegrationCard } from "@/components/pdv/integrations/IFoodIntegrationCard";
 import { PagSeguroIntegrationCard } from "@/components/pdv/integrations/PagSeguroIntegrationCard";
 import { StoneIntegrationCard } from "@/components/pdv/integrations/StoneIntegrationCard";
 import { NFAutomaticaIntegrationCard } from "@/components/pdv/integrations/NFAutomaticaIntegrationCard";
