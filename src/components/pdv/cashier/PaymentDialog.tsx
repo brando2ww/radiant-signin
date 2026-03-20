@@ -94,7 +94,7 @@ export function PaymentDialog({
   const [discountValue, setDiscountValue] = useState("");
   const [discountPassword, setDiscountPassword] = useState("");
   const [discountAuthorized, setDiscountAuthorized] = useState(false);
-  const [serviceFeeEnabled, setServiceFeeEnabled] = useState(false);
+  const [serviceFeeEnabled, setServiceFeeEnabled] = useState(true);
   
   // Split payment
   const [splitEnabled, setSplitEnabled] = useState(false);
