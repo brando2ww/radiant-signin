@@ -189,6 +189,30 @@ const integrations: Record<string, IntegrationData> = {
     docsUrl: "https://developers.getnet.com.br",
     docsLabel: "Portal do Desenvolvedor Getnet",
   },
+  whatsapp: {
+    title: "WhatsApp Business",
+    fallbackIcon: MessageCircle,
+    category: "Comunicação",
+    description:
+      "O WhatsApp Business permite que seu estabelecimento se comunique diretamente com clientes, envie notificações de pedidos, confirme reservas e ofereça atendimento personalizado. Com esta integração, conecte sua conta WhatsApp ao PDV e centralize toda a comunicação em um só lugar.",
+    features: [
+      { icon: Send, title: "Notificações de pedidos", description: "Envie atualizações automáticas sobre o status dos pedidos para os clientes." },
+      { icon: CheckCircle2, title: "Confirmação de reservas", description: "Confirme reservas de mesas automaticamente via WhatsApp." },
+      { icon: Receipt, title: "Envio de comprovantes", description: "Envie comprovantes de pagamento e notas diretamente pelo WhatsApp." },
+      { icon: Zap, title: "Respostas rápidas", description: "Configure mensagens automáticas para perguntas frequentes." },
+      { icon: ShoppingBag, title: "Recebimento de pedidos", description: "Receba pedidos dos clientes diretamente pelo WhatsApp integrado ao PDV." },
+      { icon: BarChart3, title: "Relatórios de atendimento", description: "Acompanhe métricas de atendimento e tempo de resposta." },
+    ],
+    steps: [
+      "Clique em 'Conectar' abaixo para iniciar o processo de vinculação.",
+      "Informe o nome e número do WhatsApp Business do seu estabelecimento.",
+      "Escaneie o QR Code exibido na tela com o aplicativo WhatsApp do celular.",
+      "Após a conexão, seu WhatsApp estará integrado ao PDV para envio de notificações.",
+    ],
+    component: WhatsAppConnectionCard,
+    docsUrl: "https://business.whatsapp.com",
+    docsLabel: "WhatsApp Business",
+  },
 };
 
 export default function IntegrationDetail() {

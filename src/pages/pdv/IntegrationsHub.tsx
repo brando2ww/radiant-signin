@@ -134,10 +134,11 @@ export default function IntegrationsHub() {
               <Button
                 variant="outline"
                 className="w-full gap-2"
-                onClick={() => navigate(`/pdv/integracoes/${item.slug}`)}
+                disabled={item.comingSoon}
+                onClick={() => !item.comingSoon && navigate(`/pdv/integracoes/${item.slug}`)}
               >
-                Acessar
-                <ArrowRight className="h-4 w-4" />
+                {item.comingSoon ? "Em Breve" : "Acessar"}
+                {!item.comingSoon && <ArrowRight className="h-4 w-4" />}
               </Button>
             </div>
         ))}
