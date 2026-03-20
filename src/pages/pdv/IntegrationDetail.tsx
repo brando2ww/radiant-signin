@@ -36,6 +36,7 @@ interface IntegrationData {
   title: string;
   logo?: string;
   fallbackIcon?: LucideIcon;
+  customIcon?: React.ReactNode;
   category: string;
   description: string;
   features: Feature[];
