@@ -27,6 +27,8 @@ export default function PDVCashier() {
     isClosingCashier,
     addMovement,
     isAddingMovement,
+    lastClosedSession,
+    lastClosedMovements,
   } = usePDVCashier();
 
   const [openDialog, setOpenDialog] = useState(false);
