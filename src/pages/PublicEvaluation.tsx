@@ -62,7 +62,7 @@ export default function PublicEvaluation() {
   const canSubmitAnswers = questions?.every((q) => answers[q.id]?.score > 0);
 
   const handleSubmit = () => {
-    if (!questions || !campaignId) return;
+    if (!questions || !campaignId || npsScore === null) return;
     submitEvaluation.mutate(
       {
         campaignId,
@@ -70,6 +70,7 @@ export default function PublicEvaluation() {
         customerName: name.trim(),
         customerWhatsapp: phone,
         customerBirthDate: birthDate,
+        npsScore,
         answers: questions.map((q) => ({
           questionId: q.id,
           score: answers[q.id]?.score || 0,
