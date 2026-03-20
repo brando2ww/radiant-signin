@@ -76,11 +76,26 @@ export function CampaignPersonalization({ campaignId }: Props) {
               </Button>
             </div>
           )}
-          <ImageUpload
-            onUpload={handleLogoUpload}
-            uploading={uploading}
-            label="Enviar logotipo"
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleLogoUpload(file);
+            }}
           />
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Upload className="h-4 w-4" />
+            {uploading ? "Enviando..." : "Enviar logotipo"}
+          </Button>
         </CardContent>
       </Card>
 
