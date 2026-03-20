@@ -255,7 +255,7 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     evaluation.evaluation_answers.forEach(answer => {
       if (!questionStats.has(answer.question_id)) {
         questionStats.set(answer.question_id, {
-          text: answer.evaluation_questions?.question_text || "Pergunta",
+          text: "Pergunta",
           scores: [],
         });
       }
