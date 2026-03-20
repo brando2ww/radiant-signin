@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { ResponsivePageHeader } from "@/components/ui/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import ifoodLogo from "@/assets/integrations/ifood.png";
 import pagseguroLogo from "@/assets/integrations/pagseguro.png";
