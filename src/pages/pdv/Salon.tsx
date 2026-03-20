@@ -326,16 +326,16 @@ export default function PDVSalon() {
 
   const handleCloseTable = (tableId: string) => {
     const table = tables.find((t) => t.id === tableId);
-    if (table?.current_order_id) {
-      closeOrder(table.current_order_id, {
-        onSuccess: () => {
-          updateTable({
-            id: tableId,
-            updates: { status: "livre", current_order_id: null },
-          });
-        },
-      });
-    }
+    if (!table?.current_order_id) return;
+    
+    const tableComandas = getComandasByOrder(table.current_order_id);
+    const allItems = tableComandas.flatMap((c) => getItemsByComanda(c.id));
+    
+    setPaymentTable(table);
+    setPaymentTableComandas(tableComandas);
+    setPaymentTableItems(allItems);
+    setPaymentComanda(null);
+    setPaymentDialogOpen(true);
   };
 
   const handleUpdateItem = (id: string, updates: Partial<any>) => {
