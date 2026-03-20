@@ -1,19 +1,28 @@
 
 
-## Adicionar Nome do Cliente e Mesa ao Criar Comanda
+## Bottom Tab Bar: Centralizar FAB + Adicionar aba "Itens"
 
-### Problema
-Ao escolher "Comanda Avulsa" no sheet, a comanda é criada direto sem pedir dados. Precisa solicitar nome do cliente e mesa.
+### Mudança
+Atualmente são 4 colunas (Mesas, Comandas, Novo, Cozinha). O "Novo" não fica exatamente no centro. Para centralizar, passar para **5 colunas**:
 
-### Solução
-Usar o `ComandaDialog` já existente (que tem campos de nome, observações, etc.) no fluxo do Garçom. Quando clicar em "Comanda Avulsa", fechar o sheet e abrir o `ComandaDialog`. Após preencher, criar a comanda e navegar para o detalhe.
+```text
+  Mesas   Comandas   (+)   Itens   Cozinha
+```
 
-Também adicionar campo de **número da mesa** ao `ComandaDialog` para comandas avulsas (quando não vem de uma mesa específica).
+### Nova aba "Itens"
+Tela `/garcom/itens` que mostra o catálogo de produtos (usando `usePDVProducts`) com:
+- Navegação por categorias (horizontal)
+- Cards com imagem, nome, preço
+- Ao tocar num item, abre detalhe com botão "Adicionar em Comanda/Mesa"
+- O botão abre o mesmo `NewOrderSheet` para escolher destino
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/components/pdv/ComandaDialog.tsx` | Adicionar campo opcional "Mesa" (número da mesa) quando não há `tableNumber` pré-definido |
-| `src/pages/Garcom.tsx` | Ao escolher "Comanda Avulsa": fechar sheet → abrir `ComandaDialog` → criar comanda com dados → navegar |
+| `src/components/garcom/BottomTabBar.tsx` | Mudar para `grid-cols-5`, adicionar tab "Itens" com ícone `UtensilsCrossed` após o FAB |
+| `src/pages/garcom/GarcomItens.tsx` | **Criar** — Catálogo de produtos mobile com categorias, busca, cards com imagem/preço |
+| `src/pages/garcom/GarcomItemDetalhe.tsx` | **Criar** — Detalhe do produto com imagem, descrição, preços, botão "Adicionar" que abre sheet de destino |
+| `src/pages/Garcom.tsx` | Adicionar rotas `itens` e `itens/:id` |
+| `src/App.tsx` | Sem mudança (rotas já são wildcard `/garcom/*`) |
 
