@@ -782,6 +782,40 @@ export default function PDVSalon() {
         onAddItem={handleAddComandaItem}
         isLoading={isAddingComandaItem}
       />
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        comanda={paymentComanda}
+        items={paymentComanda ? getItemsByComanda(paymentComanda.id) : []}
+        table={paymentTable}
+        tableComandas={paymentTableComandas}
+        tableItems={paymentTableItems}
+        onSuccess={() => {
+          // Close comanda or table after payment
+          if (paymentComanda && !paymentTable) {
+            closeComanda(paymentComanda.id);
+          }
+          if (paymentTable) {
+            if (paymentTable.current_order_id) {
+              closeOrder(paymentTable.current_order_id, {
+                onSuccess: () => {
+                  updateTable({
+                    id: paymentTable.id,
+                    updates: { status: "livre", current_order_id: null },
+                  });
+                },
+              });
+            }
+          }
+          setPaymentDialogOpen(false);
+          setPaymentComanda(null);
+          setPaymentTable(null);
+          setPaymentTableComandas([]);
+          setPaymentTableItems([]);
+        }}
+      />
     </div>
   );
 }
