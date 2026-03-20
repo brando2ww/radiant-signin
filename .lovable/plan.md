@@ -1,46 +1,61 @@
 
-## Erro: "invalid input syntax for type date: ''"
 
-### Causa Raiz
+## Impressão Automática do Demonstrativo ao Fechar Caixa
 
-No `IngredientDialog.tsx`, o campo `expiration_date` é inicializado como `""` (string vazia):
+### O Que Vai Mudar
 
-```typescript
-// Linha 262, 293, 319
-expiration_date: ingredient?.expiration_date || "",
+Ao confirmar o fechamento do caixa, o sistema abrirá automaticamente a janela de impressão do navegador com um demonstrativo completo contendo: dados da sessão, movimentações, resumo financeiro e informações de divergência/justificativa.
+
+### Arquivos a Modificar
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/pdv/CloseCashierDialog.tsx` | Adicionar função `printCashierReport` que monta HTML do demonstrativo e chama `window.print()` via iframe oculto. Chamar essa função dentro de `handleClose` antes de disparar o `onClose`. |
+| `src/pages/pdv/Cashier.tsx` | Passar `movements` como prop para o `CloseCashierDialog` para que o relatório inclua a lista de movimentações. |
+
+### Conteúdo do Demonstrativo Impresso
+
+```text
+═══════════════════════════════════════
+       DEMONSTRATIVO DE CAIXA
+═══════════════════════════════════════
+Abertura: 20/03/2026 08:00
+Fechamento: 20/03/2026 18:00
+
+RESUMO FINANCEIRO
+─────────────────────────────────────
+Saldo Inicial:          R$ 100,00
+Vendas em Dinheiro:   + R$  50,00
+Vendas em Cartão:       R$ 120,00
+Vendas em PIX:          R$  80,00
+Reforços:             + R$  30,00
+Sangrias:             - R$  20,00
+─────────────────────────────────────
+Saldo Esperado:         R$ 160,00
+Saldo Final Informado:  R$ 155,00
+Diferença:            - R$   5,00
+Total de Vendas:        R$ 250,00
+
+MOVIMENTAÇÕES
+─────────────────────────────────────
+10:30  Venda     Dinheiro   R$ 25,00
+11:15  Venda     Cartão     R$ 60,00
+14:00  Sangria              R$ 20,00
+...
+
+Justificativa: (se houver)
+Nível de Risco: Baixo
+═══════════════════════════════════════
 ```
 
-Quando o usuário deixa o campo em branco e clica em "Criar", o valor `""` é enviado para o Supabase, que tenta inserir uma string vazia em uma coluna do tipo `date` — e o PostgreSQL rejeita com o erro:
+### Implementação Técnica
 
-```
-invalid input syntax for type date: ""
-```
+1. Criar função `printCashierReport()` que:
+   - Monta string HTML com CSS inline para impressão (formatação térmica 80mm e A4)
+   - Cria iframe oculto, injeta o HTML, chama `contentWindow.print()`
+   - Remove o iframe após a impressão
 
-### Correção
+2. No `handleClose`, chamar `printCashierReport()` com os dados da sessão, movimentações, saldo final e justificativa **antes** de chamar `onClose`
 
-A correção é simples: no `handleSubmit`, converter `expiration_date` de `""` para `null` antes de chamar `onSubmit`:
+3. Atualizar `CloseCashierDialogProps` para receber `movements` como prop
 
-```typescript
-// ANTES (linha 392-404):
-onSubmit({
-  ...data,
-  // expiration_date vem como "" se vazio
-});
-
-// DEPOIS:
-onSubmit({
-  ...data,
-  expiration_date: data.expiration_date || null,  // "" → null
-});
-```
-
-Também vou corrigir os valores padrão de inicialização para ficarem consistentes, usando `null` em vez de `""`.
-
-### Arquivo a Modificar
-
-| Arquivo | Linhas | Mudança |
-|---------|--------|---------|
-| `src/components/pdv/IngredientDialog.tsx` | ~262, ~293, ~319 | Inicializar `expiration_date` como `null` em vez de `""` |
-| `src/components/pdv/IngredientDialog.tsx` | ~392-404 | No `handleSubmit`, garantir `expiration_date: data.expiration_date || null` |
-
-Correção pontual, sem impacto em outras partes do sistema.
