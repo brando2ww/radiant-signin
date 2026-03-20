@@ -2,13 +2,15 @@ import { useNavigate } from "react-router-dom";
 import { ResponsivePageHeader } from "@/components/ui/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, MessageCircle, Bike, Store } from "lucide-react";
+import { ArrowRight, Bike } from "lucide-react";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 
 import pagseguroLogo from "@/assets/integrations/pagseguro.png";
 import stoneLogo from "@/assets/integrations/stone.png";
 import goomerLogo from "@/assets/integrations/goomer.png";
 import nfeLogo from "@/assets/integrations/nfe.png";
 import getnetLogo from "@/assets/integrations/getnet.png";
+import velaraLogo from "@/assets/logo_velara_preto.png";
 
 interface IntegrationItem {
   slug: string;
@@ -16,6 +18,7 @@ interface IntegrationItem {
   description: string;
   logo?: string;
   fallbackIcon?: React.ComponentType<{ className?: string }>;
+  customIcon?: React.ReactNode;
   category: string;
   categoryColor: string;
   comingSoon?: boolean;
