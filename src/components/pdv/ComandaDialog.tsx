@@ -20,6 +20,7 @@ interface ComandaDialogProps {
     personNumber?: number;
     notes?: string;
     orderId?: string | null;
+    tableNumber?: number;
   }) => Promise<void>;
   orderId?: string | null;
   isLoading?: boolean;
@@ -36,6 +37,7 @@ export function ComandaDialog({
 }: ComandaDialogProps) {
   const [customerName, setCustomerName] = useState("");
   const [personNumber, setPersonNumber] = useState<string>("");
+  const [tableNum, setTableNum] = useState<string>("");
   const [notes, setNotes] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,10 +47,11 @@ export function ComandaDialog({
       personNumber: personNumber ? parseInt(personNumber) : undefined,
       notes: notes || undefined,
       orderId,
+      tableNumber: tableNum ? parseInt(tableNum) : undefined,
     });
-    // Reset form
     setCustomerName("");
     setPersonNumber("");
+    setTableNum("");
     setNotes("");
     onOpenChange(false);
   };
@@ -76,8 +79,22 @@ export function ComandaDialog({
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="Ex: João, Maria..."
               autoFocus
-            />
+           />
           </div>
+
+          {!tableNumber && (
+            <div className="space-y-2">
+              <Label htmlFor="tableNum">Mesa (opcional)</Label>
+              <Input
+                id="tableNum"
+                type="number"
+                min="1"
+                value={tableNum}
+                onChange={(e) => setTableNum(e.target.value)}
+                placeholder="Número da mesa..."
+              />
+            </div>
+          )}
 
           {orderId && (
             <div className="space-y-2">
