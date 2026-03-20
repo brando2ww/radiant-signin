@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
