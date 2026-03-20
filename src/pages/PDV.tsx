@@ -36,6 +36,7 @@ import Quotations from "./pdv/purchases/Quotations";
 import PurchaseOrders from "./pdv/purchases/PurchaseOrders";
 import ShoppingList from "./pdv/purchases/ShoppingList";
 import Integrations from "./pdv/Integrations";
+import Users from "./pdv/Users";
 
 export default function PDV() {
   return (
@@ -101,6 +102,7 @@ export default function PDV() {
               <Route path="notas-fiscais" element={<Invoices />} />
               <Route path="relatorios" element={<PDVReports />} />
               <Route path="configuracoes" element={<PDVSettings />} />
+              <Route path="usuarios" element={<Users />} />
               
               {/* Compras */}
               <Route path="compras/cotacoes" element={<Quotations />} />

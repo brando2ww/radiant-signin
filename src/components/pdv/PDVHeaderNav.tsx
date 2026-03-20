@@ -36,6 +36,7 @@ import {
   Store,
   Megaphone,
   Plug,
+  Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -104,6 +105,7 @@ const sectionItems: Section[] = [
       { title: "Notas Fiscais", url: "/pdv/notas-fiscais", icon: Receipt },
       { title: "Relatórios", url: "/pdv/relatorios", icon: BarChart3 },
       { title: "Configurações", url: "/pdv/configuracoes", icon: Settings },
+      { title: "Usuários", url: "/pdv/usuarios", icon: Users },
     ],
   },
   {
