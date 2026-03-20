@@ -1,64 +1,21 @@
 
 
-## Redesign do Painel Super Admin com Sidebar
+## Fix: Super Admin Redirecionado ao PDV em Vez do /admin
 
-### Situação Atual
-O painel super admin usa um layout simples com header e conteúdo centralizado. Só tem a seção de Tenants.
+### Causa Raiz
 
-### Proposta
-Transformar em um painel administrativo completo com **sidebar fixa**, **dashboard com métricas**, e seções organizadas.
+No `handleSignIn` (Index.tsx, linha 72), após login bem-sucedido, o código faz `navigate('/pdv/dashboard')` **hardcoded**, sem verificar se o usuário é super admin. O `useEffect` de redirecionamento (linhas 43-51) deveria corrigir, mas o `navigate` do handleSignIn executa primeiro e o ProtectedRoute do `/pdv/*` aceita o super admin normalmente.
 
-### Estrutura da Sidebar
+### Solução
 
-```text
-┌─────────────────┐
-│  Velaro Admin    │
-├─────────────────┤
-│  Dashboard       │
-│  Tenants         │
-│  Planos          │
-│                  │
-│ ──────────────── │
-│  SA (avatar)     │
-│  Sair            │
-└─────────────────┘
-```
+1. **`src/pages/Index.tsx`** — No `handleSignIn`, após login bem-sucedido, **não navegar imediatamente**. Apenas fazer o toast de sucesso. O `useEffect` já existente (linhas 43-51) cuidará do redirecionamento correto baseado em `isSuperAdmin`.
 
-### Páginas
-
-| Rota | Página | Descrição |
-|------|--------|-----------|
-| `/admin` | Dashboard | Cards com total de tenants, tenants ativos, total de usuários, módulos mais usados |
-| `/admin/tenants` | Tenants | Lista existente (já pronta) |
-| `/admin/tenants/novo` | TenantForm | Formulário existente (já pronto) |
-| `/admin/tenants/:id` | TenantDetail | Detalhe existente (já pronto) |
-| `/admin/planos` | Plans | Gerenciar planos disponíveis (visualização dos planos de `data/plans.ts`) |
+2. **`src/components/ProtectedRoute.tsx`** — Verificar se o usuário é super admin e redirecionar para `/admin` se tentar acessar `/pdv/*`. Isso garante que mesmo acessando `/pdv/dashboard` diretamente pela URL, o super admin seja redirecionado.
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/components/ui/sidebar.tsx` | **Criar** — componente Shadcn Sidebar |
-| `src/components/NavLink.tsx` | **Criar** — NavLink com activeClassName |
-| `src/components/super-admin/AdminSidebar.tsx` | **Criar** — Sidebar com itens: Dashboard, Tenants, Planos + logout |
-| `src/pages/SuperAdmin.tsx` | **Reescrever** — Usar SidebarProvider + AdminSidebar + content area (remover header atual) |
-| `src/pages/super-admin/AdminDashboard.tsx` | **Criar** — Dashboard com métricas: total tenants, ativos, total usuários, módulos mais usados |
-| `src/pages/super-admin/Plans.tsx` | **Criar** — Visualização dos planos do sistema |
-
-### Dashboard (métricas)
-- Total de Tenants
-- Tenants Ativos
-- Total de Usuários (soma de establishment_users)
-- Módulos mais habilitados (contagem por módulo em tenant_modules)
-
-### Layout
-```text
-┌──────────┬────────────────────────────┐
-│          │  Header (trigger + título) │
-│ Sidebar  ├────────────────────────────┤
-│          │                            │
-│          │  Conteúdo da página        │
-│          │                            │
-└──────────┴────────────────────────────┘
-```
+| `src/pages/Index.tsx` | Remover `navigate('/pdv/dashboard')` do `handleSignIn` — deixar o `useEffect` redirecionar |
+| `src/components/ProtectedRoute.tsx` | Adicionar check de super admin → redirecionar para `/admin` |
 
