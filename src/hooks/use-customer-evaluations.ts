@@ -45,9 +45,7 @@ export const useCustomerEvaluations = (filters?: { startDate?: string; endDate?:
             id,
             question_id,
             score,
-            evaluation_questions (
-              question_text
-            )
+            comment
           )
         `)
         .eq("user_id", user.id)
