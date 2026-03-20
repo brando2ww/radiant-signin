@@ -25,13 +25,30 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface CashMovement {
+export interface CashMovement {
   id: string;
   type: string;
   amount: number;
   payment_method?: string | null;
   description: string | null;
   created_at: string;
+}
+
+export interface PrintCashierReportParams {
+  session: {
+    opened_at?: string;
+    closed_at?: string | null;
+    opening_balance?: number;
+    total_cash?: number;
+    total_card?: number;
+    total_pix?: number;
+    total_withdrawals?: number;
+    total_sales?: number;
+  };
+  movements: CashMovement[];
+  closingBalance: number;
+  notes: string;
+  riskLevel: RiskLevel;
 }
 
 interface CloseCashierDialogProps {
@@ -102,85 +119,45 @@ function getRiskConfig(riskLevel: RiskLevel) {
   return configs[riskLevel];
 }
 
-export function CloseCashierDialog({
-  open,
-  onOpenChange,
-  onClose,
-  isClosing,
-  session,
-  movements = [],
-}: CloseCashierDialogProps) {
-  const [closingBalance, setClosingBalance] = useState("");
-  const [notes, setNotes] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
+export function printCashierReport(params: PrintCashierReportParams) {
+  const { session, movements, closingBalance: finalBalance, notes: finalNotes, riskLevel: finalRisk } = params;
+  
+  const openedAt = session?.opened_at 
+    ? format(new Date(session.opened_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
+    : "—";
+  const closedAt = session?.closed_at
+    ? format(new Date(session.closed_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
+    : format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR });
+  const openingBal = session?.opening_balance || 0;
+  const totalCash = session?.total_cash || 0;
+  const totalCard = session?.total_card || 0;
+  const totalPix = session?.total_pix || 0;
+  const totalWithdrawals = session?.total_withdrawals || 0;
+  const totalSales = session?.total_sales || 0;
+  const expectedBalance = openingBal + totalCash - totalWithdrawals;
+  const totalReinforcements = movements
+    .filter((m) => m.type === "reforco")
+    .reduce((acc, m) => acc + m.amount, 0);
+  const diff = finalBalance - expectedBalance;
+  
+  const riskLabels: Record<RiskLevel, string> = {
+    ok: "OK", low: "Baixo", medium: "Médio", high: "Alto", critical: "Crítico"
+  };
 
-  const expectedBalance =
-    (session?.opening_balance || 0) +
-    (session?.total_cash || 0) -
-    (session?.total_withdrawals || 0);
+  const movementRows = movements.map((m) => {
+    const time = format(new Date(m.created_at), "HH:mm", { locale: ptBR });
+    const typeLabel = m.type === "venda" ? "Venda" : m.type === "sangria" ? "Sangria" : m.type === "reforco" ? "Reforço" : m.type;
+    const method = m.payment_method === "dinheiro" ? "Dinheiro" : m.payment_method === "cartao" ? "Cartão" : m.payment_method === "pix" ? "PIX" : "";
+    return `<tr>
+      <td style="padding:2px 6px;font-size:11px">${time}</td>
+      <td style="padding:2px 6px;font-size:11px">${typeLabel}</td>
+      <td style="padding:2px 6px;font-size:11px">${method}</td>
+      <td style="padding:2px 6px;font-size:11px;text-align:right">R$ ${m.amount.toFixed(2)}</td>
+      <td style="padding:2px 6px;font-size:11px">${m.description || ""}</td>
+    </tr>`;
+  }).join("");
 
-  const difference = useMemo(() => {
-    return (parseFloat(closingBalance) || 0) - expectedBalance;
-  }, [closingBalance, expectedBalance]);
-
-  const riskLevel = useMemo(() => {
-    return getRiskLevel(difference);
-  }, [difference]);
-
-  const riskConfig = useMemo(() => {
-    return getRiskConfig(riskLevel);
-  }, [riskLevel]);
-
-  const needsJustification = riskLevel !== "ok";
-  const needsConfirmation = ["medium", "high"].includes(riskLevel);
-  const isBlocked = riskLevel === "critical";
-
-  const justificationLength = notes.trim().length;
-  const isJustificationValid = !needsJustification || justificationLength >= MIN_JUSTIFICATION_LENGTH;
-  const isConfirmationValid = !needsConfirmation || confirmed;
-
-  const canClose = useMemo(() => {
-    if (!closingBalance) return false;
-    if (isBlocked) return false;
-    if (!isJustificationValid) return false;
-    if (!isConfirmationValid) return false;
-    return true;
-  }, [closingBalance, isBlocked, isJustificationValid, isConfirmationValid]);
-
-  const printCashierReport = (finalBalance: number, finalNotes: string, finalRisk: RiskLevel) => {
-    const openedAt = session?.opened_at 
-      ? format(new Date(session.opened_at), "dd/MM/yyyy HH:mm", { locale: ptBR })
-      : "—";
-    const closedAt = format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR });
-    const openingBal = session?.opening_balance || 0;
-    const totalCash = session?.total_cash || 0;
-    const totalCard = session?.total_card || 0;
-    const totalPix = session?.total_pix || 0;
-    const totalWithdrawals = session?.total_withdrawals || 0;
-    const totalSales = session?.total_sales || 0;
-    const totalReinforcements = movements
-      .filter((m) => m.type === "reforco")
-      .reduce((acc, m) => acc + m.amount, 0);
-    const diff = finalBalance - expectedBalance;
-    
-    const riskLabels: Record<RiskLevel, string> = {
-      ok: "OK", low: "Baixo", medium: "Médio", high: "Alto", critical: "Crítico"
-    };
-
-    const movementRows = movements.map((m) => {
-      const time = format(new Date(m.created_at), "HH:mm", { locale: ptBR });
-      const typeLabel = m.type === "venda" ? "Venda" : m.type === "sangria" ? "Sangria" : m.type === "reforco" ? "Reforço" : m.type;
-      const method = m.payment_method === "dinheiro" ? "Dinheiro" : m.payment_method === "cartao" ? "Cartão" : m.payment_method === "pix" ? "PIX" : "";
-      return `<tr>
-        <td style="padding:2px 6px;font-size:11px">${time}</td>
-        <td style="padding:2px 6px;font-size:11px">${typeLabel}</td>
-        <td style="padding:2px 6px;font-size:11px">${method}</td>
-        <td style="padding:2px 6px;font-size:11px;text-align:right">R$ ${m.amount.toFixed(2)}</td>
-        <td style="padding:2px 6px;font-size:11px">${m.description || ""}</td>
-      </tr>`;
-    }).join("");
-
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Demonstrativo de Caixa</title>
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Demonstrativo de Caixa</title>
 <style>
   @page { size: 80mm auto; margin: 4mm; }
   @media print { body { width: 72mm; } }
@@ -236,30 +213,86 @@ ${finalNotes ? `
 <div class="footer">Documento gerado automaticamente<br/>${closedAt}</div>
 </body></html>`;
 
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "none";
-    iframe.style.left = "-9999px";
-    document.body.appendChild(iframe);
-    
-    const doc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (doc) {
-      doc.open();
-      doc.write(html);
-      doc.close();
-      setTimeout(() => {
-        iframe.contentWindow?.print();
-        setTimeout(() => document.body.removeChild(iframe), 1000);
-      }, 300);
-    }
+  const iframe = document.createElement("iframe");
+  iframe.style.position = "fixed";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "none";
+  iframe.style.left = "-9999px";
+  document.body.appendChild(iframe);
+  
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (doc) {
+    doc.open();
+    doc.write(html);
+    doc.close();
+    setTimeout(() => {
+      iframe.contentWindow?.print();
+      setTimeout(() => document.body.removeChild(iframe), 1000);
+    }, 300);
+  }
+}
+
+
+export function CloseCashierDialog({
+  open,
+  onOpenChange,
+  onClose,
+  isClosing,
+  session,
+  movements = [],
+}: CloseCashierDialogProps) {
+  const [closingBalance, setClosingBalance] = useState("");
+  const [notes, setNotes] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+
+  const expectedBalance =
+    (session?.opening_balance || 0) +
+    (session?.total_cash || 0) -
+    (session?.total_withdrawals || 0);
+
+  const difference = useMemo(() => {
+    return (parseFloat(closingBalance) || 0) - expectedBalance;
+  }, [closingBalance, expectedBalance]);
+
+  const riskLevel = useMemo(() => {
+    return getRiskLevel(difference);
+  }, [difference]);
+
+  const riskConfig = useMemo(() => {
+    return getRiskConfig(riskLevel);
+  }, [riskLevel]);
+
+  const needsJustification = riskLevel !== "ok";
+  const needsConfirmation = ["medium", "high"].includes(riskLevel);
+  const isBlocked = riskLevel === "critical";
+
+  const justificationLength = notes.trim().length;
+  const isJustificationValid = !needsJustification || justificationLength >= MIN_JUSTIFICATION_LENGTH;
+  const isConfirmationValid = !needsConfirmation || confirmed;
+
+  const canClose = useMemo(() => {
+    if (!closingBalance) return false;
+    if (isBlocked) return false;
+    if (!isJustificationValid) return false;
+    if (!isConfirmationValid) return false;
+    return true;
+  }, [closingBalance, isBlocked, isJustificationValid, isConfirmationValid]);
+
+  const internalPrint = (finalBalance: number, finalNotes: string, finalRisk: RiskLevel) => {
+    printCashierReport({
+      session,
+      movements,
+      closingBalance: finalBalance,
+      notes: finalNotes,
+      riskLevel: finalRisk,
+    });
   };
 
   const handleClose = () => {
     const balance = parseFloat(closingBalance) || 0;
     const finalNotes = notes.trim() || undefined;
-    printCashierReport(balance, finalNotes || "", riskLevel);
+    internalPrint(balance, finalNotes || "", riskLevel);
     onClose(balance, finalNotes, expectedBalance, riskLevel);
     setClosingBalance("");
     setNotes("");

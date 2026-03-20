@@ -1,4 +1,4 @@
-import { Unlock, Lock, TrendingUp, TrendingDown, HelpCircle, Receipt } from "lucide-react";
+import { Unlock, Lock, TrendingUp, TrendingDown, HelpCircle, Receipt, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface CashierActionsSidebarProps {
@@ -10,6 +10,7 @@ interface CashierActionsSidebarProps {
   onAddWithdrawal: () => void;
   onCharge: () => void;
   onShowHelp: () => void;
+  onReprintLast?: () => void;
 }
 
 export function CashierActionsSidebar({
@@ -21,6 +22,7 @@ export function CashierActionsSidebar({
   onAddWithdrawal,
   onCharge,
   onShowHelp,
+  onReprintLast,
 }: CashierActionsSidebarProps) {
   return (
     <div className="flex flex-col gap-3 h-full">
@@ -29,15 +31,28 @@ export function CashierActionsSidebar({
       </h3>
 
       {!isOpen ? (
-        <Button
-          onClick={onOpenCashier}
-          disabled={isLoading}
-          className="h-20 flex-col gap-1 bg-green-600 hover:bg-green-700 text-white"
-        >
-          <Unlock className="h-6 w-6" />
-          <span className="text-sm font-medium">Abrir Caixa</span>
-          <kbd className="text-[10px] opacity-70 bg-black/20 px-1.5 py-0.5 rounded">F1</kbd>
-        </Button>
+        <>
+          <Button
+            onClick={onOpenCashier}
+            disabled={isLoading}
+            className="h-20 flex-col gap-1 bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Unlock className="h-6 w-6" />
+            <span className="text-sm font-medium">Abrir Caixa</span>
+            <kbd className="text-[10px] opacity-70 bg-black/20 px-1.5 py-0.5 rounded">F1</kbd>
+          </Button>
+
+          {onReprintLast && (
+            <Button
+              onClick={onReprintLast}
+              variant="outline"
+              className="h-16 flex-col gap-1 border-muted-foreground/30 hover:bg-muted"
+            >
+              <Printer className="h-5 w-5 text-muted-foreground" />
+              <span className="text-xs font-medium">Reimprimir Último Caixa</span>
+            </Button>
+          )}
+        </>
       ) : (
         <>
           <Button

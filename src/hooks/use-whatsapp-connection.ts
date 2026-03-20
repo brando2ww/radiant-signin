@@ -46,8 +46,8 @@ export function useWhatsAppConnection() {
   const queryClient = useQueryClient();
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const pollingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentInstanceRef = useRef<string>('');
 
   // Generate instance name from connection name

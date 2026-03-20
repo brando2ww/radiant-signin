@@ -256,6 +256,45 @@ export function usePDVCashier() {
     },
   });
 
+  // Buscar última sessão fechada
+  const { data: lastClosedSession } = useQuery({
+    queryKey: ["pdv-cashier-last-closed", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+
+      const { data, error } = await supabase
+        .from("pdv_cashier_sessions")
+        .select("*")
+        .eq("user_id", user.id)
+        .not("closed_at", "is", null)
+        .order("closed_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as CashierSession | null;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Buscar movimentações da última sessão fechada
+  const { data: lastClosedMovements = [] } = useQuery({
+    queryKey: ["pdv-cashier-last-closed-movements", lastClosedSession?.id],
+    queryFn: async () => {
+      if (!lastClosedSession?.id) return [];
+
+      const { data, error } = await supabase
+        .from("pdv_cashier_movements")
+        .select("*")
+        .eq("cashier_session_id", lastClosedSession.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data as CashMovement[];
+    },
+    enabled: !!lastClosedSession?.id,
+  });
+
   const isLoading = isLoadingSession || isLoadingMovements;
 
   return {
@@ -269,5 +308,7 @@ export function usePDVCashier() {
     addMovement: addMovement.mutate,
     isAddingMovement: addMovement.isPending,
     registerSale: registerSale.mutate,
+    lastClosedSession,
+    lastClosedMovements,
   };
 }

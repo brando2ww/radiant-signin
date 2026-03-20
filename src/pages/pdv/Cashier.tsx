@@ -5,7 +5,7 @@ import { usePDVCashier } from "@/hooks/use-pdv-cashier";
 import { usePDVComandas, Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
 import { PDVTable } from "@/hooks/use-pdv-tables";
 import { OpenCashierDialog } from "@/components/pdv/OpenCashierDialog";
-import { CloseCashierDialog } from "@/components/pdv/CloseCashierDialog";
+import { CloseCashierDialog, printCashierReport } from "@/components/pdv/CloseCashierDialog";
 import { CashMovementDialog } from "@/components/pdv/CashMovementDialog";
 import { CashMovementsList } from "@/components/pdv/CashMovementsList";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +27,8 @@ export default function PDVCashier() {
     isClosingCashier,
     addMovement,
     isAddingMovement,
+    lastClosedSession,
+    lastClosedMovements,
   } = usePDVCashier();
 
   const [openDialog, setOpenDialog] = useState(false);
@@ -106,6 +108,17 @@ export default function PDVCashier() {
     setSelectedTable(null);
     setSelectedTableComandas([]);
     setSelectedTableItems([]);
+  };
+
+  const handleReprintLastCashier = () => {
+    if (!lastClosedSession) return;
+    printCashierReport({
+      session: lastClosedSession,
+      movements: lastClosedMovements,
+      closingBalance: lastClosedSession.closing_balance || 0,
+      notes: lastClosedSession.notes || "",
+      riskLevel: (lastClosedSession as any).fraud_risk_level || "ok",
+    });
   };
 
   // Calcular valores
@@ -245,6 +258,7 @@ export default function PDVCashier() {
               onAddWithdrawal={() => handleOpenMovementDialog("sangria")}
               onCharge={() => setChargeDialog(true)}
               onShowHelp={() => setShortcutsDialog(true)}
+              onReprintLast={lastClosedSession ? handleReprintLastCashier : undefined}
             />
           </CardContent>
         </Card>
