@@ -65,7 +65,6 @@ export function AdminSidebar() {
                         ? location.pathname === item.url
                         : location.pathname.startsWith(item.url)
                     }
-                    tooltip={item.title}
                   >
                     <NavLink
                       to={item.url}
