@@ -22,6 +22,17 @@ import {
   AlertCircle 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+interface CashMovement {
+  id: string;
+  type: string;
+  amount: number;
+  payment_method?: string | null;
+  description: string | null;
+  created_at: string;
+}
 
 interface CloseCashierDialogProps {
   open: boolean;
