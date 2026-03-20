@@ -15,11 +15,14 @@ import { PagSeguroIntegrationCard } from "@/components/pdv/integrations/PagSegur
 import { StoneIntegrationCard } from "@/components/pdv/integrations/StoneIntegrationCard";
 import { NFAutomaticaIntegrationCard } from "@/components/pdv/integrations/NFAutomaticaIntegrationCard";
 import { GoomerIntegrationCard } from "@/components/pdv/integrations/GoomerIntegrationCard";
+import { GetnetIntegrationCard } from "@/components/pdv/integrations/GetnetIntegrationCard";
 
 import ifoodLogo from "@/assets/integrations/ifood.png";
 import pagseguroLogo from "@/assets/integrations/pagseguro.png";
 import stoneLogo from "@/assets/integrations/stone.png";
 import goomerLogo from "@/assets/integrations/goomer.png";
+import nfeLogo from "@/assets/integrations/nfe.png";
+import getnetLogo from "@/assets/integrations/getnet.png";
 
 interface Feature {
   icon: LucideIcon;
