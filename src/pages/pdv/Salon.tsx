@@ -148,6 +148,13 @@ export default function PDVSalon() {
   const [comandaAddItemOpen, setComandaAddItemOpen] = useState(false);
   const [comandaForTable, setComandaForTable] = useState<{ orderId: string; tableNumber: number } | null>(null);
 
+  // Payment dialog states
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentComanda, setPaymentComanda] = useState<Comanda | null>(null);
+  const [paymentTable, setPaymentTable] = useState<any>(null);
+  const [paymentTableComandas, setPaymentTableComandas] = useState<Comanda[]>([]);
+  const [paymentTableItems, setPaymentTableItems] = useState<any[]>([]);
+
   // Sensors for drag and drop
   const sensors = useSensors(
     useSensor(PointerSensor, {
