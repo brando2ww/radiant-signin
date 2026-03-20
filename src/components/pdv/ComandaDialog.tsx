@@ -37,6 +37,7 @@ export function ComandaDialog({
 }: ComandaDialogProps) {
   const [customerName, setCustomerName] = useState("");
   const [personNumber, setPersonNumber] = useState<string>("");
+  const [tableNum, setTableNum] = useState<string>("");
   const [notes, setNotes] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,10 +47,11 @@ export function ComandaDialog({
       personNumber: personNumber ? parseInt(personNumber) : undefined,
       notes: notes || undefined,
       orderId,
+      tableNumber: tableNum ? parseInt(tableNum) : undefined,
     });
-    // Reset form
     setCustomerName("");
     setPersonNumber("");
+    setTableNum("");
     setNotes("");
     onOpenChange(false);
   };
