@@ -5,6 +5,7 @@ import { PDVUserMenu } from "@/components/pdv/PDVUserMenu";
 import { PDVNotifications } from "@/components/pdv/PDVNotifications";
 import { CashierStatus } from "@/components/pdv/CashierStatus";
 import { Logo } from "@/components/ui/logo";
+import { useUserRole } from "@/hooks/use-user-role";
 import PDVDashboard from "./pdv/Dashboard";
 import PDVSalon from "./pdv/Salon";
 import PDVBalcao from "./pdv/Balcao";
@@ -37,24 +38,34 @@ import PurchaseOrders from "./pdv/purchases/PurchaseOrders";
 import ShoppingList from "./pdv/purchases/ShoppingList";
 import Integrations from "./pdv/Integrations";
 import Users from "./pdv/Users";
+import UserForm from "./pdv/UserForm";
+
+function RoleRoute({ path, children, canAccess, defaultRoute }: { path: string; children: React.ReactNode; canAccess: (p: string) => boolean; defaultRoute: string }) {
+  if (!canAccess(path)) {
+    return <Navigate to={defaultRoute} replace />;
+  }
+  return <>{children}</>;
+}
 
 export default function PDV() {
+  const { canAccess, defaultRoute, isLoading } = useUserRole();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
   return (
     <ModuleGuard module="pdv">
       <div className="flex flex-col min-h-screen w-full">
-        {/* Header com navegação */}
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex h-14 items-center px-4 gap-4">
-            {/* Logo */}
             <Logo size="lg" className="shrink-0" />
-            
-            {/* Navegação */}
             <PDVHeaderNav />
-            
-            {/* Spacer */}
             <div className="flex-1" />
-            
-            {/* Ações */}
             <div className="flex items-center gap-2">
               <CashierStatus />
               <PDVNotifications />
@@ -63,54 +74,55 @@ export default function PDV() {
           </div>
         </header>
 
-        {/* Conteúdo Principal */}
         <main className="flex-1 overflow-auto">
           <Routes>
-              <Route index element={<Navigate to="/pdv/dashboard" replace />} />
+              <Route index element={<Navigate to={defaultRoute} replace />} />
               
               {/* Financeiro */}
-              <Route path="financeiro/lancamentos" element={<FinancialTransactions />} />
-              <Route path="financeiro/contas-pagar" element={<AccountsPayable />} />
-              <Route path="financeiro/contas-receber" element={<AccountsReceivable />} />
-              <Route path="financeiro/fluxo-caixa" element={<CashFlow />} />
-              <Route path="financeiro/plano-contas" element={<ChartOfAccounts />} />
-              <Route path="financeiro/centros-custo" element={<CostCenters />} />
-              <Route path="financeiro/dre" element={<DRE />} />
-              <Route path="financeiro/cmv-produtos" element={<ProductCMV />} />
-              <Route path="financeiro/cmv-geral" element={<GeneralCMV />} />
+              <Route path="financeiro/lancamentos" element={<RoleRoute path="/pdv/financeiro/lancamentos" canAccess={canAccess} defaultRoute={defaultRoute}><FinancialTransactions /></RoleRoute>} />
+              <Route path="financeiro/contas-pagar" element={<RoleRoute path="/pdv/financeiro/contas-pagar" canAccess={canAccess} defaultRoute={defaultRoute}><AccountsPayable /></RoleRoute>} />
+              <Route path="financeiro/contas-receber" element={<RoleRoute path="/pdv/financeiro/contas-receber" canAccess={canAccess} defaultRoute={defaultRoute}><AccountsReceivable /></RoleRoute>} />
+              <Route path="financeiro/fluxo-caixa" element={<RoleRoute path="/pdv/financeiro/fluxo-caixa" canAccess={canAccess} defaultRoute={defaultRoute}><CashFlow /></RoleRoute>} />
+              <Route path="financeiro/plano-contas" element={<RoleRoute path="/pdv/financeiro/plano-contas" canAccess={canAccess} defaultRoute={defaultRoute}><ChartOfAccounts /></RoleRoute>} />
+              <Route path="financeiro/centros-custo" element={<RoleRoute path="/pdv/financeiro/centros-custo" canAccess={canAccess} defaultRoute={defaultRoute}><CostCenters /></RoleRoute>} />
+              <Route path="financeiro/dre" element={<RoleRoute path="/pdv/financeiro/dre" canAccess={canAccess} defaultRoute={defaultRoute}><DRE /></RoleRoute>} />
+              <Route path="financeiro/cmv-produtos" element={<RoleRoute path="/pdv/financeiro/cmv-produtos" canAccess={canAccess} defaultRoute={defaultRoute}><ProductCMV /></RoleRoute>} />
+              <Route path="financeiro/cmv-geral" element={<RoleRoute path="/pdv/financeiro/cmv-geral" canAccess={canAccess} defaultRoute={defaultRoute}><GeneralCMV /></RoleRoute>} />
               
               {/* Frente de Caixa */}
-              <Route path="salao" element={<PDVSalon />} />
-              <Route path="balcao" element={<PDVBalcao />} />
-              <Route path="caixa" element={<PDVCashier />} />
-              <Route path="cozinha" element={<PDVKitchen />} />
-              <Route path="comandas" element={<ComandasPage />} />
+              <Route path="salao" element={<RoleRoute path="/pdv/salao" canAccess={canAccess} defaultRoute={defaultRoute}><PDVSalon /></RoleRoute>} />
+              <Route path="balcao" element={<RoleRoute path="/pdv/balcao" canAccess={canAccess} defaultRoute={defaultRoute}><PDVBalcao /></RoleRoute>} />
+              <Route path="caixa" element={<RoleRoute path="/pdv/caixa" canAccess={canAccess} defaultRoute={defaultRoute}><PDVCashier /></RoleRoute>} />
+              <Route path="cozinha" element={<RoleRoute path="/pdv/cozinha" canAccess={canAccess} defaultRoute={defaultRoute}><PDVKitchen /></RoleRoute>} />
+              <Route path="comandas" element={<RoleRoute path="/pdv/comandas" canAccess={canAccess} defaultRoute={defaultRoute}><ComandasPage /></RoleRoute>} />
               
               {/* Delivery */}
-              <Route path="delivery/pedidos" element={<DeliveryOrders />} />
-              <Route path="delivery/cardapio" element={<DeliveryMenu />} />
-              <Route path="delivery/personalizacao" element={<DeliveryPersonalization />} />
-              <Route path="delivery/cupons" element={<DeliveryCoupons />} />
-              <Route path="delivery/configuracoes" element={<DeliverySettings />} />
-              <Route path="delivery/relatorios" element={<DeliveryReports />} />
+              <Route path="delivery/pedidos" element={<RoleRoute path="/pdv/delivery/pedidos" canAccess={canAccess} defaultRoute={defaultRoute}><DeliveryOrders /></RoleRoute>} />
+              <Route path="delivery/cardapio" element={<RoleRoute path="/pdv/delivery/cardapio" canAccess={canAccess} defaultRoute={defaultRoute}><DeliveryMenu /></RoleRoute>} />
+              <Route path="delivery/personalizacao" element={<RoleRoute path="/pdv/delivery/personalizacao" canAccess={canAccess} defaultRoute={defaultRoute}><DeliveryPersonalization /></RoleRoute>} />
+              <Route path="delivery/cupons" element={<RoleRoute path="/pdv/delivery/cupons" canAccess={canAccess} defaultRoute={defaultRoute}><DeliveryCoupons /></RoleRoute>} />
+              <Route path="delivery/configuracoes" element={<RoleRoute path="/pdv/delivery/configuracoes" canAccess={canAccess} defaultRoute={defaultRoute}><DeliverySettings /></RoleRoute>} />
+              <Route path="delivery/relatorios" element={<RoleRoute path="/pdv/delivery/relatorios" canAccess={canAccess} defaultRoute={defaultRoute}><DeliveryReports /></RoleRoute>} />
               
               {/* Administrador */}
-              <Route path="dashboard" element={<PDVDashboard />} />
-              <Route path="produtos" element={<PDVProducts />} />
-              <Route path="estoque" element={<PDVStock />} />
-              <Route path="fornecedores" element={<PDVSuppliers />} />
-              <Route path="notas-fiscais" element={<Invoices />} />
-              <Route path="relatorios" element={<PDVReports />} />
-              <Route path="configuracoes" element={<PDVSettings />} />
-              <Route path="usuarios/*" element={<Users />} />
+              <Route path="dashboard" element={<RoleRoute path="/pdv/dashboard" canAccess={canAccess} defaultRoute={defaultRoute}><PDVDashboard /></RoleRoute>} />
+              <Route path="produtos" element={<RoleRoute path="/pdv/produtos" canAccess={canAccess} defaultRoute={defaultRoute}><PDVProducts /></RoleRoute>} />
+              <Route path="estoque" element={<RoleRoute path="/pdv/estoque" canAccess={canAccess} defaultRoute={defaultRoute}><PDVStock /></RoleRoute>} />
+              <Route path="fornecedores" element={<RoleRoute path="/pdv/fornecedores" canAccess={canAccess} defaultRoute={defaultRoute}><PDVSuppliers /></RoleRoute>} />
+              <Route path="notas-fiscais" element={<RoleRoute path="/pdv/notas-fiscais" canAccess={canAccess} defaultRoute={defaultRoute}><Invoices /></RoleRoute>} />
+              <Route path="relatorios" element={<RoleRoute path="/pdv/relatorios" canAccess={canAccess} defaultRoute={defaultRoute}><PDVReports /></RoleRoute>} />
+              <Route path="configuracoes" element={<RoleRoute path="/pdv/configuracoes" canAccess={canAccess} defaultRoute={defaultRoute}><PDVSettings /></RoleRoute>} />
+              <Route path="usuarios" element={<RoleRoute path="/pdv/usuarios" canAccess={canAccess} defaultRoute={defaultRoute}><Users /></RoleRoute>} />
+              <Route path="usuarios/novo" element={<RoleRoute path="/pdv/usuarios" canAccess={canAccess} defaultRoute={defaultRoute}><UserForm /></RoleRoute>} />
+              <Route path="usuarios/:id/editar" element={<RoleRoute path="/pdv/usuarios" canAccess={canAccess} defaultRoute={defaultRoute}><UserForm /></RoleRoute>} />
               
               {/* Compras */}
-              <Route path="compras/cotacoes" element={<Quotations />} />
-              <Route path="compras/pedidos" element={<PurchaseOrders />} />
-              <Route path="compras/lista" element={<ShoppingList />} />
+              <Route path="compras/cotacoes" element={<RoleRoute path="/pdv/compras/cotacoes" canAccess={canAccess} defaultRoute={defaultRoute}><Quotations /></RoleRoute>} />
+              <Route path="compras/pedidos" element={<RoleRoute path="/pdv/compras/pedidos" canAccess={canAccess} defaultRoute={defaultRoute}><PurchaseOrders /></RoleRoute>} />
+              <Route path="compras/lista" element={<RoleRoute path="/pdv/compras/lista" canAccess={canAccess} defaultRoute={defaultRoute}><ShoppingList /></RoleRoute>} />
               
               {/* Integrações */}
-              <Route path="integracoes/*" element={<Integrations />} />
+              <Route path="integracoes/*" element={<RoleRoute path="/pdv/integracoes" canAccess={canAccess} defaultRoute={defaultRoute}><Integrations /></RoleRoute>} />
             </Routes>
           </main>
       </div>
