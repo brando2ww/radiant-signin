@@ -32,35 +32,22 @@ export function usePDVUsers() {
     }) => {
       if (!user?.id) throw new Error("Não autenticado");
 
-      // 1. Create auth user via signUp
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: userData.email,
-        password: userData.password,
-        options: {
-          data: {
-            full_name: userData.display_name,
+      const { data, error } = await supabase.functions.invoke(
+        "create-establishment-user",
+        {
+          body: {
+            display_name: userData.display_name,
+            email: userData.email,
+            phone: userData.phone,
+            role: userData.role,
+            password: userData.password,
           },
-        },
-      });
+        }
+      );
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("Erro ao criar conta do usuário");
-
-      // 2. Insert into establishment_users with the real user_id
-      const { data, error } = await supabase
-        .from("establishment_users")
-        .insert({
-          establishment_owner_id: user.id,
-          user_id: authData.user.id,
-          display_name: userData.display_name,
-          email: userData.email,
-          phone: userData.phone,
-          role: userData.role as any,
-        })
-        .select()
-        .single();
       if (error) throw error;
-      return data;
+      if (data?.error) throw new Error(data.error);
+      return data.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["establishment-users"] });
