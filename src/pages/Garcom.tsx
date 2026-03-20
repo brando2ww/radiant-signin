@@ -10,6 +10,8 @@ import GarcomComandaDetalhe from "./garcom/GarcomComandaDetalhe";
 import GarcomAdicionarItem from "./garcom/GarcomAdicionarItem";
 import GarcomMesaDetalhe from "./garcom/GarcomMesaDetalhe";
 import GarcomCozinha from "./garcom/GarcomCozinha";
+import GarcomItens from "./garcom/GarcomItens";
+import GarcomItemDetalhe from "./garcom/GarcomItemDetalhe";
 
 export default function Garcom() {
   const navigate = useNavigate();
