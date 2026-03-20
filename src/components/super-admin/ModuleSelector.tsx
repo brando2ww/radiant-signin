@@ -1,5 +1,4 @@
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { Check } from "lucide-react";
 
 const availableModules = [
   { value: "pdv", label: "PDV", description: "Ponto de venda, caixa, salão, comandas" },
@@ -25,23 +24,30 @@ export function ModuleSelector({ selected, onChange }: ModuleSelectorProps) {
 
   return (
     <div className="space-y-3">
-      {availableModules.map((mod) => (
-        <div
-          key={mod.value}
-          className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => toggle(mod.value)}
-        >
-          <Checkbox
-            checked={selected.includes(mod.value)}
-            onCheckedChange={() => toggle(mod.value)}
-            className="mt-0.5"
-          />
-          <div>
-            <Label className="font-medium cursor-pointer">{mod.label}</Label>
-            <p className="text-xs text-muted-foreground">{mod.description}</p>
-          </div>
-        </div>
-      ))}
+      {availableModules.map((mod) => {
+        const isSelected = selected.includes(mod.value);
+
+        return (
+          <button
+            key={mod.value}
+            type="button"
+            aria-pressed={isSelected}
+            onClick={() => toggle(mod.value)}
+            className="flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-colors hover:bg-muted/50"
+          >
+            <div
+              className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border border-primary ring-offset-background"
+              aria-hidden="true"
+            >
+              {isSelected && <Check className="h-3.5 w-3.5 text-primary" />}
+            </div>
+            <div>
+              <div className="font-medium">{mod.label}</div>
+              <p className="text-xs text-muted-foreground">{mod.description}</p>
+            </div>
+          </button>
+        );
+      })}
     </div>
   );
 }
