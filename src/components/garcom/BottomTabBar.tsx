@@ -2,9 +2,12 @@ import { NavLink, useLocation } from "react-router-dom";
 import { LayoutGrid, ClipboardList, ChefHat, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const tabs = [
+const tabsBefore = [
   { to: "/garcom", icon: LayoutGrid, label: "Mesas", end: true },
   { to: "/garcom/comandas", icon: ClipboardList, label: "Comandas" },
+];
+
+const tabsAfter = [
   { to: "/garcom/cozinha", icon: ChefHat, label: "Cozinha" },
 ];
 
