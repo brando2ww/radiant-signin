@@ -33,6 +33,7 @@ import {
   Plus,
   X,
   Sparkles,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
