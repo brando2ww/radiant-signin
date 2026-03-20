@@ -337,9 +337,7 @@ export const useEvaluationById = (id: string) => {
             id,
             question_id,
             score,
-            evaluation_questions (
-              question_text
-            )
+            comment
           )
         `)
         .eq("id", id)
