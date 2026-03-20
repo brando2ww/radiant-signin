@@ -30,7 +30,7 @@ export default function Users() {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const handleSave = (data: any) => {
+  const handleSave = (data: { display_name: string; email: string; phone: string; role: string; password?: string }) => {
     if (editingUser) {
       updateUser.mutate({ id: editingUser.id, ...data }, {
         onSuccess: () => {
@@ -39,7 +39,7 @@ export default function Users() {
         },
       });
     } else {
-      createUser.mutate(data, {
+      createUser.mutate(data as any, {
         onSuccess: () => {
           setDialogOpen(false);
         },
