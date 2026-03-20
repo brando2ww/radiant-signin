@@ -184,7 +184,7 @@ export function PDVHeaderNav() {
   return (
     <NavigationMenu>
       <NavigationMenuList>
-        {sectionItems.map((section) => {
+        {filteredSections.map((section) => {
           const isSectionActive = section.items.some(
             (item) => pathname === item.url || pathname.startsWith(item.url + "/")
           );
