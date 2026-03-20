@@ -81,7 +81,7 @@ const roleDefaultRoute: Record<AppRole, string> = {
   proprietario: "/pdv/dashboard",
   gerente: "/pdv/dashboard",
   caixa: "/pdv/caixa",
-  garcom: "/pdv/salao",
+  garcom: "/garcom",
   cozinheiro: "/pdv/cozinha",
   estoquista: "/pdv/estoque",
   financeiro: "/pdv/financeiro/lancamentos",

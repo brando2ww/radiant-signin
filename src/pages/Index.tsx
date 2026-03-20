@@ -37,19 +37,20 @@ const sampleTestimonials: Testimonial[] = [
 const Index = () => {
   const { signUp, resetPasswordByDocument, signInWithGoogle, user, loading } = useAuth();
   const { isSuperAdmin, isLoading: superAdminLoading } = useSuperAdmin();
+  const { defaultRoute, isLoading: roleLoading } = useUserRole();
   const [currentForm, setCurrentForm] = useState<FormType>('login');
   const navigate = useNavigate();
 
   // Redirecionar se já estiver autenticado
   useEffect(() => {
-    if (user && !loading && !superAdminLoading) {
+    if (user && !loading && !superAdminLoading && !roleLoading) {
       if (isSuperAdmin) {
         navigate('/admin');
       } else {
-        navigate('/pdv/dashboard');
+        navigate(defaultRoute);
       }
     }
-  }, [user, loading, isSuperAdmin, superAdminLoading, navigate]);
+  }, [user, loading, isSuperAdmin, superAdminLoading, roleLoading, defaultRoute, navigate]);
 
   const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
