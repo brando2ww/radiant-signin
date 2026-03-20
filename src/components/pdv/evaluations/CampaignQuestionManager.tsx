@@ -3,13 +3,23 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2, GripVertical, FileDown } from "lucide-react";
+import { toast } from "sonner";
 import {
   useCampaignQuestions,
   useCreateCampaignQuestion,
   useUpdateCampaignQuestion,
   useDeleteCampaignQuestion,
 } from "@/hooks/use-evaluation-campaigns";
+
+const RESTAURANT_TEMPLATES = [
+  "Como avalia a qualidade da comida?",
+  "O atendimento foi satisfatório?",
+  "O ambiente estava agradável?",
+  "O tempo de espera foi adequado?",
+  "A relação custo-benefício foi justa?",
+  "A higiene do local estava adequada?",
+];
 
 interface Props {
   campaignId: string;
