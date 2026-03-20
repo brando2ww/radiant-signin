@@ -137,6 +137,16 @@ export function PDVHeaderNav() {
   const location = useLocation();
   const pathname = location.pathname;
   const [dismissedAnnouncements, setDismissedAnnouncements] = useState<string[]>([]);
+  const { canAccess } = useUserRole();
+
+  const filteredSections = useMemo(() => {
+    return sectionItems
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => canAccess(item.url)),
+      }))
+      .filter((section) => section.items.length > 0);
+  }, [canAccess]);
 
   const visibleAnnouncements = announcements.filter(
     (a) => !dismissedAnnouncements.includes(a.id)
