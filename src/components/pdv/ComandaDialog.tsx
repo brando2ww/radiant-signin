@@ -79,8 +79,22 @@ export function ComandaDialog({
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="Ex: João, Maria..."
               autoFocus
-            />
+           />
           </div>
+
+          {!tableNumber && (
+            <div className="space-y-2">
+              <Label htmlFor="tableNum">Mesa (opcional)</Label>
+              <Input
+                id="tableNum"
+                type="number"
+                min="1"
+                value={tableNum}
+                onChange={(e) => setTableNum(e.target.value)}
+                placeholder="Número da mesa..."
+              />
+            </div>
+          )}
 
           {orderId && (
             <div className="space-y-2">
