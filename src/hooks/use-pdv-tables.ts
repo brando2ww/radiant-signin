@@ -32,17 +32,18 @@ export interface PDVTable {
 
 export function usePDVTables() {
   const { user } = useAuth();
+  const { visibleUserId } = useEstablishmentId();
   const queryClient = useQueryClient();
 
   const { data: tables, isLoading } = useQuery({
-    queryKey: ["pdv-tables", user?.id],
+    queryKey: ["pdv-tables", visibleUserId],
     queryFn: async () => {
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!visibleUserId) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase
         .from("pdv_tables")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", visibleUserId)
         .eq("is_active", true)
         .order("position_x", { ascending: true, nullsFirst: false })
         .order("table_number");
@@ -50,7 +51,7 @@ export function usePDVTables() {
       if (error) throw error;
       return data as PDVTable[];
     },
-    enabled: !!user,
+    enabled: !!visibleUserId,
   });
 
   // Query para mesas deletadas (lixeira)
