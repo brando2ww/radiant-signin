@@ -91,6 +91,8 @@ export function PaymentDialog({
   // Discount & fees
   const [discountType, setDiscountType] = useState<DiscountType>("percent");
   const [discountValue, setDiscountValue] = useState("");
+  const [discountPassword, setDiscountPassword] = useState("");
+  const [discountAuthorized, setDiscountAuthorized] = useState(false);
   const [serviceFeeEnabled, setServiceFeeEnabled] = useState(false);
   
   // Split payment
