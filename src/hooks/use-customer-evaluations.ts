@@ -21,9 +21,6 @@ export interface EvaluationAnswer {
   score: number;
   created_at?: string;
   comment?: string | null;
-  evaluation_questions?: {
-    question_text: string;
-  };
 }
 
 export interface EvaluationWithAnswers extends CustomerEvaluation {
