@@ -439,6 +439,10 @@ export default function PDVSalon() {
   };
 
   const handleCreateComanda = async (data: { customerName?: string; personNumber?: number; notes?: string; orderId?: string | null }) => {
+    if (!activeSession) {
+      toast.error("Abra o caixa antes de iniciar um atendimento");
+      return;
+    }
     await createComanda({
       customerName: data.customerName,
       personNumber: data.personNumber,
