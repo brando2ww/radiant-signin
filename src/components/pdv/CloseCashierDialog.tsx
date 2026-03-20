@@ -25,13 +25,30 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface CashMovement {
+export interface CashMovement {
   id: string;
   type: string;
   amount: number;
   payment_method?: string | null;
   description: string | null;
   created_at: string;
+}
+
+export interface PrintCashierReportParams {
+  session: {
+    opened_at?: string;
+    closed_at?: string | null;
+    opening_balance?: number;
+    total_cash?: number;
+    total_card?: number;
+    total_pix?: number;
+    total_withdrawals?: number;
+    total_sales?: number;
+  };
+  movements: CashMovement[];
+  closingBalance: number;
+  notes: string;
+  riskLevel: RiskLevel;
 }
 
 interface CloseCashierDialogProps {
