@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ImageUpload } from "@/components/ui/image-upload";
-import { Palette, Type, Image as ImageIcon, Save } from "lucide-react";
+import { Palette, Type, Image as ImageIcon, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 import {
   useEvaluationCampaigns,
@@ -20,7 +19,8 @@ interface Props {
 export function CampaignPersonalization({ campaignId }: Props) {
   const { data: campaigns } = useEvaluationCampaigns();
   const updateCampaign = useUpdateCampaign();
-  const { uploadFile, uploading } = useSupabaseUpload("business-logos");
+  const { uploadFile, uploading } = useSupabaseUpload({ bucket: "business-logos", folder: "campaigns" });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const campaign = campaigns?.find((c) => c.id === campaignId) as any;
 
