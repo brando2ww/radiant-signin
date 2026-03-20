@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEstablishmentId } from "@/hooks/use-establishment-id";
 import { toast } from "sonner";
 
 export type PDVTableStatus = 
@@ -31,17 +32,18 @@ export interface PDVTable {
 
 export function usePDVTables() {
   const { user } = useAuth();
+  const { visibleUserId } = useEstablishmentId();
   const queryClient = useQueryClient();
 
   const { data: tables, isLoading } = useQuery({
-    queryKey: ["pdv-tables", user?.id],
+    queryKey: ["pdv-tables", visibleUserId],
     queryFn: async () => {
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!visibleUserId) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase
         .from("pdv_tables")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", visibleUserId)
         .eq("is_active", true)
         .order("position_x", { ascending: true, nullsFirst: false })
         .order("table_number");
@@ -49,26 +51,26 @@ export function usePDVTables() {
       if (error) throw error;
       return data as PDVTable[];
     },
-    enabled: !!user,
+    enabled: !!visibleUserId,
   });
 
   // Query para mesas deletadas (lixeira)
   const { data: deletedTables, isLoading: isLoadingDeleted } = useQuery({
-    queryKey: ["pdv-tables-deleted", user?.id],
+    queryKey: ["pdv-tables-deleted", visibleUserId],
     queryFn: async () => {
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!visibleUserId) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase
         .from("pdv_tables")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", visibleUserId)
         .eq("is_active", false)
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
       return data as PDVTable[];
     },
-    enabled: !!user,
+    enabled: !!visibleUserId,
   });
 
   const createTable = useMutation({

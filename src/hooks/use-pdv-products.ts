@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEstablishmentId } from "@/hooks/use-establishment-id";
 import { toast } from "sonner";
 
 export interface PDVProduct {
@@ -24,24 +25,25 @@ export interface PDVProduct {
 
 export function usePDVProducts() {
   const { user } = useAuth();
+  const { visibleUserId } = useEstablishmentId();
   const queryClient = useQueryClient();
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ["pdv-products", user?.id],
+    queryKey: ["pdv-products", visibleUserId],
     queryFn: async () => {
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!visibleUserId) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase
         .from("pdv_products")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", visibleUserId)
         .order("category")
         .order("name");
 
       if (error) throw error;
       return data as PDVProduct[];
     },
-    enabled: !!user,
+    enabled: !!visibleUserId,
   });
 
   const createProduct = useMutation({

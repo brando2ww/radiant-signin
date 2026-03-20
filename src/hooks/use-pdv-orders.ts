@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEstablishmentId } from "@/hooks/use-establishment-id";
 import { toast } from "sonner";
 
 export interface PDVOrderItem {
@@ -49,23 +50,24 @@ export interface PDVOrder {
 
 export function usePDVOrders() {
   const { user } = useAuth();
+  const { visibleUserId } = useEstablishmentId();
   const queryClient = useQueryClient();
 
   const { data: orders, isLoading } = useQuery({
-    queryKey: ["pdv-orders", user?.id],
+    queryKey: ["pdv-orders", visibleUserId],
     queryFn: async () => {
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!visibleUserId) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase
         .from("pdv_orders")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", visibleUserId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as PDVOrder[];
     },
-    enabled: !!user,
+    enabled: !!visibleUserId,
   });
 
   const { data: orderItems } = useQuery({

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEstablishmentId } from "@/hooks/use-establishment-id";
 import { toast } from "sonner";
 
 interface KitchenItem {
@@ -23,13 +24,14 @@ interface KitchenItem {
 
 export function usePDVKitchen() {
   const { user } = useAuth();
+  const { visibleUserId } = useEstablishmentId();
   const queryClient = useQueryClient();
 
   // Buscar itens da cozinha
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ["pdv-kitchen-items", user?.id],
+    queryKey: ["pdv-kitchen-items", visibleUserId],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!visibleUserId) return [];
 
       const { data, error } = await supabase
         .from("pdv_order_items")
@@ -43,15 +45,15 @@ export function usePDVKitchen() {
             user_id
           )
         `)
-        .eq("order.user_id", user.id)
+        .eq("order.user_id", visibleUserId)
         .in("kitchen_status", ["pendente", "preparando", "pronto"])
         .order("added_at", { ascending: true });
 
       if (error) throw error;
       return data as unknown as KitchenItem[];
     },
-    enabled: !!user?.id,
-    refetchInterval: 10000, // Atualizar a cada 10 segundos
+    enabled: !!visibleUserId,
+    refetchInterval: 10000,
   });
 
   // Atualizar status do item
