@@ -44,6 +44,18 @@ export function CampaignQuestionManager({ campaignId }: Props) {
     );
   };
 
+  const handleImportTemplate = async () => {
+    const startPos = (questions?.length || 0) + 1;
+    for (let i = 0; i < RESTAURANT_TEMPLATES.length; i++) {
+      createQuestion.mutate({
+        campaign_id: campaignId,
+        question_text: RESTAURANT_TEMPLATES[i],
+        order_position: startPos + i,
+      });
+    }
+    toast.success("Template de restaurante importado!");
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
