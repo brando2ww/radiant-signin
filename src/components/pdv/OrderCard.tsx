@@ -28,7 +28,7 @@ const STATUS_CONFIG = {
 
 const SOURCE_CONFIG = {
   salao: { label: "Salão", icon: "🪑" },
-  balcao: { label: "Balcão", icon: "🏪" },
+  balcao: { label: "Balcão", icon: "" },
   delivery: { label: "Delivery", icon: "🛵" },
 };
 
