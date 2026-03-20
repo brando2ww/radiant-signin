@@ -1,39 +1,46 @@
 
 
-## Integrar PaymentDialog no Salão
+## Bloquear Abertura de Mesa/Comanda sem Caixa Aberto
 
-### Situação Atual
-O Salão fecha comandas e pedidos diretamente via `closeComanda` / `closeOrder` sem passar pelo fluxo de pagamento. O `PaymentDialog` já existe no módulo Caixa com tudo que você precisa: débito, crédito, dinheiro, PIX, desconto, divisão de conta.
+### Problema
+Atualmente é possível criar pedidos (abrir mesas) e comandas no Salão sem que o caixa esteja aberto, o que gera inconsistências financeiras.
 
-### O Que Vai Mudar
+### Solução
 
-#### 1. `src/pages/pdv/Salon.tsx`
-- Importar `PaymentDialog` do cashier
-- Adicionar estados: `paymentDialogOpen`, `paymentComanda`, `paymentTable`, `paymentTableComandas`, `paymentTableItems`
-- Modificar `onClose` da `ComandaDetailsDialog` (linha 756): em vez de chamar `closeComanda` direto, abrir o `PaymentDialog` com a comanda selecionada e seus itens
-- Modificar `onCloseTable` da `TableDetailsDialog` (linha 319-331): em vez de fechar direto, abrir o `PaymentDialog` com a mesa, suas comandas e itens
-- Adicionar callback `handlePaymentSuccess` que fecha os dialogs e invalida as queries
-- Renderizar o `PaymentDialog` na área de dialogs
+Importar `usePDVCashier` no `Salon.tsx` e verificar se há sessão ativa antes de permitir:
+1. Criar pedido para mesa (`handleCreateOrder`, linha 308)
+2. Criar comanda standalone ou de mesa (`handleCreateComanda`, linha 436)
 
-#### 2. Fluxo Resultante
+Se o caixa estiver fechado, exibir `toast.error("Abra o caixa antes de iniciar um atendimento")` e bloquear a ação.
 
-```text
-Comanda → "Fechar Comanda" → PaymentDialog abre
-  → Escolhe método (débito/crédito/dinheiro/PIX)
-  → Aplica desconto (com senha) ou divisão
-  → Confirma → Comanda fechada + pagamento registrado
-
-Mesa → "Fechar Mesa" → PaymentDialog abre (modo mesa)
-  → Mesmo fluxo acima, fecha todas as comandas da mesa
-```
-
-#### 3. Desconto com senha
-O `PaymentDialog` já tem campo de desconto (% ou valor). Vou adicionar um campo de senha obrigatória quando desconto > 0: um `Input type="password"` que valida contra uma senha configurável (por enquanto hardcoded ou via settings).
-
-### Arquivos a Modificar
+### Arquivo a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/pages/pdv/Salon.tsx` | Importar PaymentDialog, adicionar estados, redirecionar fechamento para o dialog de pagamento |
-| `src/components/pdv/cashier/PaymentDialog.tsx` | Adicionar campo de senha obrigatória quando desconto > 0 |
+| `src/pages/pdv/Salon.tsx` | Importar `usePDVCashier`, obter `activeSession`. Adicionar guard no início de `handleCreateOrder` e `handleCreateComanda`: se `!activeSession`, exibir toast de erro e retornar sem executar. |
+
+### Implementação
+
+```typescript
+// No início do componente
+const { activeSession } = usePDVCashier();
+
+// Em handleCreateOrder (linha 308)
+const handleCreateOrder = (tableId: string) => {
+  if (!activeSession) {
+    toast.error("Abra o caixa antes de iniciar um atendimento");
+    return;
+  }
+  // ... código existente
+};
+
+// Em handleCreateComanda (linha 436)
+const handleCreateComanda = async (data: {...}) => {
+  if (!activeSession) {
+    toast.error("Abra o caixa antes de iniciar um atendimento");
+    return;
+  }
+  // ... código existente
+};
+```
 
