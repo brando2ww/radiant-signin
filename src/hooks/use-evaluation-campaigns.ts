@@ -87,7 +87,7 @@ export const useCreateCampaign = () => {
 export const useUpdateCampaign = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string; is_active?: boolean }) => {
+    mutationFn: async ({ id, ...data }: { id: string; name?: string; description?: string; is_active?: boolean; logo_url?: string | null; background_color?: string; welcome_message?: string | null; thank_you_message?: string | null }) => {
       const { error } = await supabase
         .from("evaluation_campaigns")
         .update(data)

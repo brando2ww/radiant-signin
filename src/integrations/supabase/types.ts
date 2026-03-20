@@ -1285,31 +1285,43 @@ export type Database = {
       }
       evaluation_campaigns: {
         Row: {
+          background_color: string | null
           created_at: string
           description: string | null
           id: string
           is_active: boolean
+          logo_url: string | null
           name: string
+          thank_you_message: string | null
           updated_at: string
           user_id: string
+          welcome_message: string | null
         }
         Insert: {
+          background_color?: string | null
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
+          logo_url?: string | null
           name: string
+          thank_you_message?: string | null
           updated_at?: string
           user_id: string
+          welcome_message?: string | null
         }
         Update: {
+          background_color?: string | null
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
+          logo_url?: string | null
           name?: string
+          thank_you_message?: string | null
           updated_at?: string
           user_id?: string
+          welcome_message?: string | null
         }
         Relationships: []
       }
