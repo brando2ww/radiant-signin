@@ -108,6 +108,7 @@ export function CloseCashierDialog({
   onClose,
   isClosing,
   session,
+  movements = [],
 }: CloseCashierDialogProps) {
   const [closingBalance, setClosingBalance] = useState("");
   const [notes, setNotes] = useState("");
