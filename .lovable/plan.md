@@ -1,47 +1,98 @@
 
 
-## Adicionar Logo NF-e e Nova Integração Getnet
+## Página de Usuários com Sistema de Roles (Papéis)
 
-### Mudanças
+### Levantamento de Funcionalidades por Área
 
-#### 1. Copiar assets
-- `user-uploads://nfe.png` → `src/assets/integrations/nfe.png`
-- `user-uploads://logo-getnet.png` → `src/assets/integrations/getnet.png`
+Com base em todas as rotas e módulos do sistema:
 
-#### 2. `src/pages/pdv/IntegrationsHub.tsx`
-- Importar logo NF-e e substituir `logo: null` / `icon: FileText` por `logo: nfeLogo`
-- Adicionar card Getnet com `slug: "getnet"`, categoria "Maquininha", logo importado
+| Área | Funcionalidades |
+|------|----------------|
+| **Frente de Caixa** | Salão (mesas, pedidos), Balcão, Caixa (abrir/fechar, sangria, reforço), Cozinha, Comandas |
+| **Delivery** | Pedidos, Cardápio, Personalização, Cupons, Configurações, Relatórios |
+| **Administrador** | Dashboard, Produtos, Estoque, Fornecedores, Cotações, Pedidos de Compra, Lista de Compras, Notas Fiscais, Relatórios, Configurações |
+| **Financeiro** | Lançamentos, Contas a Pagar/Receber, Fluxo de Caixa, Plano de Contas, Centros de Custo, DRE, CMV |
+| **Integrações** | iFood, PagSeguro, Stone, Getnet, NF-e, Goomer |
 
-#### 3. `src/components/pdv/integrations/GetnetIntegrationCard.tsx` (novo)
-Card de configuração seguindo o padrão do Stone/PagSeguro:
-- Campo Merchant ID (EC) e Client ID / Client Secret (credenciais OAuth da API Getnet)
-- Seletor de ambiente (Sandbox / Produção)
-- Tipo de conexão: Cloud-to-Cloud, USB/Serial ou HTTP (Wi-Fi/Ethernet) — conforme documentação da Getnet Integrated POS
-- Switches: captura automática, impressão de comprovante, Pix via terminal
-- Tabela de taxas informativas (débito, crédito à vista, parcelado)
-- Status de conexão (badge conectado/desconectado)
+### Roles Propostos
 
-**Baseado na pesquisa da API Getnet:**
-- A Getnet oferece POS Integrado que comunica com automação comercial via Cloud, USB ou HTTP
-- Credenciais OAuth: seller_id + client_id + client_secret obtidos no portal developers.getnet.com.br
-- Suporta débito, crédito, parcelamento, Pix, pré-autorização e cancelamento
+| Role | Acesso | Descrição |
+|------|--------|-----------|
+| **proprietario** | Tudo | Dono do estabelecimento. Acesso total, gerencia usuários e configurações |
+| **gerente** | Tudo exceto gerenciar usuários/roles | Gerencia operação, financeiro, relatórios, estoque, fornecedores |
+| **caixa** | Caixa (abrir/fechar, sangria, reforço), visualizar pedidos | Opera o caixa, recebe pagamentos, faz fechamento |
+| **garcom** | Salão (mesas, comandas, pedidos), Cozinha (visualizar) | Atende mesas, cria comandas, envia pedidos à cozinha |
+| **cozinheiro** | Cozinha (receber/atualizar pedidos) | Visualiza e gerencia fila de preparo |
+| **estoquista** | Estoque, Fornecedores, Notas Fiscais, Compras | Controla estoque, recebe mercadorias, lança NFs |
+| **financeiro** | Financeiro completo, Relatórios | Gerencia contas, lançamentos, DRE, CMV |
+| **atendente_delivery** | Delivery (pedidos, status) | Gerencia pedidos de delivery, atualiza status |
 
-#### 4. `src/pages/pdv/IntegrationDetail.tsx`
-- Importar `GetnetIntegrationCard` e `getnetLogo`
-- Importar `nfeLogo` e atualizar entrada `nf-automatica` para usar `logo: nfeLogo` em vez de `fallbackIcon`
-- Adicionar entrada `getnet` no objeto `integrations` com:
-  - Descrição: Getnet (Santander) como adquirente com POS integrado
-  - Features: Terminal integrado (Cloud/USB/HTTP), débito e crédito, Pix no terminal, parcelamento, pré-autorização, dashboard financeiro
-  - Steps: 1. Acesse portal Getnet → 2. Gere Client ID e Secret → 3. Cole credenciais → 4. Configure tipo de conexão
-  - Docs: `https://predocs.globalgetnet.com`
+### Arquivos a Criar
 
-### Arquivos
+| Arquivo | Descrição |
+|---------|-----------|
+| `src/pages/pdv/Users.tsx` | Página principal: listagem de usuários com role, status, ações (convidar, editar, desativar) |
+| `src/hooks/use-pdv-users.ts` | Hook para CRUD de usuários e roles via Supabase |
+| `src/components/pdv/users/UserDialog.tsx` | Dialog para convidar/editar usuário: nome, email, telefone, seleção de role, foto |
+| `src/components/pdv/users/UserCard.tsx` | Card de usuário na listagem: avatar, nome, role badge, status, ações |
+| `src/components/pdv/users/RolePermissionsView.tsx` | Componente que mostra as permissões de cada role (usado no dialog para visualizar o que o role permite) |
 
-| Arquivo | Ação |
-|---------|------|
-| `src/assets/integrations/nfe.png` | Criar (copiar upload) |
-| `src/assets/integrations/getnet.png` | Criar (copiar upload) |
-| `src/pages/pdv/IntegrationsHub.tsx` | Atualizar NF-e com logo, adicionar card Getnet |
-| `src/components/pdv/integrations/GetnetIntegrationCard.tsx` | Criar componente |
-| `src/pages/pdv/IntegrationDetail.tsx` | Adicionar Getnet, atualizar NF-e logo |
+### Arquivos a Modificar
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/pdv/PDVHeaderNav.tsx` | Adicionar item "Usuários" na seção Administrador com ícone `Users` |
+| `src/pages/PDV.tsx` | Adicionar rota `usuarios` apontando para `Users.tsx` |
+
+### Migração Supabase
+
+Criar tabela `user_roles` seguindo o padrão de segurança (separada de profiles):
+
+```sql
+CREATE TYPE public.app_role AS ENUM (
+  'proprietario', 'gerente', 'caixa', 'garcom', 
+  'cozinheiro', 'estoquista', 'financeiro', 'atendente_delivery'
+);
+
+CREATE TABLE public.user_roles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  role app_role NOT NULL,
+  UNIQUE (user_id, role)
+);
+
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE FUNCTION public.has_role(_user_id UUID, _role app_role)
+RETURNS BOOLEAN LANGUAGE SQL STABLE SECURITY DEFINER
+SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_roles
+    WHERE user_id = _user_id AND role = _role
+  )
+$$;
+```
+
+Também criar tabela `establishment_users` para vincular usuários ao estabelecimento:
+
+```sql
+CREATE TABLE public.establishment_users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  establishment_owner_id UUID REFERENCES auth.users(id) NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  role app_role NOT NULL DEFAULT 'garcom',
+  is_active BOOLEAN DEFAULT true,
+  invited_at TIMESTAMPTZ DEFAULT now(),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (establishment_owner_id, user_id)
+);
+```
+
+### UI da Página de Usuários
+
+- Header com título "Usuários" e botão "Convidar Usuário"
+- Filtros: por role, por status (ativo/inativo)
+- Grid/lista de cards com: avatar, nome, email, badge do role, status, botões editar/desativar
+- Dialog de convite: campos de email, seleção de role com descrição das permissões
+- Visualização de permissões: ao selecionar um role, mostra lista de módulos/ações permitidos
 
