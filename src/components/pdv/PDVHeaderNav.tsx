@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -39,6 +39,7 @@ import {
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useUserRole } from "@/hooks/use-user-role";
 
 interface Announcement {
   id: string;
