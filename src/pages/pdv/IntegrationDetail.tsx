@@ -193,7 +193,7 @@ const integrations: Record<string, IntegrationData> = {
   },
   whatsapp: {
     title: "WhatsApp Business",
-    fallbackIcon: MessageCircle,
+    customIcon: <WhatsAppIcon className="h-6 w-6 text-green-500" />,
     category: "Comunicação",
     description:
       "O WhatsApp Business permite que seu estabelecimento se comunique diretamente com clientes, envie notificações de pedidos, confirme reservas e ofereça atendimento personalizado. Com esta integração, conecte sua conta WhatsApp ao PDV e centralize toda a comunicação em um só lugar.",
