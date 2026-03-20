@@ -118,7 +118,7 @@ const integrations: Record<string, IntegrationData> = {
   },
   "nf-automatica": {
     title: "NF Automática",
-    fallbackIcon: FileText,
+    logo: nfeLogo,
     category: "Fiscal",
     description:
       "A emissão automática de NF-e (Nota Fiscal Eletrônica) e NFC-e (Nota Fiscal de Consumidor Eletrônica) garante conformidade fiscal sem esforço manual. Com esta integração, cada venda finalizada no PDV gera automaticamente o documento fiscal, envia para a SEFAZ e disponibiliza o DANFE para o cliente. Suporte a todos os regimes tributários: Simples Nacional, Lucro Presumido e Lucro Real.",
