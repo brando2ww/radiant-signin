@@ -1,60 +1,39 @@
 
 
-## Novo Menu "Integrações" com Páginas Dedicadas
+## Mural de Integrações com Logos e Páginas Dedicadas
 
-### O Que Será Criado
+### Estrutura
 
-Um novo menu "Integrações" na navegação do PDV com uma página dedicada contendo cards de configuração para cada integração: iFood, PagSeguro, Stone, Geração de NF Automática e Goomer. Cada integração terá status de conexão, configurações específicas e instruções de como conectar.
+Transformar `/pdv/integracoes` em uma página mural (vitrine) com cards visuais mostrando o logo de cada integração, descrição curta e botão "Acessar". Cada integração terá sua própria rota dedicada (`/pdv/integracoes/ifood`, `/pdv/integracoes/stone`, etc.) com o card de configuração completo.
 
-### Arquivos a Criar
-
-| Arquivo | Descrição |
-|---------|-----------|
-| `src/pages/pdv/Integrations.tsx` | Página principal de integrações com tabs para cada serviço |
-| `src/components/pdv/integrations/IFoodIntegrationCard.tsx` | Card iFood (migrado do IntegrationsTab existente) com todas as configs |
-| `src/components/pdv/integrations/PagSeguroIntegrationCard.tsx` | Card PagSeguro: conexão via token, configuração de maquininha, taxas |
-| `src/components/pdv/integrations/StoneIntegrationCard.tsx` | Card Stone: stone code, configuração de maquininha, split de pagamento |
-| `src/components/pdv/integrations/NFAutomaticaIntegrationCard.tsx` | Card NF Automática: certificado digital, série NF, regime tributário, emissão automática |
-| `src/components/pdv/integrations/GoomerIntegrationCard.tsx` | Card Goomer: token API, sincronização de cardápio, QR code de mesa |
-
-### Arquivos a Modificar
+### Arquivos
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/pdv/PDVHeaderNav.tsx` | Adicionar seção "Integrações" com ícone `Plug` e item único apontando para `/pdv/integracoes` |
-| `src/pages/PDV.tsx` | Importar `Integrations` e adicionar rota `integracoes` |
+| Copiar 4 logos para `src/assets/integrations/` | iFood, PagSeguro, Stone, Goomer |
+| `src/pages/pdv/IntegrationsHub.tsx` | **Novo** - Mural com grid de cards visuais (logo, nome, descrição, badge status, botão "Acessar") |
+| `src/pages/pdv/IntegrationDetail.tsx` | **Novo** - Página wrapper que recebe o slug da URL e renderiza o card de configuração correspondente, com botão voltar |
+| `src/pages/pdv/Integrations.tsx` | Transformar em layout de rotas aninhadas (`integracoes/` → Hub, `integracoes/:slug` → Detail) |
+| `src/pages/PDV.tsx` | Alterar rota de `integracoes` para `integracoes/*` para suportar sub-rotas |
 
-### Estrutura de Cada Card de Integração
+### Mural (Hub)
 
-Cada card seguirá o mesmo padrão:
-1. **Header**: Nome, logo/ícone, badge de status (Conectado/Desconectado/Em breve)
-2. **Conexão**: Campos para credenciais (token, client_id, etc.) com botão conectar/desconectar
-3. **Configurações**: Switches e inputs específicos de cada integração (quando conectado)
-4. **Info**: Lista de funcionalidades e link para documentação
+Grid responsivo com 5 cards, cada um contendo:
+- Logo da integração (imagem importada ou ícone para NF Automática que não tem logo)
+- Nome e descrição curta (ex: "Receba pedidos do iFood no seu PDV")
+- Badge de categoria (Delivery, Maquininha, Fiscal, Cardápio Digital)
+- Botão "Acessar" que navega para `/pdv/integracoes/ifood`
 
-### Detalhes por Integração
+### Página Dedicada (Detail)
 
-**iFood** - Migrar lógica existente do `IntegrationsTab` + hook `use-ifood-integration`
-- Merchant ID, auto-accept, sync de cardápio, status do token
+- Header com botão voltar e nome da integração
+- Renderiza o card de configuração existente (IFoodIntegrationCard, etc.) em tela cheia
 
-**PagSeguro** - Token de autenticação, configurações de maquininha
-- Taxas por bandeira, parcelamento, antecipação, tipo de conexão (Bluetooth/USB)
+### Logos
 
-**Stone** - Stone Code, configuração de terminal
-- Split de pagamento, taxas, tipo de captura, status do terminal
-
-**NF Automática** - Certificado A1, dados fiscais
-- Série da NF, regime tributário (Simples/Lucro Presumido/Real), emissão automática ao fechar venda, CFOP padrão
-
-**Goomer** - Token de API, sincronização
-- Sync de cardápio, QR code por mesa, pedidos via tablet
-
-### Navegação
-
-Nova seção no header nav entre "Financeiro" e as seções existentes:
-```text
-Frente de Caixa | Delivery | Administrador | Financeiro | Integrações
-```
-
-Rota: `/pdv/integracoes`
+- iFood: `user-uploads://IFood_logo.svg.png` → `src/assets/integrations/ifood.png`
+- PagSeguro: `user-uploads://Logonovo_pagseguro-cinza.png` → `src/assets/integrations/pagseguro.png`
+- Stone: `user-uploads://Stone_pagamentos.png` → `src/assets/integrations/stone.png`
+- Goomer: `user-uploads://logo.png` → `src/assets/integrations/goomer.png`
+- NF Automática: usar ícone `FileText` do Lucide (sem logo enviado)
 
