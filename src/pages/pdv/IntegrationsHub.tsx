@@ -123,6 +123,8 @@ export default function IntegrationsHub() {
                       alt={item.name}
                       className="h-full w-full object-contain"
                     />
+                  ) : item.customIcon ? (
+                    item.customIcon
                   ) : item.fallbackIcon ? (
                     <item.fallbackIcon className="h-7 w-7 text-muted-foreground" />
                   ) : null}
