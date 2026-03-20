@@ -4,90 +4,83 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export type UserModule = 'financeiro' | 'crm' | 'delivery' | 'pdv' | 'avaliacoes';
 
-interface ModuleAccess {
+interface TenantModuleRow {
   id: string;
-  user_id: string;
-  module: UserModule;
+  tenant_id: string;
+  module: string;
   is_active: boolean;
-  acquired_at: string;
   expires_at: string | null;
-  trial_ends_at: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 export function useUserModules() {
   const { user } = useAuth();
 
-  const { data: modules = [], isLoading } = useQuery({
-    queryKey: ['user-modules', user?.id],
+  // First get the tenant_id for this user
+  const { data: tenantId } = useQuery({
+    queryKey: ['user-tenant-id', user?.id],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user) return null;
 
-      const { data, error } = await supabase
-        .from('user_modules')
-        .select('*')
+      // Check if user is a tenant owner
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('id')
+        .eq('owner_user_id', user.id)
+        .maybeSingle();
+
+      if (tenant) return tenant.id;
+
+      // Check establishment_users for tenant_id
+      const { data: eu } = await supabase
+        .from('establishment_users')
+        .select('tenant_id')
         .eq('user_id', user.id)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .not('tenant_id', 'is', null)
+        .maybeSingle();
 
-      if (error) throw error;
-      return data as ModuleAccess[];
+      return eu?.tenant_id || null;
     },
     enabled: !!user,
   });
 
+  const { data: modules = [], isLoading } = useQuery({
+    queryKey: ['tenant-modules', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return [];
+
+      const { data, error } = await supabase
+        .from('tenant_modules')
+        .select('*')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true);
+
+      if (error) throw error;
+      return data as TenantModuleRow[];
+    },
+    enabled: !!tenantId,
+  });
+
   const hasModule = (module: UserModule): boolean => {
     if (!user) return false;
+    // If no tenant_id found (legacy/no tenant setup), allow all
+    if (!tenantId) return true;
 
-    const moduleAccess = modules.find((m) => m.module === module);
-    if (!moduleAccess) return false;
+    const mod = modules.find((m) => m.module === module);
+    if (!mod) return false;
 
-    // Verificar se não expirou
-    if (moduleAccess.expires_at) {
-      const expirationDate = new Date(moduleAccess.expires_at);
-      if (expirationDate < new Date()) return false;
+    if (mod.expires_at) {
+      if (new Date(mod.expires_at) < new Date()) return false;
     }
 
     return true;
-  };
-
-  const isModuleExpired = (module: UserModule): boolean => {
-    const moduleAccess = modules.find((m) => m.module === module);
-    if (!moduleAccess || !moduleAccess.expires_at) return false;
-
-    const expirationDate = new Date(moduleAccess.expires_at);
-    return expirationDate < new Date();
-  };
-
-  const isModuleTrial = (module: UserModule): boolean => {
-    const moduleAccess = modules.find((m) => m.module === module);
-    if (!moduleAccess || !moduleAccess.trial_ends_at) return false;
-
-    const trialEndDate = new Date(moduleAccess.trial_ends_at);
-    return trialEndDate > new Date();
-  };
-
-  const getModuleExpirationDate = (module: UserModule): Date | null => {
-    const moduleAccess = modules.find((m) => m.module === module);
-    if (!moduleAccess || !moduleAccess.expires_at) return null;
-
-    return new Date(moduleAccess.expires_at);
-  };
-
-  const getTrialEndDate = (module: UserModule): Date | null => {
-    const moduleAccess = modules.find((m) => m.module === module);
-    if (!moduleAccess || !moduleAccess.trial_ends_at) return null;
-
-    return new Date(moduleAccess.trial_ends_at);
   };
 
   return {
     modules,
     isLoading,
     hasModule,
-    isModuleExpired,
-    isModuleTrial,
-    getModuleExpirationDate,
-    getTrialEndDate,
+    tenantId,
   };
 }
