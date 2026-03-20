@@ -1,28 +1,23 @@
 
 
-## Bottom Tab Bar: Centralizar FAB + Adicionar aba "Itens"
+## Adicionar Botão de Logout no Header do Garçom
 
 ### Mudança
-Atualmente são 4 colunas (Mesas, Comandas, Novo, Cozinha). O "Novo" não fica exatamente no centro. Para centralizar, passar para **5 colunas**:
+Adicionar um botão de logout (ícone `LogOut`) ao lado do botão de alertas no `GarcomHeader`. Ao clicar, abre um `AlertDialog` pedindo confirmação "Deseja realmente sair do app?" com botões "Cancelar" e "Sair".
 
-```text
-  Mesas   Comandas   (+)   Itens   Cozinha
-```
-
-### Nova aba "Itens"
-Tela `/garcom/itens` que mostra o catálogo de produtos (usando `usePDVProducts`) com:
-- Navegação por categorias (horizontal)
-- Cards com imagem, nome, preço
-- Ao tocar num item, abre detalhe com botão "Adicionar em Comanda/Mesa"
-- O botão abre o mesmo `NewOrderSheet` para escolher destino
-
-### Arquivos
+### Arquivo
 
 | Arquivo | Ação |
 |---------|------|
-| `src/components/garcom/BottomTabBar.tsx` | Mudar para `grid-cols-5`, adicionar tab "Itens" com ícone `UtensilsCrossed` após o FAB |
-| `src/pages/garcom/GarcomItens.tsx` | **Criar** — Catálogo de produtos mobile com categorias, busca, cards com imagem/preço |
-| `src/pages/garcom/GarcomItemDetalhe.tsx` | **Criar** — Detalhe do produto com imagem, descrição, preços, botão "Adicionar" que abre sheet de destino |
-| `src/pages/Garcom.tsx` | Adicionar rotas `itens` e `itens/:id` |
-| `src/App.tsx` | Sem mudança (rotas já são wildcard `/garcom/*`) |
+| `src/components/garcom/GarcomHeader.tsx` | Adicionar botão `LogOut` + `AlertDialog` de confirmação. Usar `signOut` do `useAuth` e `navigate('/')` após logout |
+
+### Layout do header
+```text
+[Olá, Garçom / Título]          [🔔 Alertas] [🚪 Sair]
+```
+
+### Modal de confirmação
+- Titulo: "Sair do aplicativo"
+- Descrição: "Deseja realmente sair do app?"
+- Ações: "Cancelar" (fecha) | "Sair" (executa signOut + navega para `/`)
 
