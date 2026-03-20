@@ -14,6 +14,7 @@ import {
 } from "@/hooks/use-evaluation-campaigns";
 import { CampaignQuestionManager } from "./CampaignQuestionManager";
 import { CampaignResponses } from "./CampaignResponses";
+import { CampaignReports } from "./CampaignReports";
 
 interface CampaignDetailProps {
   campaignId: string;
