@@ -35,6 +35,7 @@ import ComandasPage from "./pdv/Comandas";
 import Quotations from "./pdv/purchases/Quotations";
 import PurchaseOrders from "./pdv/purchases/PurchaseOrders";
 import ShoppingList from "./pdv/purchases/ShoppingList";
+import Integrations from "./pdv/Integrations";
 
 export default function PDV() {
   return (
