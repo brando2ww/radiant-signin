@@ -26,6 +26,7 @@ export default function PublicEvaluation() {
   const [phone, setPhone] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [answers, setAnswers] = useState<Record<string, { score: number; comment: string }>>({});
+  const [npsScore, setNpsScore] = useState<number | null>(null);
 
   if (loadingCampaign || loadingQuestions) {
     return (
