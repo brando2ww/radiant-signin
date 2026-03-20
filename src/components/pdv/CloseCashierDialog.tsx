@@ -234,6 +234,7 @@ ${finalNotes ? `
 }
 
 
+export function CloseCashierDialog({
   open,
   onOpenChange,
   onClose,
