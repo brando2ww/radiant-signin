@@ -274,7 +274,7 @@ ${finalNotes ? `
   const handleClose = () => {
     const balance = parseFloat(closingBalance) || 0;
     const finalNotes = notes.trim() || undefined;
-    printCashierReport(balance, finalNotes || "", riskLevel);
+    internalPrint(balance, finalNotes || "", riskLevel);
     onClose(balance, finalNotes, expectedBalance, riskLevel);
     setClosingBalance("");
     setNotes("");
