@@ -2,12 +2,14 @@ import { useNavigate } from "react-router-dom";
 import { ResponsivePageHeader } from "@/components/ui/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileText, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import ifoodLogo from "@/assets/integrations/ifood.png";
 import pagseguroLogo from "@/assets/integrations/pagseguro.png";
 import stoneLogo from "@/assets/integrations/stone.png";
 import goomerLogo from "@/assets/integrations/goomer.png";
+import nfeLogo from "@/assets/integrations/nfe.png";
+import getnetLogo from "@/assets/integrations/getnet.png";
 
 const integrations = [
   {
@@ -35,11 +37,18 @@ const integrations = [
     categoryColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
   },
   {
+    slug: "getnet",
+    name: "Getnet",
+    description: "Conecte sua maquininha Getnet (Santander) com POS integrado via Cloud, USB ou HTTP.",
+    logo: getnetLogo,
+    category: "Maquininha",
+    categoryColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  },
+  {
     slug: "nf-automatica",
     name: "NF Automática",
     description: "Emita notas fiscais automaticamente ao finalizar vendas, com certificado digital A1.",
-    logo: null,
-    icon: FileText,
+    logo: nfeLogo,
     category: "Fiscal",
     categoryColor: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   },
@@ -64,9 +73,7 @@ export default function IntegrationsHub() {
       />
 
       <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {integrations.map((item) => {
-          const Icon = item.icon;
-          return (
+        {integrations.map((item) => (
             <div
               key={item.slug}
               className="group relative flex flex-col rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md"
@@ -79,19 +86,13 @@ export default function IntegrationsHub() {
               </Badge>
 
               <div className="flex items-center gap-3 mb-4">
-                {item.logo ? (
-                  <div className="h-12 w-12 shrink-0 rounded-lg border bg-white p-1.5 flex items-center justify-center">
-                    <img
-                      src={item.logo}
-                      alt={item.name}
-                      className="h-full w-full object-contain"
-                    />
-                  </div>
-                ) : Icon ? (
-                  <div className="h-12 w-12 shrink-0 rounded-lg border bg-muted flex items-center justify-center">
-                    <Icon className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                ) : null}
+                <div className="h-12 w-12 shrink-0 rounded-lg border bg-white p-1.5 flex items-center justify-center">
+                  <img
+                    src={item.logo}
+                    alt={item.name}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
                 <h3 className="text-lg font-semibold leading-tight">{item.name}</h3>
               </div>
 
@@ -108,8 +109,7 @@ export default function IntegrationsHub() {
                 <ArrowRight className="h-4 w-4" />
               </Button>
             </div>
-          );
-        })}
+        ))}
       </div>
     </div>
   );

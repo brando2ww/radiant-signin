@@ -15,11 +15,14 @@ import { PagSeguroIntegrationCard } from "@/components/pdv/integrations/PagSegur
 import { StoneIntegrationCard } from "@/components/pdv/integrations/StoneIntegrationCard";
 import { NFAutomaticaIntegrationCard } from "@/components/pdv/integrations/NFAutomaticaIntegrationCard";
 import { GoomerIntegrationCard } from "@/components/pdv/integrations/GoomerIntegrationCard";
+import { GetnetIntegrationCard } from "@/components/pdv/integrations/GetnetIntegrationCard";
 
 import ifoodLogo from "@/assets/integrations/ifood.png";
 import pagseguroLogo from "@/assets/integrations/pagseguro.png";
 import stoneLogo from "@/assets/integrations/stone.png";
 import goomerLogo from "@/assets/integrations/goomer.png";
+import nfeLogo from "@/assets/integrations/nfe.png";
+import getnetLogo from "@/assets/integrations/getnet.png";
 
 interface Feature {
   icon: LucideIcon;
@@ -115,7 +118,7 @@ const integrations: Record<string, IntegrationData> = {
   },
   "nf-automatica": {
     title: "NF Automática",
-    fallbackIcon: FileText,
+    logo: nfeLogo,
     category: "Fiscal",
     description:
       "A emissão automática de NF-e (Nota Fiscal Eletrônica) e NFC-e (Nota Fiscal de Consumidor Eletrônica) garante conformidade fiscal sem esforço manual. Com esta integração, cada venda finalizada no PDV gera automaticamente o documento fiscal, envia para a SEFAZ e disponibiliza o DANFE para o cliente. Suporte a todos os regimes tributários: Simples Nacional, Lucro Presumido e Lucro Real.",
@@ -160,6 +163,30 @@ const integrations: Record<string, IntegrationData> = {
     component: GoomerIntegrationCard,
     docsUrl: "https://www.goomer.com.br",
     docsLabel: "Site Goomer",
+  },
+  getnet: {
+    title: "Getnet",
+    logo: getnetLogo,
+    category: "Maquininha",
+    description:
+      "A Getnet, do grupo Santander, é uma das maiores adquirentes do Brasil com soluções de POS Integrado que se comunicam diretamente com sistemas de automação comercial. Com esta integração, sua maquininha Getnet recebe o valor do pedido automaticamente via Cloud-to-Cloud, USB ou HTTP. Suporta débito, crédito, parcelamento, Pix, pré-autorização e cancelamento — tudo controlado pelo PDV.",
+    features: [
+      { icon: Smartphone, title: "POS Integrado", description: "Comunicação direta com o terminal via Cloud, USB/Serial ou HTTP (Wi-Fi/Ethernet)." },
+      { icon: CreditCard, title: "Débito e crédito", description: "Aceite todas as bandeiras com taxas competitivas e parcelamento de até 12x." },
+      { icon: QrCode, title: "Pix no terminal", description: "Receba pagamentos via Pix diretamente na maquininha Getnet." },
+      { icon: Shield, title: "Pré-autorização", description: "Realize pré-autorização e capture ou cancele o valor posteriormente." },
+      { icon: Split, title: "Split de pagamento", description: "Divida o valor da venda entre diferentes contas bancárias automaticamente." },
+      { icon: BarChart3, title: "Dashboard financeiro", description: "Acompanhe vendas, taxas e recebíveis pelo portal Getnet integrado." },
+    ],
+    steps: [
+      "Acesse o portal developers.getnet.com.br e crie uma conta ou faça login.",
+      "Em Minha Conta → Credenciais, copie o Seller ID, Client ID e Client Secret.",
+      "Cole as credenciais nos campos de conexão abaixo e selecione o ambiente (Sandbox ou Produção).",
+      "Escolha o tipo de conexão do POS (Cloud, USB ou HTTP) e clique em 'Conectar'.",
+    ],
+    component: GetnetIntegrationCard,
+    docsUrl: "https://developers.getnet.com.br",
+    docsLabel: "Portal do Desenvolvedor Getnet",
   },
 };
 
