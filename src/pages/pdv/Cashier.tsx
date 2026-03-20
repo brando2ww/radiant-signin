@@ -262,6 +262,7 @@ export default function PDVCashier() {
               onAddWithdrawal={() => handleOpenMovementDialog("sangria")}
               onCharge={() => setChargeDialog(true)}
               onShowHelp={() => setShortcutsDialog(true)}
+              onReprintLast={lastClosedSession ? handleReprintLastCashier : undefined}
             />
           </CardContent>
         </Card>
