@@ -2,24 +2,26 @@ import { useNavigate } from "react-router-dom";
 import { ResponsivePageHeader } from "@/components/ui/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, MessageCircle, Bike, Store } from "lucide-react";
 
-import ifoodLogo from "@/assets/integrations/ifood.png";
 import pagseguroLogo from "@/assets/integrations/pagseguro.png";
 import stoneLogo from "@/assets/integrations/stone.png";
 import goomerLogo from "@/assets/integrations/goomer.png";
 import nfeLogo from "@/assets/integrations/nfe.png";
 import getnetLogo from "@/assets/integrations/getnet.png";
 
-const integrations = [
-  {
-    slug: "ifood",
-    name: "iFood",
-    description: "Receba pedidos do iFood diretamente no seu PDV com sincronização automática de cardápio e status.",
-    logo: ifoodLogo,
-    category: "Delivery",
-    categoryColor: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-  },
+interface IntegrationItem {
+  slug: string;
+  name: string;
+  description: string;
+  logo?: string;
+  fallbackIcon?: React.ComponentType<{ className?: string }>;
+  category: string;
+  categoryColor: string;
+  comingSoon?: boolean;
+}
+
+const integrations: IntegrationItem[] = [
   {
     slug: "pagseguro",
     name: "PagSeguro",
@@ -59,6 +61,31 @@ const integrations = [
     logo: goomerLogo,
     category: "Cardápio Digital",
     categoryColor: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+  },
+  {
+    slug: "whatsapp",
+    name: "WhatsApp Business",
+    description: "Conecte seu WhatsApp Business para enviar notificações, receber pedidos e se comunicar com clientes.",
+    fallbackIcon: MessageCircle,
+    category: "Comunicação",
+    categoryColor: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  },
+  {
+    slug: "uber-eats",
+    name: "Uber Eats",
+    description: "Receba pedidos do Uber Eats no seu sistema com sincronização automática.",
+    fallbackIcon: Bike,
+    category: "Delivery",
+    categoryColor: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    comingSoon: true,
+  },
+  {
+    slug: "delivery-proprio",
+    name: "Delivery Próprio",
+    description: "Sistema de delivery integrado da Velara com cardápio online personalizável e gestão completa de pedidos.",
+    fallbackIcon: Store,
+    category: "Delivery",
+    categoryColor: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   },
 ];
 
