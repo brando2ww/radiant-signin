@@ -11,14 +11,16 @@ export interface CustomerEvaluation {
   nps_score: number | null;
   evaluation_date: string;
   created_at: string;
+  campaign_id?: string | null;
 }
 
 export interface EvaluationAnswer {
   id: string;
-  evaluation_id: string;
+  evaluation_id?: string;
   question_id: string;
   score: number;
-  created_at: string;
+  created_at?: string;
+  comment?: string | null;
   evaluation_questions?: {
     question_text: string;
   };

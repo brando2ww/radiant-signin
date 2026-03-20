@@ -37,6 +37,7 @@ import {
   Megaphone,
   Plug,
   Users,
+  Star,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -107,6 +108,7 @@ const sectionItems: Section[] = [
       { title: "Relatórios", url: "/pdv/relatorios", icon: BarChart3 },
       { title: "Configurações", url: "/pdv/configuracoes", icon: Settings },
       { title: "Usuários", url: "/pdv/usuarios", icon: Users },
+      { title: "Avaliações", url: "/pdv/avaliacoes", icon: Star },
     ],
   },
   {

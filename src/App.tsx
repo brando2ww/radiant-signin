@@ -13,6 +13,7 @@ import PDV from "./pages/PDV";
 import Garcom from "./pages/Garcom";
 import SuperAdmin from "./pages/SuperAdmin";
 import PublicMenu from "./pages/PublicMenu";
+import PublicEvaluation from "./pages/PublicEvaluation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
                 />
                 {/* Public routes - no authentication required */}
                 <Route path="/cardapio/:userId" element={<PublicMenu />} />
+                <Route path="/avaliacao/:campaignId" element={<PublicEvaluation />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
