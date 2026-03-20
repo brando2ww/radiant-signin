@@ -2,13 +2,15 @@ import { useNavigate } from "react-router-dom";
 import { ResponsivePageHeader } from "@/components/ui/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, MessageCircle, Bike, Store } from "lucide-react";
+import { ArrowRight, Bike } from "lucide-react";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 
 import pagseguroLogo from "@/assets/integrations/pagseguro.png";
 import stoneLogo from "@/assets/integrations/stone.png";
 import goomerLogo from "@/assets/integrations/goomer.png";
 import nfeLogo from "@/assets/integrations/nfe.png";
 import getnetLogo from "@/assets/integrations/getnet.png";
+import velaraLogo from "@/assets/logo_velara_preto.png";
 
 interface IntegrationItem {
   slug: string;
@@ -16,6 +18,7 @@ interface IntegrationItem {
   description: string;
   logo?: string;
   fallbackIcon?: React.ComponentType<{ className?: string }>;
+  customIcon?: React.ReactNode;
   category: string;
   categoryColor: string;
   comingSoon?: boolean;
@@ -66,7 +69,7 @@ const integrations: IntegrationItem[] = [
     slug: "whatsapp",
     name: "WhatsApp Business",
     description: "Conecte seu WhatsApp Business para enviar notificações, receber pedidos e se comunicar com clientes.",
-    fallbackIcon: MessageCircle,
+    customIcon: <WhatsAppIcon className="h-7 w-7 text-green-500" />,
     category: "Comunicação",
     categoryColor: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   },
@@ -83,7 +86,7 @@ const integrations: IntegrationItem[] = [
     slug: "delivery-proprio",
     name: "Delivery Próprio",
     description: "Sistema de delivery integrado da Velara com cardápio online personalizável e gestão completa de pedidos.",
-    fallbackIcon: Store,
+    logo: velaraLogo,
     category: "Delivery",
     categoryColor: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   },
@@ -120,6 +123,8 @@ export default function IntegrationsHub() {
                       alt={item.name}
                       className="h-full w-full object-contain"
                     />
+                  ) : item.customIcon ? (
+                    item.customIcon
                   ) : item.fallbackIcon ? (
                     <item.fallbackIcon className="h-7 w-7 text-muted-foreground" />
                   ) : null}

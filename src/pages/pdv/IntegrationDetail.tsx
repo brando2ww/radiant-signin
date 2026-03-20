@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,6 +36,7 @@ interface IntegrationData {
   title: string;
   logo?: string;
   fallbackIcon?: LucideIcon;
+  customIcon?: React.ReactNode;
   category: string;
   description: string;
   features: Feature[];
@@ -191,7 +193,7 @@ const integrations: Record<string, IntegrationData> = {
   },
   whatsapp: {
     title: "WhatsApp Business",
-    fallbackIcon: MessageCircle,
+    customIcon: <WhatsAppIcon className="h-6 w-6 text-green-500" />,
     category: "Comunicação",
     description:
       "O WhatsApp Business permite que seu estabelecimento se comunique diretamente com clientes, envie notificações de pedidos, confirme reservas e ofereça atendimento personalizado. Com esta integração, conecte sua conta WhatsApp ao PDV e centralize toda a comunicação em um só lugar.",
@@ -252,6 +254,10 @@ export default function IntegrationDetail() {
         <div className="flex items-center gap-4">
           {data.logo ? (
             <img src={data.logo} alt={data.title} className="h-12 w-12 object-contain rounded-lg" />
+          ) : data.customIcon ? (
+            <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
+              {data.customIcon}
+            </div>
           ) : FallbackIcon ? (
             <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
               <FallbackIcon className="h-6 w-6 text-muted-foreground" />
