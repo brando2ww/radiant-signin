@@ -21,9 +21,6 @@ export interface EvaluationAnswer {
   score: number;
   created_at?: string;
   comment?: string | null;
-  evaluation_questions?: {
-    question_text: string;
-  };
 }
 
 export interface EvaluationWithAnswers extends CustomerEvaluation {
@@ -45,9 +42,7 @@ export const useCustomerEvaluations = (filters?: { startDate?: string; endDate?:
             id,
             question_id,
             score,
-            evaluation_questions (
-              question_text
-            )
+            comment
           )
         `)
         .eq("user_id", user.id)
@@ -260,7 +255,7 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     evaluation.evaluation_answers.forEach(answer => {
       if (!questionStats.has(answer.question_id)) {
         questionStats.set(answer.question_id, {
-          text: answer.evaluation_questions?.question_text || "Pergunta",
+          text: "Pergunta",
           scores: [],
         });
       }
@@ -339,9 +334,7 @@ export const useEvaluationById = (id: string) => {
             id,
             question_id,
             score,
-            evaluation_questions (
-              question_text
-            )
+            comment
           )
         `)
         .eq("id", id)

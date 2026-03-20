@@ -1236,13 +1236,6 @@ export type Database = {
             referencedRelation: "customer_evaluations"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "evaluation_answers_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "evaluation_questions"
-            referencedColumns: ["id"]
-          },
         ]
       }
       evaluation_campaign_questions: {
