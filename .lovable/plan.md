@@ -1,27 +1,36 @@
 
 
-## Mover botão "Novo" para o centro da tab bar
+## Botão "Novo" — Escolher Mesa ou Comanda Avulsa
 
-### Mudança
-Reordenar os itens da bottom tab bar para que o FAB "Novo" fique no meio (posição 3 de 5 colunas), entre Comandas e Cozinha:
+### Problema
+Atualmente o botão "Novo" cria uma comanda avulsa diretamente, sem perguntar onde vincular o pedido.
 
-```text
-Mesas  Comandas  [+Novo]  Cozinha  (vazio ou futuro)
-```
+### Solução
+Ao clicar em "Novo", abrir um **bottom sheet** com duas opções:
+1. **Mesa** — Navega para a tela de mesas (`/garcom`) para o garçom selecionar a mesa
+2. **Comanda Avulsa** — Cria uma comanda sem mesa (balcão, delivery, etc.)
 
-Na verdade, com 3 tabs + 1 FAB, o layout ideal é centralizar o FAB entre as tabs:
+### Arquivos
 
-```text
-  Mesas   Comandas   (+)   Cozinha
-```
-
-### Implementação
-Alterar `BottomTabBar.tsx`:
-- Renderizar: tab Mesas → tab Comandas → botão Novo (FAB central) → tab Cozinha
-- Manter `grid-cols-4` mas colocar o FAB na 3ª posição e Cozinha na 4ª
-
-### Arquivo
 | Arquivo | Ação |
 |---------|------|
-| `src/components/garcom/BottomTabBar.tsx` | Reordenar: Mesas, Comandas, FAB Novo, Cozinha |
+| `src/components/garcom/NewOrderSheet.tsx` | **Criar** — Sheet com duas opções: "Abrir em Mesa" e "Comanda Avulsa" |
+| `src/pages/Garcom.tsx` | Substituir `handleNewComanda` direto por state que abre o sheet; passar callbacks para as duas opções |
+| `src/components/garcom/BottomTabBar.tsx` | Sem mudança (já chama `onNewComanda`) |
+
+### UX do Sheet
+```text
+┌──────────────────────────┐
+│   Novo Pedido            │
+│                          │
+│  ┌────────┐ ┌──────────┐ │
+│  │ 🪑     │ │ 📋       │ │
+│  │ Mesa   │ │ Comanda  │ │
+│  │        │ │ Avulsa   │ │
+│  └────────┘ └──────────┘ │
+└──────────────────────────┘
+```
+
+Ao escolher "Mesa" → navega para `/garcom` (grid de mesas).
+Ao escolher "Comanda Avulsa" → cria comanda sem `order_id` e navega para detalhe.
 
