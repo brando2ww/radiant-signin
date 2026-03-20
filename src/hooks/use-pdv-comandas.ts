@@ -39,23 +39,24 @@ export interface ComandaItem {
 
 export function usePDVComandas() {
   const { user } = useAuth();
+  const { visibleUserId } = useEstablishmentId();
   const queryClient = useQueryClient();
 
   // Fetch all comandas
   const { data: comandas = [], isLoading: isLoadingComandas } = useQuery({
-    queryKey: ["pdv-comandas", user?.id],
+    queryKey: ["pdv-comandas", visibleUserId],
     queryFn: async () => {
-      if (!user) return [];
+      if (!visibleUserId) return [];
       const { data, error } = await supabase
         .from("pdv_comandas")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", visibleUserId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as Comanda[];
     },
-    enabled: !!user,
+    enabled: !!visibleUserId,
   });
 
   // Fetch all comanda items

@@ -56,21 +56,21 @@ export function usePDVTables() {
 
   // Query para mesas deletadas (lixeira)
   const { data: deletedTables, isLoading: isLoadingDeleted } = useQuery({
-    queryKey: ["pdv-tables-deleted", user?.id],
+    queryKey: ["pdv-tables-deleted", visibleUserId],
     queryFn: async () => {
-      if (!user) throw new Error("Usuário não autenticado");
+      if (!visibleUserId) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase
         .from("pdv_tables")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", visibleUserId)
         .eq("is_active", false)
         .order("updated_at", { ascending: false });
 
       if (error) throw error;
       return data as PDVTable[];
     },
-    enabled: !!user,
+    enabled: !!visibleUserId,
   });
 
   const createTable = useMutation({
