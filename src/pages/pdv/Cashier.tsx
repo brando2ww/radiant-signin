@@ -277,6 +277,7 @@ export default function PDVCashier() {
         onClose={handleCloseCashier}
         isClosing={isClosingCashier}
         session={activeSession}
+        movements={movements}
       />
 
       <CashMovementDialog
