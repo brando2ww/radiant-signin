@@ -16,10 +16,11 @@ export interface CustomerEvaluation {
 
 export interface EvaluationAnswer {
   id: string;
-  evaluation_id: string;
+  evaluation_id?: string;
   question_id: string;
   score: number;
-  created_at: string;
+  created_at?: string;
+  comment?: string | null;
   evaluation_questions?: {
     question_text: string;
   };
