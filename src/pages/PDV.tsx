@@ -102,7 +102,7 @@ export default function PDV() {
               <Route path="notas-fiscais" element={<Invoices />} />
               <Route path="relatorios" element={<PDVReports />} />
               <Route path="configuracoes" element={<PDVSettings />} />
-              <Route path="usuarios" element={<Users />} />
+              <Route path="usuarios/*" element={<Users />} />
               
               {/* Compras */}
               <Route path="compras/cotacoes" element={<Quotations />} />
