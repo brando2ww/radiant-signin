@@ -254,6 +254,10 @@ export default function IntegrationDetail() {
         <div className="flex items-center gap-4">
           {data.logo ? (
             <img src={data.logo} alt={data.title} className="h-12 w-12 object-contain rounded-lg" />
+          ) : data.customIcon ? (
+            <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
+              {data.customIcon}
+            </div>
           ) : FallbackIcon ? (
             <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center">
               <FallbackIcon className="h-6 w-6 text-muted-foreground" />
