@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ import {
   Plus,
   X,
   Sparkles,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
@@ -90,6 +92,8 @@ export function PaymentDialog({
   // Discount & fees
   const [discountType, setDiscountType] = useState<DiscountType>("percent");
   const [discountValue, setDiscountValue] = useState("");
+  const [discountPassword, setDiscountPassword] = useState("");
+  const [discountAuthorized, setDiscountAuthorized] = useState(false);
   const [serviceFeeEnabled, setServiceFeeEnabled] = useState(false);
   
   // Split payment
@@ -132,10 +136,14 @@ export function PaymentDialog({
   const splitTotal = splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const splitRemaining = total - splitTotal;
 
+  // Discount requires password authorization
+  const hasDiscount = discountAmount > 0;
+  const discountNeedsAuth = hasDiscount && !discountAuthorized;
+
   // Validation
-  const canSubmit = splitEnabled
+  const canSubmit = !discountNeedsAuth && (splitEnabled
     ? Math.abs(splitRemaining) < 0.01 && splitPayments.length > 0
-    : selectedMethod !== "dinheiro" || cashReceivedNum >= total;
+    : selectedMethod !== "dinheiro" || cashReceivedNum >= total);
 
   // Reset state when dialog opens
   useEffect(() => {
@@ -146,6 +154,8 @@ export function PaymentDialog({
       setInstallments("1");
       setDiscountType("percent");
       setDiscountValue("");
+      setDiscountPassword("");
+      setDiscountAuthorized(false);
       setServiceFeeEnabled(false);
       setSplitEnabled(false);
       setSplitPayments([]);
@@ -352,10 +362,51 @@ export function PaymentDialog({
                       type="number"
                       placeholder={discountType === "percent" ? "0%" : "0,00"}
                       value={discountValue}
-                      onChange={(e) => setDiscountValue(e.target.value)}
+                      onChange={(e) => {
+                        setDiscountValue(e.target.value);
+                        setDiscountAuthorized(false);
+                        setDiscountPassword("");
+                      }}
                       className="flex-1"
                     />
                   </div>
+
+                  {/* Password for discount authorization */}
+                  {hasDiscount && (
+                    <div className="space-y-2">
+                      <Label className="text-sm flex items-center gap-2">
+                        <Lock className="h-4 w-4 text-amber-500" />
+                        Senha para desconto
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          type="password"
+                          placeholder="Digite a senha"
+                          value={discountPassword}
+                          onChange={(e) => setDiscountPassword(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant={discountAuthorized ? "default" : "outline"}
+                          size="sm"
+                          className="shrink-0"
+                          disabled={discountAuthorized}
+                          onClick={() => {
+                            if (discountPassword === "1234") {
+                              setDiscountAuthorized(true);
+                              toast.success("Desconto autorizado");
+                            } else {
+                              toast.error("Senha incorreta");
+                              setDiscountPassword("");
+                            }
+                          }}
+                        >
+                          {discountAuthorized ? "Autorizado ✓" : "Autorizar"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Service Fee Toggle */}

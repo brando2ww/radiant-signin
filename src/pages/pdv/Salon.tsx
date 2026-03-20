@@ -21,6 +21,7 @@ import { StandaloneComandasBar } from "@/components/pdv/StandaloneComandasBar";
 import { ComandaDialog } from "@/components/pdv/ComandaDialog";
 import { ComandaDetailsDialog } from "@/components/pdv/ComandaDetailsDialog";
 import { ComandaAddItemDialog } from "@/components/pdv/ComandaAddItemDialog";
+import { PaymentDialog } from "@/components/pdv/cashier/PaymentDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -146,6 +147,13 @@ export default function PDVSalon() {
   const [selectedComanda, setSelectedComanda] = useState<Comanda | null>(null);
   const [comandaAddItemOpen, setComandaAddItemOpen] = useState(false);
   const [comandaForTable, setComandaForTable] = useState<{ orderId: string; tableNumber: number } | null>(null);
+
+  // Payment dialog states
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentComanda, setPaymentComanda] = useState<Comanda | null>(null);
+  const [paymentTable, setPaymentTable] = useState<any>(null);
+  const [paymentTableComandas, setPaymentTableComandas] = useState<Comanda[]>([]);
+  const [paymentTableItems, setPaymentTableItems] = useState<any[]>([]);
 
   // Sensors for drag and drop
   const sensors = useSensors(
@@ -318,16 +326,16 @@ export default function PDVSalon() {
 
   const handleCloseTable = (tableId: string) => {
     const table = tables.find((t) => t.id === tableId);
-    if (table?.current_order_id) {
-      closeOrder(table.current_order_id, {
-        onSuccess: () => {
-          updateTable({
-            id: tableId,
-            updates: { status: "livre", current_order_id: null },
-          });
-        },
-      });
-    }
+    if (!table?.current_order_id) return;
+    
+    const tableComandas = getComandasByOrder(table.current_order_id);
+    const allItems = tableComandas.flatMap((c) => getItemsByComanda(c.id));
+    
+    setPaymentTable(table);
+    setPaymentTableComandas(tableComandas);
+    setPaymentTableItems(allItems);
+    setPaymentComanda(null);
+    setPaymentDialogOpen(true);
   };
 
   const handleUpdateItem = (id: string, updates: Partial<any>) => {
@@ -753,7 +761,17 @@ export default function PDVSalon() {
         onUpdateItem={(id, updates) => updateComandaItem({ id, ...updates })}
         onRemoveItem={(id) => removeComandaItem(id)}
         onSendToKitchen={(itemIds) => sendToKitchen(itemIds)}
-        onClose={() => selectedComanda && closeComanda(selectedComanda.id)}
+        onClose={() => {
+          if (selectedComanda) {
+            const items = getItemsByComanda(selectedComanda.id);
+            setPaymentComanda(selectedComanda);
+            setPaymentTable(null);
+            setPaymentTableComandas([]);
+            setPaymentTableItems([]);
+            setPaymentDialogOpen(true);
+            setComandaDetailsOpen(false);
+          }
+        }}
         onCancel={() => selectedComanda && cancelComanda(selectedComanda.id)}
       />
 
@@ -763,6 +781,40 @@ export default function PDVSalon() {
         onOpenChange={setComandaAddItemOpen}
         onAddItem={handleAddComandaItem}
         isLoading={isAddingComandaItem}
+      />
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        comanda={paymentComanda}
+        items={paymentComanda ? getItemsByComanda(paymentComanda.id) : []}
+        table={paymentTable}
+        tableComandas={paymentTableComandas}
+        tableItems={paymentTableItems}
+        onSuccess={() => {
+          // Close comanda or table after payment
+          if (paymentComanda && !paymentTable) {
+            closeComanda(paymentComanda.id);
+          }
+          if (paymentTable) {
+            if (paymentTable.current_order_id) {
+              closeOrder(paymentTable.current_order_id, {
+                onSuccess: () => {
+                  updateTable({
+                    id: paymentTable.id,
+                    updates: { status: "livre", current_order_id: null },
+                  });
+                },
+              });
+            }
+          }
+          setPaymentDialogOpen(false);
+          setPaymentComanda(null);
+          setPaymentTable(null);
+          setPaymentTableComandas([]);
+          setPaymentTableItems([]);
+        }}
       />
     </div>
   );
