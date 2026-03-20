@@ -194,12 +194,56 @@ export default function PublicEvaluation() {
             })}
             <Button
               className="w-full"
-              disabled={!canSubmitAnswers || submitEvaluation.isPending}
-              onClick={handleSubmit}
+              disabled={!canSubmitAnswers}
+              onClick={() => setStep("nps")}
             >
-              {submitEvaluation.isPending ? "Enviando..." : "Enviar Avaliação"}
+              Continuar
             </Button>
           </div>
+        )}
+
+        {step === "nps" && (
+          <Card>
+            <CardContent className="pt-6 space-y-5">
+              <div className="text-center space-y-2">
+                <p className="text-base font-medium">
+                  De 0 a 10, o quanto você indicaria nosso estabelecimento para um amigo?
+                </p>
+                <p className="text-xs text-muted-foreground">Selecione uma nota abaixo</p>
+              </div>
+              <div className="flex flex-wrap justify-center gap-2">
+                {Array.from({ length: 11 }, (_, i) => i).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setNpsScore(n)}
+                    className={`w-10 h-10 rounded-lg text-sm font-semibold border transition-all active:scale-95 ${
+                      npsScore === n
+                        ? n <= 6
+                          ? "bg-destructive text-destructive-foreground border-destructive"
+                          : n <= 8
+                          ? "bg-yellow-500 text-white border-yellow-500"
+                          : "bg-green-600 text-white border-green-600"
+                        : "border-border bg-background hover:bg-muted"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground px-1">
+                <span>Nada provável</span>
+                <span>Muito provável</span>
+              </div>
+              <Button
+                className="w-full"
+                disabled={npsScore === null || submitEvaluation.isPending}
+                onClick={handleSubmit}
+              >
+                {submitEvaluation.isPending ? "Enviando..." : "Enviar Avaliação"}
+              </Button>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

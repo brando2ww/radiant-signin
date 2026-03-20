@@ -58,16 +58,21 @@ export function CampaignQuestionManager({ campaignId }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
-        <Input
-          value={newQuestion}
-          onChange={(e) => setNewQuestion(e.target.value)}
-          placeholder="Digite uma nova pergunta..."
-          maxLength={200}
-          onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-        />
-        <Button onClick={handleAdd} disabled={!newQuestion.trim() || createQuestion.isPending} className="gap-2 shrink-0">
-          <Plus className="h-4 w-4" /> Adicionar
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <Input
+            value={newQuestion}
+            onChange={(e) => setNewQuestion(e.target.value)}
+            placeholder="Digite uma nova pergunta..."
+            maxLength={200}
+            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+          />
+          <Button onClick={handleAdd} disabled={!newQuestion.trim() || createQuestion.isPending} className="gap-2 shrink-0">
+            <Plus className="h-4 w-4" /> Adicionar
+          </Button>
+        </div>
+        <Button variant="outline" onClick={handleImportTemplate} disabled={createQuestion.isPending} className="gap-2 self-start">
+          <FileDown className="h-4 w-4" /> Importar Template Restaurante
         </Button>
       </div>
 
