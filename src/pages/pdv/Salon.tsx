@@ -73,6 +73,8 @@ export default function PDVSalon() {
     isUnmerging,
   } = usePDVTables();
 
+  const { activeSession } = usePDVCashier();
+
   const {
     orders,
     orderItems,
