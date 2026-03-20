@@ -37,6 +37,14 @@ const App = () => (
                   } 
                 />
                 <Route
+                  path="/garcom/*"
+                  element={
+                    <ProtectedRoute>
+                      <Garcom />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/admin/*"
                   element={
                     <SuperAdminGuard>
