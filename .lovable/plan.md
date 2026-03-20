@@ -1,42 +1,39 @@
 
 
-## Reimprimir Demonstrativo do Último Caixa Fechado
+## Integrar PaymentDialog no Salão
 
-### Problema
-Quando o usuário fecha a tela de impressão sem imprimir, não há como reimprimir o demonstrativo. A função `printCashierReport` só é chamada no momento do fechamento.
+### Situação Atual
+O Salão fecha comandas e pedidos diretamente via `closeComanda` / `closeOrder` sem passar pelo fluxo de pagamento. O `PaymentDialog` já existe no módulo Caixa com tudo que você precisa: débito, crédito, dinheiro, PIX, desconto, divisão de conta.
 
-### Solução
+### O Que Vai Mudar
 
-Adicionar um botão "Reimprimir Último Caixa" na sidebar de ações quando o caixa está fechado, que busca a última sessão fechada do banco e reimprimi o demonstrativo.
+#### 1. `src/pages/pdv/Salon.tsx`
+- Importar `PaymentDialog` do cashier
+- Adicionar estados: `paymentDialogOpen`, `paymentComanda`, `paymentTable`, `paymentTableComandas`, `paymentTableItems`
+- Modificar `onClose` da `ComandaDetailsDialog` (linha 756): em vez de chamar `closeComanda` direto, abrir o `PaymentDialog` com a comanda selecionada e seus itens
+- Modificar `onCloseTable` da `TableDetailsDialog` (linha 319-331): em vez de fechar direto, abrir o `PaymentDialog` com a mesa, suas comandas e itens
+- Adicionar callback `handlePaymentSuccess` que fecha os dialogs e invalida as queries
+- Renderizar o `PaymentDialog` na área de dialogs
 
-### Mudanças
+#### 2. Fluxo Resultante
 
-#### 1. `src/hooks/use-pdv-cashier.ts`
-- Adicionar query `lastClosedSession` que busca a última sessão com `closed_at IS NOT NULL` do usuário, ordenada por `closed_at DESC`, com `maybeSingle()`
-- Adicionar query `lastClosedMovements` que busca as movimentações dessa sessão
-- Retornar `lastClosedSession` e `lastClosedMovements` no hook
-
-#### 2. `src/components/pdv/CloseCashierDialog.tsx`
-- Extrair a função `printCashierReport` para ser exportada separadamente (como função pura que recebe session, movements, closingBalance, notes, riskLevel) — permitindo reuso fora do dialog
-
-#### 3. `src/pages/pdv/Cashier.tsx`
-- Importar `printCashierReport` exportada
-- Usar `lastClosedSession` e `lastClosedMovements` do hook
-- Criar função `handleReprintLastCashier` que chama `printCashierReport` com os dados da última sessão
-- Passar `onReprintLast` para o sidebar
-
-#### 4. `src/components/pdv/cashier/CashierActionsSidebar.tsx`
-- Adicionar prop `onReprintLast?: () => void`
-- Quando o caixa está fechado e `onReprintLast` existe, mostrar botão "Reimprimir Último Caixa" com ícone `Printer`
-
-#### 5. `src/hooks/use-whatsapp-connection.ts` (fix build error)
-- Substituir `NodeJS.Timeout` por `ReturnType<typeof setTimeout>` nas linhas 49-50
-
-### Fluxo
 ```text
-Caixa fechado → Sidebar mostra "Reimprimir Último Caixa"
-  → Clique → busca última sessão + movimentações do banco
-  → Chama printCashierReport com os dados
-  → Abre janela de impressão
+Comanda → "Fechar Comanda" → PaymentDialog abre
+  → Escolhe método (débito/crédito/dinheiro/PIX)
+  → Aplica desconto (com senha) ou divisão
+  → Confirma → Comanda fechada + pagamento registrado
+
+Mesa → "Fechar Mesa" → PaymentDialog abre (modo mesa)
+  → Mesmo fluxo acima, fecha todas as comandas da mesa
 ```
+
+#### 3. Desconto com senha
+O `PaymentDialog` já tem campo de desconto (% ou valor). Vou adicionar um campo de senha obrigatória quando desconto > 0: um `Input type="password"` que valida contra uma senha configurável (por enquanto hardcoded ou via settings).
+
+### Arquivos a Modificar
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/pages/pdv/Salon.tsx` | Importar PaymentDialog, adicionar estados, redirecionar fechamento para o dialog de pagamento |
+| `src/components/pdv/cashier/PaymentDialog.tsx` | Adicionar campo de senha obrigatória quando desconto > 0 |
 
