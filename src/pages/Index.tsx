@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { supabase } from "@/integrations/supabase/client";
 import { useSuperAdmin } from "@/hooks/use-super-admin";
+import { useUserRole } from "@/hooks/use-user-role";
 
 type FormType = 'login' | 'signup' | 'reset';
 
