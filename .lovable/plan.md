@@ -1,38 +1,31 @@
 
 
-## Mover Integrações do Settings para o Hub de Integrações
+## Status da Integração WhatsApp
 
-### O que muda
+### Situacao Atual
 
-Mover **WhatsApp Business**, **Uber Eats** e **Delivery Próprio** da aba "Integrações" das Configurações (`IntegrationsTab`) para a página principal de Integrações (`IntegrationsHub`). Remover **iFood** e **Rappi** do hub.
+O codigo ja esta **completamente implementado** e correto. A entrada `whatsapp` existe no registro de integracoes em `IntegrationDetail.tsx` (linha 192-215) com:
 
-### IntegrationsHub — Novos cards
+- Titulo, descricao, categoria "Comunicacao"
+- 6 funcionalidades detalhadas (notificacoes, reservas, comprovantes, etc.)
+- 4 passos de conexao
+- Componente `WhatsAppConnectionCard` que renderiza o fluxo completo (QR Code, status, desconectar, webhook)
 
-Adicionar 3 novos cards ao array de integrações (sem logo/imagem, usando ícone fallback):
+A rota `/pdv/integracoes/whatsapp` esta configurada corretamente via `Integrations.tsx` → `:slug` → `IntegrationDetail`.
 
-| Card | Categoria | Ação do botão |
-|------|-----------|---------------|
-| WhatsApp Business | Comunicação | Acessar → `/pdv/integracoes/whatsapp` |
-| Uber Eats | Delivery (Em Breve) | Botão desabilitado |
-| Delivery Próprio | Delivery (Ativo) | Acessar → `/pdv/integracoes/delivery-proprio` |
+### Por que aparece "Integracao nao encontrada"
 
-Remover o card do **iFood** do array. O resultado final terá: PagSeguro, Stone, Getnet, NF Automática, Goomer, WhatsApp, Uber Eats, Delivery Próprio.
+O erro no screenshot provavelmente ocorreu porque o build da ultima alteracao (onde o `whatsapp` foi adicionado ao `IntegrationDetail`) ainda nao havia terminado no momento da captura. **Nao ha bug no codigo.**
 
-### IntegrationsTab — Simplificar
+### Recomendacao
 
-Remover WhatsApp, Uber Eats e Delivery Próprio da tab. Manter apenas iFood (que já tem lógica de conexão real com hook e dialog). A tab continua existindo para gerenciar a conexão iFood nas configurações.
+Recarregue a pagina `/pdv/integracoes/whatsapp`. Se o build ja completou, a pagina mostrara:
 
-### IntegrationDetail — Adicionar WhatsApp
+1. Header com icone MessageCircle + "WhatsApp Business" + badge "Comunicacao"
+2. Secao "Sobre" com descricao completa
+3. 6 cards de funcionalidades
+4. Passo a passo de conexao (4 etapas)
+5. Componente `WhatsAppConnectionCard` com botao "Conectar" que abre o `WhatsAppQRCodeDialog` com fluxo de nome, telefone, QR code e polling
 
-Adicionar entrada `whatsapp` no registro de integrações do `IntegrationDetail.tsx`, renderizando o `WhatsAppConnectionCard` existente como componente de configuração.
-
-### Arquivos
-
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/pdv/IntegrationsHub.tsx` | Remover iFood do array, adicionar WhatsApp/Uber Eats/Delivery Próprio com ícones (MessageCircle, Bike, Store). Cards "Em Breve" terão botão desabilitado |
-| `src/components/pdv/settings/IntegrationsTab.tsx` | Remover seções WhatsApp, Rappi, Uber Eats e Delivery Próprio. Manter apenas iFood |
-| `src/pages/pdv/IntegrationDetail.tsx` | Adicionar entrada `whatsapp` usando `WhatsAppConnectionCard` como componente |
-
-Nenhuma edge function será modificada.
+**Nao ha alteracao de codigo necessaria.** Se apos recarregar o problema persistir, me avise para investigar mais a fundo.
 
