@@ -1,22 +1,77 @@
 
 
-## Fix: Dropdown do "Integrações" aparecendo no lado errado
+## Página "Avaliações" com Campanhas + Link Público
 
-### Problema
-O `NavigationMenuViewport` usa `left-0` fixo (linha 80), então o dropdown sempre abre alinhado à esquerda do container do `NavigationMenu`. Como "Integrações" é o último item da barra, o popup aparece deslocado para a esquerda em vez de abrir abaixo do item.
+### Conceito
 
-### Solução
-Mudar o posicionamento do viewport de `left-0` para `right-0` não resolveria para os outros menus. A solução correta é trocar de `left-0` para usar posicionamento dinâmico que se adapte. No Radix NavigationMenu, o viewport é único e compartilhado — ele sempre renderiza na mesma posição.
+Criar um sistema de **campanhas de avaliação**. Cada campanha agrupa perguntas, gera um QR code/link público, e armazena todas as respostas. O link público coleta nome, telefone e data de nascimento antes das perguntas. Se a nota de uma pergunta for baixa (1-2), abre campo de comentário.
 
-A abordagem mais simples: trocar `left-0` por `left-0 right-0` (centralizar) ou usar `end-0` para alinhar à direita. Mas como isso afeta TODOS os menus, a melhor solução é remover o `left-0` fixo e deixar o viewport se posicionar relativo ao container inteiro, centralizando-o.
+### Banco de Dados
 
-**Mudança**: No `NavigationMenuViewport`, trocar `left-0` por `left-auto right-0` para que o dropdown se alinhe à direita (já que o nav está no header à direita). Porém, para não quebrar os outros menus, a melhor abordagem é usar `left-0 w-full` no container do viewport, fazendo o dropdown se posicionar corretamente.
+**Nova tabela `evaluation_campaigns`:**
+- `id`, `user_id`, `name`, `description`, `is_active`, `created_at`, `updated_at`
 
-Na verdade, a solução mais limpa: mudar o `div` wrapper do viewport de `absolute left-0` para `absolute left-0 right-0` e centralizar, permitindo que o conteúdo flua naturalmente.
+**Nova tabela `evaluation_campaign_questions`:**
+- `id`, `campaign_id` (FK), `question_text`, `order_position`, `is_active`
 
-### Arquivo
+**Alterar `customer_evaluations`:**
+- Adicionar coluna `campaign_id` (FK nullable para retrocompatibilidade)
+
+**Alterar `evaluation_answers`:**
+- Adicionar coluna `comment` (text nullable) — para quando a nota é baixa
+
+RLS: campanhas visíveis pelo dono (`user_id = auth.uid()`). Respostas públicas permitem INSERT anônimo (como já funciona com `customer_evaluations`). A página pública de campanha lê perguntas da campanha sem autenticação.
+
+### Rota Pública
+
+`/avaliacao/:campaignId` — página pública (sem login) que:
+1. Busca a campanha e suas perguntas
+2. Coleta nome, telefone, data de nascimento
+3. Mostra cada pergunta com escala 1-5 (estrelas)
+4. Se nota <= 2, abre textarea "O que aconteceu?"
+5. Envia tudo para o banco
+
+### Página Admin (PDV)
+
+Rota `/pdv/avaliacoes` com:
+
+**Aba Campanhas:**
+- Lista de campanhas criadas
+- Botão "Nova Campanha" → dialog com nome e descrição
+- Cada campanha mostra: nome, status (ativa/inativa), total de respostas, QR code
+- Ao clicar na campanha → detalhe com:
+  - Gerenciador de perguntas (criar, editar, reordenar, ativar/desativar)
+  - Link público + QR code
+  - Lista de respostas recebidas com dados do cliente e notas
+  - Estatísticas (média por pergunta, NPS, total)
+
+### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/components/ui/navigation-menu.tsx` | Linha 80: trocar `left-0 top-full flex justify-center` para `absolute top-full left-0 right-0 flex justify-center` — isso centraliza o viewport sobre toda a largura do nav, fazendo o dropdown aparecer abaixo do item correto |
+| **Migração SQL** | Criar `evaluation_campaigns`, `evaluation_campaign_questions`, adicionar `campaign_id` em `customer_evaluations`, `comment` em `evaluation_answers` + RLS |
+| `src/hooks/use-evaluation-campaigns.ts` | **Criar** — CRUD de campanhas e perguntas de campanha |
+| `src/pages/pdv/Evaluations.tsx` | **Criar** — Página principal com lista de campanhas + detalhe |
+| `src/components/pdv/evaluations/CampaignCard.tsx` | **Criar** — Card de campanha com stats e QR |
+| `src/components/pdv/evaluations/CampaignDialog.tsx` | **Criar** — Dialog para criar/editar campanha |
+| `src/components/pdv/evaluations/CampaignDetail.tsx` | **Criar** — Detalhe com perguntas, link, respostas |
+| `src/components/pdv/evaluations/CampaignQuestionManager.tsx` | **Criar** — Gerenciar perguntas da campanha |
+| `src/components/pdv/evaluations/CampaignResponses.tsx` | **Criar** — Lista de respostas com filtros |
+| `src/pages/PublicEvaluation.tsx` | **Criar** — Página pública `/avaliacao/:campaignId` |
+| `src/App.tsx` | Adicionar rota `/avaliacao/:campaignId` (pública) |
+| `src/pages/PDV.tsx` | Adicionar rota `avaliacoes` e `avaliacoes/:id` |
+| `src/components/pdv/PDVHeaderNav.tsx` | Adicionar "Avaliações" na seção Administrador com ícone `Star` |
+
+### Fluxo do Link Público
+
+```text
+1. Cliente escaneia QR → /avaliacao/abc123
+2. Tela: "Olá! Conte-nos sobre sua experiência"
+3. Formulário: Nome, Telefone (máscara), Data de Nascimento
+4. Botão "Continuar"
+5. Perguntas uma a uma ou todas juntas com estrelas 1-5
+6. Se nota <= 2: "O que aconteceu?" (textarea)
+7. Botão "Enviar Avaliação"
+8. Tela de agradecimento
+```
 
