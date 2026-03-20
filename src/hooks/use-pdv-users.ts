@@ -45,7 +45,12 @@ export function usePDVUsers() {
         }
       );
 
-      if (error) throw error;
+      if (error) {
+        // supabase.functions.invoke returns error body in data when status >= 400
+        const errorBody = data || error;
+        const msg = typeof errorBody === 'object' ? (errorBody.error || errorBody.message || JSON.stringify(errorBody)) : String(errorBody);
+        throw new Error(msg);
+      }
       if (data?.error) throw new Error(data.error);
       return data.data;
     },
