@@ -120,10 +120,6 @@ export default function PDVCashier() {
       riskLevel: (lastClosedSession as any).fraud_risk_level || "ok",
     });
   };
-    setSelectedTable(null);
-    setSelectedTableComandas([]);
-    setSelectedTableItems([]);
-  };
 
   // Calcular valores
   const openingBalance = activeSession?.opening_balance || 0;
