@@ -164,6 +164,30 @@ const integrations: Record<string, IntegrationData> = {
     docsUrl: "https://www.goomer.com.br",
     docsLabel: "Site Goomer",
   },
+  getnet: {
+    title: "Getnet",
+    logo: getnetLogo,
+    category: "Maquininha",
+    description:
+      "A Getnet, do grupo Santander, é uma das maiores adquirentes do Brasil com soluções de POS Integrado que se comunicam diretamente com sistemas de automação comercial. Com esta integração, sua maquininha Getnet recebe o valor do pedido automaticamente via Cloud-to-Cloud, USB ou HTTP. Suporta débito, crédito, parcelamento, Pix, pré-autorização e cancelamento — tudo controlado pelo PDV.",
+    features: [
+      { icon: Smartphone, title: "POS Integrado", description: "Comunicação direta com o terminal via Cloud, USB/Serial ou HTTP (Wi-Fi/Ethernet)." },
+      { icon: CreditCard, title: "Débito e crédito", description: "Aceite todas as bandeiras com taxas competitivas e parcelamento de até 12x." },
+      { icon: QrCode, title: "Pix no terminal", description: "Receba pagamentos via Pix diretamente na maquininha Getnet." },
+      { icon: Shield, title: "Pré-autorização", description: "Realize pré-autorização e capture ou cancele o valor posteriormente." },
+      { icon: Split, title: "Split de pagamento", description: "Divida o valor da venda entre diferentes contas bancárias automaticamente." },
+      { icon: BarChart3, title: "Dashboard financeiro", description: "Acompanhe vendas, taxas e recebíveis pelo portal Getnet integrado." },
+    ],
+    steps: [
+      "Acesse o portal developers.getnet.com.br e crie uma conta ou faça login.",
+      "Em Minha Conta → Credenciais, copie o Seller ID, Client ID e Client Secret.",
+      "Cole as credenciais nos campos de conexão abaixo e selecione o ambiente (Sandbox ou Produção).",
+      "Escolha o tipo de conexão do POS (Cloud, USB ou HTTP) e clique em 'Conectar'.",
+    ],
+    component: GetnetIntegrationCard,
+    docsUrl: "https://developers.getnet.com.br",
+    docsLabel: "Portal do Desenvolvedor Getnet",
+  },
 };
 
 export default function IntegrationDetail() {

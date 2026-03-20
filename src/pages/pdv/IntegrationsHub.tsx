@@ -8,6 +8,8 @@ import ifoodLogo from "@/assets/integrations/ifood.png";
 import pagseguroLogo from "@/assets/integrations/pagseguro.png";
 import stoneLogo from "@/assets/integrations/stone.png";
 import goomerLogo from "@/assets/integrations/goomer.png";
+import nfeLogo from "@/assets/integrations/nfe.png";
+import getnetLogo from "@/assets/integrations/getnet.png";
 
 const integrations = [
   {
@@ -35,11 +37,18 @@ const integrations = [
     categoryColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
   },
   {
+    slug: "getnet",
+    name: "Getnet",
+    description: "Conecte sua maquininha Getnet (Santander) com POS integrado via Cloud, USB ou HTTP.",
+    logo: getnetLogo,
+    category: "Maquininha",
+    categoryColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  },
+  {
     slug: "nf-automatica",
     name: "NF Automática",
     description: "Emita notas fiscais automaticamente ao finalizar vendas, com certificado digital A1.",
-    logo: null,
-    icon: FileText,
+    logo: nfeLogo,
     category: "Fiscal",
     categoryColor: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   },
