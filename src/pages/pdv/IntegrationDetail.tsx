@@ -16,6 +16,7 @@ import { StoneIntegrationCard } from "@/components/pdv/integrations/StoneIntegra
 import { NFAutomaticaIntegrationCard } from "@/components/pdv/integrations/NFAutomaticaIntegrationCard";
 import { GoomerIntegrationCard } from "@/components/pdv/integrations/GoomerIntegrationCard";
 import { GetnetIntegrationCard } from "@/components/pdv/integrations/GetnetIntegrationCard";
+import { WhatsAppConnectionCard } from "@/components/pdv/settings/WhatsAppConnectionCard";
 
 import ifoodLogo from "@/assets/integrations/ifood.png";
 import pagseguroLogo from "@/assets/integrations/pagseguro.png";
