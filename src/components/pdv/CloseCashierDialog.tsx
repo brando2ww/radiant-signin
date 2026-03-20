@@ -45,6 +45,7 @@ interface CloseCashierDialogProps {
   ) => void;
   isClosing: boolean;
   session: any;
+  movements?: CashMovement[];
 }
 
 type RiskLevel = "ok" | "low" | "medium" | "high" | "critical";
