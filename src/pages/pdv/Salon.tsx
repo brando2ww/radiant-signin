@@ -761,7 +761,17 @@ export default function PDVSalon() {
         onUpdateItem={(id, updates) => updateComandaItem({ id, ...updates })}
         onRemoveItem={(id) => removeComandaItem(id)}
         onSendToKitchen={(itemIds) => sendToKitchen(itemIds)}
-        onClose={() => selectedComanda && closeComanda(selectedComanda.id)}
+        onClose={() => {
+          if (selectedComanda) {
+            const items = getItemsByComanda(selectedComanda.id);
+            setPaymentComanda(selectedComanda);
+            setPaymentTable(null);
+            setPaymentTableComandas([]);
+            setPaymentTableItems([]);
+            setPaymentDialogOpen(true);
+            setComandaDetailsOpen(false);
+          }
+        }}
         onCancel={() => selectedComanda && cancelComanda(selectedComanda.id)}
       />
 
