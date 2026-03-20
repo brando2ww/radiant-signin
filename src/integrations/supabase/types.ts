@@ -498,6 +498,7 @@ export type Database = {
       }
       customer_evaluations: {
         Row: {
+          campaign_id: string | null
           created_at: string
           customer_birth_date: string
           customer_name: string
@@ -508,6 +509,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          campaign_id?: string | null
           created_at?: string
           customer_birth_date: string
           customer_name: string
@@ -518,6 +520,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          campaign_id?: string | null
           created_at?: string
           customer_birth_date?: string
           customer_name?: string
@@ -527,7 +530,15 @@ export type Database = {
           nps_score?: number | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customer_evaluations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       delivery_addresses: {
         Row: {
@@ -1194,6 +1205,7 @@ export type Database = {
       }
       evaluation_answers: {
         Row: {
+          comment: string | null
           created_at: string
           evaluation_id: string
           id: string
@@ -1201,6 +1213,7 @@ export type Database = {
           score: number
         }
         Insert: {
+          comment?: string | null
           created_at?: string
           evaluation_id: string
           id?: string
@@ -1208,6 +1221,7 @@ export type Database = {
           score: number
         }
         Update: {
+          comment?: string | null
           created_at?: string
           evaluation_id?: string
           id?: string
@@ -1230,6 +1244,74 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      evaluation_campaign_questions: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          order_position: number
+          question_text: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order_position?: number
+          question_text: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order_position?: number
+          question_text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evaluation_campaign_questions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evaluation_campaigns: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       evaluation_questions: {
         Row: {
