@@ -111,7 +111,6 @@ export default function IntegrationsHub() {
             </div>
         ))}
       </div>
-      </div>
     </div>
   );
 }
