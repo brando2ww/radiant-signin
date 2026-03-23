@@ -1,60 +1,31 @@
 
 
-## Fix: RLS policies para Franquia funcionar no PDV
+## Fix: "Módulo não disponível" após RLS policies
 
-### Problema
-João Farias não consegue ver dados da franquia porque as políticas RLS bloqueiam:
-1. **`tenants`**: SELECT só permite `owner_user_id = auth.uid()` — não consegue ler o tenant pai (matriz)
-2. **`shared_products`** e **`shared_table_layouts`**: só super admins podem acessar — franquias não conseguem ler/escrever
-3. Resultado: hook retorna `tenantId` mas não consegue ler `parent_tenant_id`, então mostra "Sem conexão"
+### Causa raiz
+
+Antes das novas RLS policies, o usuário João Farias (que não é `owner_user_id` do tenant) **não conseguia ler** a tabela `tenants`. Isso fazia `tenantId` retornar `null`, e o `hasModule()` retornava `true` para tudo (fallback de "sem tenant = libera tudo").
+
+Agora com as novas policies, o hook `useUserModules` encontra o `tenantId` via `establishment_users`, mas a tabela `tenant_modules` provavelmente **não tem** o módulo "pdv" cadastrado para esse tenant — ou o usuário não tem RLS para ler `tenant_modules`.
 
 ### Solução
-Criar migration com novas RLS policies:
 
-| Tabela | Nova Policy | Lógica |
-|--------|-------------|--------|
-| `tenants` | "Establishment users can read own tenant" | SELECT onde `id` está no `tenant_id` do `establishment_users` do user |
-| `tenants` | "Users can read parent tenant" | SELECT onde `id` é o `parent_tenant_id` de um tenant que o user já pode ler |
-| `shared_products` | "Tenant members can read shared products" | SELECT onde `target_tenant_id` é o tenant do user |
-| `shared_table_layouts` | "Tenant members can read shared table layouts" | SELECT onde `target_tenant_id` é o tenant do user |
+Duas correções necessárias:
 
-### Arquivo
-
-| Arquivo | Ação |
-|---------|------|
-| `supabase migration` | Adicionar 4 novas RLS policies permitindo leitura para membros do tenant |
-
-### Detalhes das Policies
+**1. RLS em `tenant_modules`** — adicionar policy para que membros do tenant possam ler os módulos do seu tenant:
 
 ```sql
--- 1. Establishment users can read their own tenant
-CREATE POLICY "Establishment users can read own tenant"
-  ON public.tenants FOR SELECT TO authenticated
-  USING (id IN (
+CREATE POLICY "Tenant members can read own modules"
+  ON public.tenant_modules FOR SELECT TO authenticated
+  USING (tenant_id IN (
     SELECT tenant_id FROM public.establishment_users
     WHERE user_id = auth.uid() AND is_active = true AND tenant_id IS NOT NULL
   ));
-
--- 2. Users can read parent tenant (for franchise)
-CREATE POLICY "Users can read parent tenant"
-  ON public.tenants FOR SELECT TO authenticated
-  USING (id IN (
-    SELECT parent_tenant_id FROM public.tenants
-    WHERE owner_user_id = auth.uid() OR id IN (
-      SELECT tenant_id FROM public.establishment_users
-      WHERE user_id = auth.uid() AND is_active = true
-    )
-  ));
-
--- 3-4. Tenant members can read shared data
-CREATE POLICY "Tenant members can read shared products"
-  ON public.shared_products FOR SELECT TO authenticated
-  USING (target_tenant_id IN (...user's tenant...));
-
-CREATE POLICY "Tenant members can read shared table layouts"
-  ON public.shared_table_layouts FOR SELECT TO authenticated
-  USING (target_tenant_id IN (...user's tenant...));
 ```
 
-Isso permite que qualquer membro ativo de um tenant leia: seu próprio tenant, o tenant pai (matriz), e os registros de compartilhamento associados — sem expor dados de outros tenants.
+**2. Garantir que `tenant_modules` tem os módulos cadastrados** — verificar via query se o tenant do João tem módulos. Se não tem, a migration deve inserir módulos padrão para tenants existentes que não tenham nenhum.
+
+| Arquivo | Ação |
+|---------|------|
+| `supabase migration` | Criar policy de leitura em `tenant_modules` para establishment_users + inserir módulos padrão (pdv, delivery, financeiro, avaliacoes) para tenants que não tenham nenhum |
 
