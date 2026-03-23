@@ -1,26 +1,51 @@
 
-## Adicionar botão "Sair da conta" no aviso de módulo indisponível
 
-### O que vou ajustar
-Atualizar o componente `ModuleGuard` para que, além do botão **Voltar**, ele mostre um botão **Sair da conta** dentro do card de aviso.
+## Fix: Tenants desapareceram — recursão infinita no RLS
 
-### Arquivo
+### Causa raiz
+A policy "Users can read parent tenant" faz `SELECT ... FROM tenants t` dentro de uma policy na própria tabela `tenants`. Isso causa recursão infinita no PostgreSQL, que bloqueia a query inteira — inclusive para super admins.
+
+### Solução
+1. Criar uma **security definer function** que busca o `parent_tenant_id` sem passar pelo RLS
+2. Dropar a policy problemática
+3. Recriar a policy usando a function segura
+
+### Mudança
+
 | Arquivo | Ação |
-|---|---|
-| `src/components/ModuleGuard.tsx` | Importar `useAuth` e adicionar ação de logout no estado de bloqueio do módulo |
+|---------|------|
+| `supabase migration` | Criar function `get_user_parent_tenant_ids()`, dropar policy recursiva, recriar sem recursão |
 
-### Implementação
-1. Usar `signOut()` do `AuthContext` no `ModuleGuard`
-2. Adicionar um segundo botão no rodapé do card:
-   - **Voltar** mantém o comportamento atual
-   - **Sair da conta** faz logout do usuário
-3. Após deslogar, redirecionar para a tela inicial `/` para evitar que o usuário continue preso na tela bloqueada
-4. Desabilitar o botão enquanto o logout estiver acontecendo, se necessário, para evitar clique duplo
+### SQL
 
-### Resultado esperado
-Quando aparecer a mensagem **"Módulo não disponível"**, o usuário terá duas opções:
-- voltar para a tela anterior
-- sair da conta e entrar com outro usuário
+```sql
+-- Function que busca parent_tenant_ids sem RLS
+CREATE OR REPLACE FUNCTION public.get_user_parent_tenant_ids()
+RETURNS SETOF uuid
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT t.parent_tenant_id
+  FROM public.tenants t
+  WHERE t.parent_tenant_id IS NOT NULL
+    AND (
+      t.owner_user_id = auth.uid()
+      OR t.id IN (
+        SELECT eu.tenant_id FROM public.establishment_users eu
+        WHERE eu.user_id = auth.uid() AND eu.is_active = true
+      )
+    )
+$$;
 
-### Detalhe técnico
-A mudança é pequena e isolada, sem mexer em rotas, banco ou permissões. O ajuste fica só na UI do fallback do `ModuleGuard`, reaproveitando a autenticação já existente no projeto.
+-- Dropar policy recursiva
+DROP POLICY IF EXISTS "Users can read parent tenant" ON public.tenants;
+
+-- Recriar sem recursão
+CREATE POLICY "Users can read parent tenant"
+  ON public.tenants FOR SELECT TO authenticated
+  USING (id IN (SELECT public.get_user_parent_tenant_ids()));
+```
+
+Isso elimina a recursão e restaura a listagem de tenants para super admins e todos os usuários.
+
