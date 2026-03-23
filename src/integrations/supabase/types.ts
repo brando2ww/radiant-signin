@@ -3692,8 +3692,25 @@ export type Database = {
           max_tables_per_order: number | null
           min_order_value: number | null
           new_order_sound: string | null
+          nfe_aliquota_cofins: number | null
+          nfe_aliquota_icms: number | null
+          nfe_aliquota_pis: number | null
+          nfe_ambiente: string | null
+          nfe_auto_emit: boolean | null
           nfe_auto_import_cnpj: string | null
           nfe_auto_import_enabled: boolean | null
+          nfe_certificate_password: string | null
+          nfe_certificate_url: string | null
+          nfe_cfop_padrao: string | null
+          nfe_cst_csosn: string | null
+          nfe_email_customer: boolean | null
+          nfe_enable_nfce: boolean | null
+          nfe_endereco_fiscal: Json | null
+          nfe_inscricao_municipal: string | null
+          nfe_nome_fantasia: string | null
+          nfe_numero_inicial: number | null
+          nfe_serie: string | null
+          nfe_serie_nfce: string | null
           order_ready_sound: string | null
           printers: Json | null
           require_customer_identification: boolean | null
@@ -3735,8 +3752,25 @@ export type Database = {
           max_tables_per_order?: number | null
           min_order_value?: number | null
           new_order_sound?: string | null
+          nfe_aliquota_cofins?: number | null
+          nfe_aliquota_icms?: number | null
+          nfe_aliquota_pis?: number | null
+          nfe_ambiente?: string | null
+          nfe_auto_emit?: boolean | null
           nfe_auto_import_cnpj?: string | null
           nfe_auto_import_enabled?: boolean | null
+          nfe_certificate_password?: string | null
+          nfe_certificate_url?: string | null
+          nfe_cfop_padrao?: string | null
+          nfe_cst_csosn?: string | null
+          nfe_email_customer?: boolean | null
+          nfe_enable_nfce?: boolean | null
+          nfe_endereco_fiscal?: Json | null
+          nfe_inscricao_municipal?: string | null
+          nfe_nome_fantasia?: string | null
+          nfe_numero_inicial?: number | null
+          nfe_serie?: string | null
+          nfe_serie_nfce?: string | null
           order_ready_sound?: string | null
           printers?: Json | null
           require_customer_identification?: boolean | null
@@ -3778,8 +3812,25 @@ export type Database = {
           max_tables_per_order?: number | null
           min_order_value?: number | null
           new_order_sound?: string | null
+          nfe_aliquota_cofins?: number | null
+          nfe_aliquota_icms?: number | null
+          nfe_aliquota_pis?: number | null
+          nfe_ambiente?: string | null
+          nfe_auto_emit?: boolean | null
           nfe_auto_import_cnpj?: string | null
           nfe_auto_import_enabled?: boolean | null
+          nfe_certificate_password?: string | null
+          nfe_certificate_url?: string | null
+          nfe_cfop_padrao?: string | null
+          nfe_cst_csosn?: string | null
+          nfe_email_customer?: boolean | null
+          nfe_enable_nfce?: boolean | null
+          nfe_endereco_fiscal?: Json | null
+          nfe_inscricao_municipal?: string | null
+          nfe_nome_fantasia?: string | null
+          nfe_numero_inicial?: number | null
+          nfe_serie?: string | null
+          nfe_serie_nfce?: string | null
           order_ready_sound?: string | null
           printers?: Json | null
           require_customer_identification?: boolean | null
