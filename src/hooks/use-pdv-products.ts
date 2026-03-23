@@ -19,6 +19,19 @@ export interface PDVProduct {
   is_available: boolean;
   available_times: any;
   is_sold_by_weight: boolean;
+  ncm: string | null;
+  cest: string | null;
+  cfop: string | null;
+  origin: string | null;
+  cst_icms: string | null;
+  csosn: string | null;
+  icms_rate: number | null;
+  pis_cst: string | null;
+  pis_rate: number | null;
+  cofins_cst: string | null;
+  cofins_rate: number | null;
+  tax_unit: string | null;
+  ean: string | null;
   created_at: string;
   updated_at: string;
 }
