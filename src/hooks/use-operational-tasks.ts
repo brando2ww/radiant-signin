@@ -46,6 +46,9 @@ export interface TaskSettings {
   shifts: ShiftConfig[];
   autoGenerate: boolean;
   qrCodeEnabled: boolean;
+  whatsappReportEnabled: boolean;
+  whatsappReportPhone: string;
+  whatsappReportTime: string;
 }
 
 const DEFAULT_SHIFTS: ShiftConfig[] = [
