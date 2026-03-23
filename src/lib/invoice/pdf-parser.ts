@@ -19,6 +19,91 @@ function parseAccessKey(key: string) {
   return { cnpj, cnpjRaw, series, invoiceNumber };
 }
 
+/**
+ * Extrai itens/produtos do texto do DANFE.
+ * Busca linhas com unidade de medida + valores numéricos (qty, unit price, total).
+ */
+function extractItemsFromText(text: string): ParsedInvoiceItem[] {
+  const items: ParsedInvoiceItem[] = [];
+  const lines = text.split('\n');
+
+  // Unidades comuns em NF-e
+  const units = 'UN|KG|CX|PCT|LT|ML|G|M|M2|M3|PAR|PC|FD|DZ|TON|SC|GL|L|GR|MG|CM|MM|UNID|KILO|LITRO|METRO|ROLO|SACO|FARDO|CAIXA|PACOTE|GALAO|GARRAFA|LATA|BALDE|RESMA|CARTELA|DISPLAY|POTE|BISNAGA|FRASCO|AMPOLA|SACHÊ|SACHE|ENVELOPE|BARRA|TABLETE|VIDRO';
+
+  // Pattern 1: CODE DESCRIPTION ... UNIT QTY UNIT_PRICE TOTAL
+  // Typical DANFE: "001 PRODUTO XYZ 12345678 0100 5010 UN 10,000 5,00 50,00"
+  const itemPattern = new RegExp(
+    `^\\s*(\\d{1,6})\\s+(.+?)\\s+(${units})\\s+([\\d][\\d.,]*)\\s+([\\d][\\d.,]*)\\s+([\\d][\\d.,]*)`,
+    'i'
+  );
+
+  // Pattern 2: DESCRIPTION UNIT QTY UNIT_PRICE TOTAL (no leading code)
+  const itemPattern2 = new RegExp(
+    `^\\s*(.{3,60})\\s+(${units})\\s+([\\d][\\d.,]*)\\s+([\\d][\\d.,]*)\\s+([\\d][\\d.,]*)`,
+    'i'
+  );
+
+  // Skip header-like lines
+  const headerKeywords = /c[oó]digo|descri[cç][aã]o|produto|ncm|cfop|cst|unid|qtd|quantidade|valor|total|base|al[ií]q|icms|ipi|pis|cofins/i;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.length < 10) continue;
+    // Skip if it looks like a header row
+    if (headerKeywords.test(trimmed) && !trimmed.match(/\d{2}[.,]\d{2}/)) continue;
+
+    let match = trimmed.match(itemPattern);
+    if (match) {
+      const [, code, name, unit, qty, unitValue, totalValue] = match;
+      const parsedQty = parseFloat(qty.replace(/\./g, '').replace(',', '.'));
+      const parsedUnitValue = parseFloat(unitValue.replace(/\./g, '').replace(',', '.'));
+      const parsedTotal = parseFloat(totalValue.replace(/\./g, '').replace(',', '.'));
+      if (parsedQty > 0 && parsedTotal > 0) {
+        items.push({
+          itemNumber: items.length + 1,
+          productCode: code.trim(),
+          productName: name.trim().replace(/\s{2,}/g, ' '),
+          ncm: '',
+          cfop: '',
+          unit: unit.toUpperCase(),
+          quantity: parsedQty,
+          unitValue: parsedUnitValue,
+          totalValue: parsedTotal,
+          productEan: '',
+          taxes: {},
+        });
+        continue;
+      }
+    }
+
+    match = trimmed.match(itemPattern2);
+    if (match) {
+      const [, name, unit, qty, unitValue, totalValue] = match;
+      const parsedQty = parseFloat(qty.replace(/\./g, '').replace(',', '.'));
+      const parsedUnitValue = parseFloat(unitValue.replace(/\./g, '').replace(',', '.'));
+      const parsedTotal = parseFloat(totalValue.replace(/\./g, '').replace(',', '.'));
+      if (parsedQty > 0 && parsedTotal > 0 && name.trim().length > 2) {
+        items.push({
+          itemNumber: items.length + 1,
+          productCode: '',
+          productName: name.trim().replace(/\s{2,}/g, ' '),
+          ncm: '',
+          cfop: '',
+          unit: unit.toUpperCase(),
+          quantity: parsedQty,
+          unitValue: parsedUnitValue,
+          totalValue: parsedTotal,
+          productEan: '',
+          taxes: {},
+        });
+      }
+    }
+  }
+
+  console.log('[PDF Parser] Itens extraídos:', items.length, items.map(i => i.productName));
+  return items;
+}
+
 export async function parseDanfePDF(pdfContent: string): Promise<PDFParseResult> {
   const warnings: string[] = [];
 
@@ -127,8 +212,12 @@ export async function parseDanfePDF(pdfContent: string): Promise<PDFParseResult>
     confidence = 'medium';
   }
 
-  const items: ParsedInvoiceItem[] = [];
-  warnings.push('Extração de itens do PDF é limitada - recomenda-se usar XML para melhor precisão');
+  const items: ParsedInvoiceItem[] = extractItemsFromText(pdfContent);
+  if (items.length === 0) {
+    warnings.push('Nenhum item encontrado no PDF - recomenda-se usar XML para melhor precisão');
+  } else {
+    warnings.push(`${items.length} item(ns) extraído(s) do PDF - revise os dados antes de confirmar`);
+  }
 
   const invoice: Partial<ParsedInvoice> = {
     invoiceKey,
