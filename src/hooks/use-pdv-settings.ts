@@ -39,6 +39,37 @@ export interface PDVSettings {
   enable_desktop_notifications?: boolean;
   nfe_auto_import_enabled?: boolean;
   nfe_auto_import_cnpj?: string;
+  // NF Automática - Dados complementares
+  nfe_inscricao_municipal?: string;
+  nfe_nome_fantasia?: string;
+  nfe_endereco_fiscal?: {
+    logradouro?: string;
+    numero?: string;
+    complemento?: string;
+    bairro?: string;
+    cidade?: string;
+    uf?: string;
+    cep?: string;
+    codigo_municipio?: string;
+  };
+  // Certificado digital
+  nfe_certificate_url?: string;
+  nfe_certificate_password?: string;
+  // Configurações NF-e
+  nfe_serie?: string;
+  nfe_serie_nfce?: string;
+  nfe_numero_inicial?: number;
+  nfe_cfop_padrao?: string;
+  nfe_ambiente?: string;
+  // Tributação padrão
+  nfe_cst_csosn?: string;
+  nfe_aliquota_icms?: number;
+  nfe_aliquota_pis?: number;
+  nfe_aliquota_cofins?: number;
+  // Automação
+  nfe_auto_emit?: boolean;
+  nfe_email_customer?: boolean;
+  nfe_enable_nfce?: boolean;
 }
 
 export function usePDVSettings() {
