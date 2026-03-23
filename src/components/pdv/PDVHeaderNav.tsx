@@ -126,6 +126,7 @@ const sectionItems: Section[] = [
       { title: "DRE", url: "/pdv/financeiro/dre", icon: FileBarChart },
       { title: "CMV Produtos", url: "/pdv/financeiro/cmv-produtos", icon: PackageSearch },
       { title: "CMV Geral", url: "/pdv/financeiro/cmv-geral", icon: PieChart },
+      { title: "Demo. Caixa", url: "/pdv/financeiro/demonstrativo-caixa", icon: Receipt },
     ],
   },
   {

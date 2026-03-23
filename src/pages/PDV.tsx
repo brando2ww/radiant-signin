@@ -26,6 +26,7 @@ import CostCenters from "./pdv/financial/CostCenters";
 import DRE from "./pdv/financial/DRE";
 import ProductCMV from "./pdv/financial/ProductCMV";
 import GeneralCMV from "./pdv/financial/GeneralCMV";
+import CashierStatement from "./pdv/financial/CashierStatement";
 import DeliveryOrders from "./pdv/delivery/Orders";
 import DeliveryMenu from "./pdv/delivery/Menu";
 import DeliveryPersonalization from "./pdv/delivery/Personalization";
@@ -90,6 +91,7 @@ export default function PDV() {
               <Route path="financeiro/dre" element={<RoleRoute path="/pdv/financeiro/dre" canAccess={canAccess} defaultRoute={defaultRoute}><DRE /></RoleRoute>} />
               <Route path="financeiro/cmv-produtos" element={<RoleRoute path="/pdv/financeiro/cmv-produtos" canAccess={canAccess} defaultRoute={defaultRoute}><ProductCMV /></RoleRoute>} />
               <Route path="financeiro/cmv-geral" element={<RoleRoute path="/pdv/financeiro/cmv-geral" canAccess={canAccess} defaultRoute={defaultRoute}><GeneralCMV /></RoleRoute>} />
+              <Route path="financeiro/demonstrativo-caixa" element={<RoleRoute path="/pdv/financeiro/demonstrativo-caixa" canAccess={canAccess} defaultRoute={defaultRoute}><CashierStatement /></RoleRoute>} />
               
               {/* Frente de Caixa */}
               <Route path="salao" element={<RoleRoute path="/pdv/salao" canAccess={canAccess} defaultRoute={defaultRoute}><PDVSalon /></RoleRoute>} />

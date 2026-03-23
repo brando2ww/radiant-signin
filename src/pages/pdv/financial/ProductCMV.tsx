@@ -1,57 +1,70 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PackageSearch } from "lucide-react";
+import { PackageSearch, CalendarIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { usePDVCmv } from "@/hooks/use-pdv-cmv";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+function getMarginBadge(margin: number) {
+  if (margin >= 70) return <Badge className="bg-success text-success-foreground">Ótima</Badge>;
+  if (margin >= 50) return <Badge className="bg-primary text-primary-foreground">Boa</Badge>;
+  if (margin >= 30) return <Badge className="bg-warning text-warning-foreground">Regular</Badge>;
+  return <Badge variant="destructive">Baixa</Badge>;
+}
 
 export default function ProductCMV() {
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const { data, isLoading } = usePDVCmv(selectedMonth);
+
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">CMV por Produto</h1>
-        <p className="text-muted-foreground mt-1">
-          Análise detalhada de custos e margens por produto
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">CMV por Produto</h1>
+          <p className="text-muted-foreground mt-1">Análise detalhada de custos e margens por produto</p>
+        </div>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {format(selectedMonth, "MMMM yyyy", { locale: ptBR })}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar mode="single" selected={selectedMonth} onSelect={(d) => d && setSelectedMonth(d)} locale={ptBR} />
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Produtos Analisados</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground mt-1">com receitas cadastradas</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Margem Média</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0%</div>
-            <p className="text-xs text-muted-foreground mt-1">dos produtos</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Melhor Margem</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-success">0%</div>
-            <p className="text-xs text-muted-foreground mt-1">produto mais lucrativo</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Pior Margem</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">0%</div>
-            <p className="text-xs text-muted-foreground mt-1">requer atenção</p>
-          </CardContent>
-        </Card>
+        {[
+          { label: "Produtos Analisados", value: String(data?.analyzedCount || 0), sub: "com receitas cadastradas" },
+          { label: "Margem Média", value: `${(data?.avgMargin || 0).toFixed(1)}%`, sub: "dos produtos" },
+          { label: "Melhor Margem", value: `${(data?.bestMargin || 0).toFixed(1)}%`, sub: "produto mais lucrativo", color: "text-success" },
+          { label: "Pior Margem", value: `${(data?.worstMargin || 0).toFixed(1)}%`, sub: "requer atenção", color: "text-destructive" },
+        ].map((c) => (
+          <Card key={c.label}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">{c.label}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? <Skeleton className="h-8 w-20" /> : (
+                <>
+                  <div className={`text-2xl font-bold ${c.color || ""}`}>{c.value}</div>
+                  <p className="text-xs text-muted-foreground mt-1">{c.sub}</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <Card>
@@ -60,12 +73,43 @@ export default function ProductCMV() {
           <CardDescription>Custos, preços e margens por produto</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12 text-muted-foreground">
-            <PackageSearch className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Nenhum produto com receita cadastrada</p>
-            <p className="text-sm mt-2">Configure receitas em Produtos → Editar Produto → Aba Receita</p>
-            <p className="text-sm">para visualizar análise de CMV</p>
-          </div>
+          {isLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+            </div>
+          ) : (data?.productCmvList?.length || 0) > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Produto</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead className="text-right">Custo</TableHead>
+                  <TableHead className="text-right">Preço</TableHead>
+                  <TableHead className="text-right">Margem</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data!.productCmvList.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.name}</TableCell>
+                    <TableCell className="text-muted-foreground">{p.category || "—"}</TableCell>
+                    <TableCell className="text-right">{fmt(p.cost)}</TableCell>
+                    <TableCell className="text-right">{fmt(p.price)}</TableCell>
+                    <TableCell className="text-right font-medium">{p.margin.toFixed(1)}%</TableCell>
+                    <TableCell className="text-center">{getMarginBadge(p.margin)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <PackageSearch className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nenhum produto com receita cadastrada</p>
+              <p className="text-sm mt-2">Configure receitas em Produtos → Editar Produto → Aba Receita</p>
+              <p className="text-sm">para visualizar análise de CMV</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -76,34 +120,20 @@ export default function ProductCMV() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-3">
-                <Badge variant="default" className="bg-success">Ótima</Badge>
-                <span className="text-sm">Margem acima de 70%</span>
+            {[
+              { badge: <Badge className="bg-success text-success-foreground">Ótima</Badge>, desc: "Margem acima de 70%", count: data?.classification?.otima || 0 },
+              { badge: <Badge className="bg-primary text-primary-foreground">Boa</Badge>, desc: "Margem entre 50% e 70%", count: data?.classification?.boa || 0 },
+              { badge: <Badge className="bg-warning text-warning-foreground">Regular</Badge>, desc: "Margem entre 30% e 50%", count: data?.classification?.regular || 0 },
+              { badge: <Badge variant="destructive">Baixa</Badge>, desc: "Margem abaixo de 30%", count: data?.classification?.baixa || 0 },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center gap-3">
+                  {item.badge}
+                  <span className="text-sm">{item.desc}</span>
+                </div>
+                <span className="font-bold">{isLoading ? "..." : `${item.count} produtos`}</span>
               </div>
-              <span className="font-bold">0 produtos</span>
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-3">
-                <Badge variant="default" className="bg-primary">Boa</Badge>
-                <span className="text-sm">Margem entre 50% e 70%</span>
-              </div>
-              <span className="font-bold">0 produtos</span>
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-3">
-                <Badge variant="default" className="bg-warning">Regular</Badge>
-                <span className="text-sm">Margem entre 30% e 50%</span>
-              </div>
-              <span className="font-bold">0 produtos</span>
-            </div>
-            <div className="flex items-center justify-between p-3 border rounded-lg">
-              <div className="flex items-center gap-3">
-                <Badge variant="destructive">Baixa</Badge>
-                <span className="text-sm">Margem abaixo de 30%</span>
-              </div>
-              <span className="font-bold">0 produtos</span>
-            </div>
+            ))}
           </div>
         </CardContent>
       </Card>
