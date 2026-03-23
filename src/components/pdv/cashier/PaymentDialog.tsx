@@ -144,7 +144,7 @@ export function PaymentDialog({
   const splitRemaining = total - splitTotal;
 
   // Discount requires password authorization and reason
-  const hasDiscount = discountAmount > 0;
+  const hasDiscount = parseFloat(discountValue) > 0;
   const discountNeedsAuth = hasDiscount && !discountAuthorized;
   const discountNeedsReason = hasDiscount && !discountReason.trim();
 
@@ -310,9 +310,10 @@ export function PaymentDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid md:grid-cols-2 gap-6 overflow-y-auto max-h-[60vh] pr-2">
+        <div className="grid md:grid-cols-2 gap-6">
           {/* Left Column - Order Summary */}
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4 max-h-[60vh]">
+            <div className="overflow-y-auto flex-1 space-y-4 pr-1">
             {/* Items List */}
             <Card>
               <CardContent className="p-4">
@@ -381,19 +382,41 @@ onClick={() => {
                         <DollarSign className="h-4 w-4" />
                       </Button>
                     </div>
-                    <Input
-                      type="number"
-                      placeholder={discountType === "percent" ? "0%" : "0,00"}
-                      value={discountValue}
-                      onChange={(e) => {
-                        setDiscountValue(e.target.value);
-                        setDiscountAuthorized(false);
-                        setDiscountAuthorizedBy("");
-                        setDiscountPassword("");
-                        setDiscountReason("");
-                      }}
-                      className="flex-1"
-                    />
+                    {discountType === "percent" ? (
+                      <div className="relative flex-1">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder="0"
+                          value={discountValue}
+                          onChange={(e) => {
+                            const val = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
+                            setDiscountValue(val > 0 ? val.toString() : e.target.value);
+                            setDiscountAuthorized(false);
+                            setDiscountAuthorizedBy("");
+                            setDiscountPassword("");
+                            setDiscountReason("");
+                          }}
+                          className="pr-8"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">%</span>
+                      </div>
+                    ) : (
+                      <div className="flex-1">
+                        <CurrencyInput
+                          value={discountValue}
+                          onChange={(val) => {
+                            setDiscountValue(val);
+                            setDiscountAuthorized(false);
+                            setDiscountAuthorizedBy("");
+                            setDiscountPassword("");
+                            setDiscountReason("");
+                          }}
+                          placeholder="0,00"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Discount reason */}
@@ -507,8 +530,10 @@ onClick={() => {
               </CardContent>
             </Card>
 
-            {/* Totals */}
-            <Card className="bg-primary/5 border-primary/20">
+            </div>
+
+            {/* Totals - fixed at bottom */}
+            <Card className="bg-primary/5 border-primary/20 shrink-0">
               <CardContent className="p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
@@ -538,7 +563,7 @@ onClick={() => {
           </div>
 
           {/* Right Column - Payment */}
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-1">
             {/* Split Payment Toggle */}
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <Label htmlFor="split-payment" className="text-sm cursor-pointer flex items-center gap-2">
