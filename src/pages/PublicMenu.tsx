@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { PublicMenuHeader } from "@/components/public-menu/PublicMenuHeader";
 import { CategoryNav } from "@/components/public-menu/CategoryNav";
 import { ProductList } from "@/components/public-menu/ProductList";
