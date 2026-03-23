@@ -386,17 +386,34 @@ export function PaymentDialog({
                     />
                   </div>
 
+                  {/* Discount reason */}
+                  {hasDiscount && (
+                    <div className="space-y-2">
+                      <Label className="text-sm flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-amber-500" />
+                        Motivo do desconto *
+                      </Label>
+                      <Input
+                        type="text"
+                        placeholder="Ex: Cliente frequente, promoção..."
+                        value={discountReason}
+                        onChange={(e) => setDiscountReason(e.target.value)}
+                      />
+                    </div>
+                  )}
+
                   {/* Password for discount authorization */}
                   {hasDiscount && (
                     <div className="space-y-2">
                       <Label className="text-sm flex items-center gap-2">
                         <Lock className="h-4 w-4 text-amber-500" />
-                        Senha para desconto
+                        Senha de autorização
                       </Label>
                       <div className="flex gap-2">
                         <Input
                           type="password"
-                          placeholder="Digite a senha"
+                          inputMode="numeric"
+                          placeholder="Senha numérica"
                           value={discountPassword}
                           onChange={(e) => setDiscountPassword(e.target.value)}
                           className="flex-1"
@@ -407,19 +424,61 @@ export function PaymentDialog({
                           size="sm"
                           className="shrink-0"
                           disabled={discountAuthorized}
-                          onClick={() => {
-                            if (discountPassword === "1234") {
-                              setDiscountAuthorized(true);
-                              toast.success("Desconto autorizado");
-                            } else {
+                          onClick={async () => {
+                            if (!discountPassword) {
+                              toast.error("Digite a senha");
+                              return;
+                            }
+                            // Lookup user by discount_password
+                            const { data: users, error } = await supabase
+                              .from("establishment_users")
+                              .select("display_name, discount_password, max_discount_percent")
+                              .eq("establishment_owner_id", user?.id || "")
+                              .eq("is_active", true) as any;
+
+                            if (error) {
+                              toast.error("Erro ao verificar senha");
+                              return;
+                            }
+
+                            const authorizer = (users || []).find(
+                              (u: any) => u.discount_password === discountPassword
+                            );
+
+                            if (!authorizer) {
                               toast.error("Senha incorreta");
                               setDiscountPassword("");
+                              return;
                             }
+
+                            // Check discount percentage limit
+                            const discountPercent = discountType === "percent"
+                              ? parseFloat(discountValue) || 0
+                              : ((parseFloat(discountValue) || 0) / subtotal) * 100;
+                            
+                            const maxAllowed = authorizer.max_discount_percent ?? 100;
+
+                            if (discountPercent > maxAllowed) {
+                              toast.error(
+                                `Desconto acima do limite de ${authorizer.display_name || "operador"} (máx ${maxAllowed}%)`
+                              );
+                              setDiscountPassword("");
+                              return;
+                            }
+
+                            setDiscountAuthorized(true);
+                            setDiscountAuthorizedBy(authorizer.display_name || "Operador");
+                            toast.success(`Desconto autorizado por ${authorizer.display_name || "operador"}`);
                           }}
                         >
                           {discountAuthorized ? "Autorizado ✓" : "Autorizar"}
                         </Button>
                       </div>
+                      {discountAuthorized && discountAuthorizedBy && (
+                        <p className="text-xs text-green-600">
+                          Autorizado por: {discountAuthorizedBy}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
