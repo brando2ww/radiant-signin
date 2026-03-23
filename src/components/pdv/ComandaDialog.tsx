@@ -103,7 +103,7 @@ export function ComandaDialog({
                 id="personNumber"
                 type="number"
                 min="1"
-                value={personNumber || "1"}
+                value={personNumber}
                 onChange={(e) => setPersonNumber(e.target.value)}
                 placeholder="1"
               />

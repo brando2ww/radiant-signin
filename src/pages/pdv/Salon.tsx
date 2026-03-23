@@ -865,7 +865,13 @@ export default function PDVSalon() {
       />
 
       {/* Capacity Warning Dialog */}
-      <AlertDialog open={capacityWarningOpen} onOpenChange={setCapacityWarningOpen}>
+      <AlertDialog open={capacityWarningOpen} onOpenChange={(open) => {
+        if (!open) {
+          setPendingComandaData(null);
+          setCapacityWarningOpen(false);
+          document.body.style.pointerEvents = "";
+        }
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Capacidade da mesa excedida</AlertDialogTitle>
@@ -874,8 +880,14 @@ export default function PDVSalon() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setPendingComandaData(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmCapacityOverride}>
+            <AlertDialogCancel onClick={() => {
+              setPendingComandaData(null);
+              document.body.style.pointerEvents = "";
+            }}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              handleConfirmCapacityOverride();
+              document.body.style.pointerEvents = "";
+            }}>
               Continuar mesmo assim
             </AlertDialogAction>
           </AlertDialogFooter>
