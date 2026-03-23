@@ -1153,12 +1153,14 @@ export type Database = {
       establishment_users: {
         Row: {
           created_at: string | null
+          discount_password: string | null
           display_name: string | null
           email: string | null
           establishment_owner_id: string
           id: string
           invited_at: string | null
           is_active: boolean | null
+          max_discount_percent: number | null
           phone: string | null
           role: Database["public"]["Enums"]["app_role"]
           tenant_id: string | null
@@ -1167,12 +1169,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          discount_password?: string | null
           display_name?: string | null
           email?: string | null
           establishment_owner_id: string
           id?: string
           invited_at?: string | null
           is_active?: boolean | null
+          max_discount_percent?: number | null
           phone?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           tenant_id?: string | null
@@ -1181,12 +1185,14 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          discount_password?: string | null
           display_name?: string | null
           email?: string | null
           establishment_owner_id?: string
           id?: string
           invited_at?: string | null
           is_active?: boolean | null
+          max_discount_percent?: number | null
           phone?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           tenant_id?: string | null
@@ -1617,6 +1623,8 @@ export type Database = {
           cashier_session_id: string
           created_at: string
           description: string | null
+          discount_authorized_by: string | null
+          discount_reason: string | null
           id: string
           payment_method: string | null
           type: string
@@ -1626,6 +1634,8 @@ export type Database = {
           cashier_session_id: string
           created_at?: string
           description?: string | null
+          discount_authorized_by?: string | null
+          discount_reason?: string | null
           id?: string
           payment_method?: string | null
           type: string
@@ -1635,6 +1645,8 @@ export type Database = {
           cashier_session_id?: string
           created_at?: string
           description?: string | null
+          discount_authorized_by?: string | null
+          discount_reason?: string | null
           id?: string
           payment_method?: string | null
           type?: string
