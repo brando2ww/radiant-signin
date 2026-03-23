@@ -32,12 +32,16 @@ export default function Tasks() {
     if (!user?.id) return;
     setSendingReport(true);
     try {
-      const { data, error } = await supabase.functions.invoke("send-tasks-report", {
-        body: { user_id: user.id },
-      });
-      console.log("Report response:", data, error);
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Tempo esgotado (20s). Tente novamente.")), 20000)
+      );
+      const result = await Promise.race([
+        supabase.functions.invoke("send-tasks-report", { body: { user_id: user.id } }),
+        timeoutPromise,
+      ]) as { data: any; error: any };
+      console.log("Report response:", result.data, result.error);
+      if (result.error) throw result.error;
+      if (result.data?.error) throw new Error(result.data.error);
       toast({ title: "Relatório enviado! ✅", description: "O resumo das tarefas foi enviado via WhatsApp." });
     } catch (err: any) {
       console.error("Report error:", err);
