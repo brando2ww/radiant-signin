@@ -1,90 +1,57 @@
 
 
-## Página de Clientes Centralizada
+## Fix: Garçom não vê mesas nem produtos — RLS bloqueando staff
 
-### Conceito
+### Diagnóstico
 
-Nova página `/pdv/clientes` que unifica em uma única tela:
+Todas as tabelas PDV (`pdv_tables`, `pdv_products`, `pdv_orders`, `pdv_comandas`, `pdv_comanda_items`, `pdv_sectors`) têm RLS policies que verificam apenas `auth.uid() = user_id`. 
 
-- **Clientes** — cadastrados manualmente (tabela `pdv_customers`) + vindos do delivery (`delivery_customers`)
-- **Leads** — vindos das avaliações (`customer_evaluations`)
+O hook `useEstablishmentId` resolve o `visibleUserId` (ID do dono) corretamente no frontend, mas o **banco de dados bloqueia** a query porque o `auth.uid()` do garçom é diferente do `user_id` do dono.
 
-A página terá duas abas: **Clientes** e **Leads**, com busca, filtros e CRUD para clientes manuais.
+### Solução
 
-### Fontes de dados
-
-| Origem | Tabela | Dados principais |
-|--------|--------|-----------------|
-| PDV (manual) | `pdv_customers` | nome, phone, cpf, email, birth_date, total_spent, visit_count |
-| Delivery | `delivery_customers` | phone, name, email, cpf, birth_date |
-| Avaliações (leads) | `customer_evaluations` | customer_name, customer_whatsapp, customer_birth_date, nps_score |
+Criar uma **function SQL `is_establishment_member`** que verifica se o usuário autenticado é membro ativo do estabelecimento de um dado owner. Depois, atualizar as RLS policies das tabelas afetadas para permitir acesso tanto ao dono quanto aos seus staff members.
 
 ### Mudanças
 
-| Arquivo | Ação |
-|---------|------|
-| `src/hooks/use-pdv-customers.ts` | Expandir com CRUD completo (create, update, delete) + query de delivery_customers + query de leads (customer_evaluations agrupados) |
-| `src/pages/pdv/Customers.tsx` | Nova página com abas Clientes / Leads |
-| `src/components/pdv/CustomerCard.tsx` | Card de cliente com origem (PDV/Delivery), dados e ações |
-| `src/components/pdv/CustomerDialog.tsx` | Dialog para criar/editar cliente manual |
-| `src/components/pdv/CustomerFilters.tsx` | Busca + filtro por origem (PDV/Delivery/Todos) |
-| `src/components/pdv/LeadCard.tsx` | Card de lead com NPS, WhatsApp, data |
-| `src/pages/PDV.tsx` | Adicionar rota `/pdv/clientes` |
-| `src/components/pdv/PDVHeaderNav.tsx` | Adicionar "Clientes" no menu Administrador |
-| `src/hooks/use-user-role.ts` | Adicionar `/pdv/clientes` nas rotas de gerente |
+**1. Migration SQL** — nova function + policies atualizadas:
 
-### UI — Aba Clientes
-
-```text
-┌─────────────────────────────────────────────────────┐
-│ Clientes                          [+ Novo Cliente]  │
-│ Gerencie todos os clientes do estabelecimento       │
-├─────────────────────────────────────────────────────┤
-│ [Clientes]  [Leads]                                 │
-├─────────────────────────────────────────────────────┤
-│ 🔍 Buscar...     Origem: [Todos ▾]                  │
-│ 15 clientes encontrados                             │
-├─────────────────────────────────────────────────────┤
-│ ┌──────────┐ ┌──────────┐ ┌──────────┐             │
-│ │ João S.  │ │ Maria L. │ │ Pedro R. │             │
-│ │ PDV      │ │ Delivery │ │ PDV      │             │
-│ │ (54)...  │ │ (11)...  │ │ (21)...  │             │
-│ │ R$1.250  │ │ 3 ped.   │ │ R$890    │             │
-│ └──────────┘ └──────────┘ └──────────┘             │
-└─────────────────────────────────────────────────────┘
+```sql
+-- Function para verificar se o usuário é membro do estabelecimento
+CREATE OR REPLACE FUNCTION public.is_establishment_member(owner_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM establishment_users
+    WHERE user_id = auth.uid()
+      AND establishment_owner_id = owner_id
+      AND is_active = true
+  )
+$$;
 ```
 
-### UI — Aba Leads
+**2. Atualizar RLS policies** nas seguintes tabelas para usar `OR is_establishment_member(user_id)`:
 
-```text
-┌─────────────────────────────────────────────────────┐
-│ [Clientes]  [Leads]                                 │
-├─────────────────────────────────────────────────────┤
-│ 🔍 Buscar...                                        │
-│ 8 leads capturados via avaliações                   │
-├─────────────────────────────────────────────────────┤
-│ ┌──────────────────────────────────────────────┐    │
-│ │ Ana Costa  │ (54) 99653-5731 │ NPS: 9 🟢    │    │
-│ │ Última avaliação: 23/03/2026 │ 2 avaliações │    │
-│ │                     [Converter em Cliente]   │    │
-│ └──────────────────────────────────────────────┘    │
-└─────────────────────────────────────────────────────┘
-```
+| Tabela | Policy atual | Nova condição |
+|--------|-------------|---------------|
+| `pdv_tables` | `auth.uid() = user_id` | `auth.uid() = user_id OR is_establishment_member(user_id)` |
+| `pdv_products` | `auth.uid() = user_id` | `auth.uid() = user_id OR is_establishment_member(user_id)` |
+| `pdv_orders` | `auth.uid() = user_id` | `auth.uid() = user_id OR is_establishment_member(user_id)` |
+| `pdv_comandas` | `auth.uid() = user_id` | `auth.uid() = user_id OR is_establishment_member(user_id)` |
+| `pdv_comanda_items` | Joins com `pdv_comandas` | Mesma lógica (herda via join) |
+| `pdv_sectors` | `auth.uid() = user_id` | `auth.uid() = user_id OR is_establishment_member(user_id)` |
 
-"Converter em Cliente" cria um registro em `pdv_customers` com os dados do lead.
+Para tabelas com policy `ALL`, será necessário separar em SELECT (leitura ampla) e INSERT/UPDATE/DELETE (restrito ao dono) para que staff possa **ler** mas não **criar/deletar** recursos indevidamente — ou manter `ALL` se o garçom precisa criar comandas/pedidos.
 
-### Hook — Dados unificados
+**3. Nenhuma mudança no frontend** — os hooks já usam `visibleUserId` corretamente.
 
-O hook `usePDVCustomers` será expandido para:
-1. Buscar `pdv_customers` (com flag `source: 'pdv'`)
-2. Buscar `delivery_customers` (com flag `source: 'delivery'`)
-3. Deduplicar por telefone (prioriza PDV)
-4. Buscar leads de `customer_evaluations` agrupados por `customer_whatsapp` (com contagem de avaliações e último NPS)
-5. Mutations: `createCustomer`, `updateCustomer`, `deleteCustomer`, `convertLeadToCustomer`
+### Segurança
 
-### Navegação
-
-- Menu Administrador: novo item "Clientes" com ícone `Users` (entre "Usuários" e "Avaliações")
-- Rota: `/pdv/clientes`
-- Acesso: proprietário + gerente
+- `SECURITY DEFINER` na function evita recursão de RLS ao consultar `establishment_users`
+- Staff só pode acessar dados do owner ao qual está vinculado (multi-tenant seguro)
+- Staff com role `garcom` pode criar comandas e comanda_items (necessário para o fluxo)
 
