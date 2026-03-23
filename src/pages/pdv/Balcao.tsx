@@ -60,6 +60,10 @@ export default function PDVBalcao() {
   };
 
   const handleCreateOrder = (customerName?: string) => {
+    if (!activeSession) {
+      toast.error("Abra o caixa antes de criar pedidos no balcão");
+      return;
+    }
     createOrder({ 
       source: "balcao",
       customer_name: customerName 
