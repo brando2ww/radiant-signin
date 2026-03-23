@@ -16,6 +16,8 @@ import { toast } from "sonner";
 export function IntegrationsTab() {
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
   const { settings, isLoading, isConnected, disconnectIFood, updateSettings } = useIFoodIntegration();
+  const { settings: pdvSettings, updateSettings: updatePDVSettings, isUpdating } = usePDVSettings();
+  const [nfeCnpj, setNfeCnpj] = useState("");
 
   if (isLoading) {
     return (
