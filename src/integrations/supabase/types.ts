@@ -4517,6 +4517,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_parent_tenant_ids: { Args: never; Returns: string[] }
       has_module_access: {
         Args: {
           _module: Database["public"]["Enums"]["user_module"]
