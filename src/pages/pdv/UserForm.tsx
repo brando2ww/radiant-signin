@@ -25,6 +25,9 @@ export default function UserForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [discountPassword, setDiscountPassword] = useState("");
+  const [showDiscountPassword, setShowDiscountPassword] = useState(false);
+  const [maxDiscountPercent, setMaxDiscountPercent] = useState(100);
 
   useEffect(() => {
     if (isEditing && users.length > 0) {
