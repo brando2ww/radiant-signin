@@ -40,14 +40,7 @@ export function AdminSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-4 py-5">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-sm">
-            V
-          </div>
-          {!collapsed && (
-            <span className="font-semibold text-base tracking-tight">Velaro Admin</span>
-          )}
-        </div>
+        <Logo size="sm" className={collapsed ? "h-8 w-8 object-contain" : ""} />
       </SidebarHeader>
 
       <SidebarSeparator />
