@@ -11,9 +11,9 @@ import { Plus, FolderTree, Pencil, Trash2, Search, Sparkles, ChevronRight, Chevr
 import { usePDVChartOfAccounts, type PDVChartOfAccount } from "@/hooks/use-pdv-chart-of-accounts";
 
 const ACCOUNT_TYPES = [
-  { value: "receita", label: "Receita", color: "text-emerald-600 dark:text-emerald-400", badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" },
-  { value: "despesa", label: "Despesa", color: "text-destructive", badge: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
-  { value: "custo", label: "Custo (CMV)", color: "text-amber-600 dark:text-amber-400", badge: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" },
+  { value: "revenue", label: "Receita", color: "text-emerald-600 dark:text-emerald-400", badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  { value: "expense", label: "Despesa", color: "text-destructive", badge: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
+  { value: "cost", label: "Custo (CMV)", color: "text-amber-600 dark:text-amber-400", badge: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" },
 ];
 
 function getTypeConfig(type: string) {
