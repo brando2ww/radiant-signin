@@ -310,9 +310,10 @@ export function PaymentDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid md:grid-cols-2 gap-6 overflow-y-auto max-h-[60vh] pr-2">
+        <div className="grid md:grid-cols-2 gap-6">
           {/* Left Column - Order Summary */}
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4 max-h-[60vh]">
+            <div className="overflow-y-auto flex-1 space-y-4 pr-1">
             {/* Items List */}
             <Card>
               <CardContent className="p-4">
