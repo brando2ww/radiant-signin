@@ -86,6 +86,8 @@ export function PaymentDialog({
   tableItems = [],
   onSuccess,
 }: PaymentDialogProps) {
+  const { user } = useAuth();
+  
   // Payment state
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>("dinheiro");
   const [cardType, setCardType] = useState<CardType>("credito");
@@ -97,6 +99,8 @@ export function PaymentDialog({
   const [discountValue, setDiscountValue] = useState("");
   const [discountPassword, setDiscountPassword] = useState("");
   const [discountAuthorized, setDiscountAuthorized] = useState(false);
+  const [discountAuthorizedBy, setDiscountAuthorizedBy] = useState("");
+  const [discountReason, setDiscountReason] = useState("");
   const [serviceFeeEnabled, setServiceFeeEnabled] = useState(true);
   
   // Split payment
