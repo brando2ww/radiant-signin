@@ -136,6 +136,8 @@ export function usePDVPayments() {
       cashReceived,
       changeAmount,
       installments,
+      discountReason,
+      discountAuthorizedBy,
     }: {
       tableId: string;
       comandaIds: string[];
@@ -144,6 +146,8 @@ export function usePDVPayments() {
       cashReceived?: number;
       changeAmount?: number;
       installments?: number;
+      discountReason?: string;
+      discountAuthorizedBy?: string;
     }) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
