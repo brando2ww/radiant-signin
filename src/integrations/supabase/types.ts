@@ -3689,6 +3689,8 @@ export type Database = {
           max_tables_per_order: number | null
           min_order_value: number | null
           new_order_sound: string | null
+          nfe_auto_import_cnpj: string | null
+          nfe_auto_import_enabled: boolean | null
           order_ready_sound: string | null
           printers: Json | null
           require_customer_identification: boolean | null
@@ -3730,6 +3732,8 @@ export type Database = {
           max_tables_per_order?: number | null
           min_order_value?: number | null
           new_order_sound?: string | null
+          nfe_auto_import_cnpj?: string | null
+          nfe_auto_import_enabled?: boolean | null
           order_ready_sound?: string | null
           printers?: Json | null
           require_customer_identification?: boolean | null
@@ -3771,6 +3775,8 @@ export type Database = {
           max_tables_per_order?: number | null
           min_order_value?: number | null
           new_order_sound?: string | null
+          nfe_auto_import_cnpj?: string | null
+          nfe_auto_import_enabled?: boolean | null
           order_ready_sound?: string | null
           printers?: Json | null
           require_customer_identification?: boolean | null
