@@ -19,8 +19,10 @@ import { GoomerIntegrationCard } from "@/components/pdv/integrations/GoomerInteg
 import { GetnetIntegrationCard } from "@/components/pdv/integrations/GetnetIntegrationCard";
 import { RedeIntegrationCard } from "@/components/pdv/integrations/RedeIntegrationCard";
 import { WhatsAppConnectionCard } from "@/components/pdv/settings/WhatsAppConnectionCard";
+import { DeliveryProprioIntegrationCard } from "@/components/pdv/integrations/DeliveryProprioIntegrationCard";
 
 import ifoodLogo from "@/assets/integrations/ifood.png";
+import velaraLogo from "@/assets/logo_velara_preto.png";
 import pagseguroLogo from "@/assets/integrations/pagseguro.png";
 import stoneLogo from "@/assets/integrations/stone.png";
 import goomerLogo from "@/assets/integrations/goomer.png";
@@ -240,6 +242,30 @@ const integrations: Record<string, IntegrationData> = {
     component: WhatsAppConnectionCard,
     docsUrl: "https://business.whatsapp.com",
     docsLabel: "WhatsApp Business",
+  },
+  "delivery-proprio": {
+    title: "Delivery Próprio",
+    logo: velaraLogo,
+    category: "Delivery",
+    description:
+      "O Delivery Próprio da Velara é um sistema completo de delivery integrado ao seu PDV. Crie seu cardápio online personalizado, receba pedidos em tempo real, gerencie entregas, ofereça cupons de desconto e acompanhe relatórios detalhados — tudo sem depender de plataformas terceiras e sem pagar comissões por pedido.",
+    features: [
+      { icon: Menu, title: "Cardápio online", description: "Cardápio digital personalizado com link público para compartilhar com seus clientes." },
+      { icon: ShoppingBag, title: "Pedidos em tempo real", description: "Receba e gerencie pedidos em um painel Kanban com atualização automática de status." },
+      { icon: Settings2, title: "Gestão completa", description: "Configure taxas de entrega, zonas, horários de funcionamento e formas de pagamento." },
+      { icon: MessageCircle, title: "Cupons de desconto", description: "Crie cupons percentuais ou de valor fixo com controle de uso e validade." },
+      { icon: Palette, title: "Personalização visual", description: "Customize cores, logo, banner e mensagens do seu cardápio online." },
+      { icon: BarChart3, title: "Relatórios de delivery", description: "Acompanhe faturamento, ticket médio, produtos mais vendidos e métricas de entrega." },
+    ],
+    steps: [
+      "Acesse o módulo Delivery no menu lateral do PDV.",
+      "Configure seu cardápio: adicione categorias e produtos com fotos e descrições.",
+      "Personalize a aparência do seu cardápio online com suas cores e logo.",
+      "Compartilhe o link público do cardápio com seus clientes via WhatsApp, redes sociais ou QR Code.",
+    ],
+    component: DeliveryProprioIntegrationCard,
+    docsUrl: "/pdv/delivery/configuracoes",
+    docsLabel: "Configurações do Delivery",
   },
 };
 
