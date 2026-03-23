@@ -1,60 +1,60 @@
 
 
-## Importação Automática de NF-e via SEFAZ (DistDFe)
+## Conectar Importação Automática de NF-e à Página de Notas Fiscais
 
-### Conceito
-Adicionar na aba Integrações (Settings) um card "Importar NF-e Automaticamente" com toggle ativar/desativar e campo para CNPJ. Quando ativado, uma edge function consulta periodicamente a SEFAZ via API de terceiros (usando DistDFe) e importa as NF-e emitidas contra o CNPJ do tenant para a tabela `pdv_invoices`.
-
-A API key é global (1 para todo o sistema, configurada como secret no Supabase). Cada tenant configura apenas seu CNPJ e se quer ativar.
+### Problema
+1. A edge function `fetch-nfe-automatica` insere colunas com nomes errados (`access_key`, `invoice_series`, `issue_date`, `total_value`, `xml_content`, `source`) que **não existem** na tabela `pdv_invoices` (colunas reais: `invoice_key`, `series`, `emission_date`, `total_invoice`, `xml_url`, `operation_type`, `invoice_type`).
+2. A página de Notas Fiscais não tem botão para disparar a busca automática manualmente.
+3. Falta colunas `source` na tabela para diferenciar NFs importadas manualmente vs automaticamente.
+4. O `handleView` na página de Notas Fiscais apenas loga no console — não abre o wizard de revisão para cadastrar insumos.
 
 ### Mudanças
 
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---------|------|
-| Migration SQL | Adicionar colunas `nfe_auto_import_enabled` e `nfe_auto_import_cnpj` em `pdv_settings` |
-| `src/hooks/use-pdv-settings.ts` | Adicionar campos na interface `PDVSettings` |
-| `src/components/pdv/settings/IntegrationsTab.tsx` | Adicionar card "Importar NF-e Automaticamente" com Switch e campo CNPJ |
-| `supabase/functions/fetch-nfe-automatica/index.ts` | Edge function que consulta API DistDFe e insere NF-e novas em `pdv_invoices` |
+| Migration SQL | Adicionar coluna `source` (TEXT, default 'manual') em `pdv_invoices` |
+| `supabase/functions/fetch-nfe-automatica/index.ts` | Corrigir nomes das colunas no INSERT para corresponder ao schema real |
+| `src/pages/pdv/Invoices.tsx` | Adicionar botao "Buscar NF-e" que chama a edge function; implementar `handleView` para abrir wizard de revisao com dados da NF existente |
+| `src/hooks/use-pdv-invoices.ts` | Adicionar hook `useFetchNFeAutomatica` para chamar a edge function |
+| `src/components/pdv/invoices/InvoiceCard.tsx` | Mostrar badge "Automática" para NFs com source `sefaz_auto`; adicionar botao "Cadastrar Insumos" para NFs pendentes |
 
-### DB — Colunas novas em `pdv_settings`
+### Detalhes
 
-| Coluna | Tipo | Default |
-|--------|------|---------|
-| `nfe_auto_import_enabled` | BOOLEAN | false |
-| `nfe_auto_import_cnpj` | TEXT | NULL |
-
-### UI — Card na aba Integrações
+**1. Fix Edge Function — colunas corretas**
 
 ```text
-┌──────────────────────────────────────────────────┐
-│ [FileDown] Importar NF-e Automaticamente   [OFF] │
-│ Busque automaticamente notas fiscais emitidas    │
-│ contra o CNPJ do seu estabelecimento via SEFAZ   │
-│                                                  │
-│ CNPJ para consulta: [_________________]          │
-│                     (pré-preenche com business_cnpj)│
-│                                                  │
-│ • Consulta automática de NF-e na SEFAZ           │
-│ • Importa XML completo com itens e impostos      │
-│ • NF-e novas aparecem na tela de Notas Fiscais   │
-│                  [Salvar]                        │
-└──────────────────────────────────────────────────┘
+Errado → Correto
+access_key → invoice_key
+invoice_series → series
+issue_date → emission_date
+total_value → total_invoice
+xml_content → xml_url (ou notes)
+source → source (nova coluna)
++ operation_type: 'entrada'
++ invoice_type: 'compra'
++ total_products: 0
++ total_tax: 0
++ supplier_cnpj precisa ser NOT NULL
 ```
 
-O card aparece após o card do iFood, antes do WhatsApp.
+**2. Botão "Buscar NF-e" na página**
 
-### Edge Function — `fetch-nfe-automatica`
+Ao lado do "Importar NF-e", um segundo botão "Buscar NF-e SEFAZ" que:
+- Chama `supabase.functions.invoke('fetch-nfe-automatica', { body: { user_id } })`
+- Mostra toast com resultado (X notas importadas / API key não configurada)
+- Recarrega a lista
 
-- Recebe `{ user_id }` ou é chamada via cron para todos os tenants com `nfe_auto_import_enabled = true`
-- Busca `business_cnpj` ou `nfe_auto_import_cnpj` do tenant
-- Chama API DistDFe (placeholder URL, a ser configurada quando a API key for adicionada)
-- Para cada NF-e nova (chave não existente em `pdv_invoices`), insere na tabela com status `pending`
-- A API key será o secret `NFE_API_KEY` (global, ainda não adicionada)
-- A function ficará funcional em estrutura mas sem a API key não fará chamadas reais — retorna mensagem informando que a key não está configurada
+**3. handleView → Abrir InvoiceReviewDialog**
 
-### Fluxo futuro (quando API key existir)
-1. Cron a cada 6h chama edge function
-2. Edge function busca todos os tenants com auto-import ativado
-3. Para cada um, consulta DistDFe pelo CNPJ
-4. Insere NF-e novas em `pdv_invoices` + `pdv_invoice_items`
+Quando o admin clica "Visualizar" em uma NF pendente (importada automaticamente), abre o `InvoiceReviewWizard` populado com os dados da NF existente, permitindo revisar e cadastrar insumos a partir dos itens.
+
+Para NFs auto-importadas que só têm dados básicos (sem itens parseados), o wizard mostrará os dados disponíveis e permitirá complementar manualmente.
+
+### Fluxo completo
+1. Admin ativa importação automática nas Configurações → Integrações
+2. Na página Notas Fiscais, clica "Buscar NF-e SEFAZ" (ou aguarda cron)
+3. NFs aparecem na lista com status "Pendente" e badge "Automática"
+4. Admin clica "Visualizar" → abre wizard de revisão
+5. No Step 4 (Produtos), vincula ou cria insumos a partir dos itens da NF
+6. Confirma → insumos cadastrados no estoque
 
