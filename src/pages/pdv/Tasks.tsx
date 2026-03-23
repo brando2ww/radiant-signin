@@ -35,7 +35,7 @@ export default function Tasks() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => generateDaily()}
+          onClick={() => generateDailyFn()}
           disabled={isGenerating}
         >
           <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? "animate-spin" : ""}`} />
