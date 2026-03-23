@@ -4,15 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Link2, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Link2, ExternalLink, CheckCircle2, AlertCircle, FileDown } from "lucide-react";
 import { useIFoodIntegration } from "@/hooks/use-ifood-integration";
 import { IFoodConnectionDialog } from "./IFoodConnectionDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WhatsAppConnectionCard } from "./WhatsAppConnectionCard";
+import { usePDVSettings } from "@/hooks/use-pdv-settings";
+import { toast } from "sonner";
 
 export function IntegrationsTab() {
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
   const { settings, isLoading, isConnected, disconnectIFood, updateSettings } = useIFoodIntegration();
+  const { settings: pdvSettings, updateSettings: updatePDVSettings, isUpdating } = usePDVSettings();
+  const [nfeCnpj, setNfeCnpj] = useState("");
 
   if (isLoading) {
     return (
@@ -116,6 +121,63 @@ export function IntegrationsTab() {
               • Recebimento de pedidos em tempo real<br />
               • Atualização de status automaticamente
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* NF-e Auto Import Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FileDown className="h-5 w-5" />
+                Importar NF-e Automaticamente
+              </CardTitle>
+              <CardDescription>
+                Busque automaticamente notas fiscais emitidas contra o CNPJ do seu estabelecimento via SEFAZ
+              </CardDescription>
+            </div>
+            <Switch
+              checked={pdvSettings?.nfe_auto_import_enabled || false}
+              onCheckedChange={(checked) =>
+                updatePDVSettings({
+                  nfe_auto_import_enabled: checked,
+                  nfe_auto_import_cnpj: nfeCnpj || pdvSettings?.nfe_auto_import_cnpj || pdvSettings?.business_cnpj || "",
+                })
+              }
+            />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {pdvSettings?.nfe_auto_import_enabled && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="nfe-cnpj">CNPJ para consulta</Label>
+                <Input
+                  id="nfe-cnpj"
+                  placeholder="00.000.000/0000-00"
+                  value={nfeCnpj || pdvSettings?.nfe_auto_import_cnpj || pdvSettings?.business_cnpj || ""}
+                  onChange={(e) => setNfeCnpj(e.target.value)}
+                />
+              </div>
+              <Button
+                size="sm"
+                disabled={isUpdating}
+                onClick={() => {
+                  updatePDVSettings({
+                    nfe_auto_import_cnpj: nfeCnpj || pdvSettings?.nfe_auto_import_cnpj || "",
+                  });
+                }}
+              >
+                Salvar CNPJ
+              </Button>
+            </div>
+          )}
+          <div className="text-xs text-muted-foreground">
+            • Consulta automática de NF-e na SEFAZ<br />
+            • Importa XML completo com itens e impostos<br />
+            • NF-e novas aparecem na tela de Notas Fiscais
           </div>
         </CardContent>
       </Card>
