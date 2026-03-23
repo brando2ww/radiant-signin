@@ -103,7 +103,7 @@ export function AddItemDialog({
                       <p className="font-medium">{product.name}</p>
                       <Badge variant="outline">{product.category}</Badge>
                       <p className="text-lg font-bold">
-                        R$ {product.price_salon.toFixed(2)}
+                        R$ {getPrice(product).toFixed(2)}
                       </p>
                     </div>
                   </button>
