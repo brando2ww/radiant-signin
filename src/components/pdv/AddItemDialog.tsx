@@ -36,6 +36,11 @@ export function AddItemDialog({
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
 
+  const getPrice = (product: any) => {
+    if (source === "balcao") return product.price_balcao ?? product.price_salon;
+    if (source === "delivery") return product.price_delivery ?? product.price_salon;
+    return product.price_salon;
+  };
   const filteredProducts = useMemo(() => {
     return products.filter(
       (p) =>
