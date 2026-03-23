@@ -37,6 +37,8 @@ export default function UserForm() {
         setEmail(user.email || "");
         setPhone(user.phone || "");
         setRole(user.role || "garcom");
+        setDiscountPassword(user.discount_password || "");
+        setMaxDiscountPercent(user.max_discount_percent ?? 100);
       }
     }
   }, [isEditing, id, users]);
