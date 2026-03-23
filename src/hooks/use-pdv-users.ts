@@ -43,6 +43,8 @@ export function usePDVUsers() {
             phone: userData.phone,
             role: userData.role,
             password: userData.password,
+            discount_password: userData.discount_password,
+            max_discount_percent: userData.max_discount_percent,
           },
         }
       );
