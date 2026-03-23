@@ -89,6 +89,25 @@ export default function TenantForm() {
                 placeholder="00.000.000/0000-00"
               />
             </div>
+            <div className="space-y-2">
+              <Label>Tenant Matriz (opcional)</Label>
+              <Select value={parentTenantId} onValueChange={setParentTenantId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhum (independente)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhum (independente)</SelectItem>
+                  {tenants.filter((t) => !t.parent_tenant_id).map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Se selecionado, este tenant será uma franquia do tenant matriz
+              </p>
+            </div>
           </CardContent>
         </Card>
 

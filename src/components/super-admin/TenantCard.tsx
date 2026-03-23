@@ -1,7 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Building2, ChevronRight } from "lucide-react";
+import { Building2, ChevronRight, GitBranch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tenant } from "@/hooks/use-tenants";
 import { format } from "date-fns";
@@ -9,10 +8,15 @@ import { ptBR } from "date-fns/locale";
 
 interface TenantCardProps {
   tenant: Tenant;
+  allTenants?: Tenant[];
 }
 
-export function TenantCard({ tenant }: TenantCardProps) {
+export function TenantCard({ tenant, allTenants = [] }: TenantCardProps) {
   const navigate = useNavigate();
+  const parentName = tenant.parent_tenant_id
+    ? allTenants.find((t) => t.id === tenant.parent_tenant_id)?.name
+    : null;
+  const hasChildren = allTenants.some((t) => t.parent_tenant_id === tenant.id);
 
   return (
     <Card
@@ -22,7 +26,11 @@ export function TenantCard({ tenant }: TenantCardProps) {
       <CardContent className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Building2 className="h-5 w-5 text-primary" />
+            {hasChildren ? (
+              <GitBranch className="h-5 w-5 text-primary" />
+            ) : (
+              <Building2 className="h-5 w-5 text-primary" />
+            )}
           </div>
           <div>
             <p className="font-medium">{tenant.name}</p>
@@ -33,6 +41,12 @@ export function TenantCard({ tenant }: TenantCardProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {hasChildren && (
+            <Badge variant="outline" className="text-xs">Matriz</Badge>
+          )}
+          {parentName && (
+            <Badge variant="outline" className="text-xs">Franquia</Badge>
+          )}
           <Badge variant={tenant.is_active ? "default" : "secondary"}>
             {tenant.is_active ? "Ativo" : "Inativo"}
           </Badge>
