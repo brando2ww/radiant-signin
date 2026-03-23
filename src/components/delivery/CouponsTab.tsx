@@ -29,10 +29,17 @@ export const CouponsTab = () => {
   const { data: coupons = [] } = useDeliveryCoupons();
   const deleteCoupon = useDeleteCoupon();
   const updateCoupon = useUpdateCoupon();
+  const { visibleUserId } = useEstablishmentId();
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.success("Código copiado!");
+  };
+
+  const handleCopyLink = (code: string) => {
+    const url = `${window.location.origin}/cardapio/${visibleUserId}?cupom=${code}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link com cupom copiado!");
   };
 
   const handleToggleActive = (coupon: DeliveryCoupon) => {
