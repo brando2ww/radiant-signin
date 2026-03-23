@@ -110,6 +110,7 @@ const sectionItems: Section[] = [
       { title: "Configurações", url: "/pdv/configuracoes", icon: Settings },
       { title: "Usuários", url: "/pdv/usuarios", icon: Users },
       { title: "Avaliações", url: "/pdv/avaliacoes", icon: Star },
+      { title: "Franquia", url: "/pdv/franquia", icon: GitBranch },
     ],
   },
   {
