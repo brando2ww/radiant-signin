@@ -38,7 +38,7 @@ export default function ChartOfAccounts() {
   const [deleteTarget, setDeleteTarget] = useState<PDVChartOfAccount | null>(null);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
-  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(["receita", "despesa", "custo"]));
+  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(["revenue", "expense", "cost"]));
 
   const filtered = useMemo(() => {
     let list = accounts;
