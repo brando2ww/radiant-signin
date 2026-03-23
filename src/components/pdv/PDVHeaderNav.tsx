@@ -37,6 +37,7 @@ import {
   Megaphone,
   Plug,
   Users,
+  UserCheck,
   Star,
   GitBranch,
   ClipboardCheck,
