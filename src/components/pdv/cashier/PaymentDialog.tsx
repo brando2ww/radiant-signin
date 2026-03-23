@@ -354,7 +354,12 @@ export function PaymentDialog({
                           "rounded-none px-3",
                           discountType === "percent" && "bg-primary/10 text-primary"
                         )}
-                        onClick={() => setDiscountType("percent")}
+onClick={() => {
+                          setDiscountType("percent");
+                          setDiscountAuthorized(false);
+                          setDiscountAuthorizedBy("");
+                          setDiscountPassword("");
+                        }}
                       >
                         <Percent className="h-4 w-4" />
                       </Button>
@@ -366,7 +371,12 @@ export function PaymentDialog({
                           "rounded-none px-3",
                           discountType === "value" && "bg-primary/10 text-primary"
                         )}
-                        onClick={() => setDiscountType("value")}
+                        onClick={() => {
+                          setDiscountType("value");
+                          setDiscountAuthorized(false);
+                          setDiscountAuthorizedBy("");
+                          setDiscountPassword("");
+                        }}
                       >
                         <DollarSign className="h-4 w-4" />
                       </Button>
