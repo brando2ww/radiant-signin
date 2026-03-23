@@ -220,6 +220,9 @@ export function PaymentDialog({
         cashReceived: selectedMethod === "dinheiro" ? cashReceivedNum : undefined,
         changeAmount: selectedMethod === "dinheiro" ? changeAmount : undefined,
         installments: selectedMethod === "cartao" ? parseInt(installments) : undefined,
+        discountAmount: hasDiscount ? discountAmount : undefined,
+        discountReason: hasDiscount ? discountReason : undefined,
+        discountAuthorizedBy: hasDiscount ? discountAuthorizedBy : undefined,
       };
 
       if (isTablePayment && table) {
