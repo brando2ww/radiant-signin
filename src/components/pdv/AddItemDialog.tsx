@@ -20,6 +20,7 @@ interface AddItemDialogProps {
   onOpenChange: (open: boolean) => void;
   orderId: string;
   onAddItem: (item: any) => void;
+  source?: string;
 }
 
 export function AddItemDialog({
@@ -27,6 +28,7 @@ export function AddItemDialog({
   onOpenChange,
   orderId,
   onAddItem,
+  source = "salon",
 }: AddItemDialogProps) {
   const { products } = usePDVProducts();
   const [search, setSearch] = useState("");
@@ -34,6 +36,11 @@ export function AddItemDialog({
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
 
+  const getPrice = (product: any) => {
+    if (source === "balcao") return product.price_balcao ?? product.price_salon;
+    if (source === "delivery") return product.price_delivery ?? product.price_salon;
+    return product.price_salon;
+  };
   const filteredProducts = useMemo(() => {
     return products.filter(
       (p) =>
@@ -51,7 +58,7 @@ export function AddItemDialog({
       product_id: selectedProduct.id,
       product_name: selectedProduct.name,
       quantity,
-      unit_price: selectedProduct.price_salon,
+      unit_price: getPrice(selectedProduct),
       notes: notes.trim() || undefined,
     });
 
@@ -96,7 +103,7 @@ export function AddItemDialog({
                       <p className="font-medium">{product.name}</p>
                       <Badge variant="outline">{product.category}</Badge>
                       <p className="text-lg font-bold">
-                        R$ {product.price_salon.toFixed(2)}
+                        R$ {getPrice(product).toFixed(2)}
                       </p>
                     </div>
                   </button>
@@ -112,7 +119,7 @@ export function AddItemDialog({
                 {selectedProduct.category}
               </p>
               <p className="text-lg font-bold mt-2">
-                R$ {selectedProduct.price_salon.toFixed(2)}
+                R$ {getPrice(selectedProduct).toFixed(2)}
               </p>
             </div>
 
@@ -162,7 +169,7 @@ export function AddItemDialog({
               <div className="flex items-center justify-between">
                 <span className="font-medium">Subtotal</span>
                 <span className="text-xl font-bold">
-                  R$ {(selectedProduct.price_salon * quantity).toFixed(2)}
+                  R$ {(getPrice(selectedProduct) * quantity).toFixed(2)}
                 </span>
               </div>
             </div>

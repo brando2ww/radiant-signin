@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Plus, ShoppingBag, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { usePDVOrders } from "@/hooks/use-pdv-orders";
+import { usePDVCashier } from "@/hooks/use-pdv-cashier";
+import { toast } from "sonner";
 import { OrderCard } from "@/components/pdv/OrderCard";
 import { OrderDetailsDialog } from "@/components/pdv/OrderDetailsDialog";
 import { NewOrderDialog } from "@/components/pdv/NewOrderDialog";
@@ -22,6 +24,7 @@ export default function PDVBalcao() {
     closeOrder,
     cancelOrder,
   } = usePDVOrders();
+  const { activeSession } = usePDVCashier();
 
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -58,6 +61,10 @@ export default function PDVBalcao() {
   };
 
   const handleCreateOrder = (customerName?: string) => {
+    if (!activeSession) {
+      toast.error("Abra o caixa antes de criar pedidos no balcão");
+      return;
+    }
     createOrder({ 
       source: "balcao",
       customer_name: customerName 
