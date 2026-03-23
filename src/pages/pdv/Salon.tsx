@@ -863,6 +863,24 @@ export default function PDVSalon() {
           setPaymentTableItems([]);
         }}
       />
+
+      {/* Capacity Warning Dialog */}
+      <AlertDialog open={capacityWarningOpen} onOpenChange={setCapacityWarningOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Capacidade da mesa excedida</AlertDialogTitle>
+            <AlertDialogDescription>
+              {capacityWarningMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingComandaData(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmCapacityOverride}>
+              Continuar mesmo assim
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
