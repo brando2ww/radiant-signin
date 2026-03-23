@@ -154,7 +154,7 @@ export default function CostCenters() {
       <CostCenterQuickDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        onSubmit={createCostCenter}
+        onSubmit={async (name) => { await createCostCenter(name); }}
         isSubmitting={isCreating}
       />
 
