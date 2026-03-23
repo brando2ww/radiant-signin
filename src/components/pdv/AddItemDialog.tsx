@@ -28,6 +28,7 @@ export function AddItemDialog({
   onOpenChange,
   orderId,
   onAddItem,
+  source = "salon",
 }: AddItemDialogProps) {
   const { products } = usePDVProducts();
   const [search, setSearch] = useState("");
