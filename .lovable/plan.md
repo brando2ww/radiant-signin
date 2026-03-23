@@ -1,96 +1,28 @@
 
 
-## Gamificação: Roleta de Prêmios nas Campanhas de Avaliação
+## Fix: Melhorar texto nas fatias da roleta e posição do botão
 
-### Fluxo Revisado — Roleta PRIMEIRO
+### Problemas identificados
+1. **Texto nas fatias**: As labels estão rotacionadas no ângulo do meio do segmento, ficando de cabeça para baixo em fatias na metade inferior. O texto precisa seguir a direção radial (de fora para dentro) e usar SVG para melhor posicionamento ao longo do arco.
+2. **Botão "Girar Roleta!"**: Está colado logo abaixo da roleta (`gap-6`). Precisa de mais espaçamento.
 
-```text
-Cliente acessa link → Gira a Roleta → Preenche Avaliação → Recebe Cupom
-```
-
-O cliente é atraído pela roleta (engajamento), gira e descobre o prêmio. Para **liberar o cupom**, precisa preencher a avaliação. Isso aumenta a taxa de resposta.
-
-```text
-┌─────────────────────────────────┐
-│  🎡 Gire e Ganhe!               │
-│                                 │
-│      [ROLETA ANIMADA]           │
-│                                 │
-│  [ Girar Roleta! ]              │
-└──────────┬──────────────────────┘
-           ▼
-┌─────────────────────────────────┐
-│  🎊 Você ganhou: Sobremesa!     │
-│                                 │
-│  Para liberar seu cupom,        │
-│  preencha a avaliação abaixo:   │
-├─────────────────────────────────┤
-│  📋 Seus Dados                   │
-│  ⭐ Perguntas de Avaliação       │
-│  📊 NPS                          │
-│  [ Enviar e Liberar Cupom ]     │
-└──────────┬──────────────────────┘
-           ▼
-┌─────────────────────────────────┐
-│  🎉 Seu Cupom!                  │
-│  CUPOM: ABC-1234                │
-│  Válido até: 30/03/2026         │
-│  Apresente no caixa             │
-└─────────────────────────────────┘
-```
-
-Se a roleta estiver desativada, vai direto para o formulário (comportamento atual).
-
-### Banco de Dados (migration)
-
-**Coluna em `evaluation_campaigns`:**
-- `roulette_enabled` boolean default false
-
-**Tabela `campaign_prizes`:**
-- id, campaign_id (FK), name, color (hex), probability (%), max_quantity (null=ilimitado), redeemed_count, coupon_validity_days, is_active, created_at
-
-**Tabela `campaign_prize_wins`:**
-- id, campaign_id, prize_id (FK), evaluation_id (FK, unique — 1 giro por avaliação), customer_name, customer_whatsapp, coupon_code (unique), coupon_expires_at, is_redeemed, redeemed_at, created_at
-
-**RLS:** SELECT e INSERT público (roleta funciona sem auth). UPDATE/DELETE apenas owner autenticado.
-
-### Admin — Nova aba "Roleta" na campanha
-
-Dentro de `CampaignDetail`, nova aba com:
-- Switch ativar/desativar roleta
-- CRUD de prêmios (nome, cor, probabilidade %, quantidade, validade)
-- Barra visual mostrando soma das % (deve = 100%)
-- Preview miniatura da roleta
-
-### Componente SpinWheel
-
-- Roleta circular com `conic-gradient` baseada nas cores/probabilidades
-- Prêmio sorteado antes da animação (distribuição acumulada de probabilidade)
-- Animação: `transform: rotate()` com `transition 4s cubic-bezier` — 5+ voltas e desacelera
-- Indicador triangular fixo no topo
-
-### Arquivos a criar/modificar
+### Solução
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase migration` | Criar tabelas, coluna roulette_enabled, RLS |
-| `src/hooks/use-campaign-prizes.ts` | CRUD prêmios + hook público buscar prêmios + registrar vitória |
-| `src/components/pdv/evaluations/CampaignRoulette.tsx` | Aba config roleta no admin |
-| `src/components/pdv/evaluations/PrizeDialog.tsx` | Dialog adicionar/editar prêmio |
-| `src/components/pdv/evaluations/RoulettePreview.tsx` | Preview visual da roleta |
-| `src/components/public-evaluation/SpinWheel.tsx` | Roleta animada pública |
-| `src/components/public-evaluation/PrizeResult.tsx` | Tela do cupom ganho |
-| `src/components/pdv/evaluations/CampaignDetail.tsx` | Adicionar aba "Roleta" |
-| `src/pages/PublicEvaluation.tsx` | Fluxo: roleta primeiro → formulário → cupom |
-| `src/integrations/supabase/types.ts` | Atualizar tipos |
+| `src/components/public-evaluation/SpinWheel.tsx` | Refatorar labels e botão |
 
-### Fluxo público detalhado
+### Mudanças detalhadas
 
-1. Página carrega → verifica `roulette_enabled` e busca prêmios ativos
-2. Se roleta ativa: mostra tela da roleta com botão "Girar"
-3. Ao girar: sorteia prêmio (client-side), anima roleta para o ângulo correto
-4. Mostra prêmio ganho + mensagem "preencha para liberar"
-5. Formulário de avaliação aparece abaixo (mesmo formulário atual)
-6. Ao enviar avaliação: salva avaliação + salva `campaign_prize_wins` com cupom gerado
-7. Mostra tela final com código do cupom e validade
+**1. Labels nas fatias — usar SVG com texto radial**
+- Substituir as `<span>` absolutas por um SVG overlay no mesmo tamanho da roleta
+- Para cada segmento, desenhar o texto ao longo de uma linha radial do centro para a borda
+- Rotacionar cada texto para que fique alinhado radialmente (apontando para fora do centro)
+- Para fatias na metade inferior (180-360deg), inverter a rotação (+180deg) para que o texto nunca fique de cabeça para baixo
+- Aumentar font-size para `11px` e usar `text-shadow` para legibilidade
+- Posicionar labels a ~65% do raio (entre centro e borda)
+
+**2. Botão "Girar Roleta!"**
+- Aumentar gap de `gap-6` para `gap-10` (mais espaço entre roleta e botão)
+- Adicionar `mt-4` no botão para separação extra
 
