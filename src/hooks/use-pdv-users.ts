@@ -29,6 +29,8 @@ export function usePDVUsers() {
       phone: string;
       role: string;
       password: string;
+      discount_password?: string;
+      max_discount_percent?: number;
     }) => {
       if (!user?.id) throw new Error("Não autenticado");
 
