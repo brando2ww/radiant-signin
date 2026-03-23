@@ -1,65 +1,90 @@
 
 
-## Fix: "Enviar Relatório" trava sem feedback — Evolution API timeout
+## Página de Clientes Centralizada
 
-### Diagnóstico
-Os logs da edge function mostram `Sending report to phone: 5554996535731` mas **nunca** mostram `Evolution API response:`. O `fetch()` para a Evolution API está travando (provavelmente o mesmo problema de DNS que afetou o `whatsapp-qrcode` antes). A function faz timeout de ~60s sem retornar nada, e o frontend fica esperando eternamente sem mostrar toast.
+### Conceito
+
+Nova página `/pdv/clientes` que unifica em uma única tela:
+
+- **Clientes** — cadastrados manualmente (tabela `pdv_customers`) + vindos do delivery (`delivery_customers`)
+- **Leads** — vindos das avaliações (`customer_evaluations`)
+
+A página terá duas abas: **Clientes** e **Leads**, com busca, filtros e CRUD para clientes manuais.
+
+### Fontes de dados
+
+| Origem | Tabela | Dados principais |
+|--------|--------|-----------------|
+| PDV (manual) | `pdv_customers` | nome, phone, cpf, email, birth_date, total_spent, visit_count |
+| Delivery | `delivery_customers` | phone, name, email, cpf, birth_date |
+| Avaliações (leads) | `customer_evaluations` | customer_name, customer_whatsapp, customer_birth_date, nps_score |
 
 ### Mudanças
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/functions/send-tasks-report/index.ts` | Adicionar timeout no fetch + try/catch ao redor da chamada Evolution + log de erro |
-| `src/pages/pdv/Tasks.tsx` | Adicionar timeout no lado do cliente para não esperar eternamente |
+| `src/hooks/use-pdv-customers.ts` | Expandir com CRUD completo (create, update, delete) + query de delivery_customers + query de leads (customer_evaluations agrupados) |
+| `src/pages/pdv/Customers.tsx` | Nova página com abas Clientes / Leads |
+| `src/components/pdv/CustomerCard.tsx` | Card de cliente com origem (PDV/Delivery), dados e ações |
+| `src/components/pdv/CustomerDialog.tsx` | Dialog para criar/editar cliente manual |
+| `src/components/pdv/CustomerFilters.tsx` | Busca + filtro por origem (PDV/Delivery/Todos) |
+| `src/components/pdv/LeadCard.tsx` | Card de lead com NPS, WhatsApp, data |
+| `src/pages/PDV.tsx` | Adicionar rota `/pdv/clientes` |
+| `src/components/pdv/PDVHeaderNav.tsx` | Adicionar "Clientes" no menu Administrador |
+| `src/hooks/use-user-role.ts` | Adicionar `/pdv/clientes` nas rotas de gerente |
 
-### Detalhes técnicos
+### UI — Aba Clientes
 
-**1. Edge function — timeout no fetch (send-tasks-report/index.ts)**
-
-Envolver o `fetch` para Evolution API com `AbortController` de 15 segundos:
-
-```typescript
-const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 15000);
-
-try {
-  const evoResponse = await fetch(`${evoUrl}/message/sendText/${instanceName}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: evoKey },
-    body: JSON.stringify({ number: phone, text: message }),
-    signal: controller.signal,
-  });
-  clearTimeout(timeout);
-  // ... rest of response handling
-} catch (fetchErr: any) {
-  clearTimeout(timeout);
-  console.error("Evolution API fetch error:", fetchErr.message);
-  if (fetchErr.name === "AbortError") {
-    throw new Error("Timeout ao conectar com Evolution API. Verifique se o servidor está acessível.");
-  }
-  throw new Error(`Erro ao conectar com Evolution API: ${fetchErr.message}`);
-}
+```text
+┌─────────────────────────────────────────────────────┐
+│ Clientes                          [+ Novo Cliente]  │
+│ Gerencie todos os clientes do estabelecimento       │
+├─────────────────────────────────────────────────────┤
+│ [Clientes]  [Leads]                                 │
+├─────────────────────────────────────────────────────┤
+│ 🔍 Buscar...     Origem: [Todos ▾]                  │
+│ 15 clientes encontrados                             │
+├─────────────────────────────────────────────────────┤
+│ ┌──────────┐ ┌──────────┐ ┌──────────┐             │
+│ │ João S.  │ │ Maria L. │ │ Pedro R. │             │
+│ │ PDV      │ │ Delivery │ │ PDV      │             │
+│ │ (54)...  │ │ (11)...  │ │ (21)...  │             │
+│ │ R$1.250  │ │ 3 ped.   │ │ R$890    │             │
+│ └──────────┘ └──────────┘ └──────────┘             │
+└─────────────────────────────────────────────────────┘
 ```
 
-Também logar a URL completa antes do fetch para confirmar que está correta.
+### UI — Aba Leads
 
-**2. Frontend — timeout de segurança (Tasks.tsx)**
-
-Adicionar um timeout de 20s no `handleSendReport` para garantir que o botão volte ao estado normal e o toast de erro apareça mesmo se a function travar:
-
-```typescript
-const timeoutPromise = new Promise((_, reject) => 
-  setTimeout(() => reject(new Error("Tempo esgotado. Tente novamente.")), 20000)
-);
-const result = await Promise.race([
-  supabase.functions.invoke("send-tasks-report", { body: { user_id: user.id } }),
-  timeoutPromise,
-]);
+```text
+┌─────────────────────────────────────────────────────┐
+│ [Clientes]  [Leads]                                 │
+├─────────────────────────────────────────────────────┤
+│ 🔍 Buscar...                                        │
+│ 8 leads capturados via avaliações                   │
+├─────────────────────────────────────────────────────┤
+│ ┌──────────────────────────────────────────────┐    │
+│ │ Ana Costa  │ (54) 99653-5731 │ NPS: 9 🟢    │    │
+│ │ Última avaliação: 23/03/2026 │ 2 avaliações │    │
+│ │                     [Converter em Cliente]   │    │
+│ └──────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────┘
 ```
 
-### Resultado esperado
-- Se Evolution API estiver OK: relatório enviado + toast de sucesso
-- Se Evolution API travar: após 15s, toast de erro claro
-- Se edge function travar: após 20s, toast de erro no frontend
-- O botão sempre volta ao estado normal (não fica travado)
+"Converter em Cliente" cria um registro em `pdv_customers` com os dados do lead.
+
+### Hook — Dados unificados
+
+O hook `usePDVCustomers` será expandido para:
+1. Buscar `pdv_customers` (com flag `source: 'pdv'`)
+2. Buscar `delivery_customers` (com flag `source: 'delivery'`)
+3. Deduplicar por telefone (prioriza PDV)
+4. Buscar leads de `customer_evaluations` agrupados por `customer_whatsapp` (com contagem de avaliações e último NPS)
+5. Mutations: `createCustomer`, `updateCustomer`, `deleteCustomer`, `convertLeadToCustomer`
+
+### Navegação
+
+- Menu Administrador: novo item "Clientes" com ícone `Users` (entre "Usuários" e "Avaliações")
+- Rota: `/pdv/clientes`
+- Acesso: proprietário + gerente
 
