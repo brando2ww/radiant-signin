@@ -55,10 +55,56 @@ export function usePDVCostCenters() {
     },
   });
 
+  const updateCostCenter = useMutation({
+    mutationFn: async ({ id, name }: { id: string; name: string }) => {
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { error } = await supabase
+        .from("pdv_cost_centers")
+        .update({ name })
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-cost-centers"] });
+      toast.success("Centro de custo atualizado");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao atualizar: " + error.message);
+    },
+  });
+
+  const deleteCostCenter = useMutation({
+    mutationFn: async (id: string) => {
+      if (!user) throw new Error("Usuário não autenticado");
+
+      const { error } = await supabase
+        .from("pdv_cost_centers")
+        .update({ is_active: false })
+        .eq("id", id)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-cost-centers"] });
+      toast.success("Centro de custo excluído");
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao excluir: " + error.message);
+    },
+  });
+
   return {
     costCenters: costCenters || [],
     isLoading,
     createCostCenter: createCostCenter.mutateAsync,
     isCreating: createCostCenter.isPending,
+    updateCostCenter: updateCostCenter.mutateAsync,
+    isUpdating: updateCostCenter.isPending,
+    deleteCostCenter: deleteCostCenter.mutateAsync,
+    isDeleting: deleteCostCenter.isPending,
   };
 }
