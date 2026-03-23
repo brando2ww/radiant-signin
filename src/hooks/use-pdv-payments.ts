@@ -76,13 +76,18 @@ export function usePDVPayments() {
 
       if (activeSession) {
         // Insert movement
-        await supabase.from("pdv_cashier_movements").insert({
+        const movementData: any = {
           cashier_session_id: activeSession.id,
           type: "venda",
           amount,
           payment_method: paymentMethod,
           description: `Comanda #${comandaId.slice(0, 8)}`,
-        });
+        };
+        
+        if (discountReason) movementData.discount_reason = discountReason;
+        if (discountAuthorizedBy) movementData.discount_authorized_by = discountAuthorizedBy;
+        
+        await supabase.from("pdv_cashier_movements").insert(movementData);
 
         // Update session totals
         const updates: Record<string, number> = {
