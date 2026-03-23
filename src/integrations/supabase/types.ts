@@ -3060,54 +3060,93 @@ export type Database = {
         Row: {
           available_times: Json | null
           category: string
+          cest: string | null
+          cfop: string | null
+          cofins_cst: string | null
+          cofins_rate: number | null
           created_at: string | null
+          csosn: string | null
+          cst_icms: string | null
           description: string | null
+          ean: string | null
+          icms_rate: number | null
           id: string
           image_url: string | null
           is_available: boolean | null
           is_sold_by_weight: boolean | null
           name: string
+          ncm: string | null
+          origin: string | null
+          pis_cst: string | null
+          pis_rate: number | null
           preparation_time: number | null
           price_balcao: number | null
           price_delivery: number | null
           price_salon: number
           serves: number | null
+          tax_unit: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           available_times?: Json | null
           category: string
+          cest?: string | null
+          cfop?: string | null
+          cofins_cst?: string | null
+          cofins_rate?: number | null
           created_at?: string | null
+          csosn?: string | null
+          cst_icms?: string | null
           description?: string | null
+          ean?: string | null
+          icms_rate?: number | null
           id?: string
           image_url?: string | null
           is_available?: boolean | null
           is_sold_by_weight?: boolean | null
           name: string
+          ncm?: string | null
+          origin?: string | null
+          pis_cst?: string | null
+          pis_rate?: number | null
           preparation_time?: number | null
           price_balcao?: number | null
           price_delivery?: number | null
           price_salon: number
           serves?: number | null
+          tax_unit?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           available_times?: Json | null
           category?: string
+          cest?: string | null
+          cfop?: string | null
+          cofins_cst?: string | null
+          cofins_rate?: number | null
           created_at?: string | null
+          csosn?: string | null
+          cst_icms?: string | null
           description?: string | null
+          ean?: string | null
+          icms_rate?: number | null
           id?: string
           image_url?: string | null
           is_available?: boolean | null
           is_sold_by_weight?: boolean | null
           name?: string
+          ncm?: string | null
+          origin?: string | null
+          pis_cst?: string | null
+          pis_rate?: number | null
           preparation_time?: number | null
           price_balcao?: number | null
           price_delivery?: number | null
           price_salon?: number
           serves?: number | null
+          tax_unit?: string | null
           updated_at?: string | null
           user_id?: string
         }
