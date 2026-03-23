@@ -58,7 +58,7 @@ export function AddItemDialog({
       product_id: selectedProduct.id,
       product_name: selectedProduct.name,
       quantity,
-      unit_price: selectedProduct.price_salon,
+      unit_price: getPrice(selectedProduct),
       notes: notes.trim() || undefined,
     });
 
