@@ -178,6 +178,7 @@ const PublicMenu = () => {
         onUpdateQuantity={updateQuantity}
         onClearCart={clearCart}
         userId={userId}
+        initialCoupon={initialCoupon}
       />
     </div>
   );

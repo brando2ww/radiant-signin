@@ -52,6 +52,25 @@ export const ShoppingCart = ({
   const discount = appliedCoupon?.discount || 0;
   const total = subtotal + deliveryFee - discount;
 
+  // Auto-apply coupon from URL when cart has items
+  useEffect(() => {
+    if (initialCoupon && cart.length > 0 && !appliedCoupon && !couponAutoApplied.current) {
+      couponAutoApplied.current = true;
+      validateCoupon.mutate(
+        { code: initialCoupon, orderValue: subtotal },
+        {
+          onSuccess: (data) => {
+            setAppliedCoupon({ code: initialCoupon, discount: data.discount });
+            toast.success(`Cupom ${initialCoupon} aplicado automaticamente!`);
+          },
+          onError: () => {
+            toast.error("Cupom do link não pôde ser aplicado");
+          },
+        }
+      );
+    }
+  }, [initialCoupon, cart.length, appliedCoupon, subtotal]);
+
   const handleApplyCoupon = () => {
     validateCoupon.mutate(
       { code: couponCode, orderValue: subtotal },

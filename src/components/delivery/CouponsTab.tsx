@@ -144,7 +144,17 @@ export const CouponsTab = () => {
                     </p>
                   </div>
 
-                  <div className="flex gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="w-full mb-2"
+                    onClick={() => handleCopyLink(coupon.code)}
+                  >
+                    <Link2 className="h-3.5 w-3.5 mr-1" />
+                    Copiar Link
+                  </Button>
+
+                  <div className="flex gap-2">
                     <Button
                       size="sm"
                       variant="outline"
