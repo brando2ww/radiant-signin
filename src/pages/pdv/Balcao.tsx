@@ -295,6 +295,17 @@ export default function PDVBalcao() {
         onCreateOrder={handleCreateOrder}
         source="balcao"
       />
+
+      <PaymentDialog
+        open={paymentOpen}
+        onOpenChange={(open) => {
+          setPaymentOpen(open);
+          if (!open) setOrderForPayment(null);
+        }}
+        comanda={virtualComanda}
+        items={virtualItems}
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   );
 }
