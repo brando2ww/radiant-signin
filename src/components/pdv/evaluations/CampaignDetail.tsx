@@ -17,6 +17,7 @@ import { CampaignResponses } from "./CampaignResponses";
 import { CampaignReports } from "./CampaignReports";
 import { CampaignPersonalization } from "./CampaignPersonalization";
 import { CampaignLeads } from "./CampaignLeads";
+import { CampaignRoulette } from "./CampaignRoulette";
 
 interface CampaignDetailProps {
   campaignId: string;
