@@ -158,55 +158,59 @@ async function sendReportForUser(
   // 5. Build message chunks
   const messages = buildReportMessages(tasks, shifts, date);
 
-  // 6. Send via Evolution API
+  // 6. Validate destination and send via Evolution API
   let phone = settings.whatsapp_report_phone.replace(/\D/g, "");
   if (!phone.startsWith("55")) {
     phone = "55" + phone;
   }
   console.log("Sending report to phone:", phone, "parts:", messages.length);
   const instanceName = encodeURIComponent(conn.instance_name);
-  const fetchUrl = `${evoUrl}/message/sendText/${instanceName}`;
-  console.log("Evolution API URL:", fetchUrl);
+  const numberCheckUrl = `${evoUrl}/chat/whatsappNumbers/${instanceName}`;
+  const sendUrl = `${evoUrl}/message/sendText/${instanceName}`;
+  console.log("Evolution number check URL:", numberCheckUrl);
+  console.log("Evolution send URL:", sendUrl);
+
+  const numberCheckResponse = await fetch(numberCheckUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: evoKey,
+    },
+    body: JSON.stringify({ numbers: [phone] }),
+  });
+
+  if (!numberCheckResponse.ok) {
+    const errorText = await numberCheckResponse.text();
+    console.error("Error checking WhatsApp number:", errorText);
+    throw new Error("Erro ao verificar número do WhatsApp antes do envio.");
+  }
+
+  const numberCheckResult = await numberCheckResponse.json();
+  console.log("WhatsApp number check result:", JSON.stringify(numberCheckResult));
+  const numberInfo = Array.isArray(numberCheckResult) ? numberCheckResult[0] : numberCheckResult;
+
+  if (!numberInfo?.exists) {
+    throw new Error(
+      `O número ${settings.whatsapp_report_phone} não foi encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.`
+    );
+  }
 
   for (let partIndex = 0; partIndex < messages.length; partIndex++) {
     const text = messages[partIndex];
-    let responseBody = "";
-    let evoStatus = 0;
+    const evoResponse = await fetch(sendUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: evoKey,
+      },
+      body: JSON.stringify({
+        number: phone,
+        text,
+      }),
+    });
 
-    for (let attempt = 0; attempt <= 2; attempt++) {
-      try {
-        const controller = new AbortController();
-        const fetchTimeout = setTimeout(() => controller.abort(), 12000);
-
-        const evoResponse = await fetch(fetchUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: evoKey,
-          },
-          body: JSON.stringify({
-            number: phone,
-            text,
-          }),
-          signal: controller.signal,
-        });
-
-        clearTimeout(fetchTimeout);
-        evoStatus = evoResponse.status;
-        responseBody = await evoResponse.text();
-        console.log(`Evolution API response (part ${partIndex + 1}/${messages.length}, attempt ${attempt + 1}):`, evoStatus, responseBody);
-        break;
-      } catch (fetchErr: any) {
-        console.error(`Evolution API attempt ${attempt + 1} failed for part ${partIndex + 1}/${messages.length}:`, fetchErr.name, fetchErr.message);
-        if (attempt === 2) {
-          if (fetchErr.name === "AbortError") {
-            throw new Error("Timeout ao conectar com Evolution API. Verifique se o servidor está acessível.");
-          }
-          throw new Error(`Erro ao conectar com Evolution API: ${fetchErr.message}`);
-        }
-        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
-      }
-    }
+    const responseBody = await evoResponse.text();
+    console.log(`Evolution API response (part ${partIndex + 1}/${messages.length}):`, evoResponse.status, responseBody);
 
     try {
       const parsed = JSON.parse(responseBody);
@@ -220,8 +224,8 @@ async function sendReportForUser(
       if (parseErr.message.includes("não foi encontrado")) throw parseErr;
     }
 
-    if (evoStatus < 200 || evoStatus >= 300) {
-      throw new Error(`Falha ao enviar mensagem via WhatsApp (status ${evoStatus})`);
+    if (!evoResponse.ok) {
+      throw new Error(`Falha ao enviar mensagem via WhatsApp (status ${evoResponse.status})`);
     }
 
     if (partIndex < messages.length - 1) {
