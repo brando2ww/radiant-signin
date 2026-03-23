@@ -1551,6 +1551,140 @@ export type Database = {
         }
         Relationships: []
       }
+      operational_task_instances: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          description: string | null
+          id: string
+          notes: string | null
+          photo_url: string | null
+          requires_photo: boolean
+          shift: string
+          status: string
+          task_date: string
+          template_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          photo_url?: string | null
+          requires_photo?: boolean
+          shift?: string
+          status?: string
+          task_date?: string
+          template_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          notes?: string | null
+          photo_url?: string | null
+          requires_photo?: boolean
+          shift?: string
+          status?: string
+          task_date?: string
+          template_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operational_task_instances_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "operational_task_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      operational_task_settings: {
+        Row: {
+          auto_generate: boolean
+          created_at: string
+          id: string
+          qr_code_enabled: boolean
+          shifts: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_generate?: boolean
+          created_at?: string
+          id?: string
+          qr_code_enabled?: boolean
+          shifts?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_generate?: boolean
+          created_at?: string
+          id?: string
+          qr_code_enabled?: boolean
+          shifts?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      operational_task_templates: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          requires_photo: boolean
+          shift: string
+          sort_order: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          requires_photo?: boolean
+          shift?: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          requires_photo?: boolean
+          shift?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pdv_bank_accounts: {
         Row: {
           account_number: string | null
