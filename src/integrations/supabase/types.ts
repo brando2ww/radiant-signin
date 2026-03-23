@@ -4647,6 +4647,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_prize_redeemed_count: {
+        Args: { prize_id: string }
+        Returns: undefined
+      }
       is_super_admin: { Args: never; Returns: boolean }
     }
     Enums: {
