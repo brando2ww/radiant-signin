@@ -127,8 +127,12 @@ export async function parseDanfePDF(pdfContent: string): Promise<PDFParseResult>
     confidence = 'medium';
   }
 
-  const items: ParsedInvoiceItem[] = [];
-  warnings.push('Extração de itens do PDF é limitada - recomenda-se usar XML para melhor precisão');
+  const items: ParsedInvoiceItem[] = extractItemsFromText(pdfContent);
+  if (items.length === 0) {
+    warnings.push('Nenhum item encontrado no PDF - recomenda-se usar XML para melhor precisão');
+  } else {
+    warnings.push(`${items.length} item(ns) extraído(s) do PDF - revise os dados antes de confirmar`);
+  }
 
   const invoice: Partial<ParsedInvoice> = {
     invoiceKey,
