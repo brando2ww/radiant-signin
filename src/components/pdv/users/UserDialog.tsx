@@ -92,7 +92,9 @@ export function UserDialog({ open, onOpenChange, onSave, editingUser, isLoading 
       phone,
       role,
       ...(isEditing ? {} : { password }),
-    });
+      discount_password: discountPassword || undefined,
+      max_discount_percent: parseFloat(maxDiscountPercent) || 100,
+    } as any);
   };
 
   const selectedConfig = roleConfig[role];
