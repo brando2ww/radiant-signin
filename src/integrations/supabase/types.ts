@@ -271,6 +271,117 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_prize_wins: {
+        Row: {
+          campaign_id: string
+          coupon_code: string
+          coupon_expires_at: string
+          created_at: string
+          customer_name: string
+          customer_whatsapp: string
+          evaluation_id: string
+          id: string
+          is_redeemed: boolean
+          prize_id: string
+          redeemed_at: string | null
+        }
+        Insert: {
+          campaign_id: string
+          coupon_code: string
+          coupon_expires_at: string
+          created_at?: string
+          customer_name: string
+          customer_whatsapp: string
+          evaluation_id: string
+          id?: string
+          is_redeemed?: boolean
+          prize_id: string
+          redeemed_at?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          coupon_code?: string
+          coupon_expires_at?: string
+          created_at?: string
+          customer_name?: string
+          customer_whatsapp?: string
+          evaluation_id?: string
+          id?: string
+          is_redeemed?: boolean
+          prize_id?: string
+          redeemed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_prize_wins_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_prize_wins_evaluation_id_fkey"
+            columns: ["evaluation_id"]
+            isOneToOne: true
+            referencedRelation: "customer_evaluations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_prize_wins_prize_id_fkey"
+            columns: ["prize_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_prizes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_prizes: {
+        Row: {
+          campaign_id: string
+          color: string
+          coupon_validity_days: number
+          created_at: string
+          id: string
+          is_active: boolean
+          max_quantity: number | null
+          name: string
+          probability: number
+          redeemed_count: number
+        }
+        Insert: {
+          campaign_id: string
+          color?: string
+          coupon_validity_days?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_quantity?: number | null
+          name: string
+          probability?: number
+          redeemed_count?: number
+        }
+        Update: {
+          campaign_id?: string
+          color?: string
+          coupon_validity_days?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          max_quantity?: number | null
+          name?: string
+          probability?: number
+          redeemed_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_prizes_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "evaluation_campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_cards: {
         Row: {
           brand: string | null
@@ -1291,6 +1402,7 @@ export type Database = {
           is_active: boolean
           logo_url: string | null
           name: string
+          roulette_enabled: boolean
           thank_you_message: string | null
           updated_at: string
           user_id: string
@@ -1304,6 +1416,7 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           name: string
+          roulette_enabled?: boolean
           thank_you_message?: string | null
           updated_at?: string
           user_id: string
@@ -1317,6 +1430,7 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           name?: string
+          roulette_enabled?: boolean
           thank_you_message?: string | null
           updated_at?: string
           user_id?: string
