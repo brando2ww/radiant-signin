@@ -37,6 +37,8 @@ export interface PDVSettings {
   new_order_sound?: string;
   order_ready_sound?: string;
   enable_desktop_notifications?: boolean;
+  nfe_auto_import_enabled?: boolean;
+  nfe_auto_import_cnpj?: string;
 }
 
 export function usePDVSettings() {
