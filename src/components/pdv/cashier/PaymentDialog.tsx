@@ -166,7 +166,7 @@ export function PaymentDialog({
       setDiscountAuthorized(false);
       setDiscountAuthorizedBy("");
       setDiscountReason("");
-      setServiceFeeEnabled(false);
+      setServiceFeeEnabled(true);
       setSplitEnabled(false);
       setSplitPayments([]);
       setShowSuccess(false);
