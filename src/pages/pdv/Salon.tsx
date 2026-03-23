@@ -492,6 +492,7 @@ export default function PDVSalon() {
     }
     setCapacityWarningOpen(false);
     setPendingComandaData(null);
+    setComandaForTable(null);
   };
 
   const handleAddComandaItem = async (data: { productId: string; productName: string; quantity: number; unitPrice: number; notes?: string }) => {
