@@ -203,6 +203,25 @@ ${movements.length > 0 ? `
   <table><thead><tr><th>Hora</th><th>Tipo</th><th>Forma</th><th style="text-align:right">Valor</th><th>Desc.</th></tr></thead>
   <tbody>${movementRows}</tbody></table>
 </div>` : ''}
+${(() => {
+  const discountMovements = movements.filter((m) => m.discount_reason);
+  if (discountMovements.length === 0) return '';
+  const discountRows = discountMovements.map((m) => {
+    const time = format(new Date(m.created_at), "HH:mm", { locale: ptBR });
+    return \`<tr>
+      <td style="padding:2px 6px;font-size:11px">\${time}</td>
+      <td style="padding:2px 6px;font-size:11px">\${m.discount_reason || ""}</td>
+      <td style="padding:2px 6px;font-size:11px">\${m.discount_authorized_by || ""}</td>
+      <td style="padding:2px 6px;font-size:11px;text-align:right">R$ \${m.amount.toFixed(2)}</td>
+    </tr>\`;
+  }).join("");
+  return \`<div class="divider"></div>
+<div class="section">
+  <div class="section-title">DESCONTOS APLICADOS</div>
+  <table><thead><tr><th>Hora</th><th>Motivo</th><th>Autorizado por</th><th style="text-align:right">Valor</th></tr></thead>
+  <tbody>\${discountRows}</tbody></table>
+</div>\`;
+})()}
 ${finalNotes ? `
 <div class="divider"></div>
 <div class="section">
