@@ -99,15 +99,37 @@ async function sendReportForUser(
     throw new Error("Número de telefone para relatório não configurado");
   }
 
-  // 2. Get WhatsApp connection
-  const { data: conn, error: connErr } = await supabase
+  // 2. Get WhatsApp connection (check own user + establishment owner)
+  let conn = null;
+  const { data: ownConn } = await supabase
     .from("whatsapp_connections")
     .select("instance_name")
     .eq("user_id", userId)
     .eq("connection_status", "open")
     .maybeSingle();
 
-  if (connErr) throw connErr;
+  conn = ownConn;
+
+  if (!conn) {
+    // Check if user is an establishment user and use owner's connection
+    const { data: estUser } = await supabase
+      .from("establishment_users")
+      .select("establishment_owner_id")
+      .eq("user_id", userId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (estUser?.establishment_owner_id) {
+      const { data: ownerConn } = await supabase
+        .from("whatsapp_connections")
+        .select("instance_name")
+        .eq("user_id", estUser.establishment_owner_id)
+        .eq("connection_status", "open")
+        .maybeSingle();
+      conn = ownerConn;
+    }
+  }
+
   if (!conn) {
     throw new Error("WhatsApp não está conectado. Conecte primeiro nas configurações.");
   }
