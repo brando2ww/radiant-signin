@@ -62,6 +62,19 @@ export function ProductDialog({
       serves: product?.serves || 1,
       is_available: product?.is_available ?? true,
       is_sold_by_weight: product?.is_sold_by_weight ?? false,
+      ncm: product?.ncm || "",
+      cest: product?.cest || "",
+      cfop: product?.cfop || "",
+      origin: product?.origin || "",
+      cst_icms: product?.cst_icms || "",
+      csosn: product?.csosn || "",
+      icms_rate: product?.icms_rate || 0,
+      pis_cst: product?.pis_cst || "",
+      pis_rate: product?.pis_rate || 0,
+      cofins_cst: product?.cofins_cst || "",
+      cofins_rate: product?.cofins_rate || 0,
+      tax_unit: product?.tax_unit || "",
+      ean: product?.ean || "",
     },
   });
 
@@ -82,6 +95,19 @@ export function ProductDialog({
         serves: product.serves,
         is_available: product.is_available,
         is_sold_by_weight: product.is_sold_by_weight,
+        ncm: product.ncm || "",
+        cest: product.cest || "",
+        cfop: product.cfop || "",
+        origin: product.origin || "",
+        cst_icms: product.cst_icms || "",
+        csosn: product.csosn || "",
+        icms_rate: product.icms_rate || 0,
+        pis_cst: product.pis_cst || "",
+        pis_rate: product.pis_rate || 0,
+        cofins_cst: product.cofins_cst || "",
+        cofins_rate: product.cofins_rate || 0,
+        tax_unit: product.tax_unit || "",
+        ean: product.ean || "",
       });
     }
   }, [product, form]);
@@ -118,15 +144,15 @@ export function ProductDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <Tabs defaultValue="basic">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="basic">Informações Básicas</TabsTrigger>
-                <TabsTrigger value="pricing">Preços e Disponibilidade</TabsTrigger>
+             <Tabs defaultValue="basic">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="basic">Básico</TabsTrigger>
+                <TabsTrigger value="pricing">Preços</TabsTrigger>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <TabsTrigger value="recipe" disabled={!product}>
-                        Receita/Ficha Técnica
+                        Receita
                       </TabsTrigger>
                     </TooltipTrigger>
                     {!product && (
@@ -136,6 +162,7 @@ export function ProductDialog({
                     )}
                   </Tooltip>
                 </TooltipProvider>
+                <TabsTrigger value="fiscal">Fiscal</TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4 mt-4">
@@ -400,6 +427,224 @@ export function ProductDialog({
                     Salve o produto primeiro para configurar a receita
                   </div>
                 )}
+              </TabsContent>
+
+              <TabsContent value="fiscal" className="space-y-6 mt-4">
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Identificação</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="ean"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>EAN / GTIN</FormLabel>
+                          <FormControl>
+                            <Input placeholder="7891234567890" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="ncm"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>NCM</FormLabel>
+                          <FormControl>
+                            <Input placeholder="21069090" maxLength={8} {...field} />
+                          </FormControl>
+                          <FormDescription>8 dígitos</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="cest"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CEST</FormLabel>
+                        <FormControl>
+                          <Input placeholder="1700700" maxLength={7} {...field} />
+                        </FormControl>
+                        <FormDescription>Código Especificador da Substituição Tributária</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">ICMS</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="origin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Origem</FormLabel>
+                          <FormControl>
+                            <Input placeholder="0" maxLength={1} {...field} />
+                          </FormControl>
+                          <FormDescription>0=Nacional, 1=Estrangeira importação direta...</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="cfop"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CFOP</FormLabel>
+                          <FormControl>
+                            <Input placeholder="5102" maxLength={4} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="cst_icms"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CST ICMS</FormLabel>
+                          <FormControl>
+                            <Input placeholder="00" maxLength={3} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="csosn"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CSOSN</FormLabel>
+                          <FormControl>
+                            <Input placeholder="102" maxLength={4} {...field} />
+                          </FormControl>
+                          <FormDescription>Simples Nacional</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="icms_rate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Alíquota ICMS %</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="18.00"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">PIS / COFINS</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="pis_cst"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CST PIS</FormLabel>
+                          <FormControl>
+                            <Input placeholder="01" maxLength={2} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="pis_rate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Alíquota PIS %</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="1.65"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="cofins_cst"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>CST COFINS</FormLabel>
+                          <FormControl>
+                            <Input placeholder="01" maxLength={2} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="cofins_rate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Alíquota COFINS %</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              placeholder="7.60"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Unidade Tributável</h4>
+                  <FormField
+                    control={form.control}
+                    name="tax_unit"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Unidade</FormLabel>
+                        <FormControl>
+                          <Input placeholder="UN, KG, L, CX..." {...field} />
+                        </FormControl>
+                        <FormDescription>Unidade de medida tributável do produto</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </TabsContent>
             </Tabs>
 
