@@ -60,15 +60,17 @@ function extractItemsFromText(text: string): ParsedInvoiceItem[] {
       const parsedTotal = parseFloat(totalValue.replace(/\./g, '').replace(',', '.'));
       if (parsedQty > 0 && parsedTotal > 0) {
         items.push({
-          code: code.trim(),
-          name: name.trim().replace(/\s{2,}/g, ' '),
+          itemNumber: items.length + 1,
+          productCode: code.trim(),
+          productName: name.trim().replace(/\s{2,}/g, ' '),
           ncm: '',
           cfop: '',
           unit: unit.toUpperCase(),
           quantity: parsedQty,
           unitValue: parsedUnitValue,
           totalValue: parsedTotal,
-          ean: '',
+          productEan: '',
+          taxes: {},
         });
         continue;
       }
@@ -82,21 +84,23 @@ function extractItemsFromText(text: string): ParsedInvoiceItem[] {
       const parsedTotal = parseFloat(totalValue.replace(/\./g, '').replace(',', '.'));
       if (parsedQty > 0 && parsedTotal > 0 && name.trim().length > 2) {
         items.push({
-          code: '',
-          name: name.trim().replace(/\s{2,}/g, ' '),
+          itemNumber: items.length + 1,
+          productCode: '',
+          productName: name.trim().replace(/\s{2,}/g, ' '),
           ncm: '',
           cfop: '',
           unit: unit.toUpperCase(),
           quantity: parsedQty,
           unitValue: parsedUnitValue,
           totalValue: parsedTotal,
-          ean: '',
+          productEan: '',
+          taxes: {},
         });
       }
     }
   }
 
-  console.log('[PDF Parser] Itens extraídos:', items.length, items.map(i => i.name));
+  console.log('[PDF Parser] Itens extraídos:', items.length, items.map(i => i.productName));
   return items;
 }
 
