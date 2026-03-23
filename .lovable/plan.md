@@ -1,29 +1,52 @@
 
 
-## Fix: Upload de logotipo da campanha não funciona
+## Melhorias: Relatórios de Avaliação + Respostas com Modal
 
-### Problema
+### Problemas
 
-O bucket `business-logos` tem RLS que exige que a pasta (primeiro segmento do path) seja o `auth.uid()` do usuário:
+1. **"Pergunta removida"** — A query `useCampaignResponses` não faz join com `evaluation_campaign_questions`, então o texto da pergunta nunca vem. Precisa incluir o join no select.
+2. **Respostas abertas** — Todas as respostas ficam listadas expandidas. Com muitos respondentes, fica inviável. Precisa virar tabela paginada com modal de detalhes.
+3. **Graficos ruins** — Charts sem cores adequadas, sem gradientes, sem formatação de valores, sem cards de resumo complementares.
 
+### Mudanças
+
+| Arquivo | Ação |
+|---------|------|
+| `src/hooks/use-evaluation-campaigns.ts` | Adicionar join com `evaluation_campaign_questions` na query de responses |
+| `src/components/pdv/evaluations/CampaignResponses.tsx` | Reescrever: tabela paginada de respondentes + modal com detalhes completos |
+| `src/components/pdv/evaluations/CampaignReports.tsx` | Melhorar graficos: cores, gradientes, tooltips formatados, cards de resumo, distribuicao de notas, satisfacao media |
+
+### Detalhes
+
+**1. Fix do join (`use-evaluation-campaigns.ts`)**
+
+Alterar a query para incluir o texto da pergunta:
 ```sql
-WITH CHECK (
-  bucket_id = 'business-logos' AND
-  (storage.foldername(name))[1] = auth.uid()::text
-);
+evaluation_answers (
+  id, question_id, score, comment,
+  evaluation_campaign_questions (
+    question_text
+  )
+)
 ```
 
-Mas o `useSupabaseUpload` está configurado com `folder: "campaigns"`, gerando path `campaigns/campaign-xyz.png` — que é rejeitado pela policy.
+**2. Respostas em tabela (`CampaignResponses.tsx`)**
 
-### Solução
+- Tabela com colunas: Nome, WhatsApp, NPS, Media, Data
+- Paginacao local (10 por pagina)
+- Busca por nome/telefone
+- Ao clicar na linha, abre `Dialog` com:
+  - Dados do cliente (nome, whatsapp, data nascimento)
+  - NPS score com badge colorida
+  - Cada pergunta com nota em estrelas e comentario
+  - Data/hora da resposta
 
-Mudar o folder do upload para usar o `user.id`, garantindo que o path fique `{userId}/campaign-{campaignId}.ext`, compatível com a RLS existente.
+**3. Graficos melhores (`CampaignReports.tsx`)**
 
-### Mudança
-
-**`src/components/pdv/evaluations/CampaignPersonalization.tsx`**:
-- Importar `useAuth` para obter `user.id`
-- Mudar `useSupabaseUpload({ bucket: "business-logos", folder: "campaigns" })` para `useSupabaseUpload({ bucket: "business-logos", folder: user?.id })`
-
-Isso é a única mudança necessária. A página pública já lê `logoUrl` corretamente da campanha.
+- NPS: donut chart com innerRadius, cores verde/amarelo/vermelho reais, gauge visual
+- Cards de resumo no topo: Total respostas, Media geral, NPS Score, Taxa de promotores
+- Media por pergunta: barras com gradiente, labels com nota ao lado da barra, cores baseadas na nota (verde >4, amarelo >3, vermelho <=3)
+- Respostas por dia: area chart com gradiente ao inves de line chart simples
+- Novo: Distribuicao de notas (1-5 estrelas) em bar chart vertical
+- Tooltips formatados em portugues
 
