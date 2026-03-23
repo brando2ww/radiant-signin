@@ -1,63 +1,34 @@
 
 
-## Fix: PDF parser não extrai dados da NF-e
+## Fix: Extrair produtos/itens do PDF da NF-e (DANFE)
 
 ### Problema
 
-O `pdfjs-dist` extrai texto do PDF unindo todos os itens com espaço simples (`.join(' ')`), perdendo a estrutura espacial do DANFE. Os regex do parser esperam formatação específica (ex: `CNPJ: 00.000.000/0000-00`, `Razão Social: Nome`) que não corresponde ao texto extraído.
-
-Resultado: apenas a chave de acesso (44 dígitos agrupados) e série são encontrados. CNPJ, fornecedor, número, totais ficam vazios.
+O parser de PDF (`pdf-parser.ts`) **nunca extrai itens**. Na linha 130, cria um array vazio e adiciona um warning. Não existe lógica para parsear a tabela de produtos do DANFE.
 
 ### Solução
 
-1. **Melhorar extração de texto** — usar posição Y dos itens para reconstruir linhas, preservando layout
-2. **Tornar regex mais flexíveis** — aceitar variações comuns de formatação DANFE
-3. **Adicionar log de debug** — logar texto extraído para diagnóstico
+Implementar extração de itens da tabela de produtos do DANFE via regex. O layout típico da tabela de produtos em um DANFE tem colunas: Código, Descrição, NCM, CST, CFOP, UN, QTD, Valor Unit, Valor Total.
 
-### Mudanças
+### Mudança
 
-| Arquivo | Ação |
-|---------|------|
-| `src/hooks/use-invoice-parser.ts` | Melhorar `extractTextFromPDF` para agrupar por posição Y (linhas reais) |
-| `src/lib/invoice/pdf-parser.ts` | Tornar regex mais robustos + extrair dados da chave de 44 dígitos + log debug |
+**`src/lib/invoice/pdf-parser.ts`** — adicionar lógica de extração de itens:
 
-### Detalhes
+1. Buscar linhas que contenham padrão de item (código numérico + descrição + unidade + quantidade + valores)
+2. Usar regex para capturar: nome do produto, unidade, quantidade, valor unitário, valor total
+3. Padrões comuns em DANFE:
+   - Linhas com sequência: `CÓDIGO DESCRIÇÃO NCM ... UN QTD VL_UNIT VL_TOTAL`
+   - Itens aparecem após header da tabela e antes dos totais
+4. Regex robusto que capture linhas com valores monetários e unidades (UN, KG, CX, PCT, LT, etc.)
 
-**1. Extração com layout (`use-invoice-parser.ts`)**
+A extração de itens do PDF não será 100% precisa (por isso existe o wizard de revisão), mas capturará o máximo possível para o usuário revisar e ajustar.
 
-Agrupar itens de texto por coordenada Y (com tolerância de 2px), ordenar por X dentro de cada linha, juntar com espaço. Isso recria a estrutura visual do DANFE:
+### Estratégia de parsing
 
-```typescript
-async function extractTextFromPDF(file: File): Promise<string> {
-  const pdfjsLib = await import('pdfjs-dist');
-  // ...
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    // Agrupar por Y, ordenar por X
-    const lines = new Map<number, {x: number, str: string}[]>();
-    content.items.forEach((item: any) => {
-      const y = Math.round(item.transform[5] / 2) * 2; // tolerância 2px
-      if (!lines.has(y)) lines.set(y, []);
-      lines.get(y)!.push({ x: item.transform[4], str: item.str });
-    });
-    // Ordenar linhas de cima para baixo, itens da esquerda para direita
-    [...lines.entries()]
-      .sort((a, b) => b[0] - a[0])
-      .forEach(([_, items]) => {
-        items.sort((a, b) => a.x - b.x);
-        fullText += items.map(i => i.str).join(' ') + '\n';
-      });
-  }
-}
-```
+Buscar padrões de linhas que contenham:
+- Uma unidade de medida conhecida (UN, KG, CX, PCT, LT, ML, G, etc.)
+- Seguida de valores numéricos (quantidade, valor unitário, valor total)
+- Texto antes da unidade = nome do produto
 
-**2. Regex mais robustos (`pdf-parser.ts`)**
-
-- CNPJ: aceitar com ou sem label, formato `XX.XXX.XXX/XXXX-XX` em qualquer contexto
-- Fornecedor: buscar por `Razão Social`, `RAZAO SOCIAL`, `Nome / Razão Social`, ou texto após CNPJ
-- Número NF: aceitar `Nº`, `No.`, `N.`, `NÚMERO`, `NF-e`, formatos variados
-- Total: aceitar `VALOR TOTAL DA NOTA`, `V. TOTAL DA NF`, `TOTAL DA NOTA`
-- **Fallback da chave**: extrair UF, CNPJ emitente, número e série diretamente dos 44 dígitos da chave (posições fixas no padrão NF-e)
-- Adicionar `console.log` do texto extraído para debug
+Isso funciona porque a tabela de produtos do DANFE segue um padrão estruturado onde cada linha de item contém esses elementos.
 
