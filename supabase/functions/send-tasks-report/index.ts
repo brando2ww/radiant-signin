@@ -155,76 +155,81 @@ async function sendReportForUser(
     { name: "Fechamento", start: "17:00", end: "23:00" },
   ];
 
-  // 5. Build message
-  const message = buildReportMessage(tasks, shifts, date);
+  // 5. Build message chunks
+  const messages = buildReportMessages(tasks, shifts, date);
 
   // 6. Send via Evolution API
   let phone = settings.whatsapp_report_phone.replace(/\D/g, "");
   if (!phone.startsWith("55")) {
     phone = "55" + phone;
   }
-  console.log("Sending report to phone:", phone);
+  console.log("Sending report to phone:", phone, "parts:", messages.length);
   const instanceName = encodeURIComponent(conn.instance_name);
-
   const fetchUrl = `${evoUrl}/message/sendText/${instanceName}`;
   console.log("Evolution API URL:", fetchUrl);
 
-  let responseBody = "";
-  let evoStatus = 0;
+  for (let partIndex = 0; partIndex < messages.length; partIndex++) {
+    const text = messages[partIndex];
+    let responseBody = "";
+    let evoStatus = 0;
 
-  for (let attempt = 0; attempt <= 2; attempt++) {
-    try {
-      const controller = new AbortController();
-      const fetchTimeout = setTimeout(() => controller.abort(), 20000);
+    for (let attempt = 0; attempt <= 2; attempt++) {
+      try {
+        const controller = new AbortController();
+        const fetchTimeout = setTimeout(() => controller.abort(), 12000);
 
-      const evoResponse = await fetch(fetchUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: evoKey,
-        },
-        body: JSON.stringify({
-          number: phone,
-          text: message,
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(fetchTimeout);
-      evoStatus = evoResponse.status;
-      responseBody = await evoResponse.text();
-      console.log(`Evolution API response (attempt ${attempt + 1}):`, evoStatus, responseBody);
-      break; // success, exit retry loop
-    } catch (fetchErr: any) {
-      console.error(`Evolution API attempt ${attempt + 1} failed:`, fetchErr.name, fetchErr.message);
-      if (attempt === 2) {
-        if (fetchErr.name === "AbortError") {
-          throw new Error("Timeout ao conectar com Evolution API. Verifique se o servidor está acessível.");
+        const evoResponse = await fetch(fetchUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: evoKey,
+          },
+          body: JSON.stringify({
+            number: phone,
+            text,
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(fetchTimeout);
+        evoStatus = evoResponse.status;
+        responseBody = await evoResponse.text();
+        console.log(`Evolution API response (part ${partIndex + 1}/${messages.length}, attempt ${attempt + 1}):`, evoStatus, responseBody);
+        break;
+      } catch (fetchErr: any) {
+        console.error(`Evolution API attempt ${attempt + 1} failed for part ${partIndex + 1}/${messages.length}:`, fetchErr.name, fetchErr.message);
+        if (attempt === 2) {
+          if (fetchErr.name === "AbortError") {
+            throw new Error("Timeout ao conectar com Evolution API. Verifique se o servidor está acessível.");
+          }
+          throw new Error(`Erro ao conectar com Evolution API: ${fetchErr.message}`);
         }
-        throw new Error(`Erro ao conectar com Evolution API: ${fetchErr.message}`);
+        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
       }
-      // Wait before retry
-      await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+    }
+
+    try {
+      const parsed = JSON.parse(responseBody);
+      const msgs = parsed?.response?.message || (Array.isArray(parsed) ? parsed : [parsed]);
+      if (Array.isArray(msgs) && msgs.some((m: any) => m.exists === false)) {
+        throw new Error(
+          `O número ${settings.whatsapp_report_phone} não foi encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.`
+        );
+      }
+    } catch (parseErr: any) {
+      if (parseErr.message.includes("não foi encontrado")) throw parseErr;
+    }
+
+    if (evoStatus < 200 || evoStatus >= 300) {
+      throw new Error(`Falha ao enviar mensagem via WhatsApp (status ${evoStatus})`);
+    }
+
+    if (partIndex < messages.length - 1) {
+      await new Promise((r) => setTimeout(r, 350));
     }
   }
 
-  // Check for exists:false even on 200
-  try {
-    const parsed = JSON.parse(responseBody);
-    const msgs = parsed?.response?.message || (Array.isArray(parsed) ? parsed : [parsed]);
-    if (Array.isArray(msgs) && msgs.some((m: any) => m.exists === false)) {
-      throw new Error(
-        `O número ${settings.whatsapp_report_phone} não foi encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.`
-      );
-    }
-  } catch (parseErr: any) {
-    if (parseErr.message.includes("não foi encontrado")) throw parseErr;
-  }
-
-  if (evoStatus < 200 || evoStatus >= 300) {
-    throw new Error(`Falha ao enviar mensagem via WhatsApp (status ${evoStatus})`);
-  }
-
-  return { success: true, message: "Relatório enviado com sucesso!" };
+  return { success: true, message: "Relatório enviado com sucesso!", parts: messages.length };
 }
 
 function buildReportMessage(tasks: any[], shifts: any[], date: string) {
