@@ -1,35 +1,29 @@
 
 
-## Fix: Dropdown de Integrações abrindo no canto
+## Fix: Upload de logotipo da campanha não funciona
 
 ### Problema
 
-O dropdown de "Integrações" está abrindo deslocado do trigger, provavelmente no canto esquerdo do menu ao invés de embaixo do botão. Isso acontece porque o Radix `NavigationMenu` internamente posiciona o conteúdo relativo à lista toda, não ao item individual.
+O bucket `business-logos` tem RLS que exige que a pasta (primeiro segmento do path) seja o `auth.uid()` do usuário:
+
+```sql
+WITH CHECK (
+  bucket_id = 'business-logos' AND
+  (storage.foldername(name))[1] = auth.uid()::text
+);
+```
+
+Mas o `useSupabaseUpload` está configurado com `folder: "campaigns"`, gerando path `campaigns/campaign-xyz.png` — que é rejeitado pela policy.
 
 ### Solução
 
-Forçar que o conteúdo do dropdown fique posicionado relativo ao `NavigationMenuItem` (que já tem `relative`), desabilitando a animação de motion do Radix que reposiciona o conteúdo e garantindo que o `NavigationMenuContent` use posicionamento absoluto correto em relação ao seu item pai.
+Mudar o folder do upload para usar o `user.id`, garantindo que o path fique `{userId}/campaign-{campaignId}.ext`, compatível com a RLS existente.
 
 ### Mudança
 
-**`src/components/pdv/PDVHeaderNav.tsx`**:
-- Adicionar `forceMount` no `NavigationMenuContent` e controlar visibilidade manualmente, OU
-- Remover as classes de motion/slide do content que interferem no posicionamento
-- Adicionar `data-[motion=from-start]:!slide-in-from-left-0 data-[motion=from-end]:!slide-in-from-right-0` para neutralizar os slides que deslocam o dropdown
+**`src/components/pdv/evaluations/CampaignPersonalization.tsx`**:
+- Importar `useAuth` para obter `user.id`
+- Mudar `useSupabaseUpload({ bucket: "business-logos", folder: "campaigns" })` para `useSupabaseUpload({ bucket: "business-logos", folder: user?.id })`
 
-**Alternativa mais limpa** — Trocar o `NavigationMenu` do Radix por um simples `Popover` ou dropdown custom para a seção "Integrações" (1 item só), ou aplicar `style={{ position: 'absolute', top: '100%' }}` inline no content para sobrescrever o Radix.
-
-A abordagem recomendada é adicionar classes que neutralizem o reposicionamento do Radix no `NavigationMenuContent`:
-
-```tsx
-<NavigationMenuContent
-  className={cn(
-    "!absolute !top-full mt-1.5 rounded-md border bg-popover text-popover-foreground shadow-lg",
-    "data-[motion^=from-]:!animate-none data-[motion^=to-]:!animate-none",
-    isRightAligned ? "right-0 left-auto" : "left-0"
-  )}
->
-```
-
-Usar `!important` via `!` prefix do Tailwind para garantir que o posicionamento absoluto relativo ao item pai (que tem `relative`) seja respeitado, desabilitando as animações de slide do Radix que causam o deslocamento.
+Isso é a única mudança necessária. A página pública já lê `logoUrl` corretamente da campanha.
 
