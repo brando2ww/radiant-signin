@@ -151,6 +151,11 @@ export default function PDVSalon() {
   const [comandaAddItemOpen, setComandaAddItemOpen] = useState(false);
   const [comandaForTable, setComandaForTable] = useState<{ orderId: string; tableNumber: number } | null>(null);
 
+  // Capacity warning states
+  const [capacityWarningOpen, setCapacityWarningOpen] = useState(false);
+  const [pendingComandaData, setPendingComandaData] = useState<{ customerName?: string; personNumber?: number; notes?: string; orderId?: string | null } | null>(null);
+  const [capacityWarningMessage, setCapacityWarningMessage] = useState("");
+
   // Payment dialog states
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [paymentComanda, setPaymentComanda] = useState<Comanda | null>(null);
