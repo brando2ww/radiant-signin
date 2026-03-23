@@ -1,27 +1,33 @@
 
 
-## Fix: Dropdown do NavigationMenu abre centralizado em vez de abaixo do item
+## Fix: Dropdown posicionar abaixo de cada item individualmente
 
 ### Problema
-O `NavigationMenuViewport` (linha 80) usa `left-0 right-0 flex justify-center`, o que centraliza o dropdown no meio de toda a barra de navegação em vez de posicioná-lo abaixo do item clicado.
+O Radix `NavigationMenu` usa um **único Viewport compartilhado** posicionado no nível do `Root`. Todos os conteúdos dos menus são renderizados dentro desse viewport único, por isso ele sempre aparece na mesma posição (esquerda) independente de qual trigger foi clicado. Não é possível resolver isso apenas com CSS no viewport.
 
 ### Solução
-Mudar o wrapper do viewport para `justify-start` e deixar o Radix UI posicionar o conteúdo naturalmente abaixo do trigger ativo. O Radix já calcula a posição horizontal via CSS custom properties internamente.
+Parar de usar o `NavigationMenuViewport` compartilhado e renderizar o conteúdo diretamente em cada `NavigationMenuItem` com posicionamento relativo. Cada item terá seu próprio dropdown posicionado abaixo do seu trigger.
 
-### Arquivo
+### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/components/ui/navigation-menu.tsx` | Linha 80: trocar `justify-center` por `justify-start` no wrapper div do viewport |
+| `src/components/pdv/PDVHeaderNav.tsx` | Adicionar `position: relative` a cada `NavigationMenuItem` e `forceMount` + classes de posicionamento absoluto no `NavigationMenuContent` para que cada dropdown fique abaixo do seu trigger |
+| `src/components/ui/navigation-menu.tsx` | Remover o `<NavigationMenuViewport />` de dentro do `NavigationMenu` Root, já que o conteúdo será renderizado inline em cada item |
 
-### Detalhe técnico
+### Detalhes técnicos
+
+**navigation-menu.tsx**: Remover a linha `<NavigationMenuViewport />` do componente `NavigationMenu` Root (linha ~21).
+
+**PDVHeaderNav.tsx**: Em cada `NavigationMenuItem`, adicionar `className="relative"` e no `NavigationMenuContent` usar classes para posicionamento absoluto direto:
 ```tsx
-// De:
-<div className={cn("absolute top-full left-0 right-0 flex justify-center")}>
-
-// Para:
-<div className={cn("absolute top-full left-0 flex justify-start")}>
+<NavigationMenuItem key={section.title} className="relative">
+  <NavigationMenuTrigger>...</NavigationMenuTrigger>
+  <NavigationMenuContent className="absolute left-0 top-full mt-1.5 rounded-md border bg-popover shadow-lg">
+    ...
+  </NavigationMenuContent>
+</NavigationMenuItem>
 ```
 
-Isso faz o dropdown abrir alinhado à esquerda do nav, e como cada `NavigationMenuContent` já usa `md:absolute` com `left-0 top-0`, o conteúdo aparecerá abaixo do item correspondente.
+Para os itens à direita (Financeiro, Integrações), usar `left-auto right-0` para que o dropdown não saia da tela.
 
