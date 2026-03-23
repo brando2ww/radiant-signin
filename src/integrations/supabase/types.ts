@@ -1622,6 +1622,9 @@ export type Database = {
           shifts: Json
           updated_at: string
           user_id: string
+          whatsapp_report_enabled: boolean | null
+          whatsapp_report_phone: string | null
+          whatsapp_report_time: string | null
         }
         Insert: {
           auto_generate?: boolean
@@ -1631,6 +1634,9 @@ export type Database = {
           shifts?: Json
           updated_at?: string
           user_id: string
+          whatsapp_report_enabled?: boolean | null
+          whatsapp_report_phone?: string | null
+          whatsapp_report_time?: string | null
         }
         Update: {
           auto_generate?: boolean
@@ -1640,6 +1646,9 @@ export type Database = {
           shifts?: Json
           updated_at?: string
           user_id?: string
+          whatsapp_report_enabled?: boolean | null
+          whatsapp_report_phone?: string | null
+          whatsapp_report_time?: string | null
         }
         Relationships: []
       }
