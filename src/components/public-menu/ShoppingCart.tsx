@@ -24,6 +24,7 @@ interface ShoppingCartProps {
   onUpdateQuantity: (index: number, quantity: number) => void;
   onClearCart: () => void;
   userId: string;
+  initialCoupon?: string;
 }
 
 export const ShoppingCart = ({
@@ -32,9 +33,11 @@ export const ShoppingCart = ({
   onUpdateQuantity,
   onClearCart,
   userId,
+  initialCoupon,
 }: ShoppingCartProps) => {
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const couponAutoApplied = useRef(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const { data: settings } = usePublicSettings(userId);
   const validateCoupon = useValidateCoupon();
