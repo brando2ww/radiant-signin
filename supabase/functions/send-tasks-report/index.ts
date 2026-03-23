@@ -232,14 +232,13 @@ async function sendReportForUser(
   return { success: true, message: "Relatório enviado com sucesso!", parts: messages.length };
 }
 
-function buildReportMessage(tasks: any[], shifts: any[], date: string) {
+function buildReportMessages(tasks: any[], shifts: any[], date: string) {
   const shiftEmojis: Record<string, string> = {
     "Abertura": "🌅",
     "Tarde": "☀️",
     "Fechamento": "🌙",
   };
 
-  // Format date
   const [y, m, d] = date.split("-");
   const formattedDate = `${d}/${m}/${y}`;
 
@@ -248,22 +247,21 @@ function buildReportMessage(tasks: any[], shifts: any[], date: string) {
   const pending = total - done;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  // Group by shift
   const grouped: Record<string, any[]> = {};
   for (const t of tasks) {
     if (!grouped[t.shift]) grouped[t.shift] = [];
     grouped[t.shift].push(t);
   }
 
-  let msg = `📋 *Relatório de Tarefas — ${formattedDate}*\n\n`;
-  msg += `✅ Concluídas: ${done}/${total} (${pct}%)\n`;
+  const sections: string[] = [];
+  sections.push(`📋 *Relatório de Tarefas — ${formattedDate}*\n\n✅ Concluídas: ${done}/${total} (${pct}%)`);
 
   for (const shift of shifts) {
     const shiftTasks = grouped[shift.name] || [];
     if (shiftTasks.length === 0) continue;
 
     const emoji = shiftEmojis[shift.name] || "📌";
-    msg += `\n*${emoji} ${shift.name} (${shift.start}-${shift.end})*\n`;
+    let section = `*${emoji} ${shift.name} (${shift.start}-${shift.end})*\n`;
 
     for (const t of shiftTasks) {
       if (t.status === "done") {
@@ -271,20 +269,22 @@ function buildReportMessage(tasks: any[], shifts: any[], date: string) {
           ? new Date(t.completed_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
           : "";
         const by = t.completed_by ? ` — ${t.completed_by}` : "";
-        msg += `✅ ${t.title}${by} ${completedTime}\n`;
+        section += `✅ ${t.title}${by} ${completedTime}\n`;
       } else if (t.status === "skipped") {
-        msg += `⏭️ ${t.title} (pulada)\n`;
+        section += `⏭️ ${t.title} (pulada)\n`;
       } else {
-        msg += `❌ ${t.title}\n`;
+        section += `❌ ${t.title}\n`;
       }
     }
+
+    sections.push(section.trimEnd());
   }
 
-  if (pending > 0) {
-    msg += `\n📊 *Pendentes: ${pending} tarefa${pending > 1 ? "s" : ""} não concluída${pending > 1 ? "s" : ""}*`;
-  } else {
-    msg += `\n🎉 *Todas as tarefas foram concluídas!*`;
-  }
+  sections.push(
+    pending > 0
+      ? `📊 *Pendentes: ${pending} tarefa${pending > 1 ? "s" : ""} não concluída${pending > 1 ? "s" : ""}*`
+      : `🎉 *Todas as tarefas foram concluídas!*`
+  );
 
-  return msg;
+  return sections;
 }
