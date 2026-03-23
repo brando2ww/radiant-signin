@@ -43,6 +43,7 @@ import UserForm from "./pdv/UserForm";
 import Evaluations from "./pdv/Evaluations";
 import FranchiseImport from "./pdv/FranchiseImport";
 import Tasks from "./pdv/Tasks";
+import Customers from "./pdv/Customers";
 
 function RoleRoute({ path, children, canAccess, defaultRoute }: { path: string; children: React.ReactNode; canAccess: (p: string) => boolean; defaultRoute: string }) {
   if (!canAccess(path)) {
@@ -137,6 +138,9 @@ export default function PDV() {
               
               {/* Tarefas */}
               <Route path="tarefas" element={<RoleRoute path="/pdv/tarefas" canAccess={canAccess} defaultRoute={defaultRoute}><Tasks /></RoleRoute>} />
+              
+              {/* Clientes */}
+              <Route path="clientes" element={<RoleRoute path="/pdv/clientes" canAccess={canAccess} defaultRoute={defaultRoute}><Customers /></RoleRoute>} />
             </Routes>
           </main>
       </div>
