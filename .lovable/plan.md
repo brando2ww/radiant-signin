@@ -1,28 +1,55 @@
 
 
-## Fix: Abrir PaymentDialog ao fechar pedido no Balcão
+## Refatorar página pública de avaliação — tudo em uma página só
 
-### Problema
-Ao clicar "Fechar Pedido" no Balcão, o `OrderDetailsDialog` chama `closeOrder(id)` diretamente, que apenas fecha o pedido no banco sem registrar pagamento. Não existe `PaymentDialog` na página Balcão.
+### O que muda
+Remover o fluxo step-by-step e mostrar tudo em uma única página com scroll suave: dados do cliente, todas as perguntas de avaliação, e o NPS — tudo visível de uma vez. Manter a tela de "done" (obrigado) após envio.
 
-### Solução
-Interceptar o "Fechar Pedido" para abrir o `PaymentDialog` antes de finalizar, igual ao fluxo do Caixa.
+### Layout
+
+```text
+┌──────────────────────────────────────┐
+│         [Logo]                       │
+│    Nome da Campanha                  │
+│    Mensagem de boas-vindas           │
+├──────────────────────────────────────┤
+│  📋 Seus Dados                       │
+│  Nome ___________                    │
+│  Telefone ___________                │
+│  Data de Nascimento ___________      │
+├──────────────────────────────────────┤
+│  ⭐ Avaliação                        │
+│                                      │
+│  1. Como foi o atendimento?          │
+│     ★ ★ ★ ★ ★                       │
+│     [comentário se ≤2]               │
+│                                      │
+│  2. Como está a limpeza?             │
+│     ★ ★ ★ ★ ★                       │
+│                                      │
+│  3. Você voltaria aqui?              │
+│     ★ ★ ★ ★ ★                       │
+├──────────────────────────────────────┤
+│  📊 Recomendação (NPS)               │
+│  De 0 a 10, indicaria para um amigo?│
+│  [0][1][2]...[9][10]                │
+├──────────────────────────────────────┤
+│  [ Enviar Avaliação ]                │
+└──────────────────────────────────────┘
+```
 
 ### Mudanças
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/pdv/Balcao.tsx` | Importar `PaymentDialog` e `usePDVComandas`. Ao clicar "Fechar Pedido", em vez de chamar `closeOrder` diretamente, abrir o `PaymentDialog` com os dados do pedido. Após pagamento confirmado, fechar o pedido |
-
-### Fluxo corrigido
-1. Usuário clica "Fechar Pedido" no `OrderDetailsDialog`
-2. `handleCloseOrder` fecha o dialog de detalhes e abre o `PaymentDialog` com o pedido selecionado
-3. Usuário escolhe método de pagamento e confirma
-4. `PaymentDialog` registra o pagamento via `usePDVPayments`
-5. Pedido é finalizado
+| `src/pages/PublicEvaluation.tsx` | Reescrever removendo steps/progress. Renderizar formulário completo em seções com cards. Validar tudo antes de habilitar botão de envio |
 
 ### Detalhes
-- O `PaymentDialog` aceita `comanda` ou `table` — como o Balcão trabalha com orders diretos (sem comanda), vou criar uma comanda virtual (objeto compatível) a partir do order para alimentar o dialog
-- Itens do pedido serão mapeados para o formato de `ComandaItem` esperado pelo `PaymentDialog`
-- O `closeOrder` será chamado após o pagamento ser registrado com sucesso (no `onSuccess` do PaymentDialog)
+- Remover state `step`, `currentQuestionIdx`, funções `goNext/goPrev`, `Progress`
+- Manter states: `name`, `phone`, `birthDate`, `answers`, `npsScore` e estado `done` (boolean)
+- Seções em cards separados com títulos: "Seus Dados", cada pergunta listada, "Recomendação"
+- Botão "Enviar" habilitado só quando: nome preenchido, telefone válido, data preenchida, todas as perguntas com score > 0, NPS selecionado
+- Manter campo de comentário condicional (score ≤ 2)
+- Manter tela de agradecimento após envio
+- Largura max `max-w-lg` para boa leitura, espaçamento generoso entre seções
 
