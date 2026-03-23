@@ -102,7 +102,7 @@ export function CampaignDetail({ campaignId }: CampaignDetailProps) {
       <Tabs defaultValue="questions">
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="questions">Perguntas</TabsTrigger>
-          <TabsTrigger value="roulette">🎡 Roleta</TabsTrigger>
+          <TabsTrigger value="roulette">Roleta</TabsTrigger>
           <TabsTrigger value="personalization">Personalização</TabsTrigger>
           <TabsTrigger value="leads">Leads ({campaign.total_responses})</TabsTrigger>
           <TabsTrigger value="responses">Respostas</TabsTrigger>
