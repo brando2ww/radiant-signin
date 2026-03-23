@@ -92,21 +92,21 @@ export function usePDVChartOfAccounts(accountType?: string) {
     mutationFn: async () => {
       if (!user) throw new Error("Usuário não autenticado");
       const seeds = [
-        { code: "1.01", name: "Vendas Balcão", account_type: "receita" },
-        { code: "1.02", name: "Vendas Delivery", account_type: "receita" },
-        { code: "1.03", name: "Outras Receitas", account_type: "receita" },
-        { code: "2.01", name: "Aluguel", account_type: "despesa" },
-        { code: "2.02", name: "Energia", account_type: "despesa" },
-        { code: "2.03", name: "Água", account_type: "despesa" },
-        { code: "2.04", name: "Internet", account_type: "despesa" },
-        { code: "2.05", name: "Salários", account_type: "despesa" },
-        { code: "2.06", name: "Impostos", account_type: "despesa" },
-        { code: "2.07", name: "Marketing", account_type: "despesa" },
-        { code: "2.08", name: "Manutenção", account_type: "despesa" },
-        { code: "2.09", name: "Outras Despesas", account_type: "despesa" },
-        { code: "3.01", name: "Matéria-prima", account_type: "custo" },
-        { code: "3.02", name: "Embalagens", account_type: "custo" },
-        { code: "3.03", name: "Descartáveis", account_type: "custo" },
+        { code: "1.01", name: "Vendas Balcão", account_type: "revenue" },
+        { code: "1.02", name: "Vendas Delivery", account_type: "revenue" },
+        { code: "1.03", name: "Outras Receitas", account_type: "revenue" },
+        { code: "2.01", name: "Aluguel", account_type: "expense" },
+        { code: "2.02", name: "Energia", account_type: "expense" },
+        { code: "2.03", name: "Água", account_type: "expense" },
+        { code: "2.04", name: "Internet", account_type: "expense" },
+        { code: "2.05", name: "Salários", account_type: "expense" },
+        { code: "2.06", name: "Impostos", account_type: "expense" },
+        { code: "2.07", name: "Marketing", account_type: "expense" },
+        { code: "2.08", name: "Manutenção", account_type: "expense" },
+        { code: "2.09", name: "Outras Despesas", account_type: "expense" },
+        { code: "3.01", name: "Matéria-prima", account_type: "cost" },
+        { code: "3.02", name: "Embalagens", account_type: "cost" },
+        { code: "3.03", name: "Descartáveis", account_type: "cost" },
       ];
       const { error } = await supabase
         .from("pdv_chart_of_accounts")

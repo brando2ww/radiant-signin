@@ -59,7 +59,7 @@ export default function ChartOfAccounts() {
   }, [filtered]);
 
   const countByType = useMemo(() => {
-    const map: Record<string, number> = { receita: 0, despesa: 0, custo: 0 };
+    const map: Record<string, number> = { revenue: 0, expense: 0, cost: 0 };
     for (const a of accounts) {
       if (map[a.account_type] !== undefined) map[a.account_type]++;
     }
