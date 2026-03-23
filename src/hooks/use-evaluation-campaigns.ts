@@ -205,7 +205,10 @@ export const useCampaignResponses = (campaignId: string) => {
             id,
             question_id,
             score,
-            comment
+            comment,
+            evaluation_campaign_questions (
+              question_text
+            )
           )
         `)
         .eq("campaign_id", campaignId)
