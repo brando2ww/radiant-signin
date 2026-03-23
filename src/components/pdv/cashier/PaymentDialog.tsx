@@ -378,7 +378,9 @@ export function PaymentDialog({
                       onChange={(e) => {
                         setDiscountValue(e.target.value);
                         setDiscountAuthorized(false);
+                        setDiscountAuthorizedBy("");
                         setDiscountPassword("");
+                        setDiscountReason("");
                       }}
                       className="flex-1"
                     />
