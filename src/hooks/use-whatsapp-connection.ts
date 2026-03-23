@@ -30,7 +30,9 @@ export interface QRCodeResponse {
 }
 
 export interface StatusResponse {
-  status: ConnectionStatus;
+  status: string;
+  qrcode?: string;
+  message?: string;
   profile_name?: string | null;
   profile_picture_url?: string | null;
   phone_number?: string | null;
@@ -46,29 +48,22 @@ export function useWhatsAppConnection() {
   const queryClient = useQueryClient();
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
+  const [pollError, setPollError] = useState<string | null>(null);
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const currentInstanceRef = useRef<string>('');
+  const consecutiveErrorsRef = useRef(0);
 
-  // Generate instance name from connection name
   const generateInstanceName = (connectionName: string) => {
     if (!user) return '';
-    // Usar o nome da conexão diretamente, apenas removendo caracteres especiais inválidos
-    // A Evolution API aceita espaços e letras maiúsculas no instanceName
-    return connectionName
-      .trim()
-      .replace(/[^\w\s-]/g, '')
-      .slice(0, 50);
+    return connectionName.trim().replace(/[^\w\s-]/g, '').slice(0, 50);
   };
 
-  // Fetch current connection from database (prioritize 'open' status)
+  // Fetch current connection from database
   const { data: connection, isLoading } = useQuery({
     queryKey: ['whatsapp-connection', user?.id],
     queryFn: async () => {
       if (!user) return null;
-      
-      // Order by connection_status desc ('open' comes before 'connecting'/'disconnected' alphabetically)
-      // Then by updated_at desc to get most recent
       const { data, error } = await supabase
         .from('whatsapp_connections')
         .select('*')
@@ -77,12 +72,7 @@ export function useWhatsAppConnection() {
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      
-      if (error) {
-        console.error('Error fetching connection:', error);
-        return null;
-      }
-      
+      if (error) { console.error('Error fetching connection:', error); return null; }
       return data as WhatsAppConnection | null;
     },
     enabled: !!user,
@@ -90,23 +80,23 @@ export function useWhatsAppConnection() {
 
   const isConnected = connection?.connection_status === 'open';
 
-  // Generate QR Code with connection name and phone
+  // Generate QR Code
   const generateQRCode = useMutation({
     mutationFn: async (params: GenerateQRCodeParams) => {
       if (!user) throw new Error('User not authenticated');
-
       const instanceName = generateInstanceName(params.connectionName);
       currentInstanceRef.current = instanceName;
+      consecutiveErrorsRef.current = 0;
+      setPollError(null);
 
       const { data, error } = await supabase.functions.invoke('whatsapp-qrcode/generate', {
-        body: { 
-          userId: user.id, 
+        body: {
+          userId: user.id,
           instanceName,
           connectionName: params.connectionName,
           phoneNumber: params.phoneNumber.replace(/\D/g, '')
         }
       });
-
       if (error) throw error;
       return data as QRCodeResponse;
     },
@@ -121,82 +111,84 @@ export function useWhatsAppConnection() {
     },
     onError: (error) => {
       console.error('Error generating QR code:', error);
-      toast.error('Erro ao gerar QR Code');
+      toast.error('Erro ao gerar QR Code. Tente novamente.');
     }
   });
 
   // Check connection status
   const checkStatus = useCallback(async () => {
     if (!user || !currentInstanceRef.current) return null;
-
     try {
       const { data, error } = await supabase.functions.invoke('whatsapp-qrcode/status', {
         body: { userId: user.id, instanceName: currentInstanceRef.current }
       });
-
       if (error) throw error;
+      consecutiveErrorsRef.current = 0;
       return data as StatusResponse;
     } catch (error) {
+      consecutiveErrorsRef.current++;
       console.error('Error checking status:', error);
+      if (consecutiveErrorsRef.current >= 5) {
+        stopPolling();
+        setPollError('Erro de comunicação. Tente gerar um novo QR Code.');
+        toast.error('Falha na comunicação com o servidor.');
+      }
       return null;
     }
   }, [user]);
 
-  // Start polling for connection status
+  // Start polling
   const startPolling = useCallback(() => {
     setIsPolling(true);
+    setPollError(null);
+    consecutiveErrorsRef.current = 0;
 
-    // Clear any existing intervals
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-    }
-    if (pollingTimeoutRef.current) {
-      clearTimeout(pollingTimeoutRef.current);
-    }
+    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+    if (pollingTimeoutRef.current) clearTimeout(pollingTimeoutRef.current);
 
-    // Poll every 3 seconds
     pollingIntervalRef.current = setInterval(async () => {
       const status = await checkStatus();
-      
-      if (status?.status === 'open') {
+      if (!status) return;
+
+      if (status.status === 'open') {
         stopPolling();
         setQrCode(null);
         toast.success('WhatsApp conectado com sucesso!');
         queryClient.invalidateQueries({ queryKey: ['whatsapp-connection'] });
+      } else if (status.status === 'pending' && status.qrcode) {
+        // Backend sent a refreshed QR code
+        setQrCode(status.qrcode);
+      } else if (status.status === 'stale' || status.status === 'disconnected') {
+        stopPolling();
+        setQrCode(null);
+        setPollError(status.message || 'Conexão expirou. Gere um novo QR Code.');
+        toast.info('QR Code expirado. Gere um novo para continuar.');
       }
     }, 3000);
 
-    // Timeout after 2 minutes
+    // Hard timeout after 2 minutes
     pollingTimeoutRef.current = setTimeout(() => {
       stopPolling();
       setQrCode(null);
+      setPollError('Tempo esgotado. Gere um novo QR Code.');
       toast.info('QR Code expirado. Gere um novo para continuar.');
     }, 120000);
   }, [checkStatus, queryClient]);
 
-  // Stop polling
   const stopPolling = useCallback(() => {
     setIsPolling(false);
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-    if (pollingTimeoutRef.current) {
-      clearTimeout(pollingTimeoutRef.current);
-      pollingTimeoutRef.current = null;
-    }
+    if (pollingIntervalRef.current) { clearInterval(pollingIntervalRef.current); pollingIntervalRef.current = null; }
+    if (pollingTimeoutRef.current) { clearTimeout(pollingTimeoutRef.current); pollingTimeoutRef.current = null; }
   }, []);
 
-  // Disconnect and delete WhatsApp instance completely
+  // Disconnect and delete
   const disconnect = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error('User not authenticated');
       if (!connection?.instance_name) throw new Error('No connection found');
-
       const { data, error } = await supabase.functions.invoke('whatsapp-qrcode/delete', {
         body: { userId: user.id, instanceName: connection.instance_name }
       });
-
       if (error) throw error;
       return data;
     },
@@ -210,24 +202,14 @@ export function useWhatsAppConnection() {
     }
   });
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopPolling();
-    };
-  }, [stopPolling]);
+  useEffect(() => { return () => { stopPolling(); }; }, [stopPolling]);
 
   return {
-    connection,
-    isLoading,
-    isConnected,
-    qrCode,
-    isPolling,
+    connection, isLoading, isConnected, qrCode, isPolling, pollError,
     isGenerating: generateQRCode.isPending,
     isDisconnecting: disconnect.isPending,
     generateQRCode: generateQRCode.mutate,
     disconnect: disconnect.mutate,
-    stopPolling,
-    setQrCode
+    stopPolling, setQrCode, setPollError
   };
 }
