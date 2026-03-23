@@ -26,6 +26,7 @@ import CostCenters from "./pdv/financial/CostCenters";
 import DRE from "./pdv/financial/DRE";
 import ProductCMV from "./pdv/financial/ProductCMV";
 import GeneralCMV from "./pdv/financial/GeneralCMV";
+import CashierStatement from "./pdv/financial/CashierStatement";
 import DeliveryOrders from "./pdv/delivery/Orders";
 import DeliveryMenu from "./pdv/delivery/Menu";
 import DeliveryPersonalization from "./pdv/delivery/Personalization";
