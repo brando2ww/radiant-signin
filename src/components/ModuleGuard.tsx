@@ -1,8 +1,10 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUserModules, UserModule } from '@/hooks/use-user-modules';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Lock } from 'lucide-react';
+import { Lock, LogOut } from 'lucide-react';
 
 interface ModuleGuardProps {
   module: UserModule;
