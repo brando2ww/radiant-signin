@@ -321,7 +321,7 @@ export function PaymentDialog({
                   <Receipt className="h-4 w-4" />
                   Resumo do Pedido
                 </h4>
-                <ScrollArea className="h-[140px]">
+                <ScrollArea className="h-[120px]">
                   <div className="space-y-2">
                     {displayItems.map((item) => (
                       <div key={item.id} className="flex justify-between text-sm">
