@@ -33,6 +33,8 @@ export function usePDVPayments() {
       cashReceived,
       changeAmount,
       installments,
+      discountReason,
+      discountAuthorizedBy,
     }: RegisterPaymentParams) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
