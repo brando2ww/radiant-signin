@@ -96,19 +96,19 @@ export function ComandaDialog({
             </div>
           )}
 
-          {orderId && (
+          {(orderId || tableNumber) && (
             <div className="space-y-2">
-              <Label htmlFor="personNumber">Número da Pessoa (opcional)</Label>
+              <Label htmlFor="personNumber">Número de Pessoas</Label>
               <Input
                 id="personNumber"
                 type="number"
                 min="1"
-                value={personNumber}
+                value={personNumber || "1"}
                 onChange={(e) => setPersonNumber(e.target.value)}
-                placeholder="Ex: 1, 2, 3..."
+                placeholder="1"
               />
               <p className="text-xs text-muted-foreground">
-                Use para identificar pessoas na mesa (ex: Pessoa 1, Pessoa 2)
+                Quantidade de pessoas nesta comanda
               </p>
             </div>
           )}

@@ -653,7 +653,7 @@ export default function PDVSalon() {
                     <SortableTableCard
                       key={table.id}
                       table={table}
-                      orderTotal={order?.total}
+                      orderTotal={order ? getTableComandas(order.id).reduce((sum, c) => sum + c.subtotal, 0) || order.total : undefined}
                       orderTime={
                         order
                           ? format(parseISO(order.opened_at), "HH:mm", { locale: ptBR })
