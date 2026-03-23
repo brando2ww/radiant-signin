@@ -108,7 +108,7 @@ export function useTenants() {
   const updateTenantUser = async (
     userId: string,
     updates: {
-      role?: string;
+      role?: "proprietario" | "gerente" | "caixa" | "garcom" | "cozinheiro" | "estoquista" | "financeiro" | "atendente_delivery";
       is_active?: boolean;
       max_discount_percent?: number;
       discount_password?: string;
