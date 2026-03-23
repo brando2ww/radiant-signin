@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Link2, ExternalLink, CheckCircle2, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Link2, ExternalLink, CheckCircle2, AlertCircle, FileDown } from "lucide-react";
 import { useIFoodIntegration } from "@/hooks/use-ifood-integration";
 import { IFoodConnectionDialog } from "./IFoodConnectionDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WhatsAppConnectionCard } from "./WhatsAppConnectionCard";
+import { usePDVSettings } from "@/hooks/use-pdv-settings";
+import { toast } from "sonner";
 
 export function IntegrationsTab() {
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
