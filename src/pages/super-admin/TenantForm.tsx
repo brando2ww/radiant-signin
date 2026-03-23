@@ -44,6 +44,7 @@ export default function TenantForm() {
       admin_email: adminEmail,
       admin_phone: adminPhone || undefined,
       admin_password: adminPassword,
+      parent_tenant_id: parentTenantId || undefined,
     });
 
     navigate("/admin/tenants");
