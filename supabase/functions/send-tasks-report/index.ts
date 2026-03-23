@@ -169,36 +169,42 @@ async function sendReportForUser(
   const fetchUrl = `${evoUrl}/message/sendText/${instanceName}`;
   console.log("Evolution API URL:", fetchUrl);
 
-  const controller = new AbortController();
-  const fetchTimeout = setTimeout(() => controller.abort(), 15000);
+  let responseBody = "";
+  let evoStatus = 0;
 
-  let responseBody: string;
-  let evoStatus: number;
+  for (let attempt = 0; attempt <= 2; attempt++) {
+    try {
+      const controller = new AbortController();
+      const fetchTimeout = setTimeout(() => controller.abort(), 20000);
 
-  try {
-    const evoResponse = await fetch(fetchUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: evoKey,
-      },
-      body: JSON.stringify({
-        number: phone,
-        text: message,
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(fetchTimeout);
-    evoStatus = evoResponse.status;
-    responseBody = await evoResponse.text();
-    console.log("Evolution API response:", evoStatus, responseBody);
-  } catch (fetchErr: any) {
-    clearTimeout(fetchTimeout);
-    console.error("Evolution API fetch error:", fetchErr.name, fetchErr.message);
-    if (fetchErr.name === "AbortError") {
-      throw new Error("Timeout ao conectar com Evolution API (15s). Verifique se o servidor está acessível.");
+      const evoResponse = await fetch(fetchUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: evoKey,
+        },
+        body: JSON.stringify({
+          number: phone,
+          text: message,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(fetchTimeout);
+      evoStatus = evoResponse.status;
+      responseBody = await evoResponse.text();
+      console.log(`Evolution API response (attempt ${attempt + 1}):`, evoStatus, responseBody);
+      break; // success, exit retry loop
+    } catch (fetchErr: any) {
+      console.error(`Evolution API attempt ${attempt + 1} failed:`, fetchErr.name, fetchErr.message);
+      if (attempt === 2) {
+        if (fetchErr.name === "AbortError") {
+          throw new Error("Timeout ao conectar com Evolution API. Verifique se o servidor está acessível.");
+        }
+        throw new Error(`Erro ao conectar com Evolution API: ${fetchErr.message}`);
+      }
+      // Wait before retry
+      await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
     }
-    throw new Error(`Erro ao conectar com Evolution API: ${fetchErr.message}`);
   }
 
   // Check for exists:false even on 200
