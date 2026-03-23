@@ -1,44 +1,34 @@
 
 
-## Fix: Layout do desconto cortando campos de senha e motivo
+## Adicionar senha de desconto e limite máximo no formulário de usuário
 
-### Problema
-A coluna esquerda do PaymentDialog usa `max-h-[60vh]` com scroll interno. Quando o desconto é ativado, os campos de motivo + senha + botão de autorizar ficam dentro do scroll e são cortados/escondidos, especialmente com itens no pedido.
+### O que será feito
+Adicionar dois campos no card "Dados Pessoais" do `UserForm.tsx`:
+1. **Senha de operador para desconto** — campo numérico (4-6 dígitos), com toggle de visibilidade
+2. **Desconto máximo permitido (%)** — campo numérico de 0 a 100, default 100
 
-### Solução
-Reorganizar os campos de desconto para serem mais compactos e garantir que não sejam cortados:
-
-1. **Compactar o card de desconto** — colocar motivo e senha lado a lado em grid de 2 colunas quando há espaço
-2. **Reduzir a altura fixa do ScrollArea de itens** de 140px para 120px para dar mais espaço
-3. **Aumentar o max-h da coluna** de `60vh` para `65vh`
-4. **Tornar senha e motivo mais compactos** — inputs menores, labels inline
+Esses campos já existem no banco (`discount_password`, `max_discount_percent` na tabela `establishment_users`) e no hook `usePDVUsers` (create/update mutations). Falta apenas o formulário exibi-los.
 
 ### Arquivo
 
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---------|------|
-| `src/components/pdv/cashier/PaymentDialog.tsx` | Reorganizar layout: (1) ScrollArea de itens reduzida para 120px. (2) Campos motivo e senha em grid `grid-cols-2` compacto. (3) `max-h-[60vh]` → `max-h-[65vh]`. (4) Remover espaçamento excessivo nos campos de desconto |
+| `src/pages/pdv/UserForm.tsx` | Adicionar estados `discountPassword` e `maxDiscountPercent`. Carregar valores no `useEffect` de edição. Incluir os dois campos no card de dados pessoais (abaixo do telefone). Passar os valores no `data` do `handleSubmit` |
 
 ### Detalhes
 
+**Novos estados:**
 ```tsx
-{/* Discount reason + password side by side */}
-{hasDiscount && (
-  <div className="grid grid-cols-2 gap-2 mt-2">
-    <div>
-      <Label className="text-xs">Motivo *</Label>
-      <Input size="sm" placeholder="Ex: Cliente frequente" ... />
-    </div>
-    <div>
-      <Label className="text-xs">Senha de autorização</Label>
-      <div className="flex gap-1">
-        <Input type="password" size="sm" ... />
-        <Button size="sm">...</Button>
-      </div>
-    </div>
-  </div>
-)}
+const [discountPassword, setDiscountPassword] = useState("");
+const [maxDiscountPercent, setMaxDiscountPercent] = useState(100);
 ```
 
-Isso mantém tudo visível sem cortar, usando melhor o espaço horizontal disponível.
+**No useEffect de edição** — carregar `user.discount_password` e `user.max_discount_percent`.
+
+**No handleSubmit** — incluir `discount_password: discountPassword, max_discount_percent: maxDiscountPercent` no objeto `data`.
+
+**Campos no formulário** (abaixo do Telefone, dentro do card "Dados Pessoais"):
+- Separador visual "Autorização de Desconto"
+- Input numérico para senha (maxLength 6, placeholder "0000") com toggle eye/eyeOff
+- Input numérico para limite % (min 0, max 100, sufixo visual "%")
 
