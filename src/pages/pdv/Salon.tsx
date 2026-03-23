@@ -697,8 +697,8 @@ export default function PDVSalon() {
         onOpenChange={setTableDetailsOpen}
         table={selectedTableForDetails}
         orderTotal={
-          selectedTableForDetails
-            ? getTableOrder(selectedTableForDetails.id)?.total
+          selectedTableForDetails?.current_order_id
+            ? getTableComandas(selectedTableForDetails.current_order_id).reduce((sum, c) => sum + c.subtotal, 0)
             : undefined
         }
         orderTime={
