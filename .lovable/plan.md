@@ -1,31 +1,26 @@
 
+## Adicionar botão "Sair da conta" no aviso de módulo indisponível
 
-## Fix: "Módulo não disponível" após RLS policies
+### O que vou ajustar
+Atualizar o componente `ModuleGuard` para que, além do botão **Voltar**, ele mostre um botão **Sair da conta** dentro do card de aviso.
 
-### Causa raiz
-
-Antes das novas RLS policies, o usuário João Farias (que não é `owner_user_id` do tenant) **não conseguia ler** a tabela `tenants`. Isso fazia `tenantId` retornar `null`, e o `hasModule()` retornava `true` para tudo (fallback de "sem tenant = libera tudo").
-
-Agora com as novas policies, o hook `useUserModules` encontra o `tenantId` via `establishment_users`, mas a tabela `tenant_modules` provavelmente **não tem** o módulo "pdv" cadastrado para esse tenant — ou o usuário não tem RLS para ler `tenant_modules`.
-
-### Solução
-
-Duas correções necessárias:
-
-**1. RLS em `tenant_modules`** — adicionar policy para que membros do tenant possam ler os módulos do seu tenant:
-
-```sql
-CREATE POLICY "Tenant members can read own modules"
-  ON public.tenant_modules FOR SELECT TO authenticated
-  USING (tenant_id IN (
-    SELECT tenant_id FROM public.establishment_users
-    WHERE user_id = auth.uid() AND is_active = true AND tenant_id IS NOT NULL
-  ));
-```
-
-**2. Garantir que `tenant_modules` tem os módulos cadastrados** — verificar via query se o tenant do João tem módulos. Se não tem, a migration deve inserir módulos padrão para tenants existentes que não tenham nenhum.
-
+### Arquivo
 | Arquivo | Ação |
-|---------|------|
-| `supabase migration` | Criar policy de leitura em `tenant_modules` para establishment_users + inserir módulos padrão (pdv, delivery, financeiro, avaliacoes) para tenants que não tenham nenhum |
+|---|---|
+| `src/components/ModuleGuard.tsx` | Importar `useAuth` e adicionar ação de logout no estado de bloqueio do módulo |
 
+### Implementação
+1. Usar `signOut()` do `AuthContext` no `ModuleGuard`
+2. Adicionar um segundo botão no rodapé do card:
+   - **Voltar** mantém o comportamento atual
+   - **Sair da conta** faz logout do usuário
+3. Após deslogar, redirecionar para a tela inicial `/` para evitar que o usuário continue preso na tela bloqueada
+4. Desabilitar o botão enquanto o logout estiver acontecendo, se necessário, para evitar clique duplo
+
+### Resultado esperado
+Quando aparecer a mensagem **"Módulo não disponível"**, o usuário terá duas opções:
+- voltar para a tela anterior
+- sair da conta e entrar com outro usuário
+
+### Detalhe técnico
+A mudança é pequena e isolada, sem mexer em rotas, banco ou permissões. O ajuste fica só na UI do fallback do `ModuleGuard`, reaproveitando a autenticação já existente no projeto.
