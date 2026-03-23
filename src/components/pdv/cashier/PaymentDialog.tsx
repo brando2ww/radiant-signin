@@ -508,8 +508,10 @@ onClick={() => {
               </CardContent>
             </Card>
 
-            {/* Totals */}
-            <Card className="bg-primary/5 border-primary/20">
+            </div>
+
+            {/* Totals - fixed at bottom */}
+            <Card className="bg-primary/5 border-primary/20 shrink-0">
               <CardContent className="p-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
