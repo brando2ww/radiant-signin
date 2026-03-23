@@ -3,9 +3,21 @@ import { parseNFeXML, ParsedInvoice } from '@/lib/invoice/xml-parser';
 import { parseDanfePDF, PDFParseResult } from '@/lib/invoice/pdf-parser';
 import { useSupabaseUpload } from './use-supabase-upload';
 import { toast } from 'sonner';
-import * as pdfjsLib from 'pdfjs-dist';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+async function extractTextFromPDF(file: File): Promise<string> {
+  const pdfjsLib = await import('pdfjs-dist');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let fullText = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    fullText += content.items.map((item: any) => item.str).join(' ') + '\n';
+  }
+  return fullText;
+}
 
 export function useInvoiceParser() {
   const [parsing, setParsing] = useState(false);
@@ -37,19 +49,9 @@ export function useInvoiceParser() {
     setParseError(null);
 
     try {
-      // Use pdf.js to extract real text from the binary PDF
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let fullText = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        fullText += content.items.map((item: any) => item.str).join(' ') + '\n';
-      }
-
+      const fullText = await extractTextFromPDF(file);
       const result = await parseDanfePDF(fullText);
       
-      // Upload PDF file
       await uploadFile(file, `invoice_${Date.now()}_pdf`);
       
       setParsing(false);
