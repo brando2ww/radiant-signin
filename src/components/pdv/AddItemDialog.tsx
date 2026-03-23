@@ -119,7 +119,7 @@ export function AddItemDialog({
                 {selectedProduct.category}
               </p>
               <p className="text-lg font-bold mt-2">
-                R$ {selectedProduct.price_salon.toFixed(2)}
+                R$ {getPrice(selectedProduct).toFixed(2)}
               </p>
             </div>
 
