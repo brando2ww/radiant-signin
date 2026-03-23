@@ -1,68 +1,60 @@
 
 
-## Página de Franquia no PDV — Importar Dados da Matriz
+## Fix: RLS policies para Franquia funcionar no PDV
 
-### Conceito
+### Problema
+João Farias não consegue ver dados da franquia porque as políticas RLS bloqueiam:
+1. **`tenants`**: SELECT só permite `owner_user_id = auth.uid()` — não consegue ler o tenant pai (matriz)
+2. **`shared_products`** e **`shared_table_layouts`**: só super admins podem acessar — franquias não conseguem ler/escrever
+3. Resultado: hook retorna `tenantId` mas não consegue ler `parent_tenant_id`, então mostra "Sem conexão"
 
-Nova página `/pdv/franquia` acessível pelo menu "Administrador". Quando o tenant do usuário logado está vinculado a uma matriz (`parent_tenant_id` != null), ele pode visualizar e importar dados da matriz: produtos, mesas, e configurações de delivery.
+### Solução
+Criar migration com novas RLS policies:
 
-Se não está conectado a nenhuma franquia, mostra mensagem informativa.
+| Tabela | Nova Policy | Lógica |
+|--------|-------------|--------|
+| `tenants` | "Establishment users can read own tenant" | SELECT onde `id` está no `tenant_id` do `establishment_users` do user |
+| `tenants` | "Users can read parent tenant" | SELECT onde `id` é o `parent_tenant_id` de um tenant que o user já pode ler |
+| `shared_products` | "Tenant members can read shared products" | SELECT onde `target_tenant_id` é o tenant do user |
+| `shared_table_layouts` | "Tenant members can read shared table layouts" | SELECT onde `target_tenant_id` é o tenant do user |
 
-```text
-┌─────────────────────────────────────────────────┐
-│ Franquia — Importar da Matriz                    │
-│ Conectado a: Burger King HQ                      │
-├─────────────────────────────────────────────────┤
-│                                                  │
-│ ┌─ Produtos da Matriz ────────────────────────┐  │
-│ │ ☑ X-Burger  ☑ Batata  ☐ Milk Shake         │  │
-│ │                          [Importar Produtos] │  │
-│ └──────────────────────────────────────────────┘  │
-│                                                  │
-│ ┌─ Mesas da Matriz ───────────────────────────┐  │
-│ │ ☑ Mesa 1  ☑ Mesa 2  ☐ Mesa 3               │  │
-│ │                            [Importar Mesas] │  │
-│ └──────────────────────────────────────────────┘  │
-│                                                  │
-│ ┌─ Configurações de Delivery ─────────────────┐  │
-│ │ Horários, zonas de entrega, taxas           │  │
-│ │                     [Importar Configurações] │  │
-│ └──────────────────────────────────────────────┘  │
-│                                                  │
-│ ┌─ Sincronizar Tudo ──────────────────────────┐  │
-│ │ Atualizar produtos já importados com as     │  │
-│ │ versões mais recentes da matriz              │  │
-│ │                            [Sincronizar]     │  │
-│ └──────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────┘
-```
-
-### Mudanças
+### Arquivo
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/functions/sync-shared-products/index.ts` | Adicionar action `import_products` (franquia puxa da matriz), `import_tables`, `import_delivery_settings`. Verificar que o caller pertence ao tenant filho. Reutilizar a lógica de clone existente |
-| `src/hooks/use-franchise-import.ts` | Novo hook: detecta `tenantId` do user, busca `parent_tenant_id`, carrega produtos/mesas/delivery settings da matriz, expõe funções de import |
-| `src/pages/pdv/FranchiseImport.tsx` | Nova página com cards de importação: produtos (checkbox + importar), mesas (checkbox + importar), delivery settings (botão), botão sincronizar |
-| `src/pages/PDV.tsx` | Adicionar rota `/pdv/franquia` → `FranchiseImport` |
-| `src/components/pdv/PDVHeaderNav.tsx` | Adicionar item "Franquia" no menu Administrador (só aparece se user tem `parent_tenant_id`) |
-| `src/hooks/use-user-role.ts` | Adicionar `/pdv/franquia` nas rotas permitidas para proprietario e gerente |
+| `supabase migration` | Adicionar 4 novas RLS policies permitindo leitura para membros do tenant |
 
-### Detalhes Técnicos
+### Detalhes das Policies
 
-**Hook `use-franchise-import.ts`:**
-- Usa `useUserModules().tenantId` para pegar o tenant do user
-- Busca o tenant para ver `parent_tenant_id`
-- Se tem parent: busca `owner_user_id` do parent, carrega `pdv_products`, `pdv_tables`, `delivery_settings` do owner
-- Funções: `importProducts(ids)`, `importTables(ids)`, `importDeliverySettings()`, `syncExisting()`
-- Todas chamam a edge function `sync-shared-products` com actions específicas
+```sql
+-- 1. Establishment users can read their own tenant
+CREATE POLICY "Establishment users can read own tenant"
+  ON public.tenants FOR SELECT TO authenticated
+  USING (id IN (
+    SELECT tenant_id FROM public.establishment_users
+    WHERE user_id = auth.uid() AND is_active = true AND tenant_id IS NOT NULL
+  ));
 
-**Edge function — novas actions:**
-- `import_products`: recebe `target_tenant_id` (quem está importando) e `product_ids`. Valida que o caller é owner/membro do target tenant. Busca `parent_tenant_id` do target para pegar o source. Clona produtos do parent → target (mesma lógica do `share_products` mas na direção inversa)
-- `import_tables`: mesma lógica para mesas
-- `import_delivery_settings`: copia campos de `delivery_settings` do owner da matriz para o owner da franquia (horários, zonas, taxas, configurações)
+-- 2. Users can read parent tenant (for franchise)
+CREATE POLICY "Users can read parent tenant"
+  ON public.tenants FOR SELECT TO authenticated
+  USING (id IN (
+    SELECT parent_tenant_id FROM public.tenants
+    WHERE owner_user_id = auth.uid() OR id IN (
+      SELECT tenant_id FROM public.establishment_users
+      WHERE user_id = auth.uid() AND is_active = true
+    )
+  ));
 
-**Visibilidade no menu:**
-- O item "Franquia" só aparece no nav se o hook retorna `hasParentTenant = true`
-- Roles permitidos: proprietario e gerente
+-- 3-4. Tenant members can read shared data
+CREATE POLICY "Tenant members can read shared products"
+  ON public.shared_products FOR SELECT TO authenticated
+  USING (target_tenant_id IN (...user's tenant...));
+
+CREATE POLICY "Tenant members can read shared table layouts"
+  ON public.shared_table_layouts FOR SELECT TO authenticated
+  USING (target_tenant_id IN (...user's tenant...));
+```
+
+Isso permite que qualquer membro ativo de um tenant leia: seu próprio tenant, o tenant pai (matriz), e os registros de compartilhamento associados — sem expor dados de outros tenants.
 
