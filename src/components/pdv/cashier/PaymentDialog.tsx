@@ -382,19 +382,41 @@ onClick={() => {
                         <DollarSign className="h-4 w-4" />
                       </Button>
                     </div>
-                    <Input
-                      type="number"
-                      placeholder={discountType === "percent" ? "0%" : "0,00"}
-                      value={discountValue}
-                      onChange={(e) => {
-                        setDiscountValue(e.target.value);
-                        setDiscountAuthorized(false);
-                        setDiscountAuthorizedBy("");
-                        setDiscountPassword("");
-                        setDiscountReason("");
-                      }}
-                      className="flex-1"
-                    />
+                    {discountType === "percent" ? (
+                      <div className="relative flex-1">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder="0"
+                          value={discountValue}
+                          onChange={(e) => {
+                            const val = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
+                            setDiscountValue(val > 0 ? val.toString() : e.target.value);
+                            setDiscountAuthorized(false);
+                            setDiscountAuthorizedBy("");
+                            setDiscountPassword("");
+                            setDiscountReason("");
+                          }}
+                          className="pr-8"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">%</span>
+                      </div>
+                    ) : (
+                      <div className="flex-1">
+                        <CurrencyInput
+                          value={discountValue}
+                          onChange={(val) => {
+                            setDiscountValue(val);
+                            setDiscountAuthorized(false);
+                            setDiscountAuthorizedBy("");
+                            setDiscountPassword("");
+                            setDiscountReason("");
+                          }}
+                          placeholder="0,00"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Discount reason */}
