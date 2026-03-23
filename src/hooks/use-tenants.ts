@@ -23,6 +23,14 @@ export interface TenantModule {
   created_at: string;
 }
 
+export interface TenantIntegration {
+  id: string;
+  tenant_id: string;
+  integration_slug: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export function useTenants() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -88,5 +96,72 @@ export function useTenants() {
     return data;
   };
 
-  return { tenants, isLoading, createTenant, fetchTenantModules, fetchTenantUsers };
+  const fetchTenantIntegrations = async (tenantId: string): Promise<TenantIntegration[]> => {
+    const { data, error } = await supabase
+      .from("tenant_integrations")
+      .select("*")
+      .eq("tenant_id", tenantId);
+    if (error) throw error;
+    return data as TenantIntegration[];
+  };
+
+  const updateTenantUser = async (
+    userId: string,
+    updates: {
+      role?: string;
+      is_active?: boolean;
+      max_discount_percent?: number;
+      discount_password?: string;
+    }
+  ) => {
+    const { error } = await supabase
+      .from("establishment_users")
+      .update(updates)
+      .eq("id", userId);
+    if (error) throw error;
+  };
+
+  const toggleTenantModule = async (moduleId: string, isActive: boolean) => {
+    const { error } = await supabase
+      .from("tenant_modules")
+      .update({ is_active: isActive })
+      .eq("id", moduleId);
+    if (error) throw error;
+  };
+
+  const saveTenantIntegrations = async (
+    tenantId: string,
+    slugs: string[]
+  ) => {
+    // Delete all existing then insert selected
+    const { error: delError } = await supabase
+      .from("tenant_integrations")
+      .delete()
+      .eq("tenant_id", tenantId);
+    if (delError) throw delError;
+
+    if (slugs.length > 0) {
+      const rows = slugs.map((slug) => ({
+        tenant_id: tenantId,
+        integration_slug: slug,
+        is_active: true,
+      }));
+      const { error: insError } = await supabase
+        .from("tenant_integrations")
+        .insert(rows);
+      if (insError) throw insError;
+    }
+  };
+
+  return {
+    tenants,
+    isLoading,
+    createTenant,
+    fetchTenantModules,
+    fetchTenantUsers,
+    fetchTenantIntegrations,
+    updateTenantUser,
+    toggleTenantModule,
+    saveTenantIntegrations,
+  };
 }
