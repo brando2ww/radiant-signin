@@ -14,6 +14,9 @@ interface RegisterPaymentParams {
   changeAmount?: number;
   installments?: number;
   notes?: string;
+  discountAmount?: number;
+  discountReason?: string;
+  discountAuthorizedBy?: string;
 }
 
 export function usePDVPayments() {
