@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, MessageSquare } from "lucide-react";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { useOperationalTasks, type ShiftConfig } from "@/hooks/use-operational-tasks";
 
 export function TaskSettings() {
@@ -12,11 +13,17 @@ export function TaskSettings() {
   const [shifts, setShifts] = useState<ShiftConfig[]>(settings.shifts);
   const [autoGenerate, setAutoGenerate] = useState(settings.autoGenerate);
   const [qrEnabled, setQrEnabled] = useState(settings.qrCodeEnabled);
+  const [whatsappEnabled, setWhatsappEnabled] = useState(settings.whatsappReportEnabled);
+  const [whatsappPhone, setWhatsappPhone] = useState(settings.whatsappReportPhone);
+  const [whatsappTime, setWhatsappTime] = useState(settings.whatsappReportTime);
 
   useEffect(() => {
     setShifts(settings.shifts);
     setAutoGenerate(settings.autoGenerate);
     setQrEnabled(settings.qrCodeEnabled);
+    setWhatsappEnabled(settings.whatsappReportEnabled);
+    setWhatsappPhone(settings.whatsappReportPhone);
+    setWhatsappTime(settings.whatsappReportTime);
   }, [settings]);
 
   const addShift = () => {
@@ -34,7 +41,14 @@ export function TaskSettings() {
   };
 
   const handleSave = () => {
-    saveSettings({ shifts, autoGenerate, qrCodeEnabled: qrEnabled });
+    saveSettings({
+      shifts,
+      autoGenerate,
+      qrCodeEnabled: qrEnabled,
+      whatsappReportEnabled: whatsappEnabled,
+      whatsappReportPhone: whatsappPhone,
+      whatsappReportTime: whatsappTime,
+    });
   };
 
   return (
@@ -88,6 +102,47 @@ export function TaskSettings() {
             </div>
             <Switch checked={qrEnabled} onCheckedChange={setQrEnabled} />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Relatório WhatsApp
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>Enviar relatório diário via WhatsApp</Label>
+              <p className="text-xs text-muted-foreground">Resumo automático das tarefas do dia no horário configurado</p>
+            </div>
+            <Switch checked={whatsappEnabled} onCheckedChange={setWhatsappEnabled} />
+          </div>
+
+          {whatsappEnabled && (
+            <div className="space-y-3 pt-2 border-t">
+              <div>
+                <Label className="text-xs">Número destino</Label>
+                <PhoneInput
+                  value={whatsappPhone}
+                  onChange={setWhatsappPhone}
+                  placeholder="(00) 00000-0000"
+                />
+                <p className="text-xs text-muted-foreground mt-1">Número que receberá o relatório diário</p>
+              </div>
+              <div className="w-40">
+                <Label className="text-xs">Horário de envio</Label>
+                <Input
+                  type="time"
+                  value={whatsappTime}
+                  onChange={(e) => setWhatsappTime(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Horário do disparo automático</p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
