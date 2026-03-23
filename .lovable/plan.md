@@ -1,52 +1,36 @@
 
 
-## Melhorias: Relatórios de Avaliação + Respostas com Modal
+## Plano de Contas Funcional
 
-### Problemas
+### Problema
 
-1. **"Pergunta removida"** — A query `useCampaignResponses` não faz join com `evaluation_campaign_questions`, então o texto da pergunta nunca vem. Precisa incluir o join no select.
-2. **Respostas abertas** — Todas as respostas ficam listadas expandidas. Com muitos respondentes, fica inviável. Precisa virar tabela paginada com modal de detalhes.
-3. **Graficos ruins** — Charts sem cores adequadas, sem gradientes, sem formatação de valores, sem cards de resumo complementares.
+A página é 100% estática — botões sem ação, contadores hardcoded em 0, sem CRUD. O hook só tem leitura, sem create/update/delete.
 
 ### Mudanças
 
 | Arquivo | Ação |
 |---------|------|
-| `src/hooks/use-evaluation-campaigns.ts` | Adicionar join com `evaluation_campaign_questions` na query de responses |
-| `src/components/pdv/evaluations/CampaignResponses.tsx` | Reescrever: tabela paginada de respondentes + modal com detalhes completos |
-| `src/components/pdv/evaluations/CampaignReports.tsx` | Melhorar graficos: cores, gradientes, tooltips formatados, cards de resumo, distribuicao de notas, satisfacao media |
+| `src/hooks/use-pdv-chart-of-accounts.ts` | Adicionar mutations: `createAccount`, `updateAccount`, `deleteAccount` (soft delete) + seed da estrutura básica |
+| `src/pages/pdv/financial/ChartOfAccounts.tsx` | Reescrever completo: conectar hook, CRUD funcional, árvore hierárquica, dialogs |
 
 ### Detalhes
 
-**1. Fix do join (`use-evaluation-campaigns.ts`)**
+**1. Hook — adicionar mutations**
 
-Alterar a query para incluir o texto da pergunta:
-```sql
-evaluation_answers (
-  id, question_id, score, comment,
-  evaluation_campaign_questions (
-    question_text
-  )
-)
-```
+- `createAccount({ code, name, account_type, parent_id? })` — insere nova conta
+- `updateAccount({ id, code?, name? })` — atualiza conta
+- `deleteAccount(id)` — soft delete (`is_active = false`)
+- `seedBasicStructure()` — cria estrutura padrão:
+  - Receitas: `1.01 Vendas Balcão`, `1.02 Vendas Delivery`, `1.03 Outras Receitas`
+  - Despesas: `2.01 Aluguel`, `2.02 Energia`, `2.03 Água`, `2.04 Internet`, `2.05 Salários`, `2.06 Impostos`, `2.07 Marketing`, `2.08 Manutenção`, `2.09 Outras Despesas`
+  - Custos: `3.01 Matéria-prima`, `3.02 Embalagens`, `3.03 Descartáveis`
 
-**2. Respostas em tabela (`CampaignResponses.tsx`)**
+**2. Página — funcionalidades**
 
-- Tabela com colunas: Nome, WhatsApp, NPS, Media, Data
-- Paginacao local (10 por pagina)
-- Busca por nome/telefone
-- Ao clicar na linha, abre `Dialog` com:
-  - Dados do cliente (nome, whatsapp, data nascimento)
-  - NPS score com badge colorida
-  - Cada pergunta com nota em estrelas e comentario
-  - Data/hora da resposta
-
-**3. Graficos melhores (`CampaignReports.tsx`)**
-
-- NPS: donut chart com innerRadius, cores verde/amarelo/vermelho reais, gauge visual
-- Cards de resumo no topo: Total respostas, Media geral, NPS Score, Taxa de promotores
-- Media por pergunta: barras com gradiente, labels com nota ao lado da barra, cores baseadas na nota (verde >4, amarelo >3, vermelho <=3)
-- Respostas por dia: area chart com gradiente ao inves de line chart simples
-- Novo: Distribuicao de notas (1-5 estrelas) em bar chart vertical
-- Tooltips formatados em portugues
+- Contadores reais (conta por `account_type` do array retornado)
+- Botão "Nova Conta" abre dialog com campos: Código, Nome, Tipo (Receita/Despesa/Custo), Conta pai (opcional, select das contas existentes)
+- Árvore hierárquica agrupada por tipo, mostrando contas pai/filho com indentação
+- Cada conta com botões editar (abre dialog preenchido) e excluir (AlertDialog de confirmação)
+- Botão "Criar Estrutura Básica" chama `seedBasicStructure` e popula a árvore
+- Busca/filtro por tipo de conta
 
