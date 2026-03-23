@@ -1,50 +1,64 @@
 
 
-## Fix: Garçom não vê mesas e itens (problema de user_id)
+## Validação de Capacidade nas Comandas e Total da Mesa por Comandas
 
-### Problema
+### Mudanças
 
-Todos os hooks de dados (mesas, produtos, comandas, pedidos, etc.) filtram por `user_id = auth.user.id`. Quando o garçom (juliano@demo.com.br) faz login, seu `user.id` é diferente do proprietário (demo@demo.com.br). Como mesas e produtos foram criados pelo proprietário, o garçom não vê nada.
+**1. Total da mesa = soma das comandas**
 
-### Solução
+Atualmente o `orderTotal` vem de `order.total` (que fica R$ 0.00). Mudar para somar os subtotais de todas as comandas abertas da mesa.
 
-Criar um hook `useEstablishmentId` que resolve o "user_id efetivo" (o dono do estabelecimento):
-- Se o usuário é proprietário → retorna `user.id`
-- Se é funcionário (garçom, caixa, etc.) → busca `establishment_owner_id` da tabela `establishment_users`
+- Em `Salon.tsx`: calcular `orderTotal` como soma dos subtotais das comandas da mesa em vez de usar `order.total`
+- Em `TableDetailsDialog.tsx`: sem mudança necessária (já recebe `orderTotal` como prop)
 
-Depois, substituir `user.id` por esse ID efetivo nos hooks que o garçom precisa acessar.
+**2. Validação de capacidade ao criar comanda**
+
+Ao clicar "Nova" comanda dentro de uma mesa, verificar se o total de `person_number` das comandas existentes já atingiu a capacidade da mesa. Se exceder, mostrar um AlertDialog de confirmação antes de abrir o ComandaDialog.
+
+- Em `Salon.tsx`: no `handleOpenTableComandaDialog`, calcular pessoas alocadas vs capacidade. Se exceder, mostrar popup de confirmação antes de prosseguir.
+- Novo state: `capacityWarningOpen` e `pendingComandaData` para controlar o fluxo de confirmação.
+
+**3. ComandaDialog: person_number padrão e validação**
+
+Quando a comanda é criada dentro de uma mesa, o campo "Número de Pessoas" deve aparecer sempre (não apenas quando tem `orderId`). O padrão deve ser 1.
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/hooks/use-establishment-id.ts` | **Criar** — Hook que consulta `establishment_users` para resolver o `establishment_owner_id` do usuário logado. Retorna `{ visibleUserId, isLoading }` |
-| `src/hooks/use-pdv-tables.ts` | Substituir `user.id` por `visibleUserId` do novo hook nas queries de leitura |
-| `src/hooks/use-pdv-products.ts` | Idem — usar `visibleUserId` na query de leitura |
-| `src/hooks/use-pdv-comandas.ts` | Idem — usar `visibleUserId` nas queries de leitura |
-| `src/hooks/use-pdv-orders.ts` | Idem — usar `visibleUserId` nas queries de leitura |
-| `src/hooks/use-pdv-kitchen.ts` | Idem — usar `visibleUserId` na query de leitura |
+| `src/pages/pdv/Salon.tsx` | Calcular `orderTotal` pela soma das comandas. Adicionar lógica de validação de capacidade com AlertDialog de confirmação |
+| `src/components/pdv/ComandaDialog.tsx` | Mostrar campo "Número de Pessoas" sempre que for comanda de mesa (com `tableNumber`). Default 1 |
+| `src/components/pdv/TableDetailsDialog.tsx` | Nenhuma mudança estrutural necessária |
 
-### Hook `useEstablishmentId`
+### Fluxo de validação
 
-```typescript
-// Busca establishment_owner_id se o usuário for funcionário
-// Se não encontrar registro em establishment_users, assume que é o próprio dono
-const { data } = useQuery({
-  queryKey: ["establishment-id", user?.id],
-  queryFn: async () => {
-    const { data } = await supabase
-      .from("establishment_users")
-      .select("establishment_owner_id")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .maybeSingle();
-    return data?.establishment_owner_id || user.id;
-  }
-});
+```text
+Usuário clica "+ Nova" comanda na mesa (cap. 6)
+→ Comandas existentes: Pessoa 1 (2 pessoas) + Pessoa 2 (3 pessoas) = 5 alocadas
+→ Nova comanda com 2 pessoas → total seria 7 > 6
+→ AlertDialog: "A mesa tem capacidade para 6 pessoas e já possui 5 alocadas. Deseja continuar mesmo assim?"
+→ Sim → cria comanda normalmente
+→ Não → cancela
 ```
 
-### Escopo
+A validação acontece ao **submeter** o ComandaDialog (não ao abrir), pois o número de pessoas é definido no formulário.
 
-Apenas queries de **leitura** serão alteradas. Mutations de criação (inserir comanda, enviar para cozinha) continuam usando `user.id` — o RLS do Supabase precisa ser compatível, mas isso é um passo futuro. O foco agora é **visualização**.
+### Detalhe técnico
+
+No `Salon.tsx`, o `orderTotal` passará a ser:
+```typescript
+const tableComandas = getTableComandas(selectedTableForDetails.current_order_id);
+const comandasTotal = tableComandas.reduce((sum, c) => sum + c.subtotal, 0);
+// Passar comandasTotal como orderTotal
+```
+
+A validação de capacidade será feita no `handleCreateComanda`:
+```typescript
+// Antes de criar, verificar capacidade
+const existingPersons = tableComandas.reduce((sum, c) => sum + (c.person_number || 1), 0);
+const newPersons = data.personNumber || 1;
+if (existingPersons + newPersons > table.capacity) {
+  // Mostrar AlertDialog de confirmação
+}
+```
 
