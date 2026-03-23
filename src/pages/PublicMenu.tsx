@@ -26,6 +26,8 @@ export interface CartItem {
 
 const PublicMenu = () => {
   const { userId } = useParams<{ userId: string }>();
+  const [searchParams] = useSearchParams();
+  const initialCoupon = searchParams.get("cupom") || undefined;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const { trackPageView } = useMarketingTracking();
