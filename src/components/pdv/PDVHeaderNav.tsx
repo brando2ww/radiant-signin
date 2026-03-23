@@ -186,15 +186,16 @@ export function PDVHeaderNav() {
   return (
     <NavigationMenu>
       <NavigationMenuList>
-        {filteredSections.map((section) => {
+        {filteredSections.map((section, index) => {
           const isSectionActive = section.items.some(
             (item) => pathname === item.url || pathname.startsWith(item.url + "/")
           );
           const SectionIcon = section.icon;
           const isAdminSection = section.title === "Administrador";
+          const isRightAligned = index >= filteredSections.length - 2;
 
           return (
-            <NavigationMenuItem key={section.title}>
+            <NavigationMenuItem key={section.title} className="relative">
               <NavigationMenuTrigger
                 className={cn(
                   "gap-2",
@@ -204,10 +205,14 @@ export function PDVHeaderNav() {
                 <SectionIcon className="h-4 w-4" />
                 <span className="hidden lg:inline">{section.title}</span>
               </NavigationMenuTrigger>
-              <NavigationMenuContent>
+              <NavigationMenuContent
+                className={cn(
+                  "absolute top-full mt-1.5 rounded-md border bg-popover text-popover-foreground shadow-lg",
+                  isRightAligned ? "right-0 left-auto" : "left-0"
+                )}
+              >
                 {isAdminSection && visibleAnnouncements.length > 0 ? (
                   <div className="flex w-[280px] md:w-[550px]">
-                    {/* Coluna Esquerda - Comunicados */}
                     <div className="w-[180px] border-r border-border p-3 bg-primary/5">
                       <div className="flex items-center gap-2 mb-3">
                         <Megaphone className="h-4 w-4 text-primary" />
@@ -230,7 +235,6 @@ export function PDVHeaderNav() {
                         ))}
                       </div>
                     </div>
-                    {/* Coluna Direita - Links */}
                     <div className="flex-1">
                       {renderNavLinks(section.items)}
                     </div>
