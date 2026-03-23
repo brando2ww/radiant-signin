@@ -1,46 +1,51 @@
 
 
-## Fix: Página de Franquia para tenant MATRIZ
+## Fix: RLS policy para tenant matriz ler seus filhos
 
-### Problema
-João Farias é o **owner do tenant matriz** (Restaurante DEMO, `parent_tenant_id = null`). A página de franquia só funciona para tenants **filhos** (que têm `parent_tenant_id` preenchido). Como Restaurante DEMO é a matriz, `hasParentTenant = false` e mostra "Sem conexão".
+### Causa raiz
+
+João Farias é owner do "Restaurante DEMO" (matriz). Quando o hook busca `childTenants` com `SELECT * FROM tenants WHERE parent_tenant_id = tenantId`, o RLS bloqueia porque nenhuma policy permite ao owner da matriz ler os tenants filhos.
+
+Policies atuais na tabela `tenants`:
+- "Tenant owner can read own tenant" — só o próprio tenant
+- "Users can read parent tenant" — só o tenant pai (direção inversa)
+- "Establishment users can read own tenant" — só tenants onde é membro
+- "Super admins full access" — só super admins
+
+Falta: **owner da matriz pode ler filhos**.
 
 ### Solução
-Expandir o hook `use-franchise-import.ts` e a página `FranchiseImport.tsx` para funcionar nos dois cenários:
 
-1. **Tenant é FILHO** (tem `parent_tenant_id`) → comportamento atual: importar da matriz
-2. **Tenant é MATRIZ** (tem filhos com `parent_tenant_id` apontando para ele) → novo: mostrar filhos vinculados e permitir enviar/compartilhar produtos e mesas para as franquias
+Criar uma **security definer function** (para evitar recursão RLS) e uma nova policy.
 
-### Mudanças
-
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---------|------|
-| `src/hooks/use-franchise-import.ts` | Adicionar detecção de filhos (`childTenants`), flag `isParentTenant`, queries para buscar filhos do tenant, e mutations de compartilhamento (reutilizando edge function existente) |
-| `src/pages/pdv/FranchiseImport.tsx` | Renderizar view diferente para matriz: lista de franquias vinculadas, seleção de produtos/mesas próprios para compartilhar com filhos selecionados, botão de sincronizar |
+| `supabase migration` | Criar function `get_user_child_tenant_ids()` + policy "Parent owners can read child tenants" |
 
-### Fluxo para MATRIZ
+### SQL
 
-```text
-┌─────────────────────────────────────────────┐
-│ Franquia — Gerenciar Franquias              │
-│ Você é a matriz. 1 franquia(s) vinculada(s) │
-├─────────────────────────────────────────────┤
-│ Franquias Vinculadas                        │
-│ ☑ Koten Sushi · Ativo                       │
-├─────────────────────────────────────────────┤
-│ Compartilhar Produtos        [Enviar]       │
-│ ☑ Produto A  ☑ Produto B                   │
-├─────────────────────────────────────────────┤
-│ Compartilhar Mesas           [Enviar]       │
-│ ☑ Mesa 1  ☑ Mesa 2                          │
-├─────────────────────────────────────────────┤
-│ Sincronizar Tudo             [Sincronizar]  │
-└─────────────────────────────────────────────┘
+```sql
+-- Function que retorna IDs dos tenants filhos do usuário atual
+CREATE OR REPLACE FUNCTION public.get_user_child_tenant_ids()
+RETURNS SETOF uuid
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT t.id
+  FROM public.tenants t
+  WHERE t.parent_tenant_id IN (
+    SELECT t2.id FROM public.tenants t2
+    WHERE t2.owner_user_id = auth.uid()
+  )
+$$;
+
+-- Policy: owner da matriz pode ler tenants filhos
+CREATE POLICY "Parent owners can read child tenants"
+  ON public.tenants FOR SELECT TO authenticated
+  USING (id IN (SELECT public.get_user_child_tenant_ids()));
 ```
 
-### Detalhes do hook
-- Buscar `childTenants` via `tenants WHERE parent_tenant_id = tenantId`
-- `isParentTenant = childTenants.length > 0`
-- Para matriz: buscar produtos/mesas do PROPRIO tenant (owner) para compartilhar
-- Mutations de share chamam a edge function `sync-shared-products` com actions `share_products` e `share_tables` já existentes
+Isso permite que João (owner de Restaurante DEMO) leia "Koten Sushi" (que tem `parent_tenant_id` apontando para o tenant dele), desbloqueando a query `childTenants` no hook e mostrando a view de matriz.
+
+Também preciso registrar a nova function no `types.ts` do Supabase.
 
