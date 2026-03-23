@@ -32,6 +32,8 @@ export interface CashMovement {
   payment_method?: string | null;
   description: string | null;
   created_at: string;
+  discount_reason?: string | null;
+  discount_authorized_by?: string | null;
 }
 
 export interface PrintCashierReportParams {
@@ -157,6 +159,27 @@ export function printCashierReport(params: PrintCashierReportParams) {
     </tr>`;
   }).join("");
 
+  // Build discount section
+  const discountMovements = movements.filter((m) => m.discount_reason);
+  let discountSection = "";
+  if (discountMovements.length > 0) {
+    const discountRows = discountMovements.map((m) => {
+      const time = format(new Date(m.created_at), "HH:mm", { locale: ptBR });
+      return `<tr>
+        <td style="padding:2px 6px;font-size:11px">${time}</td>
+        <td style="padding:2px 6px;font-size:11px">${m.discount_reason || ""}</td>
+        <td style="padding:2px 6px;font-size:11px">${m.discount_authorized_by || ""}</td>
+        <td style="padding:2px 6px;font-size:11px;text-align:right">R$ ${m.amount.toFixed(2)}</td>
+      </tr>`;
+    }).join("");
+    discountSection = `<div class="divider"></div>
+<div class="section">
+  <div class="section-title">DESCONTOS APLICADOS</div>
+  <table><thead><tr><th>Hora</th><th>Motivo</th><th>Autorizado por</th><th style="text-align:right">Valor</th></tr></thead>
+  <tbody>${discountRows}</tbody></table>
+</div>`;
+  }
+
   const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Demonstrativo de Caixa</title>
 <style>
   @page { size: 80mm auto; margin: 4mm; }
@@ -201,6 +224,7 @@ ${movements.length > 0 ? `
   <table><thead><tr><th>Hora</th><th>Tipo</th><th>Forma</th><th style="text-align:right">Valor</th><th>Desc.</th></tr></thead>
   <tbody>${movementRows}</tbody></table>
 </div>` : ''}
+${discountSection}
 ${finalNotes ? `
 <div class="divider"></div>
 <div class="section">

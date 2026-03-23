@@ -29,6 +29,8 @@ export function usePDVUsers() {
       phone: string;
       role: string;
       password: string;
+      discount_password?: string;
+      max_discount_percent?: number;
     }) => {
       if (!user?.id) throw new Error("Não autenticado");
 
@@ -41,6 +43,8 @@ export function usePDVUsers() {
             phone: userData.phone,
             role: userData.role,
             password: userData.password,
+            discount_password: userData.discount_password,
+            max_discount_percent: userData.max_discount_percent,
           },
         }
       );
@@ -75,6 +79,8 @@ export function usePDVUsers() {
       email: string;
       phone: string;
       role: string;
+      discount_password?: string;
+      max_discount_percent?: number;
     }) => {
       const { data, error } = await supabase
         .from("establishment_users")
@@ -83,7 +89,9 @@ export function usePDVUsers() {
           email: userData.email,
           phone: userData.phone,
           role: userData.role as any,
-        })
+          discount_password: userData.discount_password || null,
+          max_discount_percent: userData.max_discount_percent ?? 100,
+        } as any)
         .eq("id", id)
         .select()
         .single();

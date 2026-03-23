@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { display_name, email, phone, role, password } = await req.json();
+    const { display_name, email, phone, role, password, discount_password, max_discount_percent } = await req.json();
 
     if (!email || !password || !display_name) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -72,6 +72,8 @@ Deno.serve(async (req) => {
         email,
         phone: phone || null,
         role,
+        discount_password: discount_password || null,
+        max_discount_percent: max_discount_percent ?? 100,
       })
       .select()
       .single();

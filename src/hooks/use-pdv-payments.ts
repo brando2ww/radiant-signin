@@ -14,6 +14,9 @@ interface RegisterPaymentParams {
   changeAmount?: number;
   installments?: number;
   notes?: string;
+  discountAmount?: number;
+  discountReason?: string;
+  discountAuthorizedBy?: string;
 }
 
 export function usePDVPayments() {
@@ -30,6 +33,8 @@ export function usePDVPayments() {
       cashReceived,
       changeAmount,
       installments,
+      discountReason,
+      discountAuthorizedBy,
     }: RegisterPaymentParams) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
@@ -73,13 +78,18 @@ export function usePDVPayments() {
 
       if (activeSession) {
         // Insert movement
-        await supabase.from("pdv_cashier_movements").insert({
+        const movementData: any = {
           cashier_session_id: activeSession.id,
           type: "venda",
           amount,
           payment_method: paymentMethod,
           description: `Comanda #${comandaId.slice(0, 8)}`,
-        });
+        };
+        
+        if (discountReason) movementData.discount_reason = discountReason;
+        if (discountAuthorizedBy) movementData.discount_authorized_by = discountAuthorizedBy;
+        
+        await supabase.from("pdv_cashier_movements").insert(movementData);
 
         // Update session totals
         const updates: Record<string, number> = {
@@ -126,6 +136,8 @@ export function usePDVPayments() {
       cashReceived,
       changeAmount,
       installments,
+      discountReason,
+      discountAuthorizedBy,
     }: {
       tableId: string;
       comandaIds: string[];
@@ -134,6 +146,8 @@ export function usePDVPayments() {
       cashReceived?: number;
       changeAmount?: number;
       installments?: number;
+      discountReason?: string;
+      discountAuthorizedBy?: string;
     }) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
@@ -168,13 +182,18 @@ export function usePDVPayments() {
         .maybeSingle();
 
       if (activeSession) {
-        await supabase.from("pdv_cashier_movements").insert({
+        const movementData: any = {
           cashier_session_id: activeSession.id,
           type: "venda",
           amount,
           payment_method: paymentMethod,
           description: `Mesa #${tableId.slice(0, 8)}`,
-        });
+        };
+        
+        if (discountReason) movementData.discount_reason = discountReason;
+        if (discountAuthorizedBy) movementData.discount_authorized_by = discountAuthorizedBy;
+        
+        await supabase.from("pdv_cashier_movements").insert(movementData);
 
         const updates: Record<string, number> = {
           total_sales: activeSession.total_sales + amount,

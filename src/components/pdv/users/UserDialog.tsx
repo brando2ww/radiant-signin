@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { RolePermissionsView, roleConfig } from "./RolePermissionsView";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Eye, EyeOff, ChevronDown, ChevronUp } from "lucide-react";
 
@@ -45,6 +46,8 @@ export function UserDialog({ open, onOpenChange, onSave, editingUser, isLoading 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [discountPassword, setDiscountPassword] = useState("");
+  const [maxDiscountPercent, setMaxDiscountPercent] = useState("100");
 
   const isEditing = !!editingUser;
 
@@ -54,11 +57,15 @@ export function UserDialog({ open, onOpenChange, onSave, editingUser, isLoading 
       setEmail(editingUser.email || "");
       setPhone(editingUser.phone || "");
       setRole(editingUser.role);
+      setDiscountPassword((editingUser as any).discount_password || "");
+      setMaxDiscountPercent(String((editingUser as any).max_discount_percent ?? 100));
     } else {
       setName("");
       setEmail("");
       setPhone("");
       setRole("garcom");
+      setDiscountPassword("");
+      setMaxDiscountPercent("100");
     }
     setPassword("");
     setConfirmPassword("");
@@ -86,7 +93,9 @@ export function UserDialog({ open, onOpenChange, onSave, editingUser, isLoading 
       phone,
       role,
       ...(isEditing ? {} : { password }),
-    });
+      discount_password: discountPassword || undefined,
+      max_discount_percent: parseFloat(maxDiscountPercent) || 100,
+    } as any);
   };
 
   const selectedConfig = roleConfig[role];
@@ -146,6 +155,41 @@ export function UserDialog({ open, onOpenChange, onSave, editingUser, isLoading 
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="(11) 99999-9999"
                 />
+              </div>
+
+              {/* Discount authorization fields */}
+              <Separator className="my-2" />
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Autorização de Desconto
+              </h3>
+
+              <div className="space-y-2">
+                <Label htmlFor="discountPassword">Senha de Desconto (numérica)</Label>
+                <Input
+                  id="discountPassword"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={discountPassword}
+                  onChange={(e) => setDiscountPassword(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="4 a 6 dígitos"
+                  maxLength={6}
+                />
+                <p className="text-xs text-muted-foreground">Senha usada para autorizar descontos no caixa</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="maxDiscount">Desconto Máximo (%)</Label>
+                <Input
+                  id="maxDiscount"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={maxDiscountPercent}
+                  onChange={(e) => setMaxDiscountPercent(e.target.value)}
+                  placeholder="100"
+                />
+                <p className="text-xs text-muted-foreground">Percentual máximo de desconto que este operador pode autorizar</p>
               </div>
 
               {/* Password fields — only for new users */}
