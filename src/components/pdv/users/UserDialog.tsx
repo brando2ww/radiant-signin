@@ -45,6 +45,8 @@ export function UserDialog({ open, onOpenChange, onSave, editingUser, isLoading 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [discountPassword, setDiscountPassword] = useState("");
+  const [maxDiscountPercent, setMaxDiscountPercent] = useState("100");
 
   const isEditing = !!editingUser;
 
