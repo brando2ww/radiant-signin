@@ -1,66 +1,63 @@
 
 
-## Fix: Importação de PDF de NF-e
+## Fix: PDF parser não extrai dados da NF-e
 
-### Problemas identificados
+### Problema
 
-1. **`file.text()` em PDF binário** — O hook lê o PDF como texto puro, resultando em lixo binário. Os regex do parser não encontram nada, gerando `confidence: 'low'`.
-2. **Fluxo bloqueado no dialog** — Mesmo que o parse funcione, linhas 62-67 do `InvoiceUploadDialog` mostram um toast de erro e **nunca chamam `onParsed`**. O PDF é aceito visualmente mas jamais importado.
+O `pdfjs-dist` extrai texto do PDF unindo todos os itens com espaço simples (`.join(' ')`), perdendo a estrutura espacial do DANFE. Os regex do parser esperam formatação específica (ex: `CNPJ: 00.000.000/0000-00`, `Razão Social: Nome`) que não corresponde ao texto extraído.
+
+Resultado: apenas a chave de acesso (44 dígitos agrupados) e série são encontrados. CNPJ, fornecedor, número, totais ficam vazios.
 
 ### Solução
 
-Usar **pdf.js** (`pdfjs-dist`) no browser para extrair texto real do PDF, depois passar ao parser de regex existente. E corrigir o fluxo do dialog para aceitar dados parciais.
+1. **Melhorar extração de texto** — usar posição Y dos itens para reconstruir linhas, preservando layout
+2. **Tornar regex mais flexíveis** — aceitar variações comuns de formatação DANFE
+3. **Adicionar log de debug** — logar texto extraído para diagnóstico
 
 ### Mudanças
 
 | Arquivo | Ação |
 |---------|------|
-| `package.json` | Adicionar `pdfjs-dist` |
-| `src/hooks/use-invoice-parser.ts` | Usar pdf.js para extrair texto antes de chamar `parseDanfePDF` |
-| `src/components/pdv/invoices/InvoiceUploadDialog.tsx` | Corrigir fluxo PDF: converter `Partial<ParsedInvoice>` para `ParsedInvoice` e chamar `onParsed` com dados parciais |
+| `src/hooks/use-invoice-parser.ts` | Melhorar `extractTextFromPDF` para agrupar por posição Y (linhas reais) |
+| `src/lib/invoice/pdf-parser.ts` | Tornar regex mais robustos + extrair dados da chave de 44 dígitos + log debug |
 
 ### Detalhes
 
-**1. Extração de texto com pdf.js (`use-invoice-parser.ts`)**
+**1. Extração com layout (`use-invoice-parser.ts`)**
+
+Agrupar itens de texto por coordenada Y (com tolerância de 2px), ordenar por X dentro de cada linha, juntar com espaço. Isso recria a estrutura visual do DANFE:
 
 ```typescript
-import * as pdfjsLib from 'pdfjs-dist';
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-
-const parsePDF = async (file: File) => {
-  const arrayBuffer = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-  let fullText = '';
+async function extractTextFromPDF(file: File): Promise<string> {
+  const pdfjsLib = await import('pdfjs-dist');
+  // ...
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    fullText += content.items.map(item => item.str).join(' ') + '\n';
-  }
-  const result = await parseDanfePDF(fullText);
-  // ...
-};
-```
-
-**2. Fluxo do dialog (`InvoiceUploadDialog.tsx`)**
-
-Remover o bloqueio e converter dados parciais em `ParsedInvoice` completo com defaults para campos faltantes:
-
-```typescript
-} else if (extension === 'pdf') {
-  const result = await parsePDF(file);
-  if (result) {
-    const fullInvoice: ParsedInvoice = {
-      invoiceKey: result.invoice.invoiceKey || '',
-      invoiceNumber: result.invoice.invoiceNumber || '',
-      // ... defaults para campos obrigatórios
-      ...result.invoice,
-    };
-    if (result.confidence === 'low') {
-      toast.warning('Dados parciais extraídos - revise antes de confirmar');
-    }
-    onParsed(fullInvoice);
-    onOpenChange(false);
+    // Agrupar por Y, ordenar por X
+    const lines = new Map<number, {x: number, str: string}[]>();
+    content.items.forEach((item: any) => {
+      const y = Math.round(item.transform[5] / 2) * 2; // tolerância 2px
+      if (!lines.has(y)) lines.set(y, []);
+      lines.get(y)!.push({ x: item.transform[4], str: item.str });
+    });
+    // Ordenar linhas de cima para baixo, itens da esquerda para direita
+    [...lines.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .forEach(([_, items]) => {
+        items.sort((a, b) => a.x - b.x);
+        fullText += items.map(i => i.str).join(' ') + '\n';
+      });
   }
 }
 ```
+
+**2. Regex mais robustos (`pdf-parser.ts`)**
+
+- CNPJ: aceitar com ou sem label, formato `XX.XXX.XXX/XXXX-XX` em qualquer contexto
+- Fornecedor: buscar por `Razão Social`, `RAZAO SOCIAL`, `Nome / Razão Social`, ou texto após CNPJ
+- Número NF: aceitar `Nº`, `No.`, `N.`, `NÚMERO`, `NF-e`, formatos variados
+- Total: aceitar `VALOR TOTAL DA NOTA`, `V. TOTAL DA NF`, `TOTAL DA NOTA`
+- **Fallback da chave**: extrair UF, CNPJ emitente, número e série diretamente dos 44 dígitos da chave (posições fixas no padrão NF-e)
+- Adicionar `console.log` do texto extraído para debug
 
