@@ -10,7 +10,7 @@ import { useTenants } from "@/hooks/use-tenants";
 
 export default function TenantForm() {
   const navigate = useNavigate();
-  const { createTenant } = useTenants();
+  const { createTenant, tenants } = useTenants();
 
   const [name, setName] = useState("");
   const [document, setDocument] = useState("");
