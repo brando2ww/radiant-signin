@@ -445,11 +445,34 @@ export default function PDVSalon() {
     setComandaDetailsOpen(true);
   };
 
-  const handleCreateComanda = async (data: { customerName?: string; personNumber?: number; notes?: string; orderId?: string | null }) => {
+  const handleCreateComanda = async (data: { customerName?: string; personNumber?: number; notes?: string; orderId?: string | null; tableNumber?: number }) => {
     if (!activeSession) {
       toast.error("Abra o caixa antes de iniciar um atendimento");
       return;
     }
+
+    // Capacity validation for table comandas
+    if (data.orderId && comandaForTable) {
+      const table = tables.find(t => t.current_order_id === data.orderId);
+      if (table) {
+        const tableComandas = getComandasByOrder(data.orderId);
+        const existingPersons = tableComandas.reduce((sum, c) => sum + (c.person_number || 1), 0);
+        const newPersons = data.personNumber || 1;
+        if (existingPersons + newPersons > table.capacity) {
+          setCapacityWarningMessage(
+            `A mesa tem capacidade para ${table.capacity} pessoas e já possui ${existingPersons} alocadas. Adicionando ${newPersons} pessoa(s) o total será ${existingPersons + newPersons}. Deseja continuar mesmo assim?`
+          );
+          setPendingComandaData(data);
+          setCapacityWarningOpen(true);
+          return;
+        }
+      }
+    }
+
+    await executeCreateComanda(data);
+  };
+
+  const executeCreateComanda = async (data: { customerName?: string; personNumber?: number; notes?: string; orderId?: string | null }) => {
     await createComanda({
       customerName: data.customerName,
       personNumber: data.personNumber,
@@ -458,6 +481,14 @@ export default function PDVSalon() {
     });
     setComandaDialogOpen(false);
     setComandaForTable(null);
+  };
+
+  const handleConfirmCapacityOverride = async () => {
+    if (pendingComandaData) {
+      await executeCreateComanda(pendingComandaData);
+    }
+    setCapacityWarningOpen(false);
+    setPendingComandaData(null);
   };
 
   const handleAddComandaItem = async (data: { productId: string; productName: string; quantity: number; unitPrice: number; notes?: string }) => {
