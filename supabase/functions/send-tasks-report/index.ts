@@ -159,7 +159,11 @@ async function sendReportForUser(
   const message = buildReportMessage(tasks, shifts, date);
 
   // 6. Send via Evolution API
-  const phone = settings.whatsapp_report_phone.replace(/\D/g, "");
+  let phone = settings.whatsapp_report_phone.replace(/\D/g, "");
+  // Ensure country code 55 for Brazilian numbers
+  if (!phone.startsWith("55")) {
+    phone = "55" + phone;
+  }
   const instanceName = encodeURIComponent(conn.instance_name);
 
   const evoResponse = await fetch(`${evoUrl}/message/sendText/${instanceName}`, {
