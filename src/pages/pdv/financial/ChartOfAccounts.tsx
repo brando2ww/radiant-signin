@@ -27,7 +27,7 @@ interface AccountFormData {
   parent_id: string | null;
 }
 
-const emptyForm: AccountFormData = { code: "", name: "", account_type: "receita", parent_id: null };
+const emptyForm: AccountFormData = { code: "", name: "", account_type: "revenue", parent_id: null };
 
 export default function ChartOfAccounts() {
   const { accounts, isLoading, createAccount, updateAccount, deleteAccount, seedBasicStructure } = usePDVChartOfAccounts();
