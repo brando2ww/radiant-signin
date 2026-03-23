@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, ShoppingBag, Search } from "lucide-react";
@@ -9,8 +9,10 @@ import { toast } from "sonner";
 import { OrderCard } from "@/components/pdv/OrderCard";
 import { OrderDetailsDialog } from "@/components/pdv/OrderDetailsDialog";
 import { NewOrderDialog } from "@/components/pdv/NewOrderDialog";
+import { PaymentDialog } from "@/components/pdv/cashier/PaymentDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
 
 export default function PDVBalcao() {
   const {
