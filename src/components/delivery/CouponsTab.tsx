@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Copy, Percent, DollarSign } from "lucide-react";
+import { Plus, Edit, Trash2, Copy, Percent, DollarSign, Link2 } from "lucide-react";
 import { useState } from "react";
 import { useDeliveryCoupons, useDeleteCoupon, useUpdateCoupon } from "@/hooks/use-delivery-coupons";
+import { useEstablishmentId } from "@/hooks/use-establishment-id";
 import { CouponDialog } from "./CouponDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
