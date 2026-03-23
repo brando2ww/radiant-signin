@@ -34,13 +34,10 @@ export function SpinWheel({ prizes, onResult, disabled }: SpinWheelProps) {
     const winner = pickPrize(prizes);
     resultRef.current = winner;
 
-    // Find the segment for the winner
     const seg = segments.find((s) => s.id === winner.id)!;
-    // Target: the pointer is at top (0deg). We need the middle of the winning segment to end up at top.
-    // The wheel rotates clockwise, so we need to rotate by (360 - midAngle) + extra full rotations
     const midAngle = seg.startDeg + seg.deg / 2;
     const targetAngle = 360 - midAngle;
-    const extraSpins = 5 + Math.floor(Math.random() * 3); // 5-7 full rotations
+    const extraSpins = 5 + Math.floor(Math.random() * 3);
     const finalRotation = rotation + extraSpins * 360 + targetAngle + (Math.random() * seg.deg * 0.6 - seg.deg * 0.3);
 
     setSpinning(true);
@@ -56,7 +53,7 @@ export function SpinWheel({ prizes, onResult, disabled }: SpinWheelProps) {
   const r = size / 2;
 
   return (
-    <div className="flex flex-col items-center gap-6">
+    <div className="flex flex-col items-center gap-10">
       <div className="relative" style={{ width: size, height: size }}>
         {/* Pointer at top */}
         <div className="absolute z-10" style={{ top: -12, left: "50%", transform: "translateX(-50%)" }}>
@@ -74,31 +71,46 @@ export function SpinWheel({ prizes, onResult, disabled }: SpinWheelProps) {
             transition: spinning ? "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)" : "none",
           }}
         >
-          {/* Segment labels */}
-          {segments.map((s) => {
-            const midAngle = ((s.startDeg + s.deg / 2) * Math.PI) / 180;
-            const labelR = r * 0.62;
-            const x = r + labelR * Math.sin(midAngle);
-            const y = r - labelR * Math.cos(midAngle);
-            const rot = s.startDeg + s.deg / 2;
-            return (
-              <span
-                key={s.id}
-                className="absolute text-[10px] font-bold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)] pointer-events-none text-center leading-tight"
-                style={{
-                  left: x,
-                  top: y,
-                  transform: `translate(-50%, -50%) rotate(${rot}deg)`,
-                  maxWidth: r * 0.5,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {s.name}
-              </span>
-            );
-          })}
+          {/* SVG overlay for radial text labels */}
+          <svg width={size} height={size} className="absolute inset-0 pointer-events-none">
+            {segments.map((s) => {
+              const midAngleDeg = s.startDeg + s.deg / 2;
+              const midAngleRad = (midAngleDeg * Math.PI) / 180;
+
+              // Position label at 62% of radius
+              const labelR = r * 0.62;
+              const cx = r + labelR * Math.sin(midAngleRad);
+              const cy = r - labelR * Math.cos(midAngleRad);
+
+              // Rotate text to align radially; flip if in bottom half so it's never upside down
+              let textRot = midAngleDeg;
+              const flipped = midAngleDeg > 90 && midAngleDeg < 270;
+              if (flipped) textRot += 180;
+
+              // Truncate long names
+              const maxChars = Math.max(6, Math.floor(s.deg / 8));
+              const label = s.name.length > maxChars ? s.name.slice(0, maxChars - 1) + "…" : s.name;
+
+              return (
+                <text
+                  key={s.id}
+                  x={cx}
+                  y={cy}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  transform={`rotate(${textRot}, ${cx}, ${cy})`}
+                  fill="white"
+                  fontSize="11"
+                  fontWeight="bold"
+                  style={{
+                    filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))",
+                  }}
+                >
+                  {label}
+                </text>
+              );
+            })}
+          </svg>
         </div>
 
         {/* Center button */}
@@ -137,7 +149,7 @@ export function SpinWheel({ prizes, onResult, disabled }: SpinWheelProps) {
         <button
           onClick={handleSpin}
           disabled={spinning || disabled}
-          className="px-8 py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 animate-bounce"
+          className="mt-4 px-8 py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 animate-bounce"
         >
           🎡 Girar Roleta!
         </button>
