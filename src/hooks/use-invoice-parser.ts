@@ -3,6 +3,9 @@ import { parseNFeXML, ParsedInvoice } from '@/lib/invoice/xml-parser';
 import { parseDanfePDF, PDFParseResult } from '@/lib/invoice/pdf-parser';
 import { useSupabaseUpload } from './use-supabase-upload';
 import { toast } from 'sonner';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 export function useInvoiceParser() {
   const [parsing, setParsing] = useState(false);
@@ -14,13 +17,8 @@ export function useInvoiceParser() {
     setParseError(null);
 
     try {
-      // Read file content
       const content = await file.text();
-      
-      // Parse XML
       const parsed = await parseNFeXML(content);
-      
-      // Upload XML file
       const xmlUrl = await uploadFile(file, `${parsed.invoiceKey}_xml`);
       
       setParsing(false);
@@ -39,11 +37,17 @@ export function useInvoiceParser() {
     setParseError(null);
 
     try {
-      // For PDF parsing, we would use the document parser
-      // This is a simplified version - in production you'd use proper OCR
-      const content = await file.text();
-      
-      const result = await parseDanfePDF(content);
+      // Use pdf.js to extract real text from the binary PDF
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        fullText += content.items.map((item: any) => item.str).join(' ') + '\n';
+      }
+
+      const result = await parseDanfePDF(fullText);
       
       // Upload PDF file
       await uploadFile(file, `invoice_${Date.now()}_pdf`);
@@ -55,7 +59,7 @@ export function useInvoiceParser() {
       }
       
       if (result.confidence === 'low') {
-        toast.warning('Qualidade de extração baixa - recomenda-se usar arquivo XML');
+        toast.warning('Qualidade de extração baixa - revise os dados antes de confirmar');
       }
       
       return result;
