@@ -1,40 +1,44 @@
 
 
-## Fix: Senha de desconto não aparece em % + totais somem + máscaras
+## Fix: Layout do desconto cortando campos de senha e motivo
 
-### Problema 1: Senha não aparece para desconto em %
-O campo de senha aparece quando `hasDiscount = discountAmount > 0`. Porém `discountAmount` para percentual é calculado como `subtotal * %`. Se o subtotal for 0, o resultado é 0 mesmo com valor digitado, então `hasDiscount` fica `false` e os campos de senha/motivo não aparecem.
+### Problema
+A coluna esquerda do PaymentDialog usa `max-h-[60vh]` com scroll interno. Quando o desconto é ativado, os campos de motivo + senha + botão de autorizar ficam dentro do scroll e são cortados/escondidos, especialmente com itens no pedido.
 
-**Fix**: Mudar `hasDiscount` para verificar se o **valor digitado** é > 0, não o resultado calculado:
-```tsx
-const hasDiscount = parseFloat(discountValue) > 0;
-```
+### Solução
+Reorganizar os campos de desconto para serem mais compactos e garantir que não sejam cortados:
 
-### Problema 2: Totais somem quando campos de desconto aparecem
-Os campos de motivo + senha empurram o card de totais para fora do `max-h-[60vh]` do scroll. A solução é mover os campos de motivo e senha para uma seção separada **abaixo do card de desconto** ou reorganizar o layout para que os totais fiquem sempre visíveis (fixos no footer da coluna esquerda).
-
-**Fix**: Mover motivo + senha para dentro de um bloco compacto colapsado dentro do mesmo card, e garantir que o card de totais fique fora do scroll (fixo embaixo).
-
-### Problema 3: Máscaras nos inputs de desconto
-- **%**: Usar input com sufixo "%" e limitar a 0-100
-- **R$**: Usar o componente `CurrencyInput` já existente
+1. **Compactar o card de desconto** — colocar motivo e senha lado a lado em grid de 2 colunas quando há espaço
+2. **Reduzir a altura fixa do ScrollArea de itens** de 140px para 120px para dar mais espaço
+3. **Aumentar o max-h da coluna** de `60vh` para `65vh`
+4. **Tornar senha e motivo mais compactos** — inputs menores, labels inline
 
 ### Arquivo
 
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---------|------|
-| `src/components/pdv/cashier/PaymentDialog.tsx` | (1) Mudar `hasDiscount` para `parseFloat(discountValue) > 0`. (2) Extrair card de totais do scroll e fixar embaixo. (3) Substituir input de desconto por CurrencyInput quando tipo "value" e input com max 100 + sufixo % quando tipo "percent". (4) Campos de motivo e senha ficam compactos dentro do mesmo card |
+| `src/components/pdv/cashier/PaymentDialog.tsx` | Reorganizar layout: (1) ScrollArea de itens reduzida para 120px. (2) Campos motivo e senha em grid `grid-cols-2` compacto. (3) `max-h-[60vh]` → `max-h-[65vh]`. (4) Remover espaçamento excessivo nos campos de desconto |
 
 ### Detalhes
 
-**hasDiscount** (linha 147):
 ```tsx
-const hasDiscount = parseFloat(discountValue) > 0;
+{/* Discount reason + password side by side */}
+{hasDiscount && (
+  <div className="grid grid-cols-2 gap-2 mt-2">
+    <div>
+      <Label className="text-xs">Motivo *</Label>
+      <Input size="sm" placeholder="Ex: Cliente frequente" ... />
+    </div>
+    <div>
+      <Label className="text-xs">Senha de autorização</Label>
+      <div className="flex gap-1">
+        <Input type="password" size="sm" ... />
+        <Button size="sm">...</Button>
+      </div>
+    </div>
+  </div>
+)}
 ```
 
-**Input de desconto** (linhas 384-396):
-- Tipo `percent`: Input numérico com max=100, placeholder "0", sufixo visual "%"
-- Tipo `value`: `CurrencyInput` com máscara R$
-
-**Layout**: O `grid md:grid-cols-2` terá o scroll apenas na parte de itens + desconto/pagamento, com os totais fixos no bottom da coluna esquerda fora do overflow.
+Isso mantém tudo visível sem cortar, usando melhor o espaço horizontal disponível.
 
