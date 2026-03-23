@@ -42,6 +42,7 @@ import Users from "./pdv/Users";
 import UserForm from "./pdv/UserForm";
 import Evaluations from "./pdv/Evaluations";
 import FranchiseImport from "./pdv/FranchiseImport";
+import Tasks from "./pdv/Tasks";
 
 function RoleRoute({ path, children, canAccess, defaultRoute }: { path: string; children: React.ReactNode; canAccess: (p: string) => boolean; defaultRoute: string }) {
   if (!canAccess(path)) {
