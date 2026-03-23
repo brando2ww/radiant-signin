@@ -95,6 +95,19 @@ export function ProductDialog({
         serves: product.serves,
         is_available: product.is_available,
         is_sold_by_weight: product.is_sold_by_weight,
+        ncm: product.ncm || "",
+        cest: product.cest || "",
+        cfop: product.cfop || "",
+        origin: product.origin || "",
+        cst_icms: product.cst_icms || "",
+        csosn: product.csosn || "",
+        icms_rate: product.icms_rate || 0,
+        pis_cst: product.pis_cst || "",
+        pis_rate: product.pis_rate || 0,
+        cofins_cst: product.cofins_cst || "",
+        cofins_rate: product.cofins_rate || 0,
+        tax_unit: product.tax_unit || "",
+        ean: product.ean || "",
       });
     }
   }, [product, form]);
