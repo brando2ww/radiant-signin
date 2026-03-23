@@ -151,7 +151,7 @@ export default function TenantDetail() {
     setSavingUser(true);
     try {
       await updateTenantUser(editUser.id, {
-        role: editRole,
+        role: editRole as any,
         is_active: editActive,
         max_discount_percent: editMaxDiscount,
         discount_password: editDiscountPw || undefined,
