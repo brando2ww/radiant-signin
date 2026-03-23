@@ -72,6 +72,8 @@ Deno.serve(async (req) => {
         email,
         phone: phone || null,
         role,
+        discount_password: discount_password || null,
+        max_discount_percent: max_discount_percent ?? 100,
       })
       .select()
       .single();
