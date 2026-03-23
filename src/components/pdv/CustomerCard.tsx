@@ -29,10 +29,10 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
           </div>
           {customer.source === "pdv" && (
             <div className="flex gap-1 shrink-0">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(customer)}>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); onEdit(customer); }}>
                 <Edit className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDelete(customer.id)}>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(customer.id); }}>
                 <Trash2 className="h-4 w-4" />
               </Button>
             </div>
