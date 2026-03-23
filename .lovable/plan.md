@@ -1,34 +1,35 @@
 
 
-## Fix: Extrair produtos/itens do PDF da NF-e (DANFE)
+## Fix: Dropdown de Integrações abrindo no canto
 
 ### Problema
 
-O parser de PDF (`pdf-parser.ts`) **nunca extrai itens**. Na linha 130, cria um array vazio e adiciona um warning. Não existe lógica para parsear a tabela de produtos do DANFE.
+O dropdown de "Integrações" está abrindo deslocado do trigger, provavelmente no canto esquerdo do menu ao invés de embaixo do botão. Isso acontece porque o Radix `NavigationMenu` internamente posiciona o conteúdo relativo à lista toda, não ao item individual.
 
 ### Solução
 
-Implementar extração de itens da tabela de produtos do DANFE via regex. O layout típico da tabela de produtos em um DANFE tem colunas: Código, Descrição, NCM, CST, CFOP, UN, QTD, Valor Unit, Valor Total.
+Forçar que o conteúdo do dropdown fique posicionado relativo ao `NavigationMenuItem` (que já tem `relative`), desabilitando a animação de motion do Radix que reposiciona o conteúdo e garantindo que o `NavigationMenuContent` use posicionamento absoluto correto em relação ao seu item pai.
 
 ### Mudança
 
-**`src/lib/invoice/pdf-parser.ts`** — adicionar lógica de extração de itens:
+**`src/components/pdv/PDVHeaderNav.tsx`**:
+- Adicionar `forceMount` no `NavigationMenuContent` e controlar visibilidade manualmente, OU
+- Remover as classes de motion/slide do content que interferem no posicionamento
+- Adicionar `data-[motion=from-start]:!slide-in-from-left-0 data-[motion=from-end]:!slide-in-from-right-0` para neutralizar os slides que deslocam o dropdown
 
-1. Buscar linhas que contenham padrão de item (código numérico + descrição + unidade + quantidade + valores)
-2. Usar regex para capturar: nome do produto, unidade, quantidade, valor unitário, valor total
-3. Padrões comuns em DANFE:
-   - Linhas com sequência: `CÓDIGO DESCRIÇÃO NCM ... UN QTD VL_UNIT VL_TOTAL`
-   - Itens aparecem após header da tabela e antes dos totais
-4. Regex robusto que capture linhas com valores monetários e unidades (UN, KG, CX, PCT, LT, etc.)
+**Alternativa mais limpa** — Trocar o `NavigationMenu` do Radix por um simples `Popover` ou dropdown custom para a seção "Integrações" (1 item só), ou aplicar `style={{ position: 'absolute', top: '100%' }}` inline no content para sobrescrever o Radix.
 
-A extração de itens do PDF não será 100% precisa (por isso existe o wizard de revisão), mas capturará o máximo possível para o usuário revisar e ajustar.
+A abordagem recomendada é adicionar classes que neutralizem o reposicionamento do Radix no `NavigationMenuContent`:
 
-### Estratégia de parsing
+```tsx
+<NavigationMenuContent
+  className={cn(
+    "!absolute !top-full mt-1.5 rounded-md border bg-popover text-popover-foreground shadow-lg",
+    "data-[motion^=from-]:!animate-none data-[motion^=to-]:!animate-none",
+    isRightAligned ? "right-0 left-auto" : "left-0"
+  )}
+>
+```
 
-Buscar padrões de linhas que contenham:
-- Uma unidade de medida conhecida (UN, KG, CX, PCT, LT, ML, G, etc.)
-- Seguida de valores numéricos (quantidade, valor unitário, valor total)
-- Texto antes da unidade = nome do produto
-
-Isso funciona porque a tabela de produtos do DANFE segue um padrão estruturado onde cada linha de item contém esses elementos.
+Usar `!important` via `!` prefix do Tailwind para garantir que o posicionamento absoluto relativo ao item pai (que tem `relative`) seja respeitado, desabilitando as animações de slide do Radix que causam o deslocamento.
 
