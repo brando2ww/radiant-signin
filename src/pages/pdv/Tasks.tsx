@@ -35,11 +35,13 @@ export default function Tasks() {
       const { data, error } = await supabase.functions.invoke("send-tasks-report", {
         body: { user_id: user.id },
       });
+      console.log("Report response:", data, error);
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast({ title: "Relatório enviado!", description: "O resumo das tarefas foi enviado via WhatsApp." });
+      toast({ title: "Relatório enviado! ✅", description: "O resumo das tarefas foi enviado via WhatsApp." });
     } catch (err: any) {
-      toast({ title: "Erro ao enviar", description: err.message, variant: "destructive" });
+      console.error("Report error:", err);
+      toast({ title: "Erro ao enviar relatório", description: err.message || "Erro desconhecido", variant: "destructive" });
     } finally {
       setSendingReport(false);
     }
