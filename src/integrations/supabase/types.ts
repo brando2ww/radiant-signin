@@ -2766,6 +2766,7 @@ export type Database = {
           other_expenses: number | null
           pdf_url: string | null
           series: string | null
+          source: string
           status: string
           supplier_cnpj: string
           supplier_id: string | null
@@ -2795,6 +2796,7 @@ export type Database = {
           other_expenses?: number | null
           pdf_url?: string | null
           series?: string | null
+          source?: string
           status?: string
           supplier_cnpj: string
           supplier_id?: string | null
@@ -2824,6 +2826,7 @@ export type Database = {
           other_expenses?: number | null
           pdf_url?: string | null
           series?: string | null
+          source?: string
           status?: string
           supplier_cnpj?: string
           supplier_id?: string | null

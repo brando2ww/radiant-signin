@@ -1,0 +1,1 @@
+ALTER TABLE pdv_invoices ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'manual';

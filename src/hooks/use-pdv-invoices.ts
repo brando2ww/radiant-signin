@@ -30,6 +30,7 @@ export interface PDVInvoice {
   notes?: string | null;
   import_errors?: any;
   created_at: string;
+  source?: string;
   updated_at: string;
 }
 
@@ -206,6 +207,40 @@ export function useUpdateInvoice() {
     onError: (error) => {
       console.error('Erro ao atualizar nota:', error);
       toast.error('Erro ao atualizar nota fiscal');
+    },
+  });
+}
+
+export function useFetchNFeAutomatica() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error('Usuário não autenticado');
+
+      const { data, error } = await supabase.functions.invoke('fetch-nfe-automatica', {
+        body: { user_id: user.id },
+      });
+
+      if (error) throw error;
+      return data as { success: boolean; imported?: number; message?: string };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['pdv-invoices'] });
+      if (data?.success && data?.imported !== undefined) {
+        if (data.imported > 0) {
+          toast.success(`${data.imported} nota(s) fiscal(is) importada(s) da SEFAZ!`);
+        } else {
+          toast.info('Nenhuma nota fiscal nova encontrada.');
+        }
+      } else if (data?.message) {
+        toast.warning(data.message);
+      }
+    },
+    onError: (error) => {
+      console.error('Erro ao buscar NF-e:', error);
+      toast.error('Erro ao buscar notas fiscais da SEFAZ');
     },
   });
 }
