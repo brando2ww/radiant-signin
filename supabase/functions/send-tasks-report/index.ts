@@ -160,27 +160,46 @@ async function sendReportForUser(
 
   // 6. Send via Evolution API
   let phone = settings.whatsapp_report_phone.replace(/\D/g, "");
-  // Ensure country code 55 for Brazilian numbers
   if (!phone.startsWith("55")) {
     phone = "55" + phone;
   }
   console.log("Sending report to phone:", phone);
   const instanceName = encodeURIComponent(conn.instance_name);
 
-  const evoResponse = await fetch(`${evoUrl}/message/sendText/${instanceName}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: evoKey,
-    },
-    body: JSON.stringify({
-      number: phone,
-      text: message,
-    }),
-  });
+  const fetchUrl = `${evoUrl}/message/sendText/${instanceName}`;
+  console.log("Evolution API URL:", fetchUrl);
 
-  const responseBody = await evoResponse.text();
-  console.log("Evolution API response:", evoResponse.status, responseBody);
+  const controller = new AbortController();
+  const fetchTimeout = setTimeout(() => controller.abort(), 15000);
+
+  let responseBody: string;
+  let evoStatus: number;
+
+  try {
+    const evoResponse = await fetch(fetchUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: evoKey,
+      },
+      body: JSON.stringify({
+        number: phone,
+        text: message,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(fetchTimeout);
+    evoStatus = evoResponse.status;
+    responseBody = await evoResponse.text();
+    console.log("Evolution API response:", evoStatus, responseBody);
+  } catch (fetchErr: any) {
+    clearTimeout(fetchTimeout);
+    console.error("Evolution API fetch error:", fetchErr.name, fetchErr.message);
+    if (fetchErr.name === "AbortError") {
+      throw new Error("Timeout ao conectar com Evolution API (15s). Verifique se o servidor está acessível.");
+    }
+    throw new Error(`Erro ao conectar com Evolution API: ${fetchErr.message}`);
+  }
 
   // Check for exists:false even on 200
   try {
@@ -195,8 +214,8 @@ async function sendReportForUser(
     if (parseErr.message.includes("não foi encontrado")) throw parseErr;
   }
 
-  if (!evoResponse.ok) {
-    throw new Error("Falha ao enviar mensagem via WhatsApp");
+  if (evoStatus < 200 || evoStatus >= 300) {
+    throw new Error(`Falha ao enviar mensagem via WhatsApp (status ${evoStatus})`);
   }
 
   return { success: true, message: "Relatório enviado com sucesso!" };
