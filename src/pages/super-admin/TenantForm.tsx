@@ -4,16 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { ModuleSelector } from "@/components/super-admin/ModuleSelector";
 import { useTenants } from "@/hooks/use-tenants";
 
 export default function TenantForm() {
   const navigate = useNavigate();
-  const { createTenant } = useTenants();
+  const { createTenant, tenants } = useTenants();
 
   const [name, setName] = useState("");
   const [document, setDocument] = useState("");
+  const [parentTenantId, setParentTenantId] = useState("");
   const [modules, setModules] = useState<string[]>(["pdv"]);
   const [adminName, setAdminName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
@@ -43,6 +45,7 @@ export default function TenantForm() {
       admin_email: adminEmail,
       admin_phone: adminPhone || undefined,
       admin_password: adminPassword,
+      parent_tenant_id: parentTenantId || undefined,
     });
 
     navigate("/admin/tenants");
@@ -85,6 +88,25 @@ export default function TenantForm() {
                 onChange={(e) => setDocument(e.target.value)}
                 placeholder="00.000.000/0000-00"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Tenant Matriz (opcional)</Label>
+              <Select value={parentTenantId} onValueChange={setParentTenantId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Nenhum (independente)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhum (independente)</SelectItem>
+                  {tenants.filter((t) => !t.parent_tenant_id).map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Se selecionado, este tenant será uma franquia do tenant matriz
+              </p>
             </div>
           </CardContent>
         </Card>

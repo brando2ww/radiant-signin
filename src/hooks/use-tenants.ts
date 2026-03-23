@@ -12,6 +12,7 @@ export interface Tenant {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  parent_tenant_id: string | null;
 }
 
 export interface TenantModule {
@@ -57,6 +58,7 @@ export function useTenants() {
       admin_password: string;
       admin_name: string;
       admin_phone?: string;
+      parent_tenant_id?: string;
     }) => {
       const { data, error } = await supabase.functions.invoke("create-tenant", {
         body: payload,
@@ -133,7 +135,6 @@ export function useTenants() {
     tenantId: string,
     slugs: string[]
   ) => {
-    // Delete all existing then insert selected
     const { error: delError } = await supabase
       .from("tenant_integrations")
       .delete()
@@ -153,6 +154,118 @@ export function useTenants() {
     }
   };
 
+  // --- Franchise functions ---
+
+  const fetchChildTenants = async (parentId: string): Promise<Tenant[]> => {
+    const { data, error } = await supabase
+      .from("tenants")
+      .select("*")
+      .eq("parent_tenant_id", parentId)
+      .order("name");
+    if (error) throw error;
+    return data as Tenant[];
+  };
+
+  const linkChildTenant = async (parentId: string, childId: string) => {
+    const { error } = await supabase
+      .from("tenants")
+      .update({ parent_tenant_id: parentId })
+      .eq("id", childId);
+    if (error) throw error;
+  };
+
+  const unlinkChildTenant = async (childId: string) => {
+    const { error } = await supabase
+      .from("tenants")
+      .update({ parent_tenant_id: null })
+      .eq("id", childId);
+    if (error) throw error;
+  };
+
+  const fetchTenantProducts = async (tenantId: string) => {
+    // Get owner_user_id of tenant
+    const { data: tenant } = await supabase
+      .from("tenants")
+      .select("owner_user_id")
+      .eq("id", tenantId)
+      .single();
+    if (!tenant?.owner_user_id) return [];
+
+    const { data, error } = await supabase
+      .from("pdv_products")
+      .select("id, name, category, price_salon, image_url, is_available")
+      .eq("user_id", tenant.owner_user_id)
+      .order("name");
+    if (error) throw error;
+    return data || [];
+  };
+
+  const fetchTenantTables = async (tenantId: string) => {
+    const { data: tenant } = await supabase
+      .from("tenants")
+      .select("owner_user_id")
+      .eq("id", tenantId)
+      .single();
+    if (!tenant?.owner_user_id) return [];
+
+    const { data, error } = await supabase
+      .from("pdv_tables")
+      .select("id, table_number, capacity, shape, sector_id")
+      .eq("user_id", tenant.owner_user_id)
+      .is("deleted_at", null)
+      .order("table_number");
+    if (error) throw error;
+    return data || [];
+  };
+
+  const shareProducts = async (
+    sourceTenantId: string,
+    targetTenantIds: string[],
+    productIds: string[]
+  ) => {
+    const { data, error } = await supabase.functions.invoke("sync-shared-products", {
+      body: {
+        action: "share_products",
+        source_tenant_id: sourceTenantId,
+        target_tenant_ids: targetTenantIds,
+        product_ids: productIds,
+      },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+  };
+
+  const syncProducts = async (sourceTenantId: string) => {
+    const { data, error } = await supabase.functions.invoke("sync-shared-products", {
+      body: {
+        action: "sync_products",
+        source_tenant_id: sourceTenantId,
+      },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+  };
+
+  const shareTables = async (
+    sourceTenantId: string,
+    targetTenantIds: string[],
+    tableIds: string[]
+  ) => {
+    const { data, error } = await supabase.functions.invoke("sync-shared-products", {
+      body: {
+        action: "share_tables",
+        source_tenant_id: sourceTenantId,
+        target_tenant_ids: targetTenantIds,
+        table_ids: tableIds,
+      },
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+    return data;
+  };
+
   return {
     tenants,
     isLoading,
@@ -163,5 +276,13 @@ export function useTenants() {
     updateTenantUser,
     toggleTenantModule,
     saveTenantIntegrations,
+    fetchChildTenants,
+    linkChildTenant,
+    unlinkChildTenant,
+    fetchTenantProducts,
+    fetchTenantTables,
+    shareProducts,
+    syncProducts,
+    shareTables,
   };
 }

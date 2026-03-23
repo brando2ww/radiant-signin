@@ -53,7 +53,7 @@ export default function Tenants() {
       ) : (
         <div className="space-y-3">
           {filtered.map((t) => (
-            <TenantCard key={t.id} tenant={t} />
+            <TenantCard key={t.id} tenant={t} allTenants={tenants} />
           ))}
         </div>
       )}

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { ArrowLeft, Pencil, Save, Eye, EyeOff } from "lucide-react";
 import { useTenants, TenantModule, TenantIntegration } from "@/hooks/use-tenants";
+import { FranchiseSection } from "@/components/super-admin/FranchiseSection";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -78,6 +79,9 @@ export default function TenantDetail() {
   const [savingUser, setSavingUser] = useState(false);
 
   const tenant = tenants.find((t) => t.id === id);
+  const parentTenant = tenant?.parent_tenant_id
+    ? tenants.find((t) => t.id === tenant.parent_tenant_id)
+    : null;
 
   const loadData = async () => {
     if (!id) return;
@@ -198,12 +202,24 @@ export default function TenantDetail() {
         </Button>
         <div>
           <h1 className="text-2xl font-bold">{tenant.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            {tenant.document || "Sem documento"} ·{" "}
-            <Badge variant={tenant.is_active ? "default" : "secondary"} className="ml-1">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>{tenant.document || "Sem documento"}</span>
+            <Badge variant={tenant.is_active ? "default" : "secondary"} className="text-xs">
               {tenant.is_active ? "Ativo" : "Inativo"}
             </Badge>
-          </p>
+            {!tenant.parent_tenant_id && (
+              <Badge variant="outline" className="text-xs">Matriz</Badge>
+            )}
+            {parentTenant && (
+              <Badge
+                variant="outline"
+                className="text-xs cursor-pointer"
+                onClick={() => navigate(`/admin/tenants/${parentTenant.id}`)}
+              >
+                Franquia de {parentTenant.name}
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 
@@ -225,9 +241,7 @@ export default function TenantDetail() {
                 <div className="space-y-3">
                   {modules.map((m) => (
                     <div key={m.id} className="flex items-center justify-between">
-                      <div>
-                        <span className="font-medium capitalize">{m.module}</span>
-                      </div>
+                      <span className="font-medium capitalize">{m.module}</span>
                       <Switch
                         checked={m.is_active}
                         disabled={savingModules}
@@ -244,32 +258,21 @@ export default function TenantDetail() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Integrações Autorizadas</CardTitle>
-              <Button
-                size="sm"
-                onClick={handleSaveIntegrations}
-                disabled={savingIntegrations}
-              >
-                <Save className="h-4 w-4 mr-1" />
-                Salvar
+              <Button size="sm" onClick={handleSaveIntegrations} disabled={savingIntegrations}>
+                <Save className="h-4 w-4 mr-1" /> Salvar
               </Button>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {availableIntegrations.map((integ) => {
-                  const checked = selectedIntegrations.includes(integ.slug);
-                  return (
-                    <label
-                      key={integ.slug}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={() => toggleIntegration(integ.slug)}
-                      />
-                      <span className="text-sm">{integ.label}</span>
-                    </label>
-                  );
-                })}
+                {availableIntegrations.map((integ) => (
+                  <label key={integ.slug} className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={selectedIntegrations.includes(integ.slug)}
+                      onCheckedChange={() => toggleIntegration(integ.slug)}
+                    />
+                    <span className="text-sm">{integ.label}</span>
+                  </label>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -285,10 +288,7 @@ export default function TenantDetail() {
               ) : (
                 <div className="space-y-3">
                   {users.map((u) => (
-                    <div
-                      key={u.id}
-                      className="flex items-center justify-between border rounded-lg p-3"
-                    >
+                    <div key={u.id} className="flex items-center justify-between border rounded-lg p-3">
                       <div className="min-w-0 flex-1">
                         <p className="font-medium truncate">{u.display_name || "Sem nome"}</p>
                         <p className="text-xs text-muted-foreground truncate">{u.email}</p>
@@ -304,11 +304,7 @@ export default function TenantDetail() {
                           </span>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditUser(u)}
-                      >
+                      <Button variant="ghost" size="icon" onClick={() => openEditUser(u)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                     </div>
@@ -317,6 +313,9 @@ export default function TenantDetail() {
               )}
             </CardContent>
           </Card>
+
+          {/* Franquias */}
+          <FranchiseSection tenantId={id!} allTenants={tenants} />
 
           {/* Info */}
           <Card>
@@ -342,27 +341,20 @@ export default function TenantDetail() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
-            <DialogDescription>
-              {editUser?.display_name || editUser?.email}
-            </DialogDescription>
+            <DialogDescription>{editUser?.display_name || editUser?.email}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label className="text-sm">Função</Label>
               <Select value={editRole} onValueChange={setEditRole}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {roleOptions.map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label className="text-sm">Desconto máximo (%)</Label>
               <Input
@@ -373,7 +365,6 @@ export default function TenantDetail() {
                 onChange={(e) => setEditMaxDiscount(Number(e.target.value))}
               />
             </div>
-
             <div>
               <Label className="text-sm">Senha de desconto</Label>
               <div className="flex gap-2">
@@ -384,29 +375,19 @@ export default function TenantDetail() {
                   value={editDiscountPw}
                   onChange={(e) => setEditDiscountPw(e.target.value.replace(/\D/g, ""))}
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setShowPw(!showPw)}
-                >
+                <Button type="button" variant="outline" size="icon" onClick={() => setShowPw(!showPw)}>
                   {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
-
             <div className="flex items-center justify-between">
               <Label className="text-sm">Ativo</Label>
               <Switch checked={editActive} onCheckedChange={setEditActive} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditUser(null)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveUser} disabled={savingUser}>
-              Salvar
-            </Button>
+            <Button variant="outline" onClick={() => setEditUser(null)}>Cancelar</Button>
+            <Button onClick={handleSaveUser} disabled={savingUser}>Salvar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
