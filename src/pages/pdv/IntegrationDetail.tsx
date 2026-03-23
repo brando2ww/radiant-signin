@@ -17,6 +17,7 @@ import { StoneIntegrationCard } from "@/components/pdv/integrations/StoneIntegra
 import { NFAutomaticaIntegrationCard } from "@/components/pdv/integrations/NFAutomaticaIntegrationCard";
 import { GoomerIntegrationCard } from "@/components/pdv/integrations/GoomerIntegrationCard";
 import { GetnetIntegrationCard } from "@/components/pdv/integrations/GetnetIntegrationCard";
+import { RedeIntegrationCard } from "@/components/pdv/integrations/RedeIntegrationCard";
 import { WhatsAppConnectionCard } from "@/components/pdv/settings/WhatsAppConnectionCard";
 
 import ifoodLogo from "@/assets/integrations/ifood.png";
@@ -25,6 +26,7 @@ import stoneLogo from "@/assets/integrations/stone.png";
 import goomerLogo from "@/assets/integrations/goomer.png";
 import nfeLogo from "@/assets/integrations/nfe.png";
 import getnetLogo from "@/assets/integrations/getnet.png";
+import redeLogo from "@/assets/integrations/rede.png";
 
 interface Feature {
   icon: LucideIcon;
@@ -190,6 +192,30 @@ const integrations: Record<string, IntegrationData> = {
     component: GetnetIntegrationCard,
     docsUrl: "https://developers.getnet.com.br",
     docsLabel: "Portal do Desenvolvedor Getnet",
+  },
+  rede: {
+    title: "Rede",
+    logo: redeLogo,
+    category: "Maquininha",
+    description:
+      "A Rede, do grupo Itaú, é uma das maiores adquirentes do Brasil com soluções completas de pagamento presencial e online. Com esta integração, sua maquininha Rede se comunica diretamente com o PDV via USB, Bluetooth ou HTTP. Suporta débito, crédito, parcelamento, Pix via e-Rede, captura automática e comprovante digital — tudo controlado pelo seu sistema.",
+    features: [
+      { icon: Smartphone, title: "Terminal integrado", description: "Comunicação direta com o terminal via USB, Bluetooth ou HTTP (Wi-Fi/Ethernet)." },
+      { icon: CreditCard, title: "Débito e crédito", description: "Aceite todas as bandeiras com taxas competitivas e parcelamento de até 12x." },
+      { icon: QrCode, title: "Pix via e-Rede", description: "Receba pagamentos via Pix diretamente na maquininha Rede." },
+      { icon: Zap, title: "Captura automática", description: "O valor do pedido é enviado automaticamente para a maquininha ao finalizar a venda." },
+      { icon: Receipt, title: "Comprovante digital", description: "Envie comprovantes por SMS ou e-mail, economizando papel e agilizando o atendimento." },
+      { icon: BarChart3, title: "Dashboard e-Rede", description: "Acompanhe vendas, taxas e recebíveis pelo portal e-Rede integrado." },
+    ],
+    steps: [
+      "Acesse o portal e-Rede (userede.com.br) e faça login com sua conta.",
+      "Em Credenciais, copie o PV (Ponto de Venda) e gere um Token de autenticação.",
+      "Cole as credenciais nos campos de conexão abaixo e selecione o ambiente.",
+      "Escolha o tipo de conexão (USB, Bluetooth ou HTTP) e clique em 'Conectar'.",
+    ],
+    component: RedeIntegrationCard,
+    docsUrl: "https://www.userede.com.br/desenvolvedores",
+    docsLabel: "Portal do Desenvolvedor Rede",
   },
   whatsapp: {
     title: "WhatsApp Business",

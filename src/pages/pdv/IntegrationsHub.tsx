@@ -10,6 +10,7 @@ import stoneLogo from "@/assets/integrations/stone.png";
 import goomerLogo from "@/assets/integrations/goomer.png";
 import nfeLogo from "@/assets/integrations/nfe.png";
 import getnetLogo from "@/assets/integrations/getnet.png";
+import redeLogo from "@/assets/integrations/rede.png";
 import velaraLogo from "@/assets/logo_velara_preto.png";
 
 interface IntegrationItem {
@@ -46,6 +47,14 @@ const integrations: IntegrationItem[] = [
     name: "Getnet",
     description: "Conecte sua maquininha Getnet (Santander) com POS integrado via Cloud, USB ou HTTP.",
     logo: getnetLogo,
+    category: "Maquininha",
+    categoryColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  },
+  {
+    slug: "rede",
+    name: "Rede",
+    description: "Integração com maquininhas Rede (Itaú) via USB, Bluetooth ou HTTP com suporte a Pix e e-Rede.",
+    logo: redeLogo,
     category: "Maquininha",
     categoryColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
   },
