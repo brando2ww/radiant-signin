@@ -1,128 +1,68 @@
 
 
-## Arquitetura de Franquias (Multi-Tenant Hierárquico)
+## Página de Franquia no PDV — Importar Dados da Matriz
 
 ### Conceito
 
-Criar uma hierarquia de tenants onde um **tenant matriz** pode ter **tenants filhos** (franquias). O tenant matriz pode compartilhar produtos e mesas com suas franquias, e o super admin gerencia tudo.
+Nova página `/pdv/franquia` acessível pelo menu "Administrador". Quando o tenant do usuário logado está vinculado a uma matriz (`parent_tenant_id` != null), ele pode visualizar e importar dados da matriz: produtos, mesas, e configurações de delivery.
+
+Se não está conectado a nenhuma franquia, mostra mensagem informativa.
 
 ```text
-┌──────────────────────────────────────────────┐
-│            SUPER ADMIN                       │
-├──────────────────────────────────────────────┤
-│                                              │
-│  ┌─────────────────┐                         │
-│  │ Burger King HQ   │ ← tenant matriz       │
-│  │ (parent_id=null) │                        │
-│  └────────┬────────┘                         │
-│           │                                  │
-│     ┌─────┴──────┐                           │
-│     │            │                           │
-│  ┌──▼────┐  ┌───▼────┐                      │
-│  │ BK     │  │ BK     │ ← tenants filhos    │
-│  │ Moema  │  │ Pinhei.│   (franquias)        │
-│  └────────┘  └────────┘                      │
-│                                              │
-│  Produtos compartilhados: Matriz → Filhos    │
-│  Mesas compartilhadas: Layout copiado        │
-└──────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────┐
+│ Franquia — Importar da Matriz                    │
+│ Conectado a: Burger King HQ                      │
+├─────────────────────────────────────────────────┤
+│                                                  │
+│ ┌─ Produtos da Matriz ────────────────────────┐  │
+│ │ ☑ X-Burger  ☑ Batata  ☐ Milk Shake         │  │
+│ │                          [Importar Produtos] │  │
+│ └──────────────────────────────────────────────┘  │
+│                                                  │
+│ ┌─ Mesas da Matriz ───────────────────────────┐  │
+│ │ ☑ Mesa 1  ☑ Mesa 2  ☐ Mesa 3               │  │
+│ │                            [Importar Mesas] │  │
+│ └──────────────────────────────────────────────┘  │
+│                                                  │
+│ ┌─ Configurações de Delivery ─────────────────┐  │
+│ │ Horários, zonas de entrega, taxas           │  │
+│ │                     [Importar Configurações] │  │
+│ └──────────────────────────────────────────────┘  │
+│                                                  │
+│ ┌─ Sincronizar Tudo ──────────────────────────┐  │
+│ │ Atualizar produtos já importados com as     │  │
+│ │ versões mais recentes da matriz              │  │
+│ │                            [Sincronizar]     │  │
+│ └──────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────┘
 ```
 
-### Mudanças no Banco de Dados
+### Mudanças
 
-**1. Adicionar `parent_tenant_id` na tabela `tenants`:**
-```sql
-ALTER TABLE public.tenants
-  ADD COLUMN parent_tenant_id uuid REFERENCES public.tenants(id) ON DELETE SET NULL;
-```
-
-**2. Tabela `shared_products` — catálogo compartilhado pela matriz:**
-```sql
-CREATE TABLE public.shared_products (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  source_tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  target_tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  source_product_id uuid NOT NULL REFERENCES public.pdv_products(id) ON DELETE CASCADE,
-  cloned_product_id uuid REFERENCES public.pdv_products(id) ON DELETE SET NULL,
-  sync_enabled boolean DEFAULT true,
-  last_synced_at timestamptz,
-  created_at timestamptz DEFAULT now(),
-  UNIQUE(source_product_id, target_tenant_id)
-);
-```
-
-**3. Tabela `shared_table_layouts` — layouts de mesa compartilhados:**
-```sql
-CREATE TABLE public.shared_table_layouts (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  source_tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  target_tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-  source_table_id uuid NOT NULL REFERENCES public.pdv_tables(id) ON DELETE CASCADE,
-  cloned_table_id uuid REFERENCES public.pdv_tables(id) ON DELETE SET NULL,
-  created_at timestamptz DEFAULT now(),
-  UNIQUE(source_table_id, target_tenant_id)
-);
-```
-
-Ambas com RLS para super admins + owners dos tenants envolvidos.
-
-### Mudanças no Frontend
-
-| Arquivo | Acao |
+| Arquivo | Ação |
 |---------|------|
-| `supabase migration` | Adicionar `parent_tenant_id` em tenants, criar tabelas `shared_products` e `shared_table_layouts` com RLS |
-| `src/hooks/use-tenants.ts` | Adicionar: `fetchChildTenants(parentId)`, `linkChildTenant(parentId, childId)`, `unlinkChildTenant(childId)`, `shareProducts(sourceTenantId, targetTenantId, productIds)`, `shareTableLayout(sourceTenantId, targetTenantId, tableIds)`, `syncSharedProducts(sourceTenantId)` |
-| `src/pages/super-admin/TenantDetail.tsx` | Adicionar seção "Franquias" com: lista de filhos, botão vincular tenant existente, botão desvincular. Adicionar seção "Compartilhar Produtos" com seleção de produtos da matriz e envio para franquias. Adicionar seção "Compartilhar Mesas" similar |
-| `src/pages/super-admin/TenantForm.tsx` | Adicionar campo opcional "Tenant Matriz" (select de tenants existentes) para criar franquia vinculada |
-| `src/components/super-admin/TenantCard.tsx` | Mostrar badge "Matriz" ou "Franquia de X" conforme `parent_tenant_id` |
-| `supabase/functions/sync-shared-products/index.ts` | Edge function que copia/atualiza produtos da matriz para franquias quando sync é disparado |
+| `supabase/functions/sync-shared-products/index.ts` | Adicionar action `import_products` (franquia puxa da matriz), `import_tables`, `import_delivery_settings`. Verificar que o caller pertence ao tenant filho. Reutilizar a lógica de clone existente |
+| `src/hooks/use-franchise-import.ts` | Novo hook: detecta `tenantId` do user, busca `parent_tenant_id`, carrega produtos/mesas/delivery settings da matriz, expõe funções de import |
+| `src/pages/pdv/FranchiseImport.tsx` | Nova página com cards de importação: produtos (checkbox + importar), mesas (checkbox + importar), delivery settings (botão), botão sincronizar |
+| `src/pages/PDV.tsx` | Adicionar rota `/pdv/franquia` → `FranchiseImport` |
+| `src/components/pdv/PDVHeaderNav.tsx` | Adicionar item "Franquia" no menu Administrador (só aparece se user tem `parent_tenant_id`) |
+| `src/hooks/use-user-role.ts` | Adicionar `/pdv/franquia` nas rotas permitidas para proprietario e gerente |
 
-### Fluxo de Compartilhamento de Produtos
+### Detalhes Técnicos
 
-1. Super admin abre tenant matriz → seção "Compartilhar Produtos"
-2. Seleciona produtos do catálogo da matriz
-3. Seleciona franquias destino (ou "todas")
-4. Clica "Compartilhar" → edge function clona os `pdv_products` para o `user_id` do owner de cada franquia
-5. Registra em `shared_products` com `sync_enabled=true`
-6. Futuras edições na matriz podem ser propagadas via botão "Sincronizar" (atualiza nome, preço, categoria dos clones)
+**Hook `use-franchise-import.ts`:**
+- Usa `useUserModules().tenantId` para pegar o tenant do user
+- Busca o tenant para ver `parent_tenant_id`
+- Se tem parent: busca `owner_user_id` do parent, carrega `pdv_products`, `pdv_tables`, `delivery_settings` do owner
+- Funções: `importProducts(ids)`, `importTables(ids)`, `importDeliverySettings()`, `syncExisting()`
+- Todas chamam a edge function `sync-shared-products` com actions específicas
 
-### Fluxo de Compartilhamento de Mesas
+**Edge function — novas actions:**
+- `import_products`: recebe `target_tenant_id` (quem está importando) e `product_ids`. Valida que o caller é owner/membro do target tenant. Busca `parent_tenant_id` do target para pegar o source. Clona produtos do parent → target (mesma lógica do `share_products` mas na direção inversa)
+- `import_tables`: mesma lógica para mesas
+- `import_delivery_settings`: copia campos de `delivery_settings` do owner da matriz para o owner da franquia (horários, zonas, taxas, configurações)
 
-1. Super admin abre tenant matriz → seção "Compartilhar Layout de Mesas"
-2. Seleciona mesas/setores
-3. Seleciona franquias destino
-4. Clona `pdv_tables` (número, capacidade, posição, shape, setor) para o owner de cada franquia
-5. Registra em `shared_table_layouts` — não sincroniza automaticamente (layout pode divergir por loja)
-
-### Seção "Franquias" no TenantDetail
-
-```text
-┌─────────────────────────────────────────┐
-│ Franquias (3)                  [+ Add]  │
-├─────────────────────────────────────────┤
-│ ┌─────────────────────────────────────┐ │
-│ │ BK Moema · CNPJ · Ativo  [Abrir ↗] │ │
-│ │                      [Desvincular]  │ │
-│ └─────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────┐ │
-│ │ BK Pinheiros · CNPJ · Ativo        │ │
-│ └─────────────────────────────────────┘ │
-├─────────────────────────────────────────┤
-│ Compartilhar Produtos         [Enviar]  │
-│ ☑ X-Burger  ☑ Batata  ☐ Milk Shake     │
-│ Para: ☑ Todas  ☐ BK Moema  ☐ BK Pinh. │
-├─────────────────────────────────────────┤
-│ Compartilhar Mesas            [Copiar]  │
-│ ☑ Mesa 1  ☑ Mesa 2  ☐ Mesa 3           │
-│ Para: ☑ Todas  ☐ BK Moema              │
-└─────────────────────────────────────────┘
-```
-
-### Detalhes Tecnico da Edge Function `sync-shared-products`
-
-- Recebe `{ source_tenant_id, target_tenant_ids?: string[] }`
-- Busca `shared_products` com `sync_enabled=true` para o source
-- Para cada registro, busca o produto fonte e atualiza o clone (nome, preço, categoria, imagem, disponibilidade)
-- Atualiza `last_synced_at`
-- Verifica permissão via super_admin ou owner do tenant matriz
+**Visibilidade no menu:**
+- O item "Franquia" só aparece no nav se o hook retorna `hasParentTenant = true`
+- Roles permitidos: proprietario e gerente
 
