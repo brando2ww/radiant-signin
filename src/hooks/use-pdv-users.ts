@@ -79,6 +79,8 @@ export function usePDVUsers() {
       email: string;
       phone: string;
       role: string;
+      discount_password?: string;
+      max_discount_percent?: number;
     }) => {
       const { data, error } = await supabase
         .from("establishment_users")
@@ -87,7 +89,9 @@ export function usePDVUsers() {
           email: userData.email,
           phone: userData.phone,
           role: userData.role as any,
-        })
+          discount_password: userData.discount_password || null,
+          max_discount_percent: userData.max_discount_percent ?? 100,
+        } as any)
         .eq("id", id)
         .select()
         .single();

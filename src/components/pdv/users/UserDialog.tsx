@@ -156,6 +156,41 @@ export function UserDialog({ open, onOpenChange, onSave, editingUser, isLoading 
                 />
               </div>
 
+              {/* Discount authorization fields */}
+              <Separator className="my-2" />
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+                Autorização de Desconto
+              </h3>
+
+              <div className="space-y-2">
+                <Label htmlFor="discountPassword">Senha de Desconto (numérica)</Label>
+                <Input
+                  id="discountPassword"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={discountPassword}
+                  onChange={(e) => setDiscountPassword(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  placeholder="4 a 6 dígitos"
+                  maxLength={6}
+                />
+                <p className="text-xs text-muted-foreground">Senha usada para autorizar descontos no caixa</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="maxDiscount">Desconto Máximo (%)</Label>
+                <Input
+                  id="maxDiscount"
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={maxDiscountPercent}
+                  onChange={(e) => setMaxDiscountPercent(e.target.value)}
+                  placeholder="100"
+                />
+                <p className="text-xs text-muted-foreground">Percentual máximo de desconto que este operador pode autorizar</p>
+              </div>
+
               {/* Password fields — only for new users */}
               {!isEditing && (
                 <>
