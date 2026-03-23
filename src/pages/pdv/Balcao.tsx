@@ -32,6 +32,8 @@ export default function PDVBalcao() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [newOrderOpen, setNewOrderOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [orderForPayment, setOrderForPayment] = useState<any>(null);
 
   // Filtrar apenas pedidos do balcão
   const balcaoOrders = useMemo(() => {
