@@ -64,7 +64,6 @@ Deno.serve(async (req) => {
       if (!cnpj || cnpj.length !== 14) continue;
 
       // Call DistDFe API (Nuvem Fiscal or similar)
-      // Placeholder: replace with real API endpoint
       const apiUrl = `https://api.nuvemfiscal.com.br/nfe/distribuicao/documentos?cpf_cnpj=${cnpj}&ambiente=producao`;
 
       const apiResponse = await fetch(apiUrl, {
@@ -83,36 +82,45 @@ Deno.serve(async (req) => {
       const documents = apiData?.documentos || apiData?.data || [];
 
       for (const doc of documents) {
-        const accessKey = doc.chave || doc.chave_acesso || doc.key;
-        if (!accessKey) continue;
+        const invoiceKey = doc.chave || doc.chave_acesso || doc.key;
+        if (!invoiceKey) continue;
 
         // Check if already imported
         const { data: existing } = await supabase
           .from("pdv_invoices")
           .select("id")
           .eq("user_id", tenant.user_id)
-          .eq("access_key", accessKey)
+          .eq("invoice_key", invoiceKey)
           .maybeSingle();
 
         if (existing) continue;
 
-        // Insert new invoice
+        const supplierCnpj = doc.emit_cnpj || doc.supplier_cnpj || "";
+        const supplierName = doc.emit_nome || doc.supplier_name || "Fornecedor";
+        const invoiceNumber = String(doc.numero || doc.invoice_number || "");
+        const totalValue = Number(doc.valor_total || doc.total || 0);
+
+        // Insert new invoice with correct column names
         const { error: insertError } = await supabase.from("pdv_invoices").insert({
           user_id: tenant.user_id,
-          access_key: accessKey,
-          supplier_name: doc.emit_nome || doc.supplier_name || "Fornecedor",
-          supplier_cnpj: doc.emit_cnpj || doc.supplier_cnpj || "",
-          invoice_number: doc.numero || doc.invoice_number || "",
-          invoice_series: doc.serie || "",
-          issue_date: doc.data_emissao || doc.issue_date || new Date().toISOString(),
-          total_value: doc.valor_total || doc.total || 0,
+          invoice_key: invoiceKey,
+          invoice_number: invoiceNumber,
+          series: doc.serie || "",
+          emission_date: doc.data_emissao || doc.issue_date || new Date().toISOString(),
+          supplier_name: supplierName,
+          supplier_cnpj: supplierCnpj,
+          total_products: totalValue,
+          total_tax: 0,
+          total_invoice: totalValue,
+          operation_type: "entrada",
+          invoice_type: "compra",
           status: "pending",
-          xml_content: doc.xml || null,
           source: "sefaz_auto",
+          notes: doc.xml ? "XML disponível via API" : null,
         });
 
         if (insertError) {
-          console.error(`Erro ao inserir NF-e ${accessKey}:`, insertError.message);
+          console.error(`Erro ao inserir NF-e ${invoiceKey}:`, insertError.message);
         } else {
           totalImported++;
         }
