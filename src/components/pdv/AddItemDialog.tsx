@@ -169,7 +169,7 @@ export function AddItemDialog({
               <div className="flex items-center justify-between">
                 <span className="font-medium">Subtotal</span>
                 <span className="text-xl font-bold">
-                  R$ {(selectedProduct.price_salon * quantity).toFixed(2)}
+                  R$ {(getPrice(selectedProduct) * quantity).toFixed(2)}
                 </span>
               </div>
             </div>
