@@ -59,11 +59,22 @@ export function InvoiceUploadDialog({
       }
     } else if (extension === 'pdf') {
       const result = await parsePDF(file);
-      if (result && result.invoice.invoiceKey) {
-        // Convert partial to full parsed invoice
-        toast.warning('PDF importado com dados parciais - recomenda-se usar XML para importação completa');
-        // For now, we'll skip PDF import and ask for XML
-        toast.error('Por favor, use o arquivo XML da nota fiscal para importação completa');
+      if (result) {
+        const fullInvoice: ParsedInvoice = {
+          invoiceKey: result.invoice.invoiceKey || '',
+          invoiceNumber: result.invoice.invoiceNumber || '',
+          series: result.invoice.series || '',
+          emissionDate: result.invoice.emissionDate || new Date(),
+          operationType: 'entrada',
+          supplier: result.invoice.supplier || { cnpj: '', name: '' },
+          totals: result.invoice.totals || { products: 0, tax: 0, invoice: 0 },
+          items: result.invoice.items || [],
+        };
+        if (result.confidence !== 'high') {
+          toast.warning('Dados parciais extraídos do PDF - revise antes de confirmar');
+        }
+        onParsed(fullInvoice);
+        onOpenChange(false);
       }
     } else {
       toast.error('Formato de arquivo não suportado. Use XML ou PDF.');
