@@ -14,7 +14,7 @@ export function useFranchiseImport() {
       if (!tenantId) return null;
       const { data, error } = await supabase
         .from("tenants")
-        .select("id, name, parent_tenant_id")
+        .select("id, name, parent_tenant_id, owner_user_id")
         .eq("id", tenantId)
         .single();
       if (error) throw error;
@@ -24,9 +24,9 @@ export function useFranchiseImport() {
   });
 
   const parentTenantId = tenantInfo?.parent_tenant_id;
-  const hasParentTenant = !!parentTenantId;
+  const isChildTenant = !!parentTenantId;
 
-  // Get parent tenant info
+  // === CHILD TENANT: Get parent tenant info ===
   const { data: parentTenant } = useQuery({
     queryKey: ["franchise-parent-info", parentTenantId],
     queryFn: async () => {
@@ -42,7 +42,7 @@ export function useFranchiseImport() {
     enabled: !!parentTenantId,
   });
 
-  // Get parent products
+  // Get parent products (child view)
   const { data: parentProducts = [], isLoading: loadingProducts } = useQuery({
     queryKey: ["franchise-parent-products", parentTenant?.owner_user_id],
     queryFn: async () => {
@@ -58,7 +58,7 @@ export function useFranchiseImport() {
     enabled: !!parentTenant?.owner_user_id,
   });
 
-  // Get parent tables
+  // Get parent tables (child view)
   const { data: parentTables = [], isLoading: loadingTables } = useQuery({
     queryKey: ["franchise-parent-tables", parentTenant?.owner_user_id],
     queryFn: async () => {
@@ -105,6 +105,59 @@ export function useFranchiseImport() {
     enabled: !!tenantId,
   });
 
+  // === PARENT TENANT: Get child tenants ===
+  const { data: childTenants = [], isLoading: loadingChildren } = useQuery({
+    queryKey: ["franchise-child-tenants", tenantId],
+    queryFn: async () => {
+      if (!tenantId) return [];
+      const { data, error } = await supabase
+        .from("tenants")
+        .select("id, name, document, is_active")
+        .eq("parent_tenant_id", tenantId)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!tenantId && !isChildTenant,
+  });
+
+  const isParentTenant = !isChildTenant && childTenants.length > 0;
+  const hasConnection = isChildTenant || isParentTenant;
+
+  // Get own products (parent view - to share)
+  const { data: ownProducts = [], isLoading: loadingOwnProducts } = useQuery({
+    queryKey: ["franchise-own-products", tenantInfo?.owner_user_id],
+    queryFn: async () => {
+      if (!tenantInfo?.owner_user_id) return [];
+      const { data, error } = await supabase
+        .from("pdv_products")
+        .select("id, name, category, price_salon, price_balcao, price_delivery, image_url, is_available")
+        .eq("user_id", tenantInfo.owner_user_id)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: isParentTenant && !!tenantInfo?.owner_user_id,
+  });
+
+  // Get own tables (parent view - to share)
+  const { data: ownTables = [], isLoading: loadingOwnTables } = useQuery({
+    queryKey: ["franchise-own-tables", tenantInfo?.owner_user_id],
+    queryFn: async () => {
+      if (!tenantInfo?.owner_user_id) return [];
+      const { data, error } = await supabase
+        .from("pdv_tables")
+        .select("id, table_number, capacity, shape, is_active")
+        .eq("user_id", tenantInfo.owner_user_id)
+        .eq("is_active", true)
+        .order("table_number");
+      if (error) throw error;
+      return data;
+    },
+    enabled: isParentTenant && !!tenantInfo?.owner_user_id,
+  });
+
+  // === CHILD MUTATIONS ===
   const importProducts = useMutation({
     mutationFn: async (productIds: string[]) => {
       const { data, error } = await supabase.functions.invoke("sync-shared-products", {
@@ -159,19 +212,86 @@ export function useFranchiseImport() {
     onError: (err: any) => toast.error(err.message || "Erro ao sincronizar"),
   });
 
+  // === PARENT MUTATIONS ===
+  const shareProducts = useMutation({
+    mutationFn: async ({ productIds, targetTenantIds }: { productIds: string[]; targetTenantIds: string[] }) => {
+      const { data, error } = await supabase.functions.invoke("sync-shared-products", {
+        body: {
+          action: "share_products",
+          source_tenant_id: tenantId,
+          target_tenant_ids: targetTenantIds,
+          product_ids: productIds,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => toast.success(`Produtos compartilhados com sucesso`),
+    onError: (err: any) => toast.error(err.message || "Erro ao compartilhar produtos"),
+  });
+
+  const shareTables = useMutation({
+    mutationFn: async ({ tableIds, targetTenantIds }: { tableIds: string[]; targetTenantIds: string[] }) => {
+      const { data, error } = await supabase.functions.invoke("sync-shared-products", {
+        body: {
+          action: "share_tables",
+          source_tenant_id: tenantId,
+          target_tenant_ids: targetTenantIds,
+          table_ids: tableIds,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => toast.success(`Mesas compartilhadas com sucesso`),
+    onError: (err: any) => toast.error(err.message || "Erro ao compartilhar mesas"),
+  });
+
+  const syncAllChildren = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("sync-shared-products", {
+        body: { action: "sync_products", source_tenant_id: tenantId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => toast.success(`Produtos sincronizados com as franquias`),
+    onError: (err: any) => toast.error(err.message || "Erro ao sincronizar"),
+  });
+
   return {
-    hasParentTenant,
+    // Connection state
+    hasConnection,
+    isChildTenant,
+    isParentTenant,
+    isLoading: loadingTenant || loadingChildren,
+    // Child tenant data
     parentTenant,
     parentProducts,
     parentTables,
     importedProductIds,
     importedTableIds,
+    loadingProducts,
+    loadingTables,
+    // Child mutations
     importProducts,
     importTables,
     importDeliverySettings,
     syncExisting,
-    isLoading: loadingTenant,
-    loadingProducts,
-    loadingTables,
+    // Parent tenant data
+    childTenants,
+    ownProducts,
+    ownTables,
+    loadingOwnProducts,
+    loadingOwnTables,
+    // Parent mutations
+    shareProducts,
+    shareTables,
+    syncAllChildren,
+    // Legacy compat
+    hasParentTenant: isChildTenant,
   };
 }
