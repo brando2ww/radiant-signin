@@ -5,15 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { Progress } from "@/components/ui/progress";
-import { Star, CheckCircle2, ChevronLeft } from "lucide-react";
+import { Star, CheckCircle2, ClipboardList, BarChart3, User } from "lucide-react";
 import {
   usePublicCampaign,
   usePublicCampaignQuestions,
   useSubmitCampaignEvaluation,
 } from "@/hooks/use-evaluation-campaigns";
-
-type Step = "info" | "question" | "nps" | "done";
 
 export default function PublicEvaluation() {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -21,8 +18,7 @@ export default function PublicEvaluation() {
   const { data: questions, isLoading: loadingQuestions } = usePublicCampaignQuestions(campaignId || "");
   const submitEvaluation = useSubmitCampaignEvaluation();
 
-  const [step, setStep] = useState<Step>("info");
-  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+  const [done, setDone] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -50,9 +46,6 @@ export default function PublicEvaluation() {
     );
   }
 
-  const totalQuestions = questions?.length || 0;
-  const currentQuestion = questions?.[currentQuestionIdx];
-
   const handleSetScore = (questionId: string, score: number) => {
     setAnswers((prev) => ({
       ...prev,
@@ -67,23 +60,13 @@ export default function PublicEvaluation() {
     }));
   };
 
-  const canSubmitInfo = name.trim() && phone.replace(/\D/g, "").length >= 10 && birthDate;
-
-  const goNextQuestion = () => {
-    if (currentQuestionIdx < totalQuestions - 1) {
-      setCurrentQuestionIdx((i) => i + 1);
-    } else {
-      setStep("nps");
-    }
-  };
-
-  const goPrevQuestion = () => {
-    if (currentQuestionIdx > 0) {
-      setCurrentQuestionIdx((i) => i - 1);
-    } else {
-      setStep("info");
-    }
-  };
+  const allQuestionsAnswered = questions?.every((q) => answers[q.id]?.score > 0) ?? true;
+  const canSubmit =
+    name.trim() &&
+    phone.replace(/\D/g, "").length >= 10 &&
+    birthDate &&
+    allQuestionsAnswered &&
+    npsScore !== null;
 
   const handleSubmit = () => {
     if (!questions || !campaignId || npsScore === null) return;
@@ -101,23 +84,15 @@ export default function PublicEvaluation() {
           comment: answers[q.id]?.comment?.trim() || undefined,
         })),
       },
-      { onSuccess: () => setStep("done") }
+      { onSuccess: () => setDone(true) }
     );
   };
 
-  // Total steps: info(1) + questions(N) + nps(1)
-  const totalSteps = 1 + totalQuestions + 1;
-  const currentStepNum =
-    step === "info" ? 1 :
-    step === "question" ? 2 + currentQuestionIdx :
-    step === "nps" ? totalSteps : totalSteps;
-  const progressPercent = step === "done" ? 100 : Math.round((currentStepNum / totalSteps) * 100);
-
   const Logo = logoUrl ? (
-    <img src={logoUrl} alt="Logo" className="h-16 w-16 object-contain rounded-xl mx-auto" />
+    <img src={logoUrl} alt="Logo" className="h-20 w-20 object-contain rounded-2xl mx-auto shadow-sm" />
   ) : null;
 
-  if (step === "done") {
+  if (done) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: bgColor }}>
         <div className="text-center space-y-5 max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -134,192 +109,150 @@ export default function PublicEvaluation() {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
-      <div className="max-w-md mx-auto px-4 py-6 space-y-6">
-        {/* Progress */}
-        <div className="space-y-2">
-          <Progress value={progressPercent} className="h-2" />
-          <p className="text-xs text-muted-foreground text-center">
-            {step === "info" && "Seus dados"}
-            {step === "question" && `Pergunta ${currentQuestionIdx + 1} de ${totalQuestions}`}
-            {step === "nps" && "Recomendação"}
+      <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-3 pb-2">
+          {Logo}
+          <h1 className="text-2xl font-bold text-foreground">{campaign.name}</h1>
+          <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">
+            {welcomeMsg || campaign.description || "Conte-nos sobre sua experiência"}
           </p>
         </div>
 
-        {/* Header */}
-        <div className="text-center space-y-3">
-          {Logo}
-          {step === "info" && (
-            <>
-              <h1 className="text-xl font-bold text-foreground">{campaign.name}</h1>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {welcomeMsg || campaign.description || "Conte-nos sobre sua experiência"}
-              </p>
-            </>
-          )}
-        </div>
-
-        {/* Step: Info */}
-        {step === "info" && (
-          <div className="bg-card rounded-2xl p-6 shadow-sm border space-y-5 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="space-y-2">
-              <Label htmlFor="eval-name">Nome *</Label>
-              <Input
-                id="eval-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Seu nome completo"
-                maxLength={100}
-                className="h-12 rounded-xl"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="eval-phone">Telefone *</Label>
-              <PhoneInput value={phone} onChange={setPhone} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="eval-birth">Data de Nascimento *</Label>
-              <Input
-                id="eval-birth"
-                type="date"
-                value={birthDate}
-                onChange={(e) => setBirthDate(e.target.value)}
-                className="h-12 rounded-xl"
-              />
-            </div>
-            <Button
-              className="w-full h-12 rounded-xl text-base font-semibold"
-              disabled={!canSubmitInfo}
-              onClick={() => { setStep("question"); setCurrentQuestionIdx(0); }}
-            >
-              Continuar
-            </Button>
+        {/* Section: Dados do Cliente */}
+        <section className="bg-card rounded-2xl p-6 shadow-sm border space-y-4">
+          <div className="flex items-center gap-2 text-foreground mb-1">
+            <User className="h-5 w-5 text-primary" />
+            <h2 className="text-base font-semibold">Seus Dados</h2>
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="eval-name">Nome *</Label>
+            <Input
+              id="eval-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Seu nome completo"
+              maxLength={100}
+              className="h-12 rounded-xl"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="eval-phone">Telefone *</Label>
+            <PhoneInput value={phone} onChange={setPhone} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="eval-birth">Data de Nascimento *</Label>
+            <Input
+              id="eval-birth"
+              type="date"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              className="h-12 rounded-xl"
+            />
+          </div>
+        </section>
+
+        {/* Section: Perguntas */}
+        {questions && questions.length > 0 && (
+          <section className="bg-card rounded-2xl p-6 shadow-sm border space-y-6">
+            <div className="flex items-center gap-2 text-foreground mb-1">
+              <ClipboardList className="h-5 w-5 text-primary" />
+              <h2 className="text-base font-semibold">Avaliação</h2>
+            </div>
+
+            {questions.map((q, idx) => {
+              const score = answers[q.id]?.score || 0;
+              return (
+                <div key={q.id} className="space-y-3">
+                  <p className="text-sm font-medium text-foreground leading-snug">
+                    {idx + 1}. {q.question_text}
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => handleSetScore(q.id, s)}
+                        className="p-1 transition-transform active:scale-90"
+                      >
+                        <Star
+                          className={`h-9 w-9 transition-colors ${
+                            s <= score
+                              ? "text-yellow-500 fill-yellow-500"
+                              : "text-muted-foreground/20"
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  {score > 0 && score <= 2 && (
+                    <div className="space-y-1.5 animate-in fade-in duration-200">
+                      <Label className="text-xs text-muted-foreground">
+                        O que aconteceu? (opcional)
+                      </Label>
+                      <Textarea
+                        value={answers[q.id]?.comment || ""}
+                        onChange={(e) => handleSetComment(q.id, e.target.value)}
+                        placeholder="Conte-nos o que podemos melhorar..."
+                        maxLength={500}
+                        className="min-h-[70px] rounded-xl text-sm"
+                      />
+                    </div>
+                  )}
+                  {idx < questions.length - 1 && (
+                    <div className="border-b border-border/50 pt-1" />
+                  )}
+                </div>
+              );
+            })}
+          </section>
         )}
 
-        {/* Step: Question (one at a time) */}
-        {step === "question" && currentQuestion && (
-          <div
-            key={currentQuestion.id}
-            className="bg-card rounded-2xl p-6 shadow-sm border space-y-6 animate-in fade-in slide-in-from-right-4 duration-300"
-          >
-            <p className="text-base font-semibold text-foreground leading-snug">
-              {currentQuestion.question_text}
-            </p>
-
-            {/* Stars */}
-            <div className="flex items-center justify-center gap-2">
-              {[1, 2, 3, 4, 5].map((s) => {
-                const score = answers[currentQuestion.id]?.score || 0;
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => handleSetScore(currentQuestion.id, s)}
-                    className="p-1.5 transition-transform active:scale-90"
-                  >
-                    <Star
-                      className={`h-10 w-10 transition-colors ${
-                        s <= score
-                          ? "text-yellow-500 fill-yellow-500"
-                          : "text-muted-foreground/20"
-                      }`}
-                    />
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Comment if low score */}
-            {(answers[currentQuestion.id]?.score || 0) > 0 &&
-              (answers[currentQuestion.id]?.score || 0) <= 2 && (
-              <div className="space-y-2 animate-in fade-in duration-200">
-                <Label className="text-sm text-muted-foreground">
-                  O que aconteceu? (opcional)
-                </Label>
-                <Textarea
-                  value={answers[currentQuestion.id]?.comment || ""}
-                  onChange={(e) => handleSetComment(currentQuestion.id, e.target.value)}
-                  placeholder="Conte-nos o que podemos melhorar..."
-                  maxLength={500}
-                  className="min-h-[80px] rounded-xl"
-                />
-              </div>
-            )}
-
-            {/* Nav buttons */}
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="h-12 rounded-xl px-4"
-                onClick={goPrevQuestion}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                className="flex-1 h-12 rounded-xl text-base font-semibold"
-                disabled={!(answers[currentQuestion.id]?.score > 0)}
-                onClick={goNextQuestion}
-              >
-                {currentQuestionIdx < totalQuestions - 1 ? "Próxima" : "Continuar"}
-              </Button>
-            </div>
+        {/* Section: NPS */}
+        <section className="bg-card rounded-2xl p-6 shadow-sm border space-y-4">
+          <div className="flex items-center gap-2 text-foreground mb-1">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            <h2 className="text-base font-semibold">Recomendação</h2>
           </div>
-        )}
-
-        {/* Step: NPS */}
-        {step === "nps" && (
-          <div className="bg-card rounded-2xl p-6 shadow-sm border space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <div className="text-center space-y-2">
-              <p className="text-base font-semibold text-foreground">
-                De 0 a 10, o quanto você indicaria nosso estabelecimento para um amigo?
-              </p>
-              <p className="text-xs text-muted-foreground">Selecione uma nota abaixo</p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-2">
-              {Array.from({ length: 11 }, (_, i) => i).map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setNpsScore(n)}
-                  className={`w-11 h-11 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 ${
-                    npsScore === n
-                      ? n <= 6
-                        ? "bg-red-500 text-white border-red-500 shadow-md"
-                        : n <= 8
-                        ? "bg-yellow-500 text-white border-yellow-500 shadow-md"
-                        : "bg-green-600 text-white border-green-600 shadow-md"
-                      : "border-border bg-card hover:bg-muted"
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-            <div className="flex justify-between text-xs text-muted-foreground px-1">
-              <span>Nada provável</span>
-              <span>Muito provável</span>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="h-12 rounded-xl px-4"
-                onClick={() => {
-                  setStep("question");
-                  setCurrentQuestionIdx(totalQuestions - 1);
-                }}
+          <p className="text-sm text-muted-foreground leading-snug">
+            De 0 a 10, o quanto você indicaria nosso estabelecimento para um amigo?
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {Array.from({ length: 11 }, (_, i) => i).map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setNpsScore(n)}
+                className={`w-11 h-11 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 ${
+                  npsScore === n
+                    ? n <= 6
+                      ? "bg-red-500 text-white border-red-500 shadow-md"
+                      : n <= 8
+                      ? "bg-yellow-500 text-white border-yellow-500 shadow-md"
+                      : "bg-green-600 text-white border-green-600 shadow-md"
+                    : "border-border bg-card hover:bg-muted"
+                }`}
               >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                className="flex-1 h-12 rounded-xl text-base font-semibold"
-                disabled={npsScore === null || submitEvaluation.isPending}
-                onClick={handleSubmit}
-              >
-                {submitEvaluation.isPending ? "Enviando..." : "Enviar Avaliação"}
-              </Button>
-            </div>
+                {n}
+              </button>
+            ))}
           </div>
-        )}
+          <div className="flex justify-between text-xs text-muted-foreground px-1">
+            <span>Nada provável</span>
+            <span>Muito provável</span>
+          </div>
+        </section>
+
+        {/* Submit */}
+        <Button
+          className="w-full h-14 rounded-2xl text-base font-semibold shadow-md"
+          disabled={!canSubmit || submitEvaluation.isPending}
+          onClick={handleSubmit}
+        >
+          {submitEvaluation.isPending ? "Enviando..." : "Enviar Avaliação"}
+        </Button>
+
+        <div className="h-4" />
       </div>
     </div>
   );
