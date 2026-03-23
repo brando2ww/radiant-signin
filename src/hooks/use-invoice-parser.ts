@@ -14,8 +14,23 @@ async function extractTextFromPDF(file: File): Promise<string> {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    fullText += content.items.map((item: any) => item.str).join(' ') + '\n';
+    // Agrupar itens por coordenada Y para reconstruir linhas reais do DANFE
+    const lines = new Map<number, { x: number; str: string }[]>();
+    content.items.forEach((item: any) => {
+      if (!item.str || item.str.trim() === '') return;
+      const y = Math.round(item.transform[5] / 2) * 2; // tolerância 2px
+      if (!lines.has(y)) lines.set(y, []);
+      lines.get(y)!.push({ x: item.transform[4], str: item.str });
+    });
+    // Ordenar linhas de cima para baixo, itens da esquerda para direita
+    [...lines.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .forEach(([_, items]) => {
+        items.sort((a, b) => a.x - b.x);
+        fullText += items.map(i => i.str).join(' ') + '\n';
+      });
   }
+  console.log('[PDF Parser] Texto extraído:', fullText.substring(0, 2000));
   return fullText;
 }
 
