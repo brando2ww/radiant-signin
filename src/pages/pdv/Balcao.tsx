@@ -24,6 +24,7 @@ export default function PDVBalcao() {
     closeOrder,
     cancelOrder,
   } = usePDVOrders();
+  const { activeSession } = usePDVCashier();
 
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
