@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, ShoppingBag, Search } from "lucide-react";
@@ -9,8 +9,10 @@ import { toast } from "sonner";
 import { OrderCard } from "@/components/pdv/OrderCard";
 import { OrderDetailsDialog } from "@/components/pdv/OrderDetailsDialog";
 import { NewOrderDialog } from "@/components/pdv/NewOrderDialog";
+import { PaymentDialog } from "@/components/pdv/cashier/PaymentDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
 
 export default function PDVBalcao() {
   const {
@@ -30,6 +32,8 @@ export default function PDVBalcao() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [newOrderOpen, setNewOrderOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [orderForPayment, setOrderForPayment] = useState<any>(null);
 
   // Filtrar apenas pedidos do balcão
   const balcaoOrders = useMemo(() => {
@@ -89,7 +93,56 @@ export default function PDVBalcao() {
   };
 
   const handleCloseOrder = (id: string) => {
-    closeOrder(id);
+    // Find the order and open payment dialog instead of closing directly
+    const order = orders.find((o) => o.id === id);
+    if (order) {
+      setOrderForPayment(order);
+      setDetailsOpen(false);
+      setPaymentOpen(true);
+    }
+  };
+
+  // Build virtual comanda + items for PaymentDialog
+  const virtualComanda: Comanda | null = orderForPayment
+    ? {
+        id: orderForPayment.id,
+        user_id: orderForPayment.user_id,
+        order_id: orderForPayment.id,
+        comanda_number: orderForPayment.order_number || orderForPayment.id.slice(0, 8),
+        customer_name: orderForPayment.customer_name || null,
+        person_number: null,
+        status: "aberta" as const,
+        subtotal: orderForPayment.total || 0,
+        notes: null,
+        created_at: orderForPayment.created_at,
+        updated_at: orderForPayment.updated_at || orderForPayment.created_at,
+      }
+    : null;
+
+  const virtualItems: ComandaItem[] = orderForPayment
+    ? getOrderItems(orderForPayment.id).map((item: any) => ({
+        id: item.id,
+        comanda_id: orderForPayment.id,
+        product_id: item.product_id,
+        product_name: item.product_name || item.products?.name || "Produto",
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        subtotal: item.subtotal,
+        notes: item.notes || null,
+        modifiers: null,
+        kitchen_status: "entregue" as const,
+        sent_to_kitchen_at: null,
+        ready_at: null,
+        created_at: item.created_at || orderForPayment.created_at,
+      }))
+    : [];
+
+  const handlePaymentSuccess = () => {
+    if (orderForPayment) {
+      closeOrder(orderForPayment.id);
+    }
+    setPaymentOpen(false);
+    setOrderForPayment(null);
   };
 
   const handleCancelOrder = (id: string, reason: string) => {
@@ -241,6 +294,17 @@ export default function PDVBalcao() {
         onOpenChange={setNewOrderOpen}
         onCreateOrder={handleCreateOrder}
         source="balcao"
+      />
+
+      <PaymentDialog
+        open={paymentOpen}
+        onOpenChange={(open) => {
+          setPaymentOpen(open);
+          if (!open) setOrderForPayment(null);
+        }}
+        comanda={virtualComanda}
+        items={virtualItems}
+        onSuccess={handlePaymentSuccess}
       />
     </div>
   );
