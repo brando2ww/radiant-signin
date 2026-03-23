@@ -197,6 +197,7 @@ export const useCampaignResponses = (campaignId: string) => {
   return useQuery({
     queryKey: ["campaign-responses", campaignId],
     queryFn: async () => {
+      // Fetch responses with answers
       const { data, error } = await supabase
         .from("customer_evaluations")
         .select(`
@@ -212,7 +213,25 @@ export const useCampaignResponses = (campaignId: string) => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+
+      // Fetch questions for this campaign to map question_id -> question_text
+      const { data: questions } = await supabase
+        .from("evaluation_campaign_questions")
+        .select("id, question_text")
+        .eq("campaign_id", campaignId);
+
+      const questionMap = new Map((questions || []).map(q => [q.id, q.question_text]));
+
+      // Enrich answers with question_text
+      return (data || []).map(response => ({
+        ...response,
+        evaluation_answers: ((response.evaluation_answers as any[]) || []).map((answer: any) => ({
+          ...answer,
+          evaluation_campaign_questions: {
+            question_text: questionMap.get(answer.question_id) || "Pergunta não encontrada",
+          },
+        })),
+      }));
     },
     enabled: !!campaignId,
   });
