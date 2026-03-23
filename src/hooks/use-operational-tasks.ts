@@ -114,13 +114,16 @@ export function useOperationalTasks(selectedDate?: string) {
         .eq("user_id", user!.id)
         .maybeSingle();
       if (error) throw error;
-      if (!data) return { id: "", userId: user!.id, shifts: DEFAULT_SHIFTS, autoGenerate: true, qrCodeEnabled: true } as TaskSettings;
+      if (!data) return { id: "", userId: user!.id, shifts: DEFAULT_SHIFTS, autoGenerate: true, qrCodeEnabled: true, whatsappReportEnabled: false, whatsappReportPhone: "", whatsappReportTime: "23:00" } as TaskSettings;
       return {
         id: data.id,
         userId: data.user_id,
         shifts: (data.shifts as any) || DEFAULT_SHIFTS,
         autoGenerate: data.auto_generate,
         qrCodeEnabled: data.qr_code_enabled,
+        whatsappReportEnabled: data.whatsapp_report_enabled ?? false,
+        whatsappReportPhone: data.whatsapp_report_phone ?? "",
+        whatsappReportTime: data.whatsapp_report_time ?? "23:00",
       } as TaskSettings;
     },
     enabled: !!user?.id,
