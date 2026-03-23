@@ -36,6 +36,7 @@ import {
   X,
   Sparkles,
   Lock,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
