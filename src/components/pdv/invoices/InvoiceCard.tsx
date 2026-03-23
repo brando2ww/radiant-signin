@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PDVInvoice } from "@/hooks/use-pdv-invoices";
-import { FileText, MoreVertical, Trash2, Eye } from "lucide-react";
+import { FileText, MoreVertical, Trash2, Eye, Package } from "lucide-react";
 import { format } from "date-fns";
 import { formatCNPJ } from "@/lib/invoice/validators";
 import { formatCurrency } from "@/lib/utils";
@@ -32,6 +32,8 @@ export function InvoiceCard({ invoice, onView, onDelete }: InvoiceCardProps) {
     return <Badge variant={status.variant}>{status.label}</Badge>;
   };
 
+  const isAutoImported = invoice.source === 'sefaz_auto';
+
   return (
     <Card className="p-4 hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-4">
@@ -41,9 +43,14 @@ export function InvoiceCard({ invoice, onView, onDelete }: InvoiceCardProps) {
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h3 className="font-semibold truncate">NF-e {invoice.invoice_number}</h3>
               {getStatusBadge()}
+              {isAutoImported && (
+                <Badge variant="outline" className="text-xs border-blue-500/50 text-blue-600">
+                  Automática
+                </Badge>
+              )}
             </div>
 
             <p className="text-sm text-muted-foreground mb-2">
@@ -63,13 +70,19 @@ export function InvoiceCard({ invoice, onView, onDelete }: InvoiceCardProps) {
               </div>
             </div>
 
-            <div className="mt-3 pt-3 border-t">
-              <div className="flex items-center justify-between">
+            <div className="mt-3 pt-3 border-t flex items-center justify-between">
+              <div>
                 <span className="text-xs text-muted-foreground">Total</span>
-                <span className="text-lg font-semibold">
+                <p className="text-lg font-semibold">
                   {formatCurrency(invoice.total_invoice)}
-                </span>
+                </p>
               </div>
+              {invoice.status === 'pending' && (
+                <Button size="sm" variant="outline" onClick={() => onView(invoice)}>
+                  <Package className="h-4 w-4 mr-1" />
+                  Cadastrar Insumos
+                </Button>
+              )}
             </div>
           </div>
         </div>

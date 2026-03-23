@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Upload, FileText, Download } from "lucide-react";
+import { Upload, FileText, Download, RefreshCw } from "lucide-react";
 import { InvoiceUploadDialog } from "@/components/pdv/invoices/InvoiceUploadDialog";
 import { InvoiceReviewWizard } from "@/components/pdv/invoices/InvoiceReviewWizard";
 import { InvoiceCard } from "@/components/pdv/invoices/InvoiceCard";
 import { InvoiceFilters } from "@/components/pdv/invoices/InvoiceFilters";
-import { usePDVInvoices, useDeleteInvoice, PDVInvoice } from "@/hooks/use-pdv-invoices";
+import { usePDVInvoices, useDeleteInvoice, useFetchNFeAutomatica, PDVInvoice } from "@/hooks/use-pdv-invoices";
 import { ParsedInvoice } from "@/lib/invoice/xml-parser";
+import { EditableInvoiceData } from "@/types/invoice";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -20,10 +21,48 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+function invoiceToEditableData(invoice: PDVInvoice): EditableInvoiceData {
+  return {
+    invoiceKey: invoice.invoice_key,
+    invoiceNumber: invoice.invoice_number,
+    series: invoice.series || '',
+    emissionDate: new Date(invoice.emission_date),
+    entryDate: invoice.entry_date ? new Date(invoice.entry_date) : new Date(),
+    operationType: (invoice.operation_type as 'entrada' | 'saida') || 'entrada',
+    totals: {
+      products: invoice.total_products,
+      tax: invoice.total_tax,
+      invoice: invoice.total_invoice,
+      freight: invoice.freight_value || 0,
+      insurance: invoice.insurance_value || 0,
+      otherExpenses: invoice.other_expenses || 0,
+      discount: invoice.discount_value || 0,
+    },
+    supplier: {
+      mode: invoice.supplier_id ? 'existing' : 'new',
+      existingId: invoice.supplier_id || undefined,
+      newData: {
+        name: invoice.supplier_name,
+        cnpj: invoice.supplier_cnpj,
+      },
+    },
+    financial: {
+      description: `NF-e ${invoice.invoice_number} - ${invoice.supplier_name}`,
+      amount: invoice.total_invoice,
+      due_date: new Date(invoice.emission_date),
+      status: 'pending',
+      installments: 1,
+    },
+    items: [],
+    notes: invoice.notes || undefined,
+  };
+}
+
 export default function Invoices() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [parsedInvoice, setParsedInvoice] = useState<ParsedInvoice | null>(null);
+  const [reviewEditableData, setReviewEditableData] = useState<EditableInvoiceData | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -33,15 +72,18 @@ export default function Invoices() {
     status: statusFilter === 'all' ? undefined : statusFilter,
   });
   const deleteInvoice = useDeleteInvoice();
+  const fetchNFe = useFetchNFeAutomatica();
 
   const handleParsed = (invoice: ParsedInvoice) => {
-    console.log('✅ Nota fiscal parseada com sucesso:', invoice);
     setParsedInvoice(invoice);
+    setReviewEditableData(null);
     setReviewOpen(true);
   };
 
   const handleView = (invoice: PDVInvoice) => {
-    console.log('View invoice:', invoice);
+    setParsedInvoice(null);
+    setReviewEditableData(invoiceToEditableData(invoice));
+    setReviewOpen(true);
   };
 
   const handleDelete = (invoice: PDVInvoice) => {
@@ -82,10 +124,20 @@ export default function Invoices() {
             Importe e gerencie suas notas fiscais
           </p>
         </div>
-        <Button onClick={() => setUploadOpen(true)}>
-          <Upload className="h-4 w-4 mr-2" />
-          Importar NF-e
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => fetchNFe.mutate()}
+            disabled={fetchNFe.isPending}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${fetchNFe.isPending ? 'animate-spin' : ''}`} />
+            Buscar NF-e SEFAZ
+          </Button>
+          <Button onClick={() => setUploadOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Importar NF-e
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -164,10 +216,16 @@ export default function Invoices() {
                 : "Importe sua primeira nota fiscal para começar"}
             </p>
             {!searchTerm && statusFilter === 'all' && (
-              <Button onClick={() => setUploadOpen(true)}>
-                <Upload className="h-4 w-4 mr-2" />
-                Importar NF-e
-              </Button>
+              <div className="flex gap-2 justify-center">
+                <Button variant="outline" onClick={() => fetchNFe.mutate()} disabled={fetchNFe.isPending}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${fetchNFe.isPending ? 'animate-spin' : ''}`} />
+                  Buscar NF-e SEFAZ
+                </Button>
+                <Button onClick={() => setUploadOpen(true)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar NF-e
+                </Button>
+              </div>
             )}
           </Card>
         ) : (
@@ -192,6 +250,7 @@ export default function Invoices() {
         open={reviewOpen}
         onOpenChange={setReviewOpen}
         invoice={parsedInvoice}
+        initialEditableData={reviewEditableData}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

@@ -20,6 +20,7 @@ interface InvoiceReviewWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   invoice: ParsedInvoice | null;
+  initialEditableData?: EditableInvoiceData | null;
 }
 
 const STEPS = [
@@ -34,6 +35,7 @@ export function InvoiceReviewWizard({
   open,
   onOpenChange,
   invoice,
+  initialEditableData,
 }: InvoiceReviewWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [editableData, setEditableData] = useState<EditableInvoiceData | null>(null);
@@ -45,14 +47,19 @@ export function InvoiceReviewWizard({
   const { createTransaction } = usePDVFinancialTransactions();
   const { createIngredient } = usePDVIngredients();
 
-  // Initialize editable data when invoice changes
+  // Initialize editable data when invoice or initialEditableData changes
   useEffect(() => {
-    if (invoice && open) {
+    if (!open) return;
+    
+    if (initialEditableData) {
+      setEditableData(initialEditableData);
+      setCurrentStep(1);
+    } else if (invoice) {
       console.log('✅ Inicializando wizard com dados da nota:', invoice);
       setEditableData(parseInvoiceToEditable(invoice));
       setCurrentStep(1);
     }
-  }, [invoice, open]);
+  }, [invoice, initialEditableData, open]);
 
   const handleUpdate = (updates: Partial<EditableInvoiceData>) => {
     if (editableData) {
@@ -130,8 +137,6 @@ export function InvoiceReviewWizard({
           };
 
           createIngredient(newIngredient);
-          // Store mapping for later use
-          // Note: In production, we'd need to wait for the creation and get the ID
         }
       }
 
