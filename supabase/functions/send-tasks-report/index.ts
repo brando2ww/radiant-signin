@@ -164,6 +164,7 @@ async function sendReportForUser(
   if (!phone.startsWith("55")) {
     phone = "55" + phone;
   }
+  console.log("Sending report to phone:", phone);
   const instanceName = encodeURIComponent(conn.instance_name);
 
   const evoResponse = await fetch(`${evoUrl}/message/sendText/${instanceName}`, {
@@ -178,13 +179,24 @@ async function sendReportForUser(
     }),
   });
 
+  const responseBody = await evoResponse.text();
+
   if (!evoResponse.ok) {
-    const errBody = await evoResponse.text();
-    console.error("Evolution API error:", errBody);
+    console.error("Evolution API error:", responseBody);
+    // Check for "exists: false" pattern
+    try {
+      const parsed = JSON.parse(responseBody);
+      const msgs = parsed?.response?.message;
+      if (Array.isArray(msgs) && msgs.some((m: any) => m.exists === false)) {
+        throw new Error(
+          `O número ${settings.whatsapp_report_phone} não foi encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.`
+        );
+      }
+    } catch (parseErr: any) {
+      if (parseErr.message.includes("não foi encontrado")) throw parseErr;
+    }
     throw new Error("Falha ao enviar mensagem via WhatsApp");
   }
-
-  await evoResponse.text();
 
   return { success: true, message: "Relatório enviado com sucesso!" };
 }
