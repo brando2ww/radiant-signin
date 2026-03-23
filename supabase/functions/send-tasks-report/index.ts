@@ -155,86 +155,90 @@ async function sendReportForUser(
     { name: "Fechamento", start: "17:00", end: "23:00" },
   ];
 
-  // 5. Build message
-  const message = buildReportMessage(tasks, shifts, date);
+  // 5. Build message chunks
+  const messages = buildReportMessages(tasks, shifts, date);
 
   // 6. Send via Evolution API
   let phone = settings.whatsapp_report_phone.replace(/\D/g, "");
   if (!phone.startsWith("55")) {
     phone = "55" + phone;
   }
-  console.log("Sending report to phone:", phone);
+  console.log("Sending report to phone:", phone, "parts:", messages.length);
   const instanceName = encodeURIComponent(conn.instance_name);
-
   const fetchUrl = `${evoUrl}/message/sendText/${instanceName}`;
   console.log("Evolution API URL:", fetchUrl);
 
-  let responseBody = "";
-  let evoStatus = 0;
+  for (let partIndex = 0; partIndex < messages.length; partIndex++) {
+    const text = messages[partIndex];
+    let responseBody = "";
+    let evoStatus = 0;
 
-  for (let attempt = 0; attempt <= 2; attempt++) {
-    try {
-      const controller = new AbortController();
-      const fetchTimeout = setTimeout(() => controller.abort(), 20000);
+    for (let attempt = 0; attempt <= 2; attempt++) {
+      try {
+        const controller = new AbortController();
+        const fetchTimeout = setTimeout(() => controller.abort(), 12000);
 
-      const evoResponse = await fetch(fetchUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: evoKey,
-        },
-        body: JSON.stringify({
-          number: phone,
-          text: message,
-        }),
-        signal: controller.signal,
-      });
-      clearTimeout(fetchTimeout);
-      evoStatus = evoResponse.status;
-      responseBody = await evoResponse.text();
-      console.log(`Evolution API response (attempt ${attempt + 1}):`, evoStatus, responseBody);
-      break; // success, exit retry loop
-    } catch (fetchErr: any) {
-      console.error(`Evolution API attempt ${attempt + 1} failed:`, fetchErr.name, fetchErr.message);
-      if (attempt === 2) {
-        if (fetchErr.name === "AbortError") {
-          throw new Error("Timeout ao conectar com Evolution API. Verifique se o servidor está acessível.");
+        const evoResponse = await fetch(fetchUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: evoKey,
+          },
+          body: JSON.stringify({
+            number: phone,
+            text,
+          }),
+          signal: controller.signal,
+        });
+
+        clearTimeout(fetchTimeout);
+        evoStatus = evoResponse.status;
+        responseBody = await evoResponse.text();
+        console.log(`Evolution API response (part ${partIndex + 1}/${messages.length}, attempt ${attempt + 1}):`, evoStatus, responseBody);
+        break;
+      } catch (fetchErr: any) {
+        console.error(`Evolution API attempt ${attempt + 1} failed for part ${partIndex + 1}/${messages.length}:`, fetchErr.name, fetchErr.message);
+        if (attempt === 2) {
+          if (fetchErr.name === "AbortError") {
+            throw new Error("Timeout ao conectar com Evolution API. Verifique se o servidor está acessível.");
+          }
+          throw new Error(`Erro ao conectar com Evolution API: ${fetchErr.message}`);
         }
-        throw new Error(`Erro ao conectar com Evolution API: ${fetchErr.message}`);
+        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
       }
-      // Wait before retry
-      await new Promise(r => setTimeout(r, 2000 * (attempt + 1)));
+    }
+
+    try {
+      const parsed = JSON.parse(responseBody);
+      const msgs = parsed?.response?.message || (Array.isArray(parsed) ? parsed : [parsed]);
+      if (Array.isArray(msgs) && msgs.some((m: any) => m.exists === false)) {
+        throw new Error(
+          `O número ${settings.whatsapp_report_phone} não foi encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.`
+        );
+      }
+    } catch (parseErr: any) {
+      if (parseErr.message.includes("não foi encontrado")) throw parseErr;
+    }
+
+    if (evoStatus < 200 || evoStatus >= 300) {
+      throw new Error(`Falha ao enviar mensagem via WhatsApp (status ${evoStatus})`);
+    }
+
+    if (partIndex < messages.length - 1) {
+      await new Promise((r) => setTimeout(r, 350));
     }
   }
 
-  // Check for exists:false even on 200
-  try {
-    const parsed = JSON.parse(responseBody);
-    const msgs = parsed?.response?.message || (Array.isArray(parsed) ? parsed : [parsed]);
-    if (Array.isArray(msgs) && msgs.some((m: any) => m.exists === false)) {
-      throw new Error(
-        `O número ${settings.whatsapp_report_phone} não foi encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.`
-      );
-    }
-  } catch (parseErr: any) {
-    if (parseErr.message.includes("não foi encontrado")) throw parseErr;
-  }
-
-  if (evoStatus < 200 || evoStatus >= 300) {
-    throw new Error(`Falha ao enviar mensagem via WhatsApp (status ${evoStatus})`);
-  }
-
-  return { success: true, message: "Relatório enviado com sucesso!" };
+  return { success: true, message: "Relatório enviado com sucesso!", parts: messages.length };
 }
 
-function buildReportMessage(tasks: any[], shifts: any[], date: string) {
+function buildReportMessages(tasks: any[], shifts: any[], date: string) {
   const shiftEmojis: Record<string, string> = {
     "Abertura": "🌅",
     "Tarde": "☀️",
     "Fechamento": "🌙",
   };
 
-  // Format date
   const [y, m, d] = date.split("-");
   const formattedDate = `${d}/${m}/${y}`;
 
@@ -243,22 +247,21 @@ function buildReportMessage(tasks: any[], shifts: any[], date: string) {
   const pending = total - done;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  // Group by shift
   const grouped: Record<string, any[]> = {};
   for (const t of tasks) {
     if (!grouped[t.shift]) grouped[t.shift] = [];
     grouped[t.shift].push(t);
   }
 
-  let msg = `📋 *Relatório de Tarefas — ${formattedDate}*\n\n`;
-  msg += `✅ Concluídas: ${done}/${total} (${pct}%)\n`;
+  const sections: string[] = [];
+  sections.push(`📋 *Relatório de Tarefas — ${formattedDate}*\n\n✅ Concluídas: ${done}/${total} (${pct}%)`);
 
   for (const shift of shifts) {
     const shiftTasks = grouped[shift.name] || [];
     if (shiftTasks.length === 0) continue;
 
     const emoji = shiftEmojis[shift.name] || "📌";
-    msg += `\n*${emoji} ${shift.name} (${shift.start}-${shift.end})*\n`;
+    let section = `*${emoji} ${shift.name} (${shift.start}-${shift.end})*\n`;
 
     for (const t of shiftTasks) {
       if (t.status === "done") {
@@ -266,20 +269,22 @@ function buildReportMessage(tasks: any[], shifts: any[], date: string) {
           ? new Date(t.completed_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
           : "";
         const by = t.completed_by ? ` — ${t.completed_by}` : "";
-        msg += `✅ ${t.title}${by} ${completedTime}\n`;
+        section += `✅ ${t.title}${by} ${completedTime}\n`;
       } else if (t.status === "skipped") {
-        msg += `⏭️ ${t.title} (pulada)\n`;
+        section += `⏭️ ${t.title} (pulada)\n`;
       } else {
-        msg += `❌ ${t.title}\n`;
+        section += `❌ ${t.title}\n`;
       }
     }
+
+    sections.push(section.trimEnd());
   }
 
-  if (pending > 0) {
-    msg += `\n📊 *Pendentes: ${pending} tarefa${pending > 1 ? "s" : ""} não concluída${pending > 1 ? "s" : ""}*`;
-  } else {
-    msg += `\n🎉 *Todas as tarefas foram concluídas!*`;
-  }
+  sections.push(
+    pending > 0
+      ? `📊 *Pendentes: ${pending} tarefa${pending > 1 ? "s" : ""} não concluída${pending > 1 ? "s" : ""}*`
+      : `🎉 *Todas as tarefas foram concluídas!*`
+  );
 
-  return msg;
+  return sections;
 }
