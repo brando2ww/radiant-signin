@@ -563,7 +563,7 @@ onClick={() => {
           </div>
 
           {/* Right Column - Payment */}
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-1">
             {/* Split Payment Toggle */}
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
               <Label htmlFor="split-payment" className="text-sm cursor-pointer flex items-center gap-2">
