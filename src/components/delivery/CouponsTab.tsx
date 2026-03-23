@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, Copy, Percent, DollarSign } from "lucide-react";
+import { Plus, Edit, Trash2, Copy, Percent, DollarSign, Link2 } from "lucide-react";
 import { useState } from "react";
 import { useDeliveryCoupons, useDeleteCoupon, useUpdateCoupon } from "@/hooks/use-delivery-coupons";
+import { useEstablishmentId } from "@/hooks/use-establishment-id";
 import { CouponDialog } from "./CouponDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -28,10 +29,17 @@ export const CouponsTab = () => {
   const { data: coupons = [] } = useDeliveryCoupons();
   const deleteCoupon = useDeleteCoupon();
   const updateCoupon = useUpdateCoupon();
+  const { visibleUserId } = useEstablishmentId();
 
   const handleCopyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     toast.success("Código copiado!");
+  };
+
+  const handleCopyLink = (code: string) => {
+    const url = `${window.location.origin}/cardapio/${visibleUserId}?cupom=${code}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link com cupom copiado!");
   };
 
   const handleToggleActive = (coupon: DeliveryCoupon) => {
@@ -136,7 +144,17 @@ export const CouponsTab = () => {
                     </p>
                   </div>
 
-                  <div className="flex gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="w-full mb-2"
+                    onClick={() => handleCopyLink(coupon.code)}
+                  >
+                    <Link2 className="h-3.5 w-3.5 mr-1" />
+                    Copiar Link
+                  </Button>
+
+                  <div className="flex gap-2">
                     <Button
                       size="sm"
                       variant="outline"

@@ -5,7 +5,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ShoppingBag, Trash2, Plus, Minus, Tag, X } from "lucide-react";
 import { CartItem } from "@/pages/PublicMenu";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 import { usePublicSettings } from "@/hooks/use-public-menu";
 import { useValidateCoupon } from "@/hooks/use-delivery-coupons";
 import { CheckoutFlow } from "./CheckoutFlow";
@@ -24,6 +25,7 @@ interface ShoppingCartProps {
   onUpdateQuantity: (index: number, quantity: number) => void;
   onClearCart: () => void;
   userId: string;
+  initialCoupon?: string;
 }
 
 export const ShoppingCart = ({
@@ -32,9 +34,11 @@ export const ShoppingCart = ({
   onUpdateQuantity,
   onClearCart,
   userId,
+  initialCoupon,
 }: ShoppingCartProps) => {
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const couponAutoApplied = useRef(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const { data: settings } = usePublicSettings(userId);
   const validateCoupon = useValidateCoupon();
@@ -48,6 +52,25 @@ export const ShoppingCart = ({
   const deliveryFee = Number(settings?.default_delivery_fee || 0);
   const discount = appliedCoupon?.discount || 0;
   const total = subtotal + deliveryFee - discount;
+
+  // Auto-apply coupon from URL when cart has items
+  useEffect(() => {
+    if (initialCoupon && cart.length > 0 && !appliedCoupon && !couponAutoApplied.current) {
+      couponAutoApplied.current = true;
+      validateCoupon.mutate(
+        { code: initialCoupon, orderValue: subtotal },
+        {
+          onSuccess: (data) => {
+            setAppliedCoupon({ code: initialCoupon, discount: data.discount });
+            toast.success(`Cupom ${initialCoupon} aplicado automaticamente!`);
+          },
+          onError: () => {
+            toast.error("Cupom do link não pôde ser aplicado");
+          },
+        }
+      );
+    }
+  }, [initialCoupon, cart.length, appliedCoupon, subtotal]);
 
   const handleApplyCoupon = () => {
     validateCoupon.mutate(

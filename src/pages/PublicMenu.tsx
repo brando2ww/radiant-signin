@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { PublicMenuHeader } from "@/components/public-menu/PublicMenuHeader";
 import { CategoryNav } from "@/components/public-menu/CategoryNav";
 import { ProductList } from "@/components/public-menu/ProductList";
@@ -26,6 +26,8 @@ export interface CartItem {
 
 const PublicMenu = () => {
   const { userId } = useParams<{ userId: string }>();
+  const [searchParams] = useSearchParams();
+  const initialCoupon = searchParams.get("cupom") || undefined;
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const { trackPageView } = useMarketingTracking();
@@ -176,6 +178,7 @@ const PublicMenu = () => {
         onUpdateQuantity={updateQuantity}
         onClearCart={clearCart}
         userId={userId}
+        initialCoupon={initialCoupon}
       />
     </div>
   );
