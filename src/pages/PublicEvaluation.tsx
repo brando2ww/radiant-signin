@@ -11,14 +11,26 @@ import {
   usePublicCampaignQuestions,
   useSubmitCampaignEvaluation,
 } from "@/hooks/use-evaluation-campaigns";
+import { usePublicCampaignPrizes, useRegisterPrizeWin, type CampaignPrize } from "@/hooks/use-campaign-prizes";
+import { SpinWheel } from "@/components/public-evaluation/SpinWheel";
+import { PrizeResult } from "@/components/public-evaluation/PrizeResult";
+
+type Phase = "roulette" | "form" | "coupon" | "done";
 
 export default function PublicEvaluation() {
   const { campaignId } = useParams<{ campaignId: string }>();
   const { data: campaign, isLoading: loadingCampaign } = usePublicCampaign(campaignId || "");
   const { data: questions, isLoading: loadingQuestions } = usePublicCampaignQuestions(campaignId || "");
   const submitEvaluation = useSubmitCampaignEvaluation();
+  const registerWin = useRegisterPrizeWin();
 
-  const [done, setDone] = useState(false);
+  const rouletteEnabled = (campaign as any)?.roulette_enabled ?? false;
+  const { data: prizes = [] } = usePublicCampaignPrizes(campaignId || "", rouletteEnabled);
+
+  const [phase, setPhase] = useState<Phase>("roulette");
+  const [wonPrize, setWonPrize] = useState<CampaignPrize | null>(null);
+  const [couponData, setCouponData] = useState<{ code: string; expiresAt: string } | null>(null);
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -46,6 +58,10 @@ export default function PublicEvaluation() {
     );
   }
 
+  // Determine initial phase
+  const showRoulette = rouletteEnabled && prizes.length > 0;
+  const currentPhase = showRoulette ? phase : (phase === "roulette" ? "form" : phase);
+
   const handleSetScore = (questionId: string, score: number) => {
     setAnswers((prev) => ({
       ...prev,
@@ -68,6 +84,12 @@ export default function PublicEvaluation() {
     allQuestionsAnswered &&
     npsScore !== null;
 
+  const handleSpinResult = (prize: CampaignPrize) => {
+    setWonPrize(prize);
+    // Small delay for dramatic effect, then show form
+    setTimeout(() => setPhase("form"), 1500);
+  };
+
   const handleSubmit = () => {
     if (!questions || !campaignId || npsScore === null) return;
     submitEvaluation.mutate(
@@ -84,7 +106,32 @@ export default function PublicEvaluation() {
           comment: answers[q.id]?.comment?.trim() || undefined,
         })),
       },
-      { onSuccess: () => setDone(true) }
+      {
+        onSuccess: (result) => {
+          if (wonPrize && result?.id) {
+            // Register the prize win
+            registerWin.mutate(
+              {
+                campaignId,
+                prizeId: wonPrize.id,
+                evaluationId: result.id,
+                customerName: name.trim(),
+                customerWhatsapp: phone,
+                couponValidityDays: wonPrize.coupon_validity_days,
+              },
+              {
+                onSuccess: (win) => {
+                  setCouponData({ code: win.coupon_code, expiresAt: win.coupon_expires_at });
+                  setPhase("coupon");
+                },
+                onError: () => setPhase("done"),
+              }
+            );
+          } else {
+            setPhase("done");
+          }
+        },
+      }
     );
   };
 
@@ -92,7 +139,26 @@ export default function PublicEvaluation() {
     <img src={logoUrl} alt="Logo" className="h-20 w-20 object-contain rounded-2xl mx-auto shadow-sm" />
   ) : null;
 
-  if (done) {
+  // === PHASE: COUPON ===
+  if (currentPhase === "coupon" && couponData && wonPrize) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: bgColor }}>
+        <div className="max-w-sm w-full">
+          {Logo}
+          <div className="mt-6">
+            <PrizeResult
+              prizeName={wonPrize.name}
+              couponCode={couponData.code}
+              expiresAt={couponData.expiresAt}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // === PHASE: DONE (no roulette) ===
+  if (currentPhase === "done") {
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: bgColor }}>
         <div className="text-center space-y-5 max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -114,145 +180,181 @@ export default function PublicEvaluation() {
         <div className="text-center space-y-3 pb-2">
           {Logo}
           <h1 className="text-2xl font-bold text-foreground">{campaign.name}</h1>
-          <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">
-            {welcomeMsg || campaign.description || "Conte-nos sobre sua experiência"}
-          </p>
+          {currentPhase === "roulette" ? (
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">
+              🎡 Gire a roleta e descubra seu prêmio!
+            </p>
+          ) : (
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">
+              {wonPrize
+                ? `Você ganhou: ${wonPrize.name}! Preencha a avaliação para liberar seu cupom.`
+                : welcomeMsg || campaign.description || "Conte-nos sobre sua experiência"}
+            </p>
+          )}
         </div>
 
-        {/* Section: Dados do Cliente */}
-        <section className="bg-card rounded-2xl p-6 shadow-sm border space-y-4">
-          <div className="flex items-center gap-2 text-foreground mb-1">
-            <User className="h-5 w-5 text-primary" />
-            <h2 className="text-base font-semibold">Seus Dados</h2>
+        {/* === PHASE: ROULETTE === */}
+        {currentPhase === "roulette" && (
+          <div className="flex justify-center py-8">
+            <SpinWheel prizes={prizes} onResult={handleSpinResult} />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="eval-name">Nome *</Label>
-            <Input
-              id="eval-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Seu nome completo"
-              maxLength={100}
-              className="h-12 rounded-xl"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="eval-phone">Telefone *</Label>
-            <PhoneInput value={phone} onChange={setPhone} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="eval-birth">Data de Nascimento *</Label>
-            <Input
-              id="eval-birth"
-              type="date"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              className="h-12 rounded-xl"
-            />
-          </div>
-        </section>
-
-        {/* Section: Perguntas */}
-        {questions && questions.length > 0 && (
-          <section className="bg-card rounded-2xl p-6 shadow-sm border space-y-6">
-            <div className="flex items-center gap-2 text-foreground mb-1">
-              <ClipboardList className="h-5 w-5 text-primary" />
-              <h2 className="text-base font-semibold">Avaliação</h2>
-            </div>
-
-            {questions.map((q, idx) => {
-              const score = answers[q.id]?.score || 0;
-              return (
-                <div key={q.id} className="space-y-3">
-                  <p className="text-sm font-medium text-foreground leading-snug">
-                    {idx + 1}. {q.question_text}
-                  </p>
-                  <div className="flex items-center gap-1.5">
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => handleSetScore(q.id, s)}
-                        className="p-1 transition-transform active:scale-90"
-                      >
-                        <Star
-                          className={`h-9 w-9 transition-colors ${
-                            s <= score
-                              ? "text-yellow-500 fill-yellow-500"
-                              : "text-muted-foreground/20"
-                          }`}
-                        />
-                      </button>
-                    ))}
-                  </div>
-                  {score > 0 && score <= 2 && (
-                    <div className="space-y-1.5 animate-in fade-in duration-200">
-                      <Label className="text-xs text-muted-foreground">
-                        O que aconteceu? (opcional)
-                      </Label>
-                      <Textarea
-                        value={answers[q.id]?.comment || ""}
-                        onChange={(e) => handleSetComment(q.id, e.target.value)}
-                        placeholder="Conte-nos o que podemos melhorar..."
-                        maxLength={500}
-                        className="min-h-[70px] rounded-xl text-sm"
-                      />
-                    </div>
-                  )}
-                  {idx < questions.length - 1 && (
-                    <div className="border-b border-border/50 pt-1" />
-                  )}
-                </div>
-              );
-            })}
-          </section>
         )}
 
-        {/* Section: NPS */}
-        <section className="bg-card rounded-2xl p-6 shadow-sm border space-y-4">
-          <div className="flex items-center gap-2 text-foreground mb-1">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <h2 className="text-base font-semibold">Recomendação</h2>
-          </div>
-          <p className="text-sm text-muted-foreground leading-snug">
-            De 0 a 10, o quanto você indicaria nosso estabelecimento para um amigo?
-          </p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {Array.from({ length: 11 }, (_, i) => i).map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setNpsScore(n)}
-                className={`w-11 h-11 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 ${
-                  npsScore === n
-                    ? n <= 6
-                      ? "bg-red-500 text-white border-red-500 shadow-md"
-                      : n <= 8
-                      ? "bg-yellow-500 text-white border-yellow-500 shadow-md"
-                      : "bg-green-600 text-white border-green-600 shadow-md"
-                    : "border-border bg-card hover:bg-muted"
-                }`}
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-          <div className="flex justify-between text-xs text-muted-foreground px-1">
-            <span>Nada provável</span>
-            <span>Muito provável</span>
-          </div>
-        </section>
+        {/* === PHASE: FORM === */}
+        {currentPhase === "form" && (
+          <>
+            {/* Prize reminder banner */}
+            {wonPrize && (
+              <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 text-center">
+                <p className="text-sm font-semibold text-primary">
+                  🎊 Prêmio: {wonPrize.name}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Preencha a avaliação abaixo para liberar seu cupom
+                </p>
+              </div>
+            )}
 
-        {/* Submit */}
-        <Button
-          className="w-full h-14 rounded-2xl text-base font-semibold shadow-md"
-          disabled={!canSubmit || submitEvaluation.isPending}
-          onClick={handleSubmit}
-        >
-          {submitEvaluation.isPending ? "Enviando..." : "Enviar Avaliação"}
-        </Button>
+            {/* Section: Dados do Cliente */}
+            <section className="bg-card rounded-2xl p-6 shadow-sm border space-y-4">
+              <div className="flex items-center gap-2 text-foreground mb-1">
+                <User className="h-5 w-5 text-primary" />
+                <h2 className="text-base font-semibold">Seus Dados</h2>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="eval-name">Nome *</Label>
+                <Input
+                  id="eval-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Seu nome completo"
+                  maxLength={100}
+                  className="h-12 rounded-xl"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="eval-phone">Telefone *</Label>
+                <PhoneInput value={phone} onChange={setPhone} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="eval-birth">Data de Nascimento *</Label>
+                <Input
+                  id="eval-birth"
+                  type="date"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  className="h-12 rounded-xl"
+                />
+              </div>
+            </section>
 
-        <div className="h-4" />
+            {/* Section: Perguntas */}
+            {questions && questions.length > 0 && (
+              <section className="bg-card rounded-2xl p-6 shadow-sm border space-y-6">
+                <div className="flex items-center gap-2 text-foreground mb-1">
+                  <ClipboardList className="h-5 w-5 text-primary" />
+                  <h2 className="text-base font-semibold">Avaliação</h2>
+                </div>
+
+                {questions.map((q, idx) => {
+                  const score = answers[q.id]?.score || 0;
+                  return (
+                    <div key={q.id} className="space-y-3">
+                      <p className="text-sm font-medium text-foreground leading-snug">
+                        {idx + 1}. {q.question_text}
+                      </p>
+                      <div className="flex items-center gap-1.5">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => handleSetScore(q.id, s)}
+                            className="p-1 transition-transform active:scale-90"
+                          >
+                            <Star
+                              className={`h-9 w-9 transition-colors ${
+                                s <= score
+                                  ? "text-yellow-500 fill-yellow-500"
+                                  : "text-muted-foreground/20"
+                              }`}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                      {score > 0 && score <= 2 && (
+                        <div className="space-y-1.5 animate-in fade-in duration-200">
+                          <Label className="text-xs text-muted-foreground">
+                            O que aconteceu? (opcional)
+                          </Label>
+                          <Textarea
+                            value={answers[q.id]?.comment || ""}
+                            onChange={(e) => handleSetComment(q.id, e.target.value)}
+                            placeholder="Conte-nos o que podemos melhorar..."
+                            maxLength={500}
+                            className="min-h-[70px] rounded-xl text-sm"
+                          />
+                        </div>
+                      )}
+                      {idx < questions.length - 1 && (
+                        <div className="border-b border-border/50 pt-1" />
+                      )}
+                    </div>
+                  );
+                })}
+              </section>
+            )}
+
+            {/* Section: NPS */}
+            <section className="bg-card rounded-2xl p-6 shadow-sm border space-y-4">
+              <div className="flex items-center gap-2 text-foreground mb-1">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <h2 className="text-base font-semibold">Recomendação</h2>
+              </div>
+              <p className="text-sm text-muted-foreground leading-snug">
+                De 0 a 10, o quanto você indicaria nosso estabelecimento para um amigo?
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {Array.from({ length: 11 }, (_, i) => i).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setNpsScore(n)}
+                    className={`w-11 h-11 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 ${
+                      npsScore === n
+                        ? n <= 6
+                          ? "bg-red-500 text-white border-red-500 shadow-md"
+                          : n <= 8
+                          ? "bg-yellow-500 text-white border-yellow-500 shadow-md"
+                          : "bg-green-600 text-white border-green-600 shadow-md"
+                        : "border-border bg-card hover:bg-muted"
+                    }`}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground px-1">
+                <span>Nada provável</span>
+                <span>Muito provável</span>
+              </div>
+            </section>
+
+            {/* Submit */}
+            <Button
+              className="w-full h-14 rounded-2xl text-base font-semibold shadow-md"
+              disabled={!canSubmit || submitEvaluation.isPending || registerWin.isPending}
+              onClick={handleSubmit}
+            >
+              {submitEvaluation.isPending || registerWin.isPending
+                ? "Enviando..."
+                : wonPrize
+                ? "Enviar e Liberar Cupom 🎁"
+                : "Enviar Avaliação"}
+            </Button>
+
+            <div className="h-4" />
+          </>
+        )}
       </div>
     </div>
   );
