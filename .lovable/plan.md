@@ -1,39 +1,65 @@
 
 
-## Fix: Botão "Enviar Relatório" sem feedback visível
+## Fix: "Enviar Relatório" trava sem feedback — Evolution API timeout
 
-### Problemas identificados
-
-1. **Edge function não loga resposta de sucesso** — quando a Evolution API retorna 200, o corpo da resposta é lido mas nunca logado nem inspecionado. A Evolution pode retornar 200 com `exists: false` no body, e o código ignora isso.
-2. **Frontend pode não mostrar toast** — o `handleSendReport` usa `toast()` do shadcn, que funciona mas o usuário relata não ver nada. Precisa de feedback mais óbvio.
+### Diagnóstico
+Os logs da edge function mostram `Sending report to phone: 5554996535731` mas **nunca** mostram `Evolution API response:`. O `fetch()` para a Evolution API está travando (provavelmente o mesmo problema de DNS que afetou o `whatsapp-qrcode` antes). A function faz timeout de ~60s sem retornar nada, e o frontend fica esperando eternamente sem mostrar toast.
 
 ### Mudanças
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase/functions/send-tasks-report/index.ts` | Logar resposta da Evolution API mesmo em caso de sucesso; verificar `exists: false` também em respostas 200; re-deploy |
-| `src/pages/pdv/Tasks.tsx` | Adicionar `console.log` para debug e garantir que o toast de erro/sucesso mostra a mensagem retornada pela function |
+| `supabase/functions/send-tasks-report/index.ts` | Adicionar timeout no fetch + try/catch ao redor da chamada Evolution + log de erro |
+| `src/pages/pdv/Tasks.tsx` | Adicionar timeout no lado do cliente para não esperar eternamente |
 
 ### Detalhes técnicos
 
-**Edge function** — após `evoResponse.ok`:
-```typescript
-const responseBody = await evoResponse.text();
-console.log("Evolution API response:", evoResponse.status, responseBody);
+**1. Edge function — timeout no fetch (send-tasks-report/index.ts)**
 
-// Check for exists:false even on 200
+Envolver o `fetch` para Evolution API com `AbortController` de 15 segundos:
+
+```typescript
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 15000);
+
 try {
-  const parsed = JSON.parse(responseBody);
-  const msgs = parsed?.response?.message || (Array.isArray(parsed) ? parsed : [parsed]);
-  if (msgs.some((m: any) => m.exists === false)) {
-    throw new Error(`Número ${phone} não encontrado no WhatsApp`);
+  const evoResponse = await fetch(`${evoUrl}/message/sendText/${instanceName}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: evoKey },
+    body: JSON.stringify({ number: phone, text: message }),
+    signal: controller.signal,
+  });
+  clearTimeout(timeout);
+  // ... rest of response handling
+} catch (fetchErr: any) {
+  clearTimeout(timeout);
+  console.error("Evolution API fetch error:", fetchErr.message);
+  if (fetchErr.name === "AbortError") {
+    throw new Error("Timeout ao conectar com Evolution API. Verifique se o servidor está acessível.");
   }
-} catch (parseErr: any) {
-  if (parseErr.message.includes("não encontrado")) throw parseErr;
+  throw new Error(`Erro ao conectar com Evolution API: ${fetchErr.message}`);
 }
 ```
 
-**Frontend** — melhorar feedback:
-- Adicionar `console.log("Report response:", data, error)` no `handleSendReport` para debug
-- Manter toast atual que já deveria funcionar — o log vai ajudar a identificar se o problema é no retorno da function
+Também logar a URL completa antes do fetch para confirmar que está correta.
+
+**2. Frontend — timeout de segurança (Tasks.tsx)**
+
+Adicionar um timeout de 20s no `handleSendReport` para garantir que o botão volte ao estado normal e o toast de erro apareça mesmo se a function travar:
+
+```typescript
+const timeoutPromise = new Promise((_, reject) => 
+  setTimeout(() => reject(new Error("Tempo esgotado. Tente novamente.")), 20000)
+);
+const result = await Promise.race([
+  supabase.functions.invoke("send-tasks-report", { body: { user_id: user.id } }),
+  timeoutPromise,
+]);
+```
+
+### Resultado esperado
+- Se Evolution API estiver OK: relatório enviado + toast de sucesso
+- Se Evolution API travar: após 15s, toast de erro claro
+- Se edge function travar: após 20s, toast de erro no frontend
+- O botão sempre volta ao estado normal (não fica travado)
 
