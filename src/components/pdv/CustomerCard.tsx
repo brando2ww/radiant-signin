@@ -17,7 +17,7 @@ export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) 
   const SourceIcon = customer.source === "pdv" ? Store : Truck;
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate(`/pdv/clientes/${customer.id}?source=${customer.source}`)}>
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between">
           <div className="space-y-1 min-w-0">
