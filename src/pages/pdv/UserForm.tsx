@@ -25,6 +25,9 @@ export default function UserForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [discountPassword, setDiscountPassword] = useState("");
+  const [showDiscountPassword, setShowDiscountPassword] = useState(false);
+  const [maxDiscountPercent, setMaxDiscountPercent] = useState(100);
 
   useEffect(() => {
     if (isEditing && users.length > 0) {
@@ -34,6 +37,8 @@ export default function UserForm() {
         setEmail(user.email || "");
         setPhone(user.phone || "");
         setRole(user.role || "garcom");
+        setDiscountPassword(user.discount_password || "");
+        setMaxDiscountPercent(user.max_discount_percent ?? 100);
       }
     }
   }, [isEditing, id, users]);
@@ -58,7 +63,7 @@ export default function UserForm() {
       }
     }
 
-    const data = { display_name: displayName, email, phone, role, ...(isEditing ? {} : { password }) };
+    const data = { display_name: displayName, email, phone, role, discount_password: discountPassword, max_discount_percent: maxDiscountPercent, ...(isEditing ? {} : { password }) };
 
     if (isEditing) {
       updateUser.mutate({ id, ...data }, {
@@ -108,6 +113,47 @@ export default function UserForm() {
           <div className="space-y-2">
             <Label htmlFor="phone">Telefone</Label>
             <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(00) 00000-0000" />
+          </div>
+
+          {/* Discount authorization */}
+          <div className="pt-2 border-t space-y-1">
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Autorização de Desconto</h3>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="discountPassword">Senha de desconto</Label>
+            <div className="relative">
+              <Input
+                id="discountPassword"
+                type={showDiscountPassword ? "text" : "password"}
+                inputMode="numeric"
+                maxLength={6}
+                value={discountPassword}
+                onChange={(e) => setDiscountPassword(e.target.value.replace(/\D/g, ""))}
+                placeholder="0000"
+                className="pr-10"
+              />
+              <button type="button" onClick={() => setShowDiscountPassword(!showDiscountPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                {showDiscountPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">Senha numérica (4-6 dígitos) para autorizar descontos no caixa.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="maxDiscount">Desconto máximo permitido (%)</Label>
+            <div className="relative">
+              <Input
+                id="maxDiscount"
+                type="number"
+                min={0}
+                max={100}
+                value={maxDiscountPercent}
+                onChange={(e) => setMaxDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value))))}
+                className="pr-8"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+            </div>
           </div>
 
           {!isEditing && (
