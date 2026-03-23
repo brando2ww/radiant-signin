@@ -1,63 +1,67 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PieChart, TrendingDown, TrendingUp, RefreshCw } from "lucide-react";
+import { PieChart as PieChartIcon, TrendingDown, TrendingUp, RefreshCw, CalendarIcon } from "lucide-react";
+import { usePDVCmv } from "@/hooks/use-pdv-cmv";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from "recharts";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const COLORS = ["hsl(var(--primary))", "hsl(var(--success))", "hsl(var(--warning))", "hsl(var(--destructive))", "#8b5cf6", "#06b6d4"];
 
 export default function GeneralCMV() {
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const { data, isLoading } = usePDVCmv(selectedMonth);
+
+  const pieData = data
+    ? Object.entries(data.ingredientCategoryTotals).map(([name, value]) => ({ name, value }))
+    : [];
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">CMV Geral</h1>
-          <p className="text-muted-foreground mt-1">
-            Visão consolidada do Custo das Mercadorias Vendidas
-          </p>
+          <p className="text-muted-foreground mt-1">Visão consolidada do Custo das Mercadorias Vendidas</p>
         </div>
-        <Button variant="outline">
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Gerar Relatório
-        </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {format(selectedMonth, "MMMM yyyy", { locale: ptBR })}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0">
+            <Calendar mode="single" selected={selectedMonth} onSelect={(d) => d && setSelectedMonth(d)} locale={ptBR} />
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">CMV Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-warning">R$ 0,00</div>
-            <p className="text-xs text-muted-foreground mt-1">no mês atual</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-success">R$ 0,00</div>
-            <p className="text-xs text-muted-foreground mt-1">no mês atual</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">CMV %</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">0%</div>
-            <p className="text-xs text-muted-foreground mt-1">sobre a receita</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Margem Bruta</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">0%</div>
-            <p className="text-xs text-muted-foreground mt-1">lucro bruto</p>
-          </CardContent>
-        </Card>
+        {[
+          { label: "CMV Total", value: fmt(data?.totalCmv || 0), color: "text-warning", sub: "no mês atual" },
+          { label: "Receita Total", value: fmt(data?.totalRevenue || 0), color: "text-success", sub: "no mês atual" },
+          { label: "CMV %", value: `${(data?.cmvPercent || 0).toFixed(1)}%`, color: "", sub: "sobre a receita" },
+          { label: "Margem Bruta", value: `${(data?.grossMargin || 0).toFixed(1)}%`, color: "text-primary", sub: "lucro bruto" },
+        ].map((c) => (
+          <Card key={c.label}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium">{c.label}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? <Skeleton className="h-8 w-24" /> : (
+                <>
+                  <div className={`text-2xl font-bold ${c.color}`}>{c.value}</div>
+                  <p className="text-xs text-muted-foreground mt-1">{c.sub}</p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -67,9 +71,19 @@ export default function GeneralCMV() {
             <CardDescription>Últimos 6 meses</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-              <p>Gráfico de evolução do CMV em desenvolvimento</p>
-            </div>
+            {isLoading ? <Skeleton className="h-[300px] w-full" /> : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data?.evolution || []}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="month" className="text-xs" />
+                  <YAxis tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} className="text-xs" />
+                  <Tooltip formatter={(value: number) => fmt(value)} />
+                  <Legend />
+                  <Bar dataKey="revenue" fill="hsl(var(--success))" name="Receita" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="cmv" fill="hsl(var(--warning))" name="CMV" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
 
@@ -79,9 +93,23 @@ export default function GeneralCMV() {
             <CardDescription>Por categoria de ingredientes</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-              <PieChart className="h-12 w-12 mb-2 opacity-50" />
-            </div>
+            {isLoading ? <Skeleton className="h-[300px] w-full" /> : pieData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    {pieData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => fmt(value)} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                <div className="text-center">
+                  <PieChartIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Cadastre receitas para ver a composição</p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -93,38 +121,22 @@ export default function GeneralCMV() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="flex items-center gap-3 p-4 border rounded-lg">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-warning/10">
-                <TrendingDown className="h-5 w-5 text-warning" />
+            {[
+              { label: "CMV", value: `${(data?.cmvPercent || 0).toFixed(1)}%`, prev: `${(data?.prevCmvPct || 0).toFixed(1)}%`, icon: TrendingDown, bg: "bg-warning/10", iconColor: "text-warning" },
+              { label: "Receita", value: fmt(data?.totalRevenue || 0), prev: fmt(data?.prevRevenue || 0), icon: TrendingUp, bg: "bg-success/10", iconColor: "text-success" },
+              { label: "Margem", value: `${(data?.grossMargin || 0).toFixed(1)}%`, prev: `${(data?.prevMargin || 0).toFixed(1)}%`, icon: PieChartIcon, bg: "bg-primary/10", iconColor: "text-primary" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-3 p-4 border rounded-lg">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-full ${item.bg}`}>
+                  <item.icon className={`h-5 w-5 ${item.iconColor}`} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">{item.label}</p>
+                  <p className="text-lg font-bold">{isLoading ? "..." : item.value}</p>
+                  <p className="text-xs text-muted-foreground">anterior: {isLoading ? "..." : item.prev}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">CMV</p>
-                <p className="text-lg font-bold">0%</p>
-                <p className="text-xs text-muted-foreground">vs mês anterior</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 border rounded-lg">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/10">
-                <TrendingUp className="h-5 w-5 text-success" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Receita</p>
-                <p className="text-lg font-bold">0%</p>
-                <p className="text-xs text-muted-foreground">vs mês anterior</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 border rounded-lg">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <PieChart className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Margem</p>
-                <p className="text-lg font-bold">0%</p>
-                <p className="text-xs text-muted-foreground">vs mês anterior</p>
-              </div>
-            </div>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -136,11 +148,19 @@ export default function GeneralCMV() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3 text-sm text-muted-foreground">
-            <p>• Configure receitas para todos os produtos para análise precisa do CMV</p>
-            <p>• Mantenha o cadastro de ingredientes atualizado com preços corretos</p>
-            <p>• Monitore produtos com margem abaixo de 30%</p>
-            <p>• Considere ajuste de preços ou receitas para produtos com baixa margem</p>
-            <p>• CMV ideal para restaurantes: 25% a 35% da receita</p>
+            {data && data.analyzedCount === 0 ? (
+              <>
+                <p>• Configure receitas para todos os produtos para análise precisa do CMV</p>
+                <p>• Mantenha o cadastro de ingredientes atualizado com preços corretos</p>
+              </>
+            ) : (
+              <>
+                {data && data.cmvPercent > 35 && <p>• ⚠️ Seu CMV está acima de 35%. Considere renegociar com fornecedores ou ajustar receitas.</p>}
+                {data && data.cmvPercent <= 35 && data.cmvPercent > 0 && <p>• ✅ Seu CMV está dentro da faixa ideal (25%-35%).</p>}
+                <p>• Monitore produtos com margem abaixo de 30%</p>
+                <p>• CMV ideal para restaurantes: 25% a 35% da receita</p>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>

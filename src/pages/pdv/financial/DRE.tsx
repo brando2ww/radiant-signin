@@ -1,142 +1,132 @@
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileBarChart, Download } from "lucide-react";
+import { Download, CalendarIcon } from "lucide-react";
+import { usePDVDre } from "@/hooks/use-pdv-dre";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const fmt = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const pctFmt = (v: number) => `${v.toFixed(1)}%`;
 
 export default function DRE() {
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const { data, isLoading } = usePDVDre(selectedMonth);
+
+  const handleExport = () => {
+    if (!data) return;
+    const lines = [
+      "DRE - Demonstração do Resultado",
+      `Período: ${format(selectedMonth, "MMMM yyyy", { locale: ptBR })}`,
+      "",
+      `RECEITA BRUTA;${fmt(data.grossRevenue)}`,
+      `  Vendas no PDV;${fmt(data.pdvSales)}`,
+      `  Vendas Delivery;${fmt(data.deliverySales)}`,
+      `(-) DEDUÇÕES;${fmt(data.deductions)}`,
+      `  Descontos;${fmt(data.totalDiscounts)}`,
+      `  Cancelamentos;${fmt(data.totalCancellations)}`,
+      `= RECEITA LÍQUIDA;${fmt(data.netRevenue)}`,
+      `(-) CMV;${fmt(data.cmv)}`,
+      `= LUCRO BRUTO;${fmt(data.grossProfit)}`,
+      `(-) DESPESAS OPERACIONAIS;${fmt(data.totalExpenses)}`,
+      ...Object.entries(data.expensesByCategory).map(([k, v]) => `  ${k};${fmt(v as number)}`),
+      `= LUCRO OPERACIONAL;${fmt(data.operatingProfit)}`,
+      `= LUCRO LÍQUIDO;${fmt(data.netProfit)}`,
+    ];
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `DRE_${format(selectedMonth, "yyyy-MM")}.csv`;
+    a.click();
+  };
+
+  const DRELine = ({ label, value, indent, bold, bg, color }: {
+    label: string; value: number; indent?: boolean; bold?: boolean; bg?: string; color?: string;
+  }) => (
+    <div className={`flex justify-between items-center ${indent ? "pl-4 text-sm" : ""} ${bold ? "font-bold text-lg" : ""} ${bg || ""} ${bg ? "p-3 rounded" : "py-1"}`}>
+      <span className={indent ? "text-muted-foreground" : ""}>{label}</span>
+      <span className={color || ""}>{fmt(value)}</span>
+    </div>
+  );
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">DRE - Demonstração do Resultado</h1>
-          <p className="text-muted-foreground mt-1">
-            Análise detalhada do resultado do exercício
-          </p>
+          <p className="text-muted-foreground mt-1">Análise detalhada do resultado do exercício</p>
         </div>
-        <Button variant="outline">
-          <Download className="mr-2 h-4 w-4" />
-          Exportar DRE
-        </Button>
+        <div className="flex gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {format(selectedMonth, "MMMM yyyy", { locale: ptBR })}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar mode="single" selected={selectedMonth} onSelect={(d) => d && setSelectedMonth(d)} locale={ptBR} />
+            </PopoverContent>
+          </Popover>
+          <Button variant="outline" onClick={handleExport} disabled={!data}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar DRE
+          </Button>
+        </div>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Demonstrativo de Resultado</CardTitle>
-          <CardDescription>Período: Mês atual</CardDescription>
+          <CardDescription>Período: {format(selectedMonth, "MMMM yyyy", { locale: ptBR })}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {/* Receita Bruta */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center font-bold text-lg border-b pb-2">
-                <span>RECEITA BRUTA</span>
-                <span className="text-success">R$ 0,00</span>
-              </div>
-              <div className="pl-4 space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Vendas no PDV</span>
-                  <span>R$ 0,00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Vendas Delivery</span>
-                  <span>R$ 0,00</span>
-                </div>
-              </div>
+          {isLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
             </div>
+          ) : data ? (
+            <div className="space-y-3">
+              <div className="border-b pb-2">
+                <DRELine label="RECEITA BRUTA" value={data.grossRevenue} bold color="text-success" />
+              </div>
+              <DRELine label="Vendas no PDV" value={data.pdvSales} indent />
+              <DRELine label="Vendas Delivery" value={data.deliverySales} indent />
 
-            {/* Deduções */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center font-semibold border-b pb-2">
-                <span>(-) DEDUÇÕES</span>
-                <span className="text-destructive">R$ 0,00</span>
+              <div className="border-b pb-2 pt-2">
+                <DRELine label="(-) DEDUÇÕES" value={data.deductions} bold={false} color="text-destructive" />
               </div>
-              <div className="pl-4 space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Descontos concedidos</span>
-                  <span>R$ 0,00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Cancelamentos</span>
-                  <span>R$ 0,00</span>
-                </div>
+              <DRELine label="Descontos concedidos" value={data.totalDiscounts} indent />
+              <DRELine label="Cancelamentos" value={data.totalCancellations} indent />
+
+              <DRELine label="= RECEITA LÍQUIDA" value={data.netRevenue} bold bg="bg-muted/50" />
+
+              <div className="border-b pb-2 pt-2">
+                <DRELine label="(-) CMV (Custo das Mercadorias Vendidas)" value={data.cmv} color="text-destructive" />
               </div>
-            </div>
 
-            {/* Receita Líquida */}
-            <div className="flex justify-between items-center font-bold text-lg bg-muted/50 p-3 rounded">
-              <span>= RECEITA LÍQUIDA</span>
-              <span>R$ 0,00</span>
-            </div>
+              <DRELine label="= LUCRO BRUTO" value={data.grossProfit} bold bg="bg-success/10" color="text-success" />
 
-            {/* CMV */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center font-semibold border-b pb-2">
-                <span>(-) CMV (Custo das Mercadorias Vendidas)</span>
-                <span className="text-destructive">R$ 0,00</span>
+              <div className="border-b pb-2 pt-2">
+                <DRELine label="(-) DESPESAS OPERACIONAIS" value={data.totalExpenses} color="text-destructive" />
               </div>
-            </div>
+              {Object.entries(data.expensesByCategory).map(([cat, val]) => (
+                <DRELine key={cat} label={cat} value={val as number} indent />
+              ))}
+              {Object.keys(data.expensesByCategory).length === 0 && (
+                <p className="text-sm text-muted-foreground pl-4">Nenhuma despesa registrada no período</p>
+              )}
 
-            {/* Lucro Bruto */}
-            <div className="flex justify-between items-center font-bold text-lg bg-success/10 p-3 rounded">
-              <span>= LUCRO BRUTO</span>
-              <span className="text-success">R$ 0,00</span>
+              <DRELine label="= LUCRO OPERACIONAL" value={data.operatingProfit} bold bg="bg-muted/50" />
+              <DRELine label="= LUCRO LÍQUIDO" value={data.netProfit} bold bg="bg-primary/10" color="text-primary" />
             </div>
-
-            {/* Despesas Operacionais */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center font-semibold border-b pb-2">
-                <span>(-) DESPESAS OPERACIONAIS</span>
-                <span className="text-destructive">R$ 0,00</span>
-              </div>
-              <div className="pl-4 space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Salários e encargos</span>
-                  <span>R$ 0,00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Aluguel</span>
-                  <span>R$ 0,00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Utilities (água, luz, gás)</span>
-                  <span>R$ 0,00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Marketing</span>
-                  <span>R$ 0,00</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Outras despesas</span>
-                  <span>R$ 0,00</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Lucro Operacional */}
-            <div className="flex justify-between items-center font-bold text-lg bg-muted/50 p-3 rounded">
-              <span>= LUCRO OPERACIONAL</span>
-              <span>R$ 0,00</span>
-            </div>
-
-            {/* Despesas Financeiras */}
-            <div className="space-y-2">
-              <div className="flex justify-between items-center font-semibold border-b pb-2">
-                <span>(-) DESPESAS FINANCEIRAS</span>
-                <span className="text-destructive">R$ 0,00</span>
-              </div>
-              <div className="pl-4 space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Juros e taxas</span>
-                  <span>R$ 0,00</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Lucro Líquido */}
-            <div className="flex justify-between items-center font-bold text-xl bg-primary/10 p-4 rounded-lg border-2 border-primary/20">
-              <span>= LUCRO LÍQUIDO</span>
-              <span className="text-primary">R$ 0,00</span>
-            </div>
-          </div>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -146,20 +136,24 @@ export default function DRE() {
           <CardDescription>Indicadores de rentabilidade</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Margem Bruta</p>
-              <p className="text-2xl font-bold">0%</p>
+          {isLoading ? (
+            <Skeleton className="h-20 w-full" />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Margem Bruta</p>
+                <p className="text-2xl font-bold">{pctFmt(data?.marginGross || 0)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Margem Operacional</p>
+                <p className="text-2xl font-bold">{pctFmt(data?.marginOperating || 0)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Margem Líquida</p>
+                <p className="text-2xl font-bold">{pctFmt(data?.marginNet || 0)}</p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Margem Operacional</p>
-              <p className="text-2xl font-bold">0%</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Margem Líquida</p>
-              <p className="text-2xl font-bold">0%</p>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>
