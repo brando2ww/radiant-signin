@@ -180,21 +180,22 @@ async function sendReportForUser(
   });
 
   const responseBody = await evoResponse.text();
+  console.log("Evolution API response:", evoResponse.status, responseBody);
+
+  // Check for exists:false even on 200
+  try {
+    const parsed = JSON.parse(responseBody);
+    const msgs = parsed?.response?.message || (Array.isArray(parsed) ? parsed : [parsed]);
+    if (Array.isArray(msgs) && msgs.some((m: any) => m.exists === false)) {
+      throw new Error(
+        `O número ${settings.whatsapp_report_phone} não foi encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.`
+      );
+    }
+  } catch (parseErr: any) {
+    if (parseErr.message.includes("não foi encontrado")) throw parseErr;
+  }
 
   if (!evoResponse.ok) {
-    console.error("Evolution API error:", responseBody);
-    // Check for "exists: false" pattern
-    try {
-      const parsed = JSON.parse(responseBody);
-      const msgs = parsed?.response?.message;
-      if (Array.isArray(msgs) && msgs.some((m: any) => m.exists === false)) {
-        throw new Error(
-          `O número ${settings.whatsapp_report_phone} não foi encontrado no WhatsApp. Verifique se o número está correto e possui WhatsApp ativo.`
-        );
-      }
-    } catch (parseErr: any) {
-      if (parseErr.message.includes("não foi encontrado")) throw parseErr;
-    }
     throw new Error("Falha ao enviar mensagem via WhatsApp");
   }
 
