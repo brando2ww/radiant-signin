@@ -1,51 +1,46 @@
 
 
-## Fix: Tenants desapareceram — recursão infinita no RLS
+## Fix: Página de Franquia para tenant MATRIZ
 
-### Causa raiz
-A policy "Users can read parent tenant" faz `SELECT ... FROM tenants t` dentro de uma policy na própria tabela `tenants`. Isso causa recursão infinita no PostgreSQL, que bloqueia a query inteira — inclusive para super admins.
+### Problema
+João Farias é o **owner do tenant matriz** (Restaurante DEMO, `parent_tenant_id = null`). A página de franquia só funciona para tenants **filhos** (que têm `parent_tenant_id` preenchido). Como Restaurante DEMO é a matriz, `hasParentTenant = false` e mostra "Sem conexão".
 
 ### Solução
-1. Criar uma **security definer function** que busca o `parent_tenant_id` sem passar pelo RLS
-2. Dropar a policy problemática
-3. Recriar a policy usando a function segura
+Expandir o hook `use-franchise-import.ts` e a página `FranchiseImport.tsx` para funcionar nos dois cenários:
 
-### Mudança
+1. **Tenant é FILHO** (tem `parent_tenant_id`) → comportamento atual: importar da matriz
+2. **Tenant é MATRIZ** (tem filhos com `parent_tenant_id` apontando para ele) → novo: mostrar filhos vinculados e permitir enviar/compartilhar produtos e mesas para as franquias
 
-| Arquivo | Ação |
+### Mudanças
+
+| Arquivo | Acao |
 |---------|------|
-| `supabase migration` | Criar function `get_user_parent_tenant_ids()`, dropar policy recursiva, recriar sem recursão |
+| `src/hooks/use-franchise-import.ts` | Adicionar detecção de filhos (`childTenants`), flag `isParentTenant`, queries para buscar filhos do tenant, e mutations de compartilhamento (reutilizando edge function existente) |
+| `src/pages/pdv/FranchiseImport.tsx` | Renderizar view diferente para matriz: lista de franquias vinculadas, seleção de produtos/mesas próprios para compartilhar com filhos selecionados, botão de sincronizar |
 
-### SQL
+### Fluxo para MATRIZ
 
-```sql
--- Function que busca parent_tenant_ids sem RLS
-CREATE OR REPLACE FUNCTION public.get_user_parent_tenant_ids()
-RETURNS SETOF uuid
-LANGUAGE sql
-STABLE SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT t.parent_tenant_id
-  FROM public.tenants t
-  WHERE t.parent_tenant_id IS NOT NULL
-    AND (
-      t.owner_user_id = auth.uid()
-      OR t.id IN (
-        SELECT eu.tenant_id FROM public.establishment_users eu
-        WHERE eu.user_id = auth.uid() AND eu.is_active = true
-      )
-    )
-$$;
-
--- Dropar policy recursiva
-DROP POLICY IF EXISTS "Users can read parent tenant" ON public.tenants;
-
--- Recriar sem recursão
-CREATE POLICY "Users can read parent tenant"
-  ON public.tenants FOR SELECT TO authenticated
-  USING (id IN (SELECT public.get_user_parent_tenant_ids()));
+```text
+┌─────────────────────────────────────────────┐
+│ Franquia — Gerenciar Franquias              │
+│ Você é a matriz. 1 franquia(s) vinculada(s) │
+├─────────────────────────────────────────────┤
+│ Franquias Vinculadas                        │
+│ ☑ Koten Sushi · Ativo                       │
+├─────────────────────────────────────────────┤
+│ Compartilhar Produtos        [Enviar]       │
+│ ☑ Produto A  ☑ Produto B                   │
+├─────────────────────────────────────────────┤
+│ Compartilhar Mesas           [Enviar]       │
+│ ☑ Mesa 1  ☑ Mesa 2                          │
+├─────────────────────────────────────────────┤
+│ Sincronizar Tudo             [Sincronizar]  │
+└─────────────────────────────────────────────┘
 ```
 
-Isso elimina a recursão e restaura a listagem de tenants para super admins e todos os usuários.
+### Detalhes do hook
+- Buscar `childTenants` via `tenants WHERE parent_tenant_id = tenantId`
+- `isParentTenant = childTenants.length > 0`
+- Para matriz: buscar produtos/mesas do PROPRIO tenant (owner) para compartilhar
+- Mutations de share chamam a edge function `sync-shared-products` com actions `share_products` e `share_tables` já existentes
 
