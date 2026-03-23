@@ -1,105 +1,81 @@
 
-## Corrigir WhatsApp travado em “Aguardando conexão”
 
-### Diagnóstico
-Pelos logs e requests atuais, o problema não é mais DNS:
-- A URL `https://evolution-evolution.3oz4cf.easypanel.host` responde corretamente.
-- A edge function `whatsapp-qrcode` está sendo chamada com sucesso no endpoint `/status`.
-- O retorno fica sempre em `"status":"connecting"`.
-- Existe um registro no banco em `whatsapp_connections` com `instance_name = "Teste"` e `connection_status = "connecting"`.
+## Relatório de Tarefas via WhatsApp
 
-Hoje o fluxo fica preso porque:
-1. o frontend só faz polling de status e nunca se recupera de uma instância “travada”;
-2. a edge function não trata bem instância antiga/stale na Evolution API;
-3. se a Evolution não devolver `open`, o código mantém `connecting` indefinidamente;
-4. o status não tenta devolver um QR novo nem informa motivo do bloqueio.
+### Conceito
+Adicionar na tela de Tarefas Operacionais:
+1. **Botão "Enviar Relatório WhatsApp"** na aba "Hoje" para envio manual do resumo do dia
+2. **Configurações** na aba Configurações: número de telefone destino, horário de envio automático, toggle ativar/desativar
+3. **Edge function** `send-tasks-report` que monta a mensagem de resumo e envia via Evolution API usando a instância WhatsApp conectada do usuário
+4. **Cron job** que dispara a edge function no horário configurado por cada tenant
 
-## O que vou implementar
+### Mudanças
 
-### 1) Blindar a edge function `whatsapp-qrcode`
-Arquivo:
-- `supabase/functions/whatsapp-qrcode/index.ts`
+| Arquivo | Ação |
+|---------|------|
+| Migration SQL | Adicionar colunas `whatsapp_report_enabled`, `whatsapp_report_phone`, `whatsapp_report_time` em `operational_task_settings` |
+| `src/hooks/use-operational-tasks.ts` | Adicionar campos na interface `TaskSettings` + mutation `sendWhatsAppReport` |
+| `src/components/pdv/tasks/TaskSettings.tsx` | Adicionar seção "Relatório WhatsApp" com toggle, campo telefone e horário |
+| `src/pages/pdv/Tasks.tsx` | Adicionar botão "Enviar Relatório" no header |
+| `supabase/functions/send-tasks-report/index.ts` | Nova edge function que monta resumo e envia via Evolution API |
 
-Mudanças:
-- Criar helper para chamadas à Evolution API com:
-  - `response.ok` obrigatório
-  - log de status HTTP e corpo retornado
-  - tratamento consistente de JSON inválido
-- Usar `encodeURIComponent(instanceName)` nas rotas com nome da instância.
-- Normalizar leitura do status da instância para cobrir variações da Evolution API.
-- Se existir instância em `connecting`/stale:
-  - remover também na Evolution API, não só no banco
-  - recriar do zero antes de gerar novo QR.
-- No `generate`:
-  - criar instância limpa
-  - tentar obter QR tanto na resposta do `create` quanto em chamadas subsequentes ao `connect`
-  - se a API responder sem QR (`count: 0`), fazer pequenas tentativas server-side antes de devolver erro.
-- No `status`:
-  - se continuar `connecting`, tentar buscar QR atualizado novamente via `connect`
-  - se encontrar QR, devolver `{ status: 'pending', qrcode }`
-  - se a instância não existir mais, devolver `disconnected`
-  - se passar do tempo esperado sem conexão, atualizar banco para `disconnected` em vez de ficar eterno em `connecting`.
+### DB — Colunas novas em `operational_task_settings`
 
-### 2) Ajustar o hook do frontend para reagir ao QR renovado e erros reais
-Arquivo:
-- `src/hooks/use-whatsapp-connection.ts`
-
-Mudanças:
-- Permitir que `checkStatus()` receba também `qrcode` retornado pelo endpoint de status.
-- Se o status vier com QR novo, atualizar o QR mostrado no modal.
-- Parar de engolir erro silenciosamente:
-  - mostrar toast com mensagem útil
-  - encerrar polling quando houver erro fatal.
-- Se a conexão ficar presa por muito tempo:
-  - encerrar o polling
-  - informar que a sessão expirou/travou
-  - pedir para gerar novamente.
-
-### 3) Melhorar o modal para recuperação clara
-Arquivo:
-- `src/components/pdv/settings/WhatsAppQRCodeDialog.tsx`
-
-Mudanças:
-- Mostrar estado mais claro quando:
-  - QR expirou
-  - instância travou
-  - houve erro na Evolution API
-- Adicionar ação explícita para:
-  - “Gerar novo QR Code”
-  - opcionalmente “Reiniciar conexão”
-- Evitar que o modal fique eternamente em “Aguardando conexão...” sem feedback.
-
-### 4) Tratar instância antiga “Teste” que já ficou presa
-Fluxo de recuperação embutido:
-- Ao gerar novamente, se houver instância não aberta para o mesmo usuário/nome:
-  - apagar da Evolution
-  - apagar/sobrescrever no banco
-  - recriar limpa
-Isso resolve o estado atual travado.
-
-## Resultado esperado
-Depois da correção:
-1. o QR aparece normalmente;
-2. ao escanear, o status muda para `open`;
-3. se a Evolution travar, o sistema tenta se recuperar;
-4. se não conseguir, o usuário recebe erro claro e consegue regenerar a conexão;
-5. não haverá mais conexão infinita em `connecting`.
-
-## Detalhes técnicos
-Arquivos a alterar:
-- `supabase/functions/whatsapp-qrcode/index.ts`
-- `src/hooks/use-whatsapp-connection.ts`
-- `src/components/pdv/settings/WhatsAppQRCodeDialog.tsx`
-
-Fluxo novo:
-```text
-Gerar QR
-  -> limpar instância stale na Evolution
-  -> criar instância
-  -> buscar QR
-  -> frontend exibe QR
-  -> polling de status
-      -> se open: conectar
-      -> se pending + qrcode novo: atualizar QR
-      -> se stale/erro: encerrar com mensagem e opção de regenerar
+```sql
+whatsapp_report_enabled BOOLEAN DEFAULT false
+whatsapp_report_phone TEXT         -- número destino (ex: 5511999998888)
+whatsapp_report_time TEXT DEFAULT '23:00'  -- horário do envio automático
 ```
+
+### Edge Function — `send-tasks-report`
+
+Recebe `{ user_id, date? }` (date default = hoje):
+1. Busca instância WhatsApp conectada (`whatsapp_connections` com `connection_status = 'open'`)
+2. Busca settings de tarefas (`whatsapp_report_phone`)
+3. Busca todas as `operational_task_instances` do dia, agrupadas por turno
+4. Monta mensagem formatada:
+
+```text
+📋 *Relatório de Tarefas — 23/03/2026*
+
+✅ Concluídas: 8/12 (67%)
+
+*🌅 Abertura (06:00-11:00)*
+✅ Limpar balcão — João 08:15
+✅ Verificar estoque — Maria 09:30
+❌ Organizar salão
+
+*☀️ Tarde (11:00-17:00)*
+✅ Repor insumos — Pedro 13:00
+❌ Conferir validades
+
+*🌙 Fechamento (17:00-23:00)*
+✅ Fechar caixa — Ana 22:45
+❌ Limpeza geral
+❌ Verificar equipamentos
+
+📊 Pendentes: 4 tarefas não concluídas
+```
+
+5. Envia via Evolution API (`POST /message/sendText/{instanceName}`) para o número configurado
+6. Também pode ser chamada via cron para envio automático — busca todos os usuários com `whatsapp_report_enabled = true` e `whatsapp_report_time` compatível com a hora atual
+
+### UI — Seção no TaskSettings
+
+```text
+── RELATÓRIO WHATSAPP ──
+Enviar relatório diário via WhatsApp    [OFF]
+Número destino: [+55 (__) _____-____]
+Horário de envio: [23:00]
+```
+
+### UI — Botão no header (Tasks.tsx)
+
+Ao lado do "Gerar Tarefas do Dia", botão "📤 Enviar Relatório" que chama a edge function manualmente. Desabilitado se WhatsApp não estiver conectado.
+
+### Fluxo
+1. Admin configura número e horário nas Configurações de Tarefas
+2. No final do dia, pode clicar "Enviar Relatório" manualmente
+3. Ou o cron dispara automaticamente no horário configurado
+4. A mensagem chega no WhatsApp do gestor com o resumo completo
+
