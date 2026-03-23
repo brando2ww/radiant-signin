@@ -1,25 +1,39 @@
 
 
-## Fix: Relatório WhatsApp não envia — número sem código de país
+## Fix: Botão "Enviar Relatório" sem feedback visível
 
-### Diagnóstico
-Os logs mostram claramente o problema:
-```
-Evolution API error: {"jid":"54996535731@s.whatsapp.net","exists":false,"number":"54996535731"}
-```
+### Problemas identificados
 
-O número salvo no banco é `(54) 99653-5731`. Após limpar caracteres não numéricos fica `54996535731` (11 dígitos, DDD 54 + celular). A Evolution API precisa do número com DDI `55` na frente: `5554996535731`.
-
-O fix anterior adicionou o prefixo `55`, mas a edge function pode não ter sido re-deployada. Além disso, a Evolution API retorna `exists: false` porque ela valida se o número existe no WhatsApp antes de enviar — precisamos tratar esse caso com mensagem de erro clara.
+1. **Edge function não loga resposta de sucesso** — quando a Evolution API retorna 200, o corpo da resposta é lido mas nunca logado nem inspecionado. A Evolution pode retornar 200 com `exists: false` no body, e o código ignora isso.
+2. **Frontend pode não mostrar toast** — o `handleSendReport` usa `toast()` do shadcn, que funciona mas o usuário relata não ver nada. Precisa de feedback mais óbvio.
 
 ### Mudanças
 
-**Arquivo: `supabase/functions/send-tasks-report/index.ts`**
+| Arquivo | Ação |
+|---------|------|
+| `supabase/functions/send-tasks-report/index.ts` | Logar resposta da Evolution API mesmo em caso de sucesso; verificar `exists: false` também em respostas 200; re-deploy |
+| `src/pages/pdv/Tasks.tsx` | Adicionar `console.log` para debug e garantir que o toast de erro/sucesso mostra a mensagem retornada pela function |
 
-1. Garantir normalização correta do telefone: strip non-digits, prefixar `55` se necessário
-2. Adicionar log do número final antes do envio (para debug)
-3. Melhorar mensagem de erro quando Evolution retorna `exists: false` — informar que o número não foi encontrado no WhatsApp
-4. Forçar re-deploy da function
+### Detalhes técnicos
 
-A correção é simples e focada: garantir que o número chegue como `5554996535731` na API e tratar o erro `exists: false` com mensagem amigável.
+**Edge function** — após `evoResponse.ok`:
+```typescript
+const responseBody = await evoResponse.text();
+console.log("Evolution API response:", evoResponse.status, responseBody);
+
+// Check for exists:false even on 200
+try {
+  const parsed = JSON.parse(responseBody);
+  const msgs = parsed?.response?.message || (Array.isArray(parsed) ? parsed : [parsed]);
+  if (msgs.some((m: any) => m.exists === false)) {
+    throw new Error(`Número ${phone} não encontrado no WhatsApp`);
+  }
+} catch (parseErr: any) {
+  if (parseErr.message.includes("não encontrado")) throw parseErr;
+}
+```
+
+**Frontend** — melhorar feedback:
+- Adicionar `console.log("Report response:", data, error)` no `handleSendReport` para debug
+- Manter toast atual que já deveria funcionar — o log vai ajudar a identificar se o problema é no retorno da function
 
