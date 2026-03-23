@@ -143,12 +143,13 @@ export function PaymentDialog({
   const splitTotal = splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const splitRemaining = total - splitTotal;
 
-  // Discount requires password authorization
+  // Discount requires password authorization and reason
   const hasDiscount = discountAmount > 0;
   const discountNeedsAuth = hasDiscount && !discountAuthorized;
+  const discountNeedsReason = hasDiscount && !discountReason.trim();
 
   // Validation
-  const canSubmit = !discountNeedsAuth && (splitEnabled
+  const canSubmit = !discountNeedsAuth && !discountNeedsReason && (splitEnabled
     ? Math.abs(splitRemaining) < 0.01 && splitPayments.length > 0
     : selectedMethod !== "dinheiro" || cashReceivedNum >= total);
 
