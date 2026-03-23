@@ -1,51 +1,28 @@
 
 
-## Fix: RLS policy para tenant matriz ler seus filhos
+## Fix: Abrir PaymentDialog ao fechar pedido no Balcão
 
-### Causa raiz
-
-João Farias é owner do "Restaurante DEMO" (matriz). Quando o hook busca `childTenants` com `SELECT * FROM tenants WHERE parent_tenant_id = tenantId`, o RLS bloqueia porque nenhuma policy permite ao owner da matriz ler os tenants filhos.
-
-Policies atuais na tabela `tenants`:
-- "Tenant owner can read own tenant" — só o próprio tenant
-- "Users can read parent tenant" — só o tenant pai (direção inversa)
-- "Establishment users can read own tenant" — só tenants onde é membro
-- "Super admins full access" — só super admins
-
-Falta: **owner da matriz pode ler filhos**.
+### Problema
+Ao clicar "Fechar Pedido" no Balcão, o `OrderDetailsDialog` chama `closeOrder(id)` diretamente, que apenas fecha o pedido no banco sem registrar pagamento. Não existe `PaymentDialog` na página Balcão.
 
 ### Solução
+Interceptar o "Fechar Pedido" para abrir o `PaymentDialog` antes de finalizar, igual ao fluxo do Caixa.
 
-Criar uma **security definer function** (para evitar recursão RLS) e uma nova policy.
+### Mudanças
 
 | Arquivo | Ação |
 |---------|------|
-| `supabase migration` | Criar function `get_user_child_tenant_ids()` + policy "Parent owners can read child tenants" |
+| `src/pages/pdv/Balcao.tsx` | Importar `PaymentDialog` e `usePDVComandas`. Ao clicar "Fechar Pedido", em vez de chamar `closeOrder` diretamente, abrir o `PaymentDialog` com os dados do pedido. Após pagamento confirmado, fechar o pedido |
 
-### SQL
+### Fluxo corrigido
+1. Usuário clica "Fechar Pedido" no `OrderDetailsDialog`
+2. `handleCloseOrder` fecha o dialog de detalhes e abre o `PaymentDialog` com o pedido selecionado
+3. Usuário escolhe método de pagamento e confirma
+4. `PaymentDialog` registra o pagamento via `usePDVPayments`
+5. Pedido é finalizado
 
-```sql
--- Function que retorna IDs dos tenants filhos do usuário atual
-CREATE OR REPLACE FUNCTION public.get_user_child_tenant_ids()
-RETURNS SETOF uuid
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT t.id
-  FROM public.tenants t
-  WHERE t.parent_tenant_id IN (
-    SELECT t2.id FROM public.tenants t2
-    WHERE t2.owner_user_id = auth.uid()
-  )
-$$;
-
--- Policy: owner da matriz pode ler tenants filhos
-CREATE POLICY "Parent owners can read child tenants"
-  ON public.tenants FOR SELECT TO authenticated
-  USING (id IN (SELECT public.get_user_child_tenant_ids()));
-```
-
-Isso permite que João (owner de Restaurante DEMO) leia "Koten Sushi" (que tem `parent_tenant_id` apontando para o tenant dele), desbloqueando a query `childTenants` no hook e mostrando a view de matriz.
-
-Também preciso registrar a nova function no `types.ts` do Supabase.
+### Detalhes
+- O `PaymentDialog` aceita `comanda` ou `table` — como o Balcão trabalha com orders diretos (sem comanda), vou criar uma comanda virtual (objeto compatível) a partir do order para alimentar o dialog
+- Itens do pedido serão mapeados para o formato de `ComandaItem` esperado pelo `PaymentDialog`
+- O `closeOrder` será chamado após o pagamento ser registrado com sucesso (no `onSuccess` do PaymentDialog)
 
