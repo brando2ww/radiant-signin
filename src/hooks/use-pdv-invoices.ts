@@ -30,6 +30,7 @@ export interface PDVInvoice {
   notes?: string | null;
   import_errors?: any;
   created_at: string;
+  source?: string;
   updated_at: string;
 }
 
