@@ -137,6 +137,9 @@ export default function PDV() {
               
               {/* Tarefas */}
               <Route path="tarefas" element={<RoleRoute path="/pdv/tarefas" canAccess={canAccess} defaultRoute={defaultRoute}><Tasks /></RoleRoute>} />
+              
+              {/* Clientes */}
+              <Route path="clientes" element={<RoleRoute path="/pdv/clientes" canAccess={canAccess} defaultRoute={defaultRoute}><Customers /></RoleRoute>} />
             </Routes>
           </main>
       </div>
