@@ -229,6 +229,9 @@ export function useOperationalTasks(selectedDate?: string) {
         shifts: s.shifts as any,
         auto_generate: s.autoGenerate,
         qr_code_enabled: s.qrCodeEnabled,
+        whatsapp_report_enabled: s.whatsappReportEnabled,
+        whatsapp_report_phone: s.whatsappReportPhone || null,
+        whatsapp_report_time: s.whatsappReportTime || "23:00",
       }, { onConflict: "user_id" });
       if (error) throw error;
     },
