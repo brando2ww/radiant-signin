@@ -1,69 +1,128 @@
 
 
-## Painel de Gestão do Tenant (Super Admin)
+## Arquitetura de Franquias (Multi-Tenant Hierárquico)
 
-### O que será feito
-Expandir a página `TenantDetail.tsx` para permitir ao super admin gerenciar completamente um tenant: editar usuários, configurar módulos e autorizar integrações.
+### Conceito
 
-### Mudanças
-
-| Arquivo | Ação |
-|---------|------|
-| `src/hooks/use-tenants.ts` | Adicionar mutations: `updateTenantUser` (editar role, is_active, max_discount_percent, discount_password), `updateTenantModules` (ativar/desativar módulos), `updateTenantIntegrations` (salvar integrações autorizadas no tenant) |
-| `src/pages/super-admin/TenantDetail.tsx` | Reescrever com seções expandidas: (1) Card de módulos com toggles editáveis, (2) Card de integrações autorizadas com checkboxes, (3) Card de usuários com ações de editar/ativar/desativar inline, (4) Dialog para editar usuário (role, desconto máximo, senha desconto, ativo) |
-| `supabase migration` | Criar tabela `tenant_integrations` (tenant_id, integration_slug, is_active, created_at) para registrar quais integrações cada tenant pode usar |
-
-### Detalhes
-
-**1. Módulos editáveis** — Reutilizar `ModuleSelector` com toggle para ativar/desativar módulos do tenant. Salva via update em `tenant_modules`.
-
-**2. Integrações autorizadas** — Nova tabela `tenant_integrations`:
-```sql
-CREATE TABLE public.tenant_integrations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id uuid REFERENCES tenants(id) ON DELETE CASCADE NOT NULL,
-  integration_slug text NOT NULL,
-  is_active boolean DEFAULT true,
-  created_at timestamptz DEFAULT now(),
-  UNIQUE(tenant_id, integration_slug)
-);
-ALTER TABLE public.tenant_integrations ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Super admins manage tenant integrations"
-  ON public.tenant_integrations FOR ALL TO authenticated
-  USING (public.is_super_admin());
-```
-Lista de integrações: PagSeguro, Stone, Getnet, Rede, NF Automática, Goomer, WhatsApp, Delivery Próprio — checkboxes no card.
-
-**3. Usuários expandidos** — Cada usuário mostra: nome, email, telefone, role, status, desconto máximo. Botões de ação:
-- **Editar**: Dialog inline com campos role (select), max_discount_percent (input 0-100%), discount_password, is_active (switch)
-- **Ativar/Desativar**: Toggle rápido
-
-**4. Hook `use-tenants.ts`** — Adicionar:
-- `updateTenantUser`: update em `establishment_users` por id
-- `toggleTenantModule`: update `is_active` em `tenant_modules`
-- `fetchTenantIntegrations` / `saveTenantIntegrations`: CRUD em `tenant_integrations`
-
-### Layout do TenantDetail (atualizado)
+Criar uma hierarquia de tenants onde um **tenant matriz** pode ter **tenants filhos** (franquias). O tenant matriz pode compartilhar produtos e mesas com suas franquias, e o super admin gerencia tudo.
 
 ```text
-┌─────────────────────────────────────┐
-│ ← Restaurante DEMO                 │
-│   CNPJ · Ativo                      │
-├─────────────────────────────────────┤
-│ Módulos Habilitados        [Salvar] │
-│ ☑ PDV  ☐ Delivery  ☐ Financeiro... │
-├─────────────────────────────────────┤
-│ Integrações Autorizadas    [Salvar] │
-│ ☑ PagSeguro ☑ Stone ☐ Getnet ...   │
-├─────────────────────────────────────┤
-│ Usuários (2)                        │
-│ ┌─────────────────────────────────┐ │
-│ │ João · joao@email · Proprietário│ │
-│ │ Desconto max: 100% · Ativo  [⋮]│ │
-│ └─────────────────────────────────┘ │
-├─────────────────────────────────────┤
-│ Informações                         │
-│ Criado em: ...  Atualizado em: ...  │
-└─────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│            SUPER ADMIN                       │
+├──────────────────────────────────────────────┤
+│                                              │
+│  ┌─────────────────┐                         │
+│  │ Burger King HQ   │ ← tenant matriz       │
+│  │ (parent_id=null) │                        │
+│  └────────┬────────┘                         │
+│           │                                  │
+│     ┌─────┴──────┐                           │
+│     │            │                           │
+│  ┌──▼────┐  ┌───▼────┐                      │
+│  │ BK     │  │ BK     │ ← tenants filhos    │
+│  │ Moema  │  │ Pinhei.│   (franquias)        │
+│  └────────┘  └────────┘                      │
+│                                              │
+│  Produtos compartilhados: Matriz → Filhos    │
+│  Mesas compartilhadas: Layout copiado        │
+└──────────────────────────────────────────────┘
 ```
+
+### Mudanças no Banco de Dados
+
+**1. Adicionar `parent_tenant_id` na tabela `tenants`:**
+```sql
+ALTER TABLE public.tenants
+  ADD COLUMN parent_tenant_id uuid REFERENCES public.tenants(id) ON DELETE SET NULL;
+```
+
+**2. Tabela `shared_products` — catálogo compartilhado pela matriz:**
+```sql
+CREATE TABLE public.shared_products (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  target_tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  source_product_id uuid NOT NULL REFERENCES public.pdv_products(id) ON DELETE CASCADE,
+  cloned_product_id uuid REFERENCES public.pdv_products(id) ON DELETE SET NULL,
+  sync_enabled boolean DEFAULT true,
+  last_synced_at timestamptz,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(source_product_id, target_tenant_id)
+);
+```
+
+**3. Tabela `shared_table_layouts` — layouts de mesa compartilhados:**
+```sql
+CREATE TABLE public.shared_table_layouts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  target_tenant_id uuid NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+  source_table_id uuid NOT NULL REFERENCES public.pdv_tables(id) ON DELETE CASCADE,
+  cloned_table_id uuid REFERENCES public.pdv_tables(id) ON DELETE SET NULL,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(source_table_id, target_tenant_id)
+);
+```
+
+Ambas com RLS para super admins + owners dos tenants envolvidos.
+
+### Mudanças no Frontend
+
+| Arquivo | Acao |
+|---------|------|
+| `supabase migration` | Adicionar `parent_tenant_id` em tenants, criar tabelas `shared_products` e `shared_table_layouts` com RLS |
+| `src/hooks/use-tenants.ts` | Adicionar: `fetchChildTenants(parentId)`, `linkChildTenant(parentId, childId)`, `unlinkChildTenant(childId)`, `shareProducts(sourceTenantId, targetTenantId, productIds)`, `shareTableLayout(sourceTenantId, targetTenantId, tableIds)`, `syncSharedProducts(sourceTenantId)` |
+| `src/pages/super-admin/TenantDetail.tsx` | Adicionar seção "Franquias" com: lista de filhos, botão vincular tenant existente, botão desvincular. Adicionar seção "Compartilhar Produtos" com seleção de produtos da matriz e envio para franquias. Adicionar seção "Compartilhar Mesas" similar |
+| `src/pages/super-admin/TenantForm.tsx` | Adicionar campo opcional "Tenant Matriz" (select de tenants existentes) para criar franquia vinculada |
+| `src/components/super-admin/TenantCard.tsx` | Mostrar badge "Matriz" ou "Franquia de X" conforme `parent_tenant_id` |
+| `supabase/functions/sync-shared-products/index.ts` | Edge function que copia/atualiza produtos da matriz para franquias quando sync é disparado |
+
+### Fluxo de Compartilhamento de Produtos
+
+1. Super admin abre tenant matriz → seção "Compartilhar Produtos"
+2. Seleciona produtos do catálogo da matriz
+3. Seleciona franquias destino (ou "todas")
+4. Clica "Compartilhar" → edge function clona os `pdv_products` para o `user_id` do owner de cada franquia
+5. Registra em `shared_products` com `sync_enabled=true`
+6. Futuras edições na matriz podem ser propagadas via botão "Sincronizar" (atualiza nome, preço, categoria dos clones)
+
+### Fluxo de Compartilhamento de Mesas
+
+1. Super admin abre tenant matriz → seção "Compartilhar Layout de Mesas"
+2. Seleciona mesas/setores
+3. Seleciona franquias destino
+4. Clona `pdv_tables` (número, capacidade, posição, shape, setor) para o owner de cada franquia
+5. Registra em `shared_table_layouts` — não sincroniza automaticamente (layout pode divergir por loja)
+
+### Seção "Franquias" no TenantDetail
+
+```text
+┌─────────────────────────────────────────┐
+│ Franquias (3)                  [+ Add]  │
+├─────────────────────────────────────────┤
+│ ┌─────────────────────────────────────┐ │
+│ │ BK Moema · CNPJ · Ativo  [Abrir ↗] │ │
+│ │                      [Desvincular]  │ │
+│ └─────────────────────────────────────┘ │
+│ ┌─────────────────────────────────────┐ │
+│ │ BK Pinheiros · CNPJ · Ativo        │ │
+│ └─────────────────────────────────────┘ │
+├─────────────────────────────────────────┤
+│ Compartilhar Produtos         [Enviar]  │
+│ ☑ X-Burger  ☑ Batata  ☐ Milk Shake     │
+│ Para: ☑ Todas  ☐ BK Moema  ☐ BK Pinh. │
+├─────────────────────────────────────────┤
+│ Compartilhar Mesas            [Copiar]  │
+│ ☑ Mesa 1  ☑ Mesa 2  ☐ Mesa 3           │
+│ Para: ☑ Todas  ☐ BK Moema              │
+└─────────────────────────────────────────┘
+```
+
+### Detalhes Tecnico da Edge Function `sync-shared-products`
+
+- Recebe `{ source_tenant_id, target_tenant_ids?: string[] }`
+- Busca `shared_products` com `sync_enabled=true` para o source
+- Para cada registro, busca o produto fonte e atualiza o clone (nome, preço, categoria, imagem, disponibilidade)
+- Atualiza `last_synced_at`
+- Verifica permissão via super_admin ou owner do tenant matriz
 
