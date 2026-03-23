@@ -14,6 +14,7 @@ export default function TenantForm() {
 
   const [name, setName] = useState("");
   const [document, setDocument] = useState("");
+  const [parentTenantId, setParentTenantId] = useState("");
   const [modules, setModules] = useState<string[]>(["pdv"]);
   const [adminName, setAdminName] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
