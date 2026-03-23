@@ -867,12 +867,12 @@ export default function PDVSalon() {
         }}
       />
 
-      {/* Capacity Warning Dialog */}
+      {/* Capacity Warning Dialog - never stacked with ComandaDialog */}
       <AlertDialog open={capacityWarningOpen} onOpenChange={(open) => {
         if (!open) {
-          setPendingComandaData(null);
           setCapacityWarningOpen(false);
-          document.body.style.pointerEvents = "";
+          setPendingComandaData(null);
+          setComandaForTable(null);
         }
       }}>
         <AlertDialogContent>
@@ -884,13 +884,11 @@ export default function PDVSalon() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => {
+              setCapacityWarningOpen(false);
               setPendingComandaData(null);
-              document.body.style.pointerEvents = "";
+              setComandaForTable(null);
             }}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              handleConfirmCapacityOverride();
-              document.body.style.pointerEvents = "";
-            }}>
+            <AlertDialogAction onClick={handleConfirmCapacityOverride}>
               Continuar mesmo assim
             </AlertDialogAction>
           </AlertDialogFooter>
