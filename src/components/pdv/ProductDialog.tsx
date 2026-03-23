@@ -144,15 +144,15 @@ export function ProductDialog({
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <Tabs defaultValue="basic">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="basic">Informações Básicas</TabsTrigger>
-                <TabsTrigger value="pricing">Preços e Disponibilidade</TabsTrigger>
+             <Tabs defaultValue="basic">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="basic">Básico</TabsTrigger>
+                <TabsTrigger value="pricing">Preços</TabsTrigger>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <TabsTrigger value="recipe" disabled={!product}>
-                        Receita/Ficha Técnica
+                        Receita
                       </TabsTrigger>
                     </TooltipTrigger>
                     {!product && (
@@ -162,6 +162,7 @@ export function ProductDialog({
                     )}
                   </Tooltip>
                 </TooltipProvider>
+                <TabsTrigger value="fiscal">Fiscal</TabsTrigger>
               </TabsList>
 
               <TabsContent value="basic" className="space-y-4 mt-4">
