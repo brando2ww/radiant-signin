@@ -11,9 +11,9 @@ import { Plus, FolderTree, Pencil, Trash2, Search, Sparkles, ChevronRight, Chevr
 import { usePDVChartOfAccounts, type PDVChartOfAccount } from "@/hooks/use-pdv-chart-of-accounts";
 
 const ACCOUNT_TYPES = [
-  { value: "receita", label: "Receita", color: "text-emerald-600 dark:text-emerald-400", badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" },
-  { value: "despesa", label: "Despesa", color: "text-destructive", badge: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
-  { value: "custo", label: "Custo (CMV)", color: "text-amber-600 dark:text-amber-400", badge: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" },
+  { value: "revenue", label: "Receita", color: "text-emerald-600 dark:text-emerald-400", badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  { value: "expense", label: "Despesa", color: "text-destructive", badge: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400" },
+  { value: "cost", label: "Custo (CMV)", color: "text-amber-600 dark:text-amber-400", badge: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400" },
 ];
 
 function getTypeConfig(type: string) {
@@ -27,7 +27,7 @@ interface AccountFormData {
   parent_id: string | null;
 }
 
-const emptyForm: AccountFormData = { code: "", name: "", account_type: "receita", parent_id: null };
+const emptyForm: AccountFormData = { code: "", name: "", account_type: "revenue", parent_id: null };
 
 export default function ChartOfAccounts() {
   const { accounts, isLoading, createAccount, updateAccount, deleteAccount, seedBasicStructure } = usePDVChartOfAccounts();
@@ -38,7 +38,7 @@ export default function ChartOfAccounts() {
   const [deleteTarget, setDeleteTarget] = useState<PDVChartOfAccount | null>(null);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
-  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(["receita", "despesa", "custo"]));
+  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(["revenue", "expense", "cost"]));
 
   const filtered = useMemo(() => {
     let list = accounts;
@@ -59,7 +59,7 @@ export default function ChartOfAccounts() {
   }, [filtered]);
 
   const countByType = useMemo(() => {
-    const map: Record<string, number> = { receita: 0, despesa: 0, custo: 0 };
+    const map: Record<string, number> = { revenue: 0, expense: 0, cost: 0 };
     for (const a of accounts) {
       if (map[a.account_type] !== undefined) map[a.account_type]++;
     }
