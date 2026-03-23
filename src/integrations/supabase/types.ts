@@ -3759,6 +3759,124 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_products: {
+        Row: {
+          cloned_product_id: string | null
+          created_at: string | null
+          id: string
+          last_synced_at: string | null
+          source_product_id: string
+          source_tenant_id: string
+          sync_enabled: boolean | null
+          target_tenant_id: string
+        }
+        Insert: {
+          cloned_product_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_synced_at?: string | null
+          source_product_id: string
+          source_tenant_id: string
+          sync_enabled?: boolean | null
+          target_tenant_id: string
+        }
+        Update: {
+          cloned_product_id?: string | null
+          created_at?: string | null
+          id?: string
+          last_synced_at?: string | null
+          source_product_id?: string
+          source_tenant_id?: string
+          sync_enabled?: boolean | null
+          target_tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_products_cloned_product_id_fkey"
+            columns: ["cloned_product_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_products_source_product_id_fkey"
+            columns: ["source_product_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_products_source_tenant_id_fkey"
+            columns: ["source_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_products_target_tenant_id_fkey"
+            columns: ["target_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_table_layouts: {
+        Row: {
+          cloned_table_id: string | null
+          created_at: string | null
+          id: string
+          source_table_id: string
+          source_tenant_id: string
+          target_tenant_id: string
+        }
+        Insert: {
+          cloned_table_id?: string | null
+          created_at?: string | null
+          id?: string
+          source_table_id: string
+          source_tenant_id: string
+          target_tenant_id: string
+        }
+        Update: {
+          cloned_table_id?: string | null
+          created_at?: string | null
+          id?: string
+          source_table_id?: string
+          source_tenant_id?: string
+          target_tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_table_layouts_cloned_table_id_fkey"
+            columns: ["cloned_table_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_table_layouts_source_table_id_fkey"
+            columns: ["source_table_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_tables"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_table_layouts_source_tenant_id_fkey"
+            columns: ["source_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_table_layouts_target_tenant_id_fkey"
+            columns: ["target_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       super_admins: {
         Row: {
           created_at: string
@@ -3910,6 +4028,7 @@ export type Database = {
           is_active: boolean
           name: string
           owner_user_id: string | null
+          parent_tenant_id: string | null
           updated_at: string
         }
         Insert: {
@@ -3920,6 +4039,7 @@ export type Database = {
           is_active?: boolean
           name: string
           owner_user_id?: string | null
+          parent_tenant_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -3930,9 +4050,18 @@ export type Database = {
           is_active?: boolean
           name?: string
           owner_user_id?: string | null
+          parent_tenant_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenants_parent_tenant_id_fkey"
+            columns: ["parent_tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       transactions: {
         Row: {
