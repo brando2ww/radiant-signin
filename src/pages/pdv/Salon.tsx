@@ -463,7 +463,10 @@ export default function PDVSalon() {
             `A mesa tem capacidade para ${table.capacity} pessoas e já possui ${existingPersons} alocadas. Adicionando ${newPersons} pessoa(s) o total será ${existingPersons + newPersons}. Deseja continuar mesmo assim?`
           );
           setPendingComandaData(data);
-          setCapacityWarningOpen(true);
+          // Close ComandaDialog FIRST to avoid stacked overlays
+          setComandaDialogOpen(false);
+          // Open AlertDialog after a tick so Radix cleans up the previous overlay
+          setTimeout(() => setCapacityWarningOpen(true), 150);
           return;
         }
       }
