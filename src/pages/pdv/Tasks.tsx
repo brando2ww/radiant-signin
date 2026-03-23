@@ -18,7 +18,7 @@ export default function Tasks() {
     templates,
     instances,
     settings,
-    generateDaily,
+    generateDaily: generateDailyFn,
     isGenerating,
     loadingInstances,
   } = useOperationalTasks();
