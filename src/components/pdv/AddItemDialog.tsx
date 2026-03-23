@@ -20,6 +20,7 @@ interface AddItemDialogProps {
   onOpenChange: (open: boolean) => void;
   orderId: string;
   onAddItem: (item: any) => void;
+  source?: string;
 }
 
 export function AddItemDialog({

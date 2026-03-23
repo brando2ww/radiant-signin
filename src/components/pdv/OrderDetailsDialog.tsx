@@ -232,6 +232,7 @@ export function OrderDetailsDialog({
         open={addItemOpen}
         onOpenChange={setAddItemOpen}
         orderId={order?.id || ""}
+        source={order?.source}
         onAddItem={(item) => {
           onAddItem(item);
           setAddItemOpen(false);
