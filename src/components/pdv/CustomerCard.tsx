@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, Edit, Trash2, Store, Truck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import type { UnifiedCustomer } from "@/hooks/use-pdv-customers";
 
 interface CustomerCardProps {
@@ -11,6 +12,7 @@ interface CustomerCardProps {
 }
 
 export function CustomerCard({ customer, onEdit, onDelete }: CustomerCardProps) {
+  const navigate = useNavigate();
   const sourceLabel = customer.source === "pdv" ? "PDV" : "Delivery";
   const SourceIcon = customer.source === "pdv" ? Store : Truck;
 
