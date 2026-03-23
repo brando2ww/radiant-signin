@@ -51,6 +51,14 @@ const integrations: IntegrationItem[] = [
     categoryColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
   },
   {
+    slug: "rede",
+    name: "Rede",
+    description: "Integração com maquininhas Rede (Itaú) via USB, Bluetooth ou HTTP com suporte a Pix e e-Rede.",
+    logo: redeLogo,
+    category: "Maquininha",
+    categoryColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+  },
+  {
     slug: "nf-automatica",
     name: "NF Automática",
     description: "Emita notas fiscais automaticamente ao finalizar vendas, com certificado digital A1.",
