@@ -46,6 +46,9 @@ export interface TaskSettings {
   shifts: ShiftConfig[];
   autoGenerate: boolean;
   qrCodeEnabled: boolean;
+  whatsappReportEnabled: boolean;
+  whatsappReportPhone: string;
+  whatsappReportTime: string;
 }
 
 const DEFAULT_SHIFTS: ShiftConfig[] = [
@@ -111,13 +114,16 @@ export function useOperationalTasks(selectedDate?: string) {
         .eq("user_id", user!.id)
         .maybeSingle();
       if (error) throw error;
-      if (!data) return { id: "", userId: user!.id, shifts: DEFAULT_SHIFTS, autoGenerate: true, qrCodeEnabled: true } as TaskSettings;
+      if (!data) return { id: "", userId: user!.id, shifts: DEFAULT_SHIFTS, autoGenerate: true, qrCodeEnabled: true, whatsappReportEnabled: false, whatsappReportPhone: "", whatsappReportTime: "23:00" } as TaskSettings;
       return {
         id: data.id,
         userId: data.user_id,
         shifts: (data.shifts as any) || DEFAULT_SHIFTS,
         autoGenerate: data.auto_generate,
         qrCodeEnabled: data.qr_code_enabled,
+        whatsappReportEnabled: data.whatsapp_report_enabled ?? false,
+        whatsappReportPhone: data.whatsapp_report_phone ?? "",
+        whatsappReportTime: data.whatsapp_report_time ?? "23:00",
       } as TaskSettings;
     },
     enabled: !!user?.id,
@@ -223,6 +229,9 @@ export function useOperationalTasks(selectedDate?: string) {
         shifts: s.shifts as any,
         auto_generate: s.autoGenerate,
         qr_code_enabled: s.qrCodeEnabled,
+        whatsapp_report_enabled: s.whatsappReportEnabled,
+        whatsapp_report_phone: s.whatsappReportPhone || null,
+        whatsapp_report_time: s.whatsappReportTime || "23:00",
       }, { onConflict: "user_id" });
       if (error) throw error;
     },
@@ -251,7 +260,7 @@ export function useOperationalTasks(selectedDate?: string) {
   return {
     templates,
     instances,
-    settings: settings || { id: "", userId: "", shifts: DEFAULT_SHIFTS, autoGenerate: true, qrCodeEnabled: true },
+    settings: settings || { id: "", userId: "", shifts: DEFAULT_SHIFTS, autoGenerate: true, qrCodeEnabled: true, whatsappReportEnabled: false, whatsappReportPhone: "", whatsappReportTime: "23:00" },
     loadingTemplates,
     loadingInstances,
     loadingSettings,
