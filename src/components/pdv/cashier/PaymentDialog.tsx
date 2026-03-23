@@ -144,7 +144,7 @@ export function PaymentDialog({
   const splitRemaining = total - splitTotal;
 
   // Discount requires password authorization and reason
-  const hasDiscount = discountAmount > 0;
+  const hasDiscount = parseFloat(discountValue) > 0;
   const discountNeedsAuth = hasDiscount && !discountAuthorized;
   const discountNeedsReason = hasDiscount && !discountReason.trim();
 
