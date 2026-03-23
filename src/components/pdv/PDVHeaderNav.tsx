@@ -214,7 +214,8 @@ export function PDVHeaderNav() {
               </NavigationMenuTrigger>
               <NavigationMenuContent
                 className={cn(
-                  "absolute top-full mt-1.5 rounded-md border bg-popover text-popover-foreground shadow-lg",
+                  "!absolute !top-full mt-1.5 rounded-md border bg-popover text-popover-foreground shadow-lg",
+                  "data-[motion^=from-]:!animate-none data-[motion^=to-]:!animate-none",
                   isRightAligned ? "right-0 left-auto" : "left-0"
                 )}
               >
