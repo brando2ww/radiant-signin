@@ -1,33 +1,51 @@
 
 
-## Fix: Dropdown posicionar abaixo de cada item individualmente
+## Fix: Balcão requer caixa aberto + usar preço correto de balcão
 
-### Problema
-O Radix `NavigationMenu` usa um **único Viewport compartilhado** posicionado no nível do `Root`. Todos os conteúdos dos menus são renderizados dentro desse viewport único, por isso ele sempre aparece na mesma posição (esquerda) independente de qual trigger foi clicado. Não é possível resolver isso apenas com CSS no viewport.
+### Problema 1: Criar pedido no balcão sem caixa aberto
+O botão "Novo Pedido" no Balcão funciona sem verificar se o caixa está aberto. Deve bloquear e mostrar toast/alerta pedindo para abrir o caixa primeiro (mesmo comportamento do Salão).
 
-### Solução
-Parar de usar o `NavigationMenuViewport` compartilhado e renderizar o conteúdo diretamente em cada `NavigationMenuItem` com posicionamento relativo. Cada item terá seu próprio dropdown posicionado abaixo do seu trigger.
+### Problema 2: Preço de salão sendo usado no balcão
+O `AddItemDialog` usa `selectedProduct.price_salon` hardcoded (linhas 54, 99, 115, 165). Quando o pedido é do balcão, deveria usar `price_balcao` (se existir) em vez de `price_salon`.
 
 ### Arquivos
 
-| Arquivo | Ação |
+| Arquivo | Acao |
 |---------|------|
-| `src/components/pdv/PDVHeaderNav.tsx` | Adicionar `position: relative` a cada `NavigationMenuItem` e `forceMount` + classes de posicionamento absoluto no `NavigationMenuContent` para que cada dropdown fique abaixo do seu trigger |
-| `src/components/ui/navigation-menu.tsx` | Remover o `<NavigationMenuViewport />` de dentro do `NavigationMenu` Root, já que o conteúdo será renderizado inline em cada item |
+| `src/pages/pdv/Balcao.tsx` | Importar `usePDVCashier`, verificar `activeSession` antes de permitir criar pedido. Se caixa fechado, mostrar toast de erro |
+| `src/components/pdv/AddItemDialog.tsx` | Adicionar prop `source` (opcional, default "salon"). Quando `source === "balcao"`, usar `price_balcao ?? price_salon` em vez de `price_salon` nas linhas 54, 99, 115, 165 |
+| `src/components/pdv/OrderDetailsDialog.tsx` | Passar `source={order?.source}` para o `AddItemDialog` |
 
-### Detalhes técnicos
+### Detalhes
 
-**navigation-menu.tsx**: Remover a linha `<NavigationMenuViewport />` do componente `NavigationMenu` Root (linha ~21).
-
-**PDVHeaderNav.tsx**: Em cada `NavigationMenuItem`, adicionar `className="relative"` e no `NavigationMenuContent` usar classes para posicionamento absoluto direto:
+**Balcao.tsx** - guard de caixa:
 ```tsx
-<NavigationMenuItem key={section.title} className="relative">
-  <NavigationMenuTrigger>...</NavigationMenuTrigger>
-  <NavigationMenuContent className="absolute left-0 top-full mt-1.5 rounded-md border bg-popover shadow-lg">
-    ...
-  </NavigationMenuContent>
-</NavigationMenuItem>
+const { activeSession } = usePDVCashier();
+
+const handleNewOrder = () => {
+  if (!activeSession) {
+    toast.error("Abra o caixa antes de criar pedidos no balcão");
+    return;
+  }
+  setNewOrderOpen(true);
+};
 ```
 
-Para os itens à direita (Financeiro, Integrações), usar `left-auto right-0` para que o dropdown não saia da tela.
+**AddItemDialog.tsx** - preço por source:
+```tsx
+// Nova prop
+interface AddItemDialogProps {
+  source?: string; // "balcao" | "salon" | "delivery"
+  // ...existing
+}
+
+// Helper para pegar preço correto
+const getPrice = (product: any) => {
+  if (source === "balcao") return product.price_balcao ?? product.price_salon;
+  if (source === "delivery") return product.price_delivery ?? product.price_salon;
+  return product.price_salon;
+};
+```
+
+Substituir todas as referências a `price_salon` por `getPrice(product)`.
 
