@@ -19,8 +19,10 @@ import { GoomerIntegrationCard } from "@/components/pdv/integrations/GoomerInteg
 import { GetnetIntegrationCard } from "@/components/pdv/integrations/GetnetIntegrationCard";
 import { RedeIntegrationCard } from "@/components/pdv/integrations/RedeIntegrationCard";
 import { WhatsAppConnectionCard } from "@/components/pdv/settings/WhatsAppConnectionCard";
+import { DeliveryProprioIntegrationCard } from "@/components/pdv/integrations/DeliveryProprioIntegrationCard";
 
 import ifoodLogo from "@/assets/integrations/ifood.png";
+import velaraLogo from "@/assets/logo_velara_preto.png";
 import pagseguroLogo from "@/assets/integrations/pagseguro.png";
 import stoneLogo from "@/assets/integrations/stone.png";
 import goomerLogo from "@/assets/integrations/goomer.png";
