@@ -260,7 +260,7 @@ export function useOperationalTasks(selectedDate?: string) {
   return {
     templates,
     instances,
-    settings: settings || { id: "", userId: "", shifts: DEFAULT_SHIFTS, autoGenerate: true, qrCodeEnabled: true },
+    settings: settings || { id: "", userId: "", shifts: DEFAULT_SHIFTS, autoGenerate: true, qrCodeEnabled: true, whatsappReportEnabled: false, whatsappReportPhone: "", whatsappReportTime: "23:00" },
     loadingTemplates,
     loadingInstances,
     loadingSettings,
