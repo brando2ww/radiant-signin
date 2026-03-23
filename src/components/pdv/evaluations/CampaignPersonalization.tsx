@@ -11,6 +11,7 @@ import {
   useUpdateCampaign,
 } from "@/hooks/use-evaluation-campaigns";
 import { useSupabaseUpload } from "@/hooks/use-supabase-upload";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   campaignId: string;
@@ -19,7 +20,8 @@ interface Props {
 export function CampaignPersonalization({ campaignId }: Props) {
   const { data: campaigns } = useEvaluationCampaigns();
   const updateCampaign = useUpdateCampaign();
-  const { uploadFile, uploading } = useSupabaseUpload({ bucket: "business-logos", folder: "campaigns" });
+  const { user } = useAuth();
+  const { uploadFile, uploading } = useSupabaseUpload({ bucket: "business-logos", folder: user?.id });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const campaign = campaigns?.find((c) => c.id === campaignId) as any;
