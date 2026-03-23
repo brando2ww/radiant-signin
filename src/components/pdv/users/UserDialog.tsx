@@ -56,11 +56,15 @@ export function UserDialog({ open, onOpenChange, onSave, editingUser, isLoading 
       setEmail(editingUser.email || "");
       setPhone(editingUser.phone || "");
       setRole(editingUser.role);
+      setDiscountPassword((editingUser as any).discount_password || "");
+      setMaxDiscountPercent(String((editingUser as any).max_discount_percent ?? 100));
     } else {
       setName("");
       setEmail("");
       setPhone("");
       setRole("garcom");
+      setDiscountPassword("");
+      setMaxDiscountPercent("100");
     }
     setPassword("");
     setConfirmPassword("");
