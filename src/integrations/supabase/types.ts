@@ -3834,6 +3834,38 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_integrations: {
+        Row: {
+          created_at: string | null
+          id: string
+          integration_slug: string
+          is_active: boolean | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          integration_slug: string
+          is_active?: boolean | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          integration_slug?: string
+          is_active?: boolean | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_integrations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_modules: {
         Row: {
           created_at: string
