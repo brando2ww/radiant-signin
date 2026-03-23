@@ -1,8 +1,10 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useUserModules, UserModule } from '@/hooks/use-user-modules';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Lock } from 'lucide-react';
+import { Lock, LogOut } from 'lucide-react';
 
 interface ModuleGuardProps {
   module: UserModule;
@@ -12,6 +14,15 @@ interface ModuleGuardProps {
 
 export function ModuleGuard({ module, children, fallback }: ModuleGuardProps) {
   const { hasModule, isLoading } = useUserModules();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setLoggingOut(true);
+    await signOut();
+    navigate('/');
+  };
 
   if (isLoading) {
     return (
@@ -45,6 +56,15 @@ export function ModuleGuard({ module, children, fallback }: ModuleGuardProps) {
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={() => window.history.back()}>
                 Voltar
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={handleSignOut}
+                disabled={loggingOut}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                {loggingOut ? 'Saindo...' : 'Sair da conta'}
               </Button>
             </div>
           </CardContent>
