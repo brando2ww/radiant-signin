@@ -38,6 +38,7 @@ import {
   Plug,
   Users,
   Star,
+  GitBranch,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -109,6 +110,7 @@ const sectionItems: Section[] = [
       { title: "Configurações", url: "/pdv/configuracoes", icon: Settings },
       { title: "Usuários", url: "/pdv/usuarios", icon: Users },
       { title: "Avaliações", url: "/pdv/avaliacoes", icon: Star },
+      { title: "Franquia", url: "/pdv/franquia", icon: GitBranch },
     ],
   },
   {
