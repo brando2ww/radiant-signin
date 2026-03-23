@@ -1,64 +1,27 @@
 
 
-## Validação de Capacidade nas Comandas e Total da Mesa por Comandas
+## Fix: Campo "Número de Pessoas" pré-preenchido + Modal travando a página
 
-### Mudanças
+### Problema 1: Campo vem com valor "1" pré-preenchido
+O campo "Número de Pessoas" usa `value={personNumber || "1"}`, que sempre mostra "1" mesmo quando o estado está vazio. Deveria começar vazio (com placeholder "1") para que o usuário preencha manualmente.
 
-**1. Total da mesa = soma das comandas**
-
-Atualmente o `orderTotal` vem de `order.total` (que fica R$ 0.00). Mudar para somar os subtotais de todas as comandas abertas da mesa.
-
-- Em `Salon.tsx`: calcular `orderTotal` como soma dos subtotais das comandas da mesa em vez de usar `order.total`
-- Em `TableDetailsDialog.tsx`: sem mudança necessária (já recebe `orderTotal` como prop)
-
-**2. Validação de capacidade ao criar comanda**
-
-Ao clicar "Nova" comanda dentro de uma mesa, verificar se o total de `person_number` das comandas existentes já atingiu a capacidade da mesa. Se exceder, mostrar um AlertDialog de confirmação antes de abrir o ComandaDialog.
-
-- Em `Salon.tsx`: no `handleOpenTableComandaDialog`, calcular pessoas alocadas vs capacidade. Se exceder, mostrar popup de confirmação antes de prosseguir.
-- Novo state: `capacityWarningOpen` e `pendingComandaData` para controlar o fluxo de confirmação.
-
-**3. ComandaDialog: person_number padrão e validação**
-
-Quando a comanda é criada dentro de uma mesa, o campo "Número de Pessoas" deve aparecer sempre (não apenas quando tem `orderId`). O padrão deve ser 1.
+### Problema 2: Ao fechar o modal, a página trava
+O `AlertDialog` de capacidade usa `onOpenChange={setCapacityWarningOpen}` mas quando o ComandaDialog é fechado sem submeter, o `pendingComandaData` não é limpo. Além disso, o problema principal é que o ComandaDialog e o AlertDialog podem estar competindo pelo controle do DOM — quando o AlertDialog fecha mas o ComandaDialog já foi fechado, o body mantém `pointer-events: none` do overlay do Radix. A solução é garantir que ao cancelar/fechar qualquer dialog, todos os estados relacionados sejam limpos corretamente.
 
 ### Arquivos
 
 | Arquivo | Ação |
 |---------|------|
-| `src/pages/pdv/Salon.tsx` | Calcular `orderTotal` pela soma das comandas. Adicionar lógica de validação de capacidade com AlertDialog de confirmação |
-| `src/components/pdv/ComandaDialog.tsx` | Mostrar campo "Número de Pessoas" sempre que for comanda de mesa (com `tableNumber`). Default 1 |
-| `src/components/pdv/TableDetailsDialog.tsx` | Nenhuma mudança estrutural necessária |
+| `src/components/pdv/ComandaDialog.tsx` | Mudar `value={personNumber \|\| "1"}` para `value={personNumber}` com `placeholder="1"`. Resetar estados ao fechar (via `onOpenChange`) |
+| `src/pages/pdv/Salon.tsx` | No `AlertDialogCancel`, fechar também o `comandaDialogOpen`. No `handleConfirmCapacityOverride`, garantir cleanup completo. Adicionar cleanup no `onOpenChange` do `capacityWarningOpen` |
 
-### Fluxo de validação
+### Detalhes
 
-```text
-Usuário clica "+ Nova" comanda na mesa (cap. 6)
-→ Comandas existentes: Pessoa 1 (2 pessoas) + Pessoa 2 (3 pessoas) = 5 alocadas
-→ Nova comanda com 2 pessoas → total seria 7 > 6
-→ AlertDialog: "A mesa tem capacidade para 6 pessoas e já possui 5 alocadas. Deseja continuar mesmo assim?"
-→ Sim → cria comanda normalmente
-→ Não → cancela
-```
+**ComandaDialog.tsx:**
+- Linha 106: `value={personNumber}` + `placeholder="1"`
+- Adicionar reset de estados quando `onOpenChange(false)` é chamado (via useEffect ou wrapper)
 
-A validação acontece ao **submeter** o ComandaDialog (não ao abrir), pois o número de pessoas é definido no formulário.
-
-### Detalhe técnico
-
-No `Salon.tsx`, o `orderTotal` passará a ser:
-```typescript
-const tableComandas = getTableComandas(selectedTableForDetails.current_order_id);
-const comandasTotal = tableComandas.reduce((sum, c) => sum + c.subtotal, 0);
-// Passar comandasTotal como orderTotal
-```
-
-A validação de capacidade será feita no `handleCreateComanda`:
-```typescript
-// Antes de criar, verificar capacidade
-const existingPersons = tableComandas.reduce((sum, c) => sum + (c.person_number || 1), 0);
-const newPersons = data.personNumber || 1;
-if (existingPersons + newPersons > table.capacity) {
-  // Mostrar AlertDialog de confirmação
-}
-```
+**Salon.tsx:**
+- `AlertDialogCancel`: além de limpar `pendingComandaData`, reabrir ou manter o `comandaDialogOpen` dependendo do fluxo
+- Garantir que ao fechar o `AlertDialog`, `document.body.style.pointerEvents` não fique travado — usar `onOpenChange` com cleanup explícito
 
