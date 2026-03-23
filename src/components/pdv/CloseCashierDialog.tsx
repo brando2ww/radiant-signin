@@ -32,6 +32,8 @@ export interface CashMovement {
   payment_method?: string | null;
   description: string | null;
   created_at: string;
+  discount_reason?: string | null;
+  discount_authorized_by?: string | null;
 }
 
 export interface PrintCashierReportParams {
