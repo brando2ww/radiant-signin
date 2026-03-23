@@ -63,7 +63,7 @@ export default function UserForm() {
       }
     }
 
-    const data = { display_name: displayName, email, phone, role, ...(isEditing ? {} : { password }) };
+    const data = { display_name: displayName, email, phone, role, discount_password: discountPassword, max_discount_percent: maxDiscountPercent, ...(isEditing ? {} : { password }) };
 
     if (isEditing) {
       updateUser.mutate({ id, ...data }, {
