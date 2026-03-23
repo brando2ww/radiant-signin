@@ -182,13 +182,18 @@ export function usePDVPayments() {
         .maybeSingle();
 
       if (activeSession) {
-        await supabase.from("pdv_cashier_movements").insert({
+        const movementData: any = {
           cashier_session_id: activeSession.id,
           type: "venda",
           amount,
           payment_method: paymentMethod,
           description: `Mesa #${tableId.slice(0, 8)}`,
-        });
+        };
+        
+        if (discountReason) movementData.discount_reason = discountReason;
+        if (discountAuthorizedBy) movementData.discount_authorized_by = discountAuthorizedBy;
+        
+        await supabase.from("pdv_cashier_movements").insert(movementData);
 
         const updates: Record<string, number> = {
           total_sales: activeSession.total_sales + amount,
