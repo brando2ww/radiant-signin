@@ -1,24 +1,33 @@
 
 
-## Fix: Plano de Contas - check constraint violation
+## Criar Tenant "Garibaldi" para usuário existente
 
-### Problema
+O usuário `edersonbrutti@gmail.com` (ID: `d9087102-9bff-491e-ac9d-8429f62b42dd`) já existe no auth mas não tem tenant nem registro em `establishment_users`.
 
-O banco de dados tem um check constraint que aceita apenas valores em inglês: `revenue`, `expense`, `cost`, `asset`, `liability`. O código usa valores em português (`receita`, `despesa`, `custo`), causando o erro ao inserir.
+### Ação
 
-### Solução
+Executar uma migration que:
 
-Mapear os valores internos para inglês (compatível com o DB) e manter os labels em português na UI.
+1. **Cria o tenant** "Garibaldi" com `owner_user_id` apontando para o usuário existente
+2. **Cria o registro em `establishment_users`** com role `proprietario`
+3. **Ativa o módulo `pdv`** (padrão dos outros tenants)
 
-### Mudanças
+Nenhum dado existente será alterado ou removido.
 
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/pdv/financial/ChartOfAccounts.tsx` | Trocar valores de `ACCOUNT_TYPES` para `revenue`, `expense`, `cost`. Atualizar `emptyForm`, `countByType`, `expandedTypes` |
-| `src/hooks/use-pdv-chart-of-accounts.ts` | Trocar valores do seed para `revenue`, `expense`, `cost` |
+```sql
+-- 1. Criar tenant
+INSERT INTO tenants (name, owner_user_id, created_by)
+VALUES ('Garibaldi', 'd9087102-9bff-491e-ac9d-8429f62b42dd', '9224e12b-acdf-43d7-9fdc-99a83331cdbc')
+RETURNING id;
 
-Valores mapeados:
-- `receita` → `revenue` (label: "Receita")
-- `despesa` → `expense` (label: "Despesa")  
-- `custo` → `cost` (label: "Custo (CMV)")
+-- 2. Criar establishment_users (usando o id retornado)
+INSERT INTO establishment_users (establishment_owner_id, user_id, display_name, email, role, tenant_id)
+VALUES ('d9087102-...', 'd9087102-...', 'Ederson Brutti', 'edersonbrutti@gmail.com', 'proprietario', <tenant_id>);
+
+-- 3. Ativar módulo pdv
+INSERT INTO tenant_modules (tenant_id, module, is_active)
+VALUES (<tenant_id>, 'pdv', true);
+```
+
+Será feito via migration com subconsulta para capturar o `tenant_id` automaticamente.
 
