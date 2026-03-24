@@ -1,40 +1,25 @@
 
 
-## Fix: Fornecedor não selecionável + Tela congelada ao fechar modal
+## Atualizar Estrutura Básica do Plano de Contas
 
-### Problemas
+### O que muda
 
-1. **Popover de fornecedor não funciona** — O `Popover` dentro do `MultiSupplierSelector` é renderizado dentro do `DialogContent`, que tem seu próprio portal. O `PopoverContent` precisa de `portal={false}` ou `forceMount` para não ficar atrás do overlay do dialog.
+Substituir o seed simplificado atual por uma estrutura hierárquica completa com contas-pai (grupos) e contas-filho (sub-contas), conforme o padrão enviado.
 
-2. **Tela congela ao fechar** — Os sub-dialogs (`SupplierDialog`, `CategoryQuickDialog`, etc.) são renderizados fora do `<Dialog>` principal como fragmentos irmãos. Quando o dialog principal fecha com `onOpenChange(false)`, o estado dos sub-dialogs pode ficar preso (ainda `true`), mantendo overlays invisíveis que bloqueiam clicks. Precisamos resetar todos os sub-dialogs ao fechar o principal.
+### Mudança
 
-### Mudanças
+**`src/hooks/use-pdv-chart-of-accounts.ts`** — reescrever `seedBasicStructure`:
 
-| Arquivo | Ação |
-|---------|------|
-| `src/components/pdv/IngredientDialog.tsx` | 1. Adicionar `modal={false}` no `Popover` do `MultiSupplierSelector` para que funcione dentro do Dialog<br>2. Resetar estados dos sub-dialogs quando o dialog principal fecha<br>3. Garantir que o `onOpenChange` do dialog principal feche tudo |
+1. Inserir primeiro as contas-pai (grupos: 1.000, 2.000, ..., 40.000)
+2. Após inserção, buscar os IDs das contas-pai criadas
+3. Inserir as contas-filho com `parent_id` apontando para o grupo correto
 
-### Detalhes
+**Mapeamento de `account_type`** (compatível com constraint do DB):
+- Grupos 1-13, 40 → `expense`
+- Grupo 20 (Entrada de Produtos) → `cost`
+- Grupo 30 (Receitas) → `revenue`
 
-**1. Popover do fornecedor**
+**Estrutura completa**: 14 grupos-pai + ~100 sub-contas, exatamente como listado na mensagem.
 
-No componente `MultiSupplierSelector`, o `PopoverContent` precisa renderizar no mesmo container do Dialog, não em um portal separado. Solução: adicionar a prop que evita o portal no Popover, ou usar `sideOffset` e `z-index` alto.
-
-**2. Reset dos sub-dialogs**
-
-Criar um handler para o `onOpenChange` do Dialog principal que, ao fechar (`false`), reseta todos os sub-dialog states:
-
-```typescript
-const handleMainDialogChange = (isOpen: boolean) => {
-  if (!isOpen) {
-    setCategoryDialogOpen(false);
-    setSectorDialogOpen(false);
-    setCostCenterDialogOpen(false);
-    setSupplierDialogOpen(false);
-  }
-  onOpenChange(isOpen);
-};
-```
-
-E usar `handleMainDialogChange` no `<Dialog open={open} onOpenChange={handleMainDialogChange}>`.
+A mutation usará duas inserções sequenciais: primeiro os pais, depois os filhos com `parent_id` obtido via query dos pais recém-criados.
 
