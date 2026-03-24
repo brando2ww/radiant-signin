@@ -91,12 +91,12 @@ export default function TenantForm() {
             </div>
             <div className="space-y-2">
               <Label>Tenant Matriz (opcional)</Label>
-              <Select value={parentTenantId} onValueChange={setParentTenantId}>
+              <Select value={parentTenantId || "none"} onValueChange={(v) => setParentTenantId(v === "none" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Nenhum (independente)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum (independente)</SelectItem>
+                  <SelectItem value="none">Nenhum (independente)</SelectItem>
                   {tenants.filter((t) => !t.parent_tenant_id).map((t) => (
                     <SelectItem key={t.id} value={t.id}>
                       {t.name}
