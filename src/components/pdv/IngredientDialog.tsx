@@ -429,9 +429,19 @@ export function IngredientDialog({
     });
   };
 
+  const handleMainDialogChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      setCategoryDialogOpen(false);
+      setSectorDialogOpen(false);
+      setCostCenterDialogOpen(false);
+      setSupplierDialogOpen(false);
+    }
+    onOpenChange(isOpen);
+  };
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleMainDialogChange}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
