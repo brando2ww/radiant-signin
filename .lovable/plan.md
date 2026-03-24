@@ -1,33 +1,40 @@
 
 
-## Criar Tenant "Garibaldi" para usuário existente
+## Fix: Fornecedor não selecionável + Tela congelada ao fechar modal
 
-O usuário `edersonbrutti@gmail.com` (ID: `d9087102-9bff-491e-ac9d-8429f62b42dd`) já existe no auth mas não tem tenant nem registro em `establishment_users`.
+### Problemas
 
-### Ação
+1. **Popover de fornecedor não funciona** — O `Popover` dentro do `MultiSupplierSelector` é renderizado dentro do `DialogContent`, que tem seu próprio portal. O `PopoverContent` precisa de `portal={false}` ou `forceMount` para não ficar atrás do overlay do dialog.
 
-Executar uma migration que:
+2. **Tela congela ao fechar** — Os sub-dialogs (`SupplierDialog`, `CategoryQuickDialog`, etc.) são renderizados fora do `<Dialog>` principal como fragmentos irmãos. Quando o dialog principal fecha com `onOpenChange(false)`, o estado dos sub-dialogs pode ficar preso (ainda `true`), mantendo overlays invisíveis que bloqueiam clicks. Precisamos resetar todos os sub-dialogs ao fechar o principal.
 
-1. **Cria o tenant** "Garibaldi" com `owner_user_id` apontando para o usuário existente
-2. **Cria o registro em `establishment_users`** com role `proprietario`
-3. **Ativa o módulo `pdv`** (padrão dos outros tenants)
+### Mudanças
 
-Nenhum dado existente será alterado ou removido.
+| Arquivo | Ação |
+|---------|------|
+| `src/components/pdv/IngredientDialog.tsx` | 1. Adicionar `modal={false}` no `Popover` do `MultiSupplierSelector` para que funcione dentro do Dialog<br>2. Resetar estados dos sub-dialogs quando o dialog principal fecha<br>3. Garantir que o `onOpenChange` do dialog principal feche tudo |
 
-```sql
--- 1. Criar tenant
-INSERT INTO tenants (name, owner_user_id, created_by)
-VALUES ('Garibaldi', 'd9087102-9bff-491e-ac9d-8429f62b42dd', '9224e12b-acdf-43d7-9fdc-99a83331cdbc')
-RETURNING id;
+### Detalhes
 
--- 2. Criar establishment_users (usando o id retornado)
-INSERT INTO establishment_users (establishment_owner_id, user_id, display_name, email, role, tenant_id)
-VALUES ('d9087102-...', 'd9087102-...', 'Ederson Brutti', 'edersonbrutti@gmail.com', 'proprietario', <tenant_id>);
+**1. Popover do fornecedor**
 
--- 3. Ativar módulo pdv
-INSERT INTO tenant_modules (tenant_id, module, is_active)
-VALUES (<tenant_id>, 'pdv', true);
+No componente `MultiSupplierSelector`, o `PopoverContent` precisa renderizar no mesmo container do Dialog, não em um portal separado. Solução: adicionar a prop que evita o portal no Popover, ou usar `sideOffset` e `z-index` alto.
+
+**2. Reset dos sub-dialogs**
+
+Criar um handler para o `onOpenChange` do Dialog principal que, ao fechar (`false`), reseta todos os sub-dialog states:
+
+```typescript
+const handleMainDialogChange = (isOpen: boolean) => {
+  if (!isOpen) {
+    setCategoryDialogOpen(false);
+    setSectorDialogOpen(false);
+    setCostCenterDialogOpen(false);
+    setSupplierDialogOpen(false);
+  }
+  onOpenChange(isOpen);
+};
 ```
 
-Será feito via migration com subconsulta para capturar o `tenant_id` automaticamente.
+E usar `handleMainDialogChange` no `<Dialog open={open} onOpenChange={handleMainDialogChange}>`.
 
