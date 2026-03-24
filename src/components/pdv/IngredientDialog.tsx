@@ -134,7 +134,7 @@ function MultiSupplierSelector({
       )}
 
       <div className="flex gap-2">
-        <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <Popover open={popoverOpen} onOpenChange={setPopoverOpen} modal={false}>
           <PopoverTrigger asChild>
             <Button type="button" variant="outline" size="sm" className="gap-1">
               <Plus className="h-3 w-3" />
