@@ -150,8 +150,11 @@ export const ProductDialog = ({
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
+            <TabsTrigger value="recipe" disabled={!product}>
+              Ficha Técnica
+            </TabsTrigger>
             <TabsTrigger value="options" disabled={!product}>
               Opções e Complementos
             </TabsTrigger>
