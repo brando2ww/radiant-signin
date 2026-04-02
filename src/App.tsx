@@ -48,6 +48,14 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/avaliacoes/*"
+                  element={
+                    <ProtectedRoute>
+                      <EvaluationsPanel />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/admin/*"
                   element={
                     <SuperAdminGuard>
