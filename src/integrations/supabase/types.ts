@@ -824,6 +824,48 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_option_item_recipes: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_id: string
+          option_item_id: string
+          quantity: number
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          option_item_id: string
+          quantity?: number
+          unit?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          option_item_id?: string
+          quantity?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_option_item_recipes_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_option_item_recipes_option_item_id_fkey"
+            columns: ["option_item_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_product_option_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_order_item_options: {
         Row: {
           id: string
@@ -1078,6 +1120,48 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "delivery_product_options_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_product_recipes: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_id: string
+          product_id: string
+          quantity: number
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          product_id: string
+          quantity?: number
+          unit?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          product_id?: string
+          quantity?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_product_recipes_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_product_recipes_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "delivery_products"
