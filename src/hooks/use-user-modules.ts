@@ -86,7 +86,7 @@ export function useUserModules() {
 
   return {
     modules,
-    isLoading,
+    isLoading: isLoadingTenantId || isLoadingModules,
     hasModule,
     getDefaultModuleRoute,
     tenantId,
