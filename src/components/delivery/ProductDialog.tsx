@@ -232,6 +232,12 @@ export const ProductDialog = ({
             </form>
           </TabsContent>
 
+          <TabsContent value="recipe" className="mt-4">
+            {product && (
+              <DeliveryRecipeManager productId={product.id} productPrice={product.base_price} />
+            )}
+          </TabsContent>
+
           <TabsContent value="options" className="mt-4">
             <ProductOptionsManager productId={product?.id} />
           </TabsContent>
