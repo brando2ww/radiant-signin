@@ -17,7 +17,7 @@ export function useUserModules() {
   const { user } = useAuth();
 
   // First get the tenant_id for this user
-  const { data: tenantId } = useQuery({
+  const { data: tenantId, isLoading: isLoadingTenantId } = useQuery({
     queryKey: ['user-tenant-id', user?.id],
     queryFn: async () => {
       if (!user) return null;
