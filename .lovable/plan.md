@@ -1,78 +1,44 @@
 
 
-## Fichas Técnicas para Delivery: Receitas + Estoque + CMV
+## Próximo Passo: Hooks + UI para Fichas Técnicas Delivery
 
-### Problema atual
-- `delivery_products` e `delivery_product_option_items` não têm vínculo com insumos (`pdv_ingredients`)
-- Pedidos delivery não descontam estoque nem entram no cálculo de CMV
-- O sistema de receitas (`pdv_product_recipes`) só atende produtos do PDV
+A migration já foi criada. Agora precisamos implementar os hooks e componentes de UI. Vou dividir em 3 etapas sequenciais:
 
-### Solução proposta
+### Etapa 1 — Hooks de receitas (2 novos arquivos)
 
-Criar tabelas de receita dedicadas para delivery (produto base e adicionais), reutilizando os mesmos insumos (`pdv_ingredients`) do estoque.
+**`src/hooks/use-delivery-recipes.ts`**
+- Mesmo padrão do `use-pdv-recipes.ts`, mas consultando `delivery_product_recipes`
+- Funções: `addIngredient`, `updateQuantity`, `removeIngredient`, `calculateCMV`, `calculateMargin`
+- Query key: `["delivery-recipes", productId]`
 
-### Novas tabelas (2 migrations)
+**`src/hooks/use-delivery-option-recipes.ts`**
+- Mesmo padrão, mas consultando `delivery_option_item_recipes`
+- Query key: `["delivery-option-recipes", optionItemId]`
 
-**`delivery_product_recipes`** — receita do produto delivery
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| id | uuid PK | |
-| product_id | uuid FK → delivery_products | Produto delivery |
-| ingredient_id | uuid FK → pdv_ingredients | Insumo |
-| quantity | numeric | Quantidade usada |
-| unit | text | Unidade |
-| created_at | timestamptz | |
+### Etapa 2 — UI do ProductDialog (1 novo + 1 modificado)
 
-**`delivery_option_item_recipes`** — receita de cada adicional
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| id | uuid PK | |
-| option_item_id | uuid FK → delivery_product_option_items | Item da opção |
-| ingredient_id | uuid FK → pdv_ingredients | Insumo |
-| quantity | numeric | Quantidade usada |
-| unit | text | Unidade |
-| created_at | timestamptz | |
+**`src/components/delivery/DeliveryRecipeManager.tsx`** (novo)
+- Componente idêntico ao `ProductRecipeManager` do PDV, mas usando `useDeliveryRecipes` em vez de `usePDVRecipes`
+- Props: `productId`, `productPrice`
+- Exibe cards de CMV/preço/margem + tabela de insumos + formulário de adição
 
-Ambas com RLS (user via join com produto/opção) e policies de select/insert/update/delete.
+**`src/components/delivery/ProductDialog.tsx`** (modificado)
+- Adicionar terceira aba "Ficha Técnica" no TabsList (grid-cols-2 → grid-cols-3)
+- Aba desabilitada quando produto ainda não foi salvo (igual à aba Opções)
+- Conteúdo: `<DeliveryRecipeManager productId={product.id} productPrice={product.base_price} />`
 
-### Novos arquivos
+### Etapa 3 — Receitas nos adicionais + CMV (3 modificados)
 
-1. **`src/hooks/use-delivery-recipes.ts`** — Hook com queries e mutations para gerenciar receitas de produtos delivery (mesmo padrão do `use-pdv-recipes.ts`)
+**`src/components/delivery/ProductOptionDialog.tsx`**
+- Para cada item da opção, adicionar seção colapsável "Receita do item" com mini-gerenciador de insumos usando `useDeliveryOptionRecipes`
 
-2. **`src/hooks/use-delivery-option-recipes.ts`** — Hook para receitas dos adicionais (option items)
+**`src/components/delivery/ProductOptionsManager.tsx`**
+- Exibir badge de CMV em cada option item que tem receita vinculada (consulta `delivery_option_item_recipes`)
 
-### Arquivos modificados
+**`src/hooks/use-pdv-cmv.ts`** e **`src/hooks/use-pdv-dre.ts`**
+- Incluir pedidos delivery no cálculo de CMV, somando custo dos ingredientes do produto base + adicionais selecionados via as novas tabelas de receita
 
-3. **`src/components/delivery/ProductDialog.tsx`** — Adicionar aba "Receita" (igual ao PDV) usando um `DeliveryRecipeManager` que lista insumos, quantidades e calcula CMV do produto
+### Ordem de implementação
 
-4. **`src/components/delivery/ProductOptionDialog.tsx`** — Para cada item da opção, adicionar botão/seção para vincular insumos (ex: "Salmão" consome 150g de salmão do estoque)
-
-5. **`src/hooks/use-pdv-cmv.ts`** — Incluir pedidos delivery (`delivery_orders` + `delivery_order_items`) no cálculo de CMV, somando custo de ingredientes do produto base + adicionais selecionados
-
-6. **`src/hooks/use-pdv-dre.ts`** — Já inclui `delivery_orders` na receita, mas precisa incluir o CMV dos delivery orders (atualmente só calcula CMV de `pdv_order_items`)
-
-7. **`src/components/delivery/ProductOptionsManager.tsx`** — Exibir badge de CMV em cada option item que tem receita vinculada
-
-### Fluxo de uso
-
-```text
-Delivery → Cardápio → Editar "Monte Seu Poke"
-  └─ Aba Receita (NOVA)
-       ├─ Arroz (200g) = R$ 0,80
-       ├─ Alga nori (1un) = R$ 0,50
-       └─ CMV base: R$ 1,30
-
-  └─ Aba Opções e Complementos
-       └─ Etapa 01 → Salmão
-            └─ Receita: Salmão (150g) = R$ 4,50
-       └─ Etapa 01 → Atum
-            └─ Receita: Atum (150g) = R$ 3,80
-
-Pedido chega → CMV = base (R$ 1,30) + salmão (R$ 4,50) = R$ 5,80
-            → Estoque: -200g arroz, -1 nori, -150g salmão
-```
-
-### Impacto no estoque
-
-O desconto de estoque será calculado mas **não implementado automaticamente nesta fase** — apenas o CMV será computado. O desconto automático de estoque ao fechar pedido delivery pode ser uma segunda etapa, pois requer lógica de baixa similar à do PDV (que hoje também é manual via receitas).
+Vou começar pela **Etapa 1 + Etapa 2** (hooks + aba Ficha Técnica no ProductDialog), pois é o que entrega valor imediato — o usuário poderá cadastrar receitas nos produtos delivery. A Etapa 3 (adicionais + CMV) vem logo em seguida.
 
