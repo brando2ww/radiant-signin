@@ -24,6 +24,7 @@ import { DeliveryProduct, useCreateProduct, useUpdateProduct } from "@/hooks/use
 import { DeliveryCategory } from "@/hooks/use-delivery-categories";
 import { useProductImageUpload } from "@/hooks/use-product-image-upload";
 import { ProductOptionsManager } from "./ProductOptionsManager";
+import { DeliveryRecipeManager } from "./DeliveryRecipeManager";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { toast } from "sonner";
 
