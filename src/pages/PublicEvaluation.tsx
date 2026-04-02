@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { Star, CheckCircle2, ClipboardList, BarChart3, User } from "lucide-react";
+import { Star, CheckCircle2, ClipboardList, BarChart3, User, Sparkles, Send } from "lucide-react";
 import {
   usePublicCampaign,
   usePublicCampaignQuestions,
@@ -16,6 +16,36 @@ import { SpinWheel } from "@/components/public-evaluation/SpinWheel";
 import { PrizeResult } from "@/components/public-evaluation/PrizeResult";
 
 type Phase = "roulette" | "form" | "coupon" | "done";
+
+function ProgressBar({ value }: { value: number }) {
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-muted/30">
+      <div
+        className="h-full bg-gradient-to-r from-primary/80 to-primary rounded-r-full transition-all duration-700 ease-out"
+        style={{ width: `${value}%` }}
+      />
+    </div>
+  );
+}
+
+function EncouragementMessage({ progress }: { progress: number }) {
+  const message = useMemo(() => {
+    if (progress >= 100) return { text: "Tudo pronto! 🚀", sub: "Agora é só enviar" };
+    if (progress >= 75) return { text: "Quase lá! 🎯", sub: "Faltam só os seus dados" };
+    if (progress >= 50) return { text: "Muito bem! ✨", sub: "Você já passou da metade" };
+    if (progress >= 25) return { text: "Ótimo começo! 💪", sub: "Continue assim" };
+    return null;
+  }, [progress]);
+
+  if (!message || progress === 0) return null;
+
+  return (
+    <div className="text-center animate-fade-in" key={message.text}>
+      <p className="text-sm font-semibold text-primary">{message.text}</p>
+      <p className="text-xs text-muted-foreground">{message.sub}</p>
+    </div>
+  );
+}
 
 export default function PublicEvaluation() {
   const { campaignId } = useParams<{ campaignId: string }>();
@@ -42,6 +72,21 @@ export default function PublicEvaluation() {
   const welcomeMsg = (campaign as any)?.welcome_message;
   const thankYouMsg = (campaign as any)?.thank_you_message;
 
+  // Progress calculation (reordered: questions → NPS → personal data)
+  const progress = useMemo(() => {
+    const totalQuestions = questions?.length || 0;
+    const answeredQuestions = questions?.filter((q) => answers[q.id]?.score > 0).length || 0;
+    const hasNps = npsScore !== null ? 1 : 0;
+    const hasName = name.trim() ? 1 : 0;
+    const hasPhone = phone.replace(/\D/g, "").length >= 10 ? 1 : 0;
+    const hasBirth = birthDate ? 1 : 0;
+
+    const totalSteps = totalQuestions + 1 + 3; // questions + nps + 3 personal fields
+    const completedSteps = answeredQuestions + hasNps + hasName + hasPhone + hasBirth;
+
+    return totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+  }, [questions, answers, npsScore, name, phone, birthDate]);
+
   if (loadingCampaign || loadingQuestions) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: bgColor }}>
@@ -58,7 +103,6 @@ export default function PublicEvaluation() {
     );
   }
 
-  // Determine initial phase
   const showRoulette = rouletteEnabled && prizes.length > 0;
   const currentPhase = showRoulette ? phase : (phase === "roulette" ? "form" : phase);
 
@@ -86,7 +130,6 @@ export default function PublicEvaluation() {
 
   const handleSpinResult = (prize: CampaignPrize) => {
     setWonPrize(prize);
-    // Small delay for dramatic effect, then show form
     setTimeout(() => setPhase("form"), 1500);
   };
 
@@ -109,7 +152,6 @@ export default function PublicEvaluation() {
       {
         onSuccess: (result) => {
           if (wonPrize && result?.id) {
-            // Register the prize win
             registerWin.mutate(
               {
                 campaignId,
@@ -136,7 +178,7 @@ export default function PublicEvaluation() {
   };
 
   const Logo = logoUrl ? (
-    <img src={logoUrl} alt="Logo" className="h-20 w-20 object-contain rounded-2xl mx-auto shadow-sm" />
+    <img src={logoUrl} alt="Logo" className="h-16 w-16 object-contain rounded-2xl mx-auto shadow-sm" />
   ) : null;
 
   // === PHASE: COUPON ===
@@ -157,15 +199,17 @@ export default function PublicEvaluation() {
     );
   }
 
-  // === PHASE: DONE (no roulette) ===
+  // === PHASE: DONE ===
   if (currentPhase === "done") {
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: bgColor }}>
         <div className="text-center space-y-5 max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
           {Logo}
-          <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto" />
-          <h1 className="text-2xl font-bold text-foreground">Obrigado!</h1>
-          <p className="text-muted-foreground leading-relaxed">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-50 mx-auto">
+            <CheckCircle2 className="h-10 w-10 text-green-500" />
+          </div>
+          <h1 className="text-2xl font-semibold text-foreground">Obrigado!</h1>
+          <p className="text-muted-foreground leading-relaxed text-sm">
             {thankYouMsg || "Sua avaliação foi enviada com sucesso. Agradecemos pelo seu feedback!"}
           </p>
         </div>
@@ -173,25 +217,37 @@ export default function PublicEvaluation() {
     );
   }
 
+  const getNpsColor = (n: number, selected: boolean) => {
+    if (!selected) return "border-border/60 bg-background hover:bg-muted/50 text-muted-foreground";
+    if (n <= 6) return "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20";
+    if (n <= 8) return "bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-500/20";
+    return "bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20";
+  };
+
   return (
     <div className="min-h-screen" style={{ backgroundColor: bgColor }}>
-      <div className="max-w-lg mx-auto px-4 py-8 space-y-6">
+      {currentPhase === "form" && <ProgressBar value={progress} />}
+
+      <div className="max-w-lg mx-auto px-4 py-8 space-y-5">
         {/* Header */}
-        <div className="text-center space-y-3 pb-2">
+        <div className="text-center space-y-2 pb-2">
           {Logo}
-          <h1 className="text-2xl font-bold text-foreground">{campaign.name}</h1>
+          <h1 className="text-xl font-semibold text-foreground mt-3">{campaign.name}</h1>
           {currentPhase === "roulette" ? (
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto">
               🎡 Gire a roleta e descubra seu prêmio!
             </p>
           ) : (
-            <p className="text-sm text-muted-foreground leading-relaxed max-w-md mx-auto">
+            <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto">
               {wonPrize
-                ? `Você ganhou: ${wonPrize.name}! Preencha a avaliação para liberar seu cupom.`
+                ? `Você ganhou: ${wonPrize.name}! Preencha para liberar seu cupom.`
                 : welcomeMsg || campaign.description || "Conte-nos sobre sua experiência"}
             </p>
           )}
         </div>
+
+        {/* Encouragement */}
+        {currentPhase === "form" && <EncouragementMessage progress={progress} />}
 
         {/* === PHASE: ROULETTE === */}
         {currentPhase === "roulette" && (
@@ -200,59 +256,31 @@ export default function PublicEvaluation() {
           </div>
         )}
 
-        {/* === PHASE: FORM === */}
+        {/* === PHASE: FORM (reordered: questions → NPS → personal data) === */}
         {currentPhase === "form" && (
           <>
             {/* Prize reminder banner */}
             {wonPrize && (
-              <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 text-center">
-                <p className="text-sm font-semibold text-primary">
-                  🎊 Prêmio: {wonPrize.name}
+              <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 text-center animate-fade-in">
+                <p className="text-sm font-semibold text-primary flex items-center justify-center gap-1.5">
+                  <Sparkles className="h-4 w-4" /> Prêmio: {wonPrize.name}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Preencha a avaliação abaixo para liberar seu cupom
+                  Preencha abaixo para liberar seu cupom
                 </p>
               </div>
             )}
 
-            {/* Section: Dados do Cliente */}
-            <section className="bg-card rounded-2xl p-6 shadow-sm border space-y-4">
-              <div className="flex items-center gap-2 text-foreground mb-1">
-                <User className="h-5 w-5 text-primary" />
-                <h2 className="text-base font-semibold">Seus Dados</h2>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="eval-name">Nome *</Label>
-                <Input
-                  id="eval-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Seu nome completo"
-                  maxLength={100}
-                  className="h-12 rounded-xl"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="eval-phone">Telefone *</Label>
-                <PhoneInput value={phone} onChange={setPhone} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="eval-birth">Data de Nascimento *</Label>
-                <Input
-                  id="eval-birth"
-                  type="date"
-                  value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
-                  className="h-12 rounded-xl"
-                />
-              </div>
-            </section>
-
-            {/* Section: Perguntas */}
+            {/* SECTION 1: Star Rating Questions */}
             {questions && questions.length > 0 && (
-              <section className="bg-card rounded-2xl p-6 shadow-sm border space-y-6">
-                <div className="flex items-center gap-2 text-foreground mb-1">
-                  <ClipboardList className="h-5 w-5 text-primary" />
+              <section
+                className="bg-white/70 dark:bg-card/70 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-white/40 dark:border-border/30 space-y-6"
+                style={{ animationDelay: "0.1s" }}
+              >
+                <div className="flex items-center gap-2 text-foreground">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <ClipboardList className="h-4 w-4 text-primary" />
+                  </div>
                   <h2 className="text-base font-semibold">Avaliação</h2>
                 </div>
 
@@ -263,26 +291,26 @@ export default function PublicEvaluation() {
                       <p className="text-sm font-medium text-foreground leading-snug">
                         {idx + 1}. {q.question_text}
                       </p>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
                         {[1, 2, 3, 4, 5].map((s) => (
                           <button
                             key={s}
                             type="button"
                             onClick={() => handleSetScore(q.id, s)}
-                            className="p-1 transition-transform active:scale-90"
+                            className="p-0.5 transition-all duration-200 active:scale-75"
                           >
                             <Star
-                              className={`h-9 w-9 transition-colors ${
+                              className={`h-10 w-10 transition-all duration-300 ${
                                 s <= score
-                                  ? "text-yellow-500 fill-yellow-500"
-                                  : "text-muted-foreground/20"
+                                  ? "text-amber-400 fill-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)] scale-110"
+                                  : "text-muted-foreground/15 hover:text-amber-300/50"
                               }`}
                             />
                           </button>
                         ))}
                       </div>
                       {score > 0 && score <= 2 && (
-                        <div className="space-y-1.5 animate-in fade-in duration-200">
+                        <div className="space-y-1.5 animate-fade-in">
                           <Label className="text-xs text-muted-foreground">
                             O que aconteceu? (opcional)
                           </Label>
@@ -291,12 +319,12 @@ export default function PublicEvaluation() {
                             onChange={(e) => handleSetComment(q.id, e.target.value)}
                             placeholder="Conte-nos o que podemos melhorar..."
                             maxLength={500}
-                            className="min-h-[70px] rounded-xl text-sm"
+                            className="min-h-[70px] rounded-xl text-sm border-border/40 bg-white/50 dark:bg-background/50"
                           />
                         </div>
                       )}
                       {idx < questions.length - 1 && (
-                        <div className="border-b border-border/50 pt-1" />
+                        <div className="border-b border-border/20 pt-1" />
                       )}
                     </div>
                   );
@@ -304,55 +332,110 @@ export default function PublicEvaluation() {
               </section>
             )}
 
-            {/* Section: NPS */}
-            <section className="bg-card rounded-2xl p-6 shadow-sm border space-y-4">
-              <div className="flex items-center gap-2 text-foreground mb-1">
-                <BarChart3 className="h-5 w-5 text-primary" />
+            {/* SECTION 2: NPS */}
+            <section
+              className="bg-white/70 dark:bg-card/70 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-white/40 dark:border-border/30 space-y-4"
+              style={{ animationDelay: "0.2s" }}
+            >
+              <div className="flex items-center gap-2 text-foreground">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <BarChart3 className="h-4 w-4 text-primary" />
+                </div>
                 <h2 className="text-base font-semibold">Recomendação</h2>
               </div>
               <p className="text-sm text-muted-foreground leading-snug">
-                De 0 a 10, o quanto você indicaria nosso estabelecimento para um amigo?
+                De 0 a 10, o quanto indicaria nosso estabelecimento?
               </p>
-              <div className="flex flex-wrap justify-center gap-2">
+              <div className="grid grid-cols-11 gap-1.5">
                 {Array.from({ length: 11 }, (_, i) => i).map((n) => (
                   <button
                     key={n}
                     type="button"
                     onClick={() => setNpsScore(n)}
-                    className={`w-11 h-11 rounded-xl text-sm font-bold border-2 transition-all active:scale-95 ${
-                      npsScore === n
-                        ? n <= 6
-                          ? "bg-red-500 text-white border-red-500 shadow-md"
-                          : n <= 8
-                          ? "bg-yellow-500 text-white border-yellow-500 shadow-md"
-                          : "bg-green-600 text-white border-green-600 shadow-md"
-                        : "border-border bg-card hover:bg-muted"
-                    }`}
+                    className={`aspect-square rounded-xl text-xs font-bold border-2 transition-all duration-200 active:scale-90 ${getNpsColor(n, npsScore === n)}`}
                   >
                     {n}
                   </button>
                 ))}
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground px-1">
-                <span>Nada provável</span>
-                <span>Muito provável</span>
+              <div className="flex justify-between text-[10px] text-muted-foreground/70 px-0.5 font-medium">
+                <span>😞 Nada provável</span>
+                <span>😍 Muito provável</span>
+              </div>
+            </section>
+
+            {/* SECTION 3: Personal Data (last — reduces friction) */}
+            <section
+              className="bg-white/70 dark:bg-card/70 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-white/40 dark:border-border/30 space-y-4"
+              style={{ animationDelay: "0.3s" }}
+            >
+              <div className="flex items-center gap-2 text-foreground">
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <User className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold">Seus Dados</h2>
+                  <p className="text-[11px] text-muted-foreground leading-tight">
+                    {wonPrize ? "Para entregarmos seu prêmio" : "Para personalizarmos sua experiência"}
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="eval-name" className="text-xs font-medium">Nome</Label>
+                <Input
+                  id="eval-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Seu nome completo"
+                  maxLength={100}
+                  className="h-11 rounded-xl border-border/40 bg-white/60 dark:bg-background/50"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="eval-phone" className="text-xs font-medium">Telefone</Label>
+                <PhoneInput value={phone} onChange={setPhone} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="eval-birth" className="text-xs font-medium">Data de Nascimento</Label>
+                <Input
+                  id="eval-birth"
+                  type="date"
+                  value={birthDate}
+                  onChange={(e) => setBirthDate(e.target.value)}
+                  className="h-11 rounded-xl border-border/40 bg-white/60 dark:bg-background/50"
+                />
               </div>
             </section>
 
             {/* Submit */}
             <Button
-              className="w-full h-14 rounded-2xl text-base font-semibold shadow-md"
+              className={`w-full h-14 rounded-2xl text-base font-semibold transition-all duration-500 gap-2 ${
+                canSubmit
+                  ? "shadow-lg shadow-primary/25 scale-[1.01]"
+                  : "opacity-60"
+              }`}
               disabled={!canSubmit || submitEvaluation.isPending || registerWin.isPending}
               onClick={handleSubmit}
             >
-              {submitEvaluation.isPending || registerWin.isPending
-                ? "Enviando..."
-                : wonPrize
-                ? "Enviar e Liberar Cupom 🎁"
-                : "Enviar Avaliação"}
+              {submitEvaluation.isPending || registerWin.isPending ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Enviando...
+                </>
+              ) : wonPrize ? (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Enviar e Liberar Cupom
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  Enviar Avaliação
+                </>
+              )}
             </Button>
 
-            <div className="h-4" />
+            <div className="h-6" />
           </>
         )}
       </div>
