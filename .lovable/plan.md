@@ -1,47 +1,78 @@
 
 
-## Redesign UX da Página Pública de Avaliação
+## Fichas Técnicas para Delivery: Receitas + Estoque + CMV
 
-### Objetivo
-Melhorar a experiência do cliente na página pública de avaliação para aumentar a taxa de preenchimento, com design minimalista e estratégias de engajamento.
+### Problema atual
+- `delivery_products` e `delivery_product_option_items` não têm vínculo com insumos (`pdv_ingredients`)
+- Pedidos delivery não descontam estoque nem entram no cálculo de CMV
+- O sistema de receitas (`pdv_product_recipes`) só atende produtos do PDV
 
-### Estratégias de UX para conversão
+### Solução proposta
 
-1. **Progress indicator** — Barra de progresso sutil no topo mostrando % de completude do formulário (incentiva conclusão)
-2. **Micro-interações** — Estrelas com animação de escala/cor ao selecionar; NPS buttons com feedback visual mais rico
-3. **Ordem invertida** — Começar pelas perguntas de avaliação (engaja primeiro) e pedir dados pessoais por último (reduz atrito inicial)
-4. **Feedback positivo progressivo** — Mensagens de encorajamento conforme preenche ("Quase lá!", "Falta pouco!")
-5. **Visual minimalista premium** — Cards com glassmorphism sutil, tipografia mais refinada, espaçamento generoso
+Criar tabelas de receita dedicadas para delivery (produto base e adicionais), reutilizando os mesmos insumos (`pdv_ingredients`) do estoque.
 
-### Mudanças técnicas
+### Novas tabelas (2 migrations)
 
-**`src/pages/PublicEvaluation.tsx`**
-- Reordenar seções: Avaliação (estrelas) → NPS → Dados pessoais
-- Adicionar barra de progresso animada no topo da página
-- Mensagens de encorajamento dinâmicas baseadas no progresso
-- Animações de entrada por seção (staggered fade-in)
-- Estrelas maiores com animação de pulse ao clicar
-- NPS redesenhado: números em grid mais elegante com labels coloridos (detratores/neutros/promotores)
-- Botão de submit com estado visual que "desperta" conforme formulário é completado
-- Tipografia: títulos mais leves, subtítulos com mais breathing room
-- Cards com `backdrop-blur` e bordas sutis (glassmorphism leve)
-- Seção de dados pessoais com texto explicativo mais amigável ("Para entregarmos seu prêmio" / "Para personalizarmos sua experiência")
+**`delivery_product_recipes`** — receita do produto delivery
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid PK | |
+| product_id | uuid FK → delivery_products | Produto delivery |
+| ingredient_id | uuid FK → pdv_ingredients | Insumo |
+| quantity | numeric | Quantidade usada |
+| unit | text | Unidade |
+| created_at | timestamptz | |
 
-**`src/components/public-evaluation/PrizeResult.tsx`**
-- Animação de confetti sutil (CSS-only) no resultado do prêmio
-- Layout mais celebratório e visual
+**`delivery_option_item_recipes`** — receita de cada adicional
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid PK | |
+| option_item_id | uuid FK → delivery_product_option_items | Item da opção |
+| ingredient_id | uuid FK → pdv_ingredients | Insumo |
+| quantity | numeric | Quantidade usada |
+| unit | text | Unidade |
+| created_at | timestamptz | |
 
-### Detalhes de implementação
+Ambas com RLS (user via join com produto/opção) e policies de select/insert/update/delete.
 
-| Elemento | Antes | Depois |
-|----------|-------|--------|
-| Ordem | Dados → Perguntas → NPS | Perguntas → NPS → Dados |
-| Progresso | Nenhum | Barra animada no topo |
-| Estrelas | 36px estáticas | 40px com pulse animation |
-| NPS | Grid simples | Grid com gradiente de cor e labels |
-| Cards | `bg-card border shadow-sm` | `bg-white/80 backdrop-blur border-white/20` |
-| Submit | Sempre visível | Aparece com destaque quando formulário completo |
-| Feedback | Nenhum | Mensagens dinâmicas de progresso |
+### Novos arquivos
 
-Nenhuma tabela ou hook de dados será alterada — apenas UI/UX.
+1. **`src/hooks/use-delivery-recipes.ts`** — Hook com queries e mutations para gerenciar receitas de produtos delivery (mesmo padrão do `use-pdv-recipes.ts`)
+
+2. **`src/hooks/use-delivery-option-recipes.ts`** — Hook para receitas dos adicionais (option items)
+
+### Arquivos modificados
+
+3. **`src/components/delivery/ProductDialog.tsx`** — Adicionar aba "Receita" (igual ao PDV) usando um `DeliveryRecipeManager` que lista insumos, quantidades e calcula CMV do produto
+
+4. **`src/components/delivery/ProductOptionDialog.tsx`** — Para cada item da opção, adicionar botão/seção para vincular insumos (ex: "Salmão" consome 150g de salmão do estoque)
+
+5. **`src/hooks/use-pdv-cmv.ts`** — Incluir pedidos delivery (`delivery_orders` + `delivery_order_items`) no cálculo de CMV, somando custo de ingredientes do produto base + adicionais selecionados
+
+6. **`src/hooks/use-pdv-dre.ts`** — Já inclui `delivery_orders` na receita, mas precisa incluir o CMV dos delivery orders (atualmente só calcula CMV de `pdv_order_items`)
+
+7. **`src/components/delivery/ProductOptionsManager.tsx`** — Exibir badge de CMV em cada option item que tem receita vinculada
+
+### Fluxo de uso
+
+```text
+Delivery → Cardápio → Editar "Monte Seu Poke"
+  └─ Aba Receita (NOVA)
+       ├─ Arroz (200g) = R$ 0,80
+       ├─ Alga nori (1un) = R$ 0,50
+       └─ CMV base: R$ 1,30
+
+  └─ Aba Opções e Complementos
+       └─ Etapa 01 → Salmão
+            └─ Receita: Salmão (150g) = R$ 4,50
+       └─ Etapa 01 → Atum
+            └─ Receita: Atum (150g) = R$ 3,80
+
+Pedido chega → CMV = base (R$ 1,30) + salmão (R$ 4,50) = R$ 5,80
+            → Estoque: -200g arroz, -1 nori, -150g salmão
+```
+
+### Impacto no estoque
+
+O desconto de estoque será calculado mas **não implementado automaticamente nesta fase** — apenas o CMV será computado. O desconto automático de estoque ao fechar pedido delivery pode ser uma segunda etapa, pois requer lógica de baixa similar à do PDV (que hoje também é manual via receitas).
 
