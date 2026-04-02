@@ -1,44 +1,40 @@
 
 
-## Próximo Passo: Hooks + UI para Fichas Técnicas Delivery
+## Painel Standalone de Avaliações
 
-A migration já foi criada. Agora precisamos implementar os hooks e componentes de UI. Vou dividir em 3 etapas sequenciais:
+### Problema
+O módulo de Avaliações está dentro do `/pdv/*`, que exige `ModuleGuard module="pdv"`. Se o tenant só tem `avaliacoes` ativo (sem `pdv`), o usuário vê "Módulo não disponível".
 
-### Etapa 1 — Hooks de receitas (2 novos arquivos)
+### Solução
+Criar uma rota `/avaliacoes/*` independente com seu próprio layout (header simplificado + logo + user menu), protegida por `ModuleGuard module="avaliacoes"`. O login redireciona para `/avaliacoes` quando o tenant só tem esse módulo.
 
-**`src/hooks/use-delivery-recipes.ts`**
-- Mesmo padrão do `use-pdv-recipes.ts`, mas consultando `delivery_product_recipes`
-- Funções: `addIngredient`, `updateQuantity`, `removeIngredient`, `calculateCMV`, `calculateMargin`
-- Query key: `["delivery-recipes", productId]`
+### Arquivos
 
-**`src/hooks/use-delivery-option-recipes.ts`**
-- Mesmo padrão, mas consultando `delivery_option_item_recipes`
-- Query key: `["delivery-option-recipes", optionItemId]`
+**1. `src/pages/EvaluationsPanel.tsx`** (novo)
+- Layout standalone: header com Logo + título "Avaliações" + PDVUserMenu
+- Reutiliza o componente `Evaluations` (`src/pages/pdv/Evaluations.tsx`) já existente como conteúdo
+- Envolvido em `ModuleGuard module="avaliacoes"`
 
-### Etapa 2 — UI do ProductDialog (1 novo + 1 modificado)
+**2. `src/App.tsx`** (modificado)
+- Adicionar rota `/avaliacoes/*` com `ProtectedRoute` + `EvaluationsPanel`
 
-**`src/components/delivery/DeliveryRecipeManager.tsx`** (novo)
-- Componente idêntico ao `ProductRecipeManager` do PDV, mas usando `useDeliveryRecipes` em vez de `usePDVRecipes`
-- Props: `productId`, `productPrice`
-- Exibe cards de CMV/preço/margem + tabela de insumos + formulário de adição
+**3. `src/pages/Index.tsx`** (modificado)
+- No redirect pós-login, verificar: se user não é super admin e tem módulo `avaliacoes` mas não tem `pdv`, redirecionar para `/avaliacoes` em vez de `defaultRoute`
 
-**`src/components/delivery/ProductDialog.tsx`** (modificado)
-- Adicionar terceira aba "Ficha Técnica" no TabsList (grid-cols-2 → grid-cols-3)
-- Aba desabilitada quando produto ainda não foi salvo (igual à aba Opções)
-- Conteúdo: `<DeliveryRecipeManager productId={product.id} productPrice={product.base_price} />`
+**4. `src/hooks/use-user-modules.ts`** (modificado)
+- Exportar helper `getDefaultModuleRoute()` que retorna `/avaliacoes` se só tem avaliacoes, `/pdv/dashboard` se tem pdv, etc.
 
-### Etapa 3 — Receitas nos adicionais + CMV (3 modificados)
+**5. `src/components/ProtectedRoute.tsx`** (modificado)
+- Permitir acesso a `/avaliacoes` sem exigir módulo pdv (já é controlado pelo ModuleGuard dentro do EvaluationsPanel)
 
-**`src/components/delivery/ProductOptionDialog.tsx`**
-- Para cada item da opção, adicionar seção colapsável "Receita do item" com mini-gerenciador de insumos usando `useDeliveryOptionRecipes`
+### Fluxo
 
-**`src/components/delivery/ProductOptionsManager.tsx`**
-- Exibir badge de CMV em cada option item que tem receita vinculada (consulta `delivery_option_item_recipes`)
+```text
+Login → useUserModules().getDefaultModuleRoute()
+  ├─ tem pdv → /pdv/dashboard (comportamento atual)
+  ├─ só avaliacoes → /avaliacoes (NOVO)
+  └─ super admin → /admin
+```
 
-**`src/hooks/use-pdv-cmv.ts`** e **`src/hooks/use-pdv-dre.ts`**
-- Incluir pedidos delivery no cálculo de CMV, somando custo dos ingredientes do produto base + adicionais selecionados via as novas tabelas de receita
-
-### Ordem de implementação
-
-Vou começar pela **Etapa 1 + Etapa 2** (hooks + aba Ficha Técnica no ProductDialog), pois é o que entrega valor imediato — o usuário poderá cadastrar receitas nos produtos delivery. A Etapa 3 (adicionais + CMV) vem logo em seguida.
+O painel standalone terá visual limpo: apenas logo, título e menu do usuário no header, sem a nav completa do PDV.
 
