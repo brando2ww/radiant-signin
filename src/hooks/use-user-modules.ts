@@ -17,7 +17,7 @@ export function useUserModules() {
   const { user } = useAuth();
 
   // First get the tenant_id for this user
-  const { data: tenantId } = useQuery({
+  const { data: tenantId, isLoading: isLoadingTenantId } = useQuery({
     queryKey: ['user-tenant-id', user?.id],
     queryFn: async () => {
       if (!user) return null;
@@ -45,7 +45,7 @@ export function useUserModules() {
     enabled: !!user,
   });
 
-  const { data: modules = [], isLoading } = useQuery({
+  const { data: modules = [], isLoading: isLoadingModules } = useQuery({
     queryKey: ['tenant-modules', tenantId],
     queryFn: async () => {
       if (!tenantId) return [];
@@ -86,7 +86,7 @@ export function useUserModules() {
 
   return {
     modules,
-    isLoading,
+    isLoading: isLoadingTenantId || isLoadingModules,
     hasModule,
     getDefaultModuleRoute,
     tenantId,
