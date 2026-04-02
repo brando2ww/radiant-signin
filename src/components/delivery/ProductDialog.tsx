@@ -24,6 +24,7 @@ import { DeliveryProduct, useCreateProduct, useUpdateProduct } from "@/hooks/use
 import { DeliveryCategory } from "@/hooks/use-delivery-categories";
 import { useProductImageUpload } from "@/hooks/use-product-image-upload";
 import { ProductOptionsManager } from "./ProductOptionsManager";
+import { DeliveryRecipeManager } from "./DeliveryRecipeManager";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { toast } from "sonner";
 
@@ -149,8 +150,11 @@ export const ProductDialog = ({
         </DialogHeader>
 
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="details">Detalhes</TabsTrigger>
+            <TabsTrigger value="recipe" disabled={!product}>
+              Ficha Técnica
+            </TabsTrigger>
             <TabsTrigger value="options" disabled={!product}>
               Opções e Complementos
             </TabsTrigger>
@@ -226,6 +230,12 @@ export const ProductDialog = ({
                 </Button>
               </DialogFooter>
             </form>
+          </TabsContent>
+
+          <TabsContent value="recipe" className="mt-4">
+            {product && (
+              <DeliveryRecipeManager productId={product.id} productPrice={product.base_price} />
+            )}
           </TabsContent>
 
           <TabsContent value="options" className="mt-4">
