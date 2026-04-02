@@ -45,7 +45,7 @@ export function useUserModules() {
     enabled: !!user,
   });
 
-  const { data: modules = [], isLoading } = useQuery({
+  const { data: modules = [], isLoading: isLoadingModules } = useQuery({
     queryKey: ['tenant-modules', tenantId],
     queryFn: async () => {
       if (!tenantId) return [];
