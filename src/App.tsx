@@ -15,6 +15,7 @@ import SuperAdmin from "./pages/SuperAdmin";
 import PublicMenu from "./pages/PublicMenu";
 import PublicEvaluation from "./pages/PublicEvaluation";
 import PublicTasks from "./pages/PublicTasks";
+import EvaluationsPanel from "./pages/EvaluationsPanel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <Garcom />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/avaliacoes/*"
+                  element={
+                    <ProtectedRoute>
+                      <EvaluationsPanel />
                     </ProtectedRoute>
                   }
                 />

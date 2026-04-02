@@ -77,10 +77,18 @@ export function useUserModules() {
     return true;
   };
 
+  const getDefaultModuleRoute = (): string => {
+    if (hasModule('pdv')) return '/pdv/dashboard';
+    if (hasModule('avaliacoes')) return '/avaliacoes';
+    if (hasModule('delivery')) return '/pdv/dashboard';
+    return '/pdv/dashboard';
+  };
+
   return {
     modules,
     isLoading,
     hasModule,
+    getDefaultModuleRoute,
     tenantId,
   };
 }
