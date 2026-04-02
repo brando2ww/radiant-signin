@@ -39,19 +39,20 @@ const Index = () => {
   const { signUp, resetPasswordByDocument, signInWithGoogle, user, loading } = useAuth();
   const { isSuperAdmin, isLoading: superAdminLoading } = useSuperAdmin();
   const { defaultRoute, isLoading: roleLoading } = useUserRole();
+  const { getDefaultModuleRoute, isLoading: modulesLoading } = useUserModules();
   const [currentForm, setCurrentForm] = useState<FormType>('login');
   const navigate = useNavigate();
 
   // Redirecionar se já estiver autenticado
   useEffect(() => {
-    if (user && !loading && !superAdminLoading && !roleLoading) {
+    if (user && !loading && !superAdminLoading && !roleLoading && !modulesLoading) {
       if (isSuperAdmin) {
         navigate('/admin');
       } else {
-        navigate(defaultRoute);
+        navigate(getDefaultModuleRoute());
       }
     }
-  }, [user, loading, isSuperAdmin, superAdminLoading, roleLoading, defaultRoute, navigate]);
+  }, [user, loading, isSuperAdmin, superAdminLoading, roleLoading, modulesLoading, defaultRoute, navigate, getDefaultModuleRoute]);
 
   const handleSignIn = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
