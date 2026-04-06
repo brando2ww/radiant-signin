@@ -1,39 +1,43 @@
 
 
-## Fase 6 - Melhorar Roletas (CouponsRoulettes)
+## Fase 7 - Aplicar Cores da Campanha na Roleta Publica + Cooldown
+
+### Contexto
+As fases 1-6 do plano competitivo foram concluidas. Esta fase conecta as configuracoes criadas na Fase 6 (cores primaria/secundaria, cooldown) com a experiencia publica do cliente.
 
 ### O que muda
-Transformar a pagina de roletas de uma visao somente-leitura para uma interface de edicao completa com cores customizaveis, preview interativo usando as cores reais dos premios, e campo de cooldown.
 
-### Migracao de banco de dados
-Adicionar 3 colunas na tabela `evaluation_campaigns`:
-- `wheel_primary_color` (text, default `#1a1a2e`)
-- `wheel_secondary_color` (text, default `#722F37`)
-- `roulette_cooldown_hours` (integer, default `0` — 0 = sem cooldown)
+**1. SpinWheel usa cores da campanha e dos premios**
+O componente `SpinWheel.tsx` atualmente tem cores hardcoded (`#1a1a2e`, `#722F37`). Vamos:
+- Aceitar props `primaryColor` e `secondaryColor` (vindas da campanha)
+- Usar `prize.color` como cor do segmento quando disponivel, com fallback para alternancia primaria/secundaria
+- Usar as cores da campanha na borda e centro do botao
+
+**2. PublicEvaluation passa as cores da campanha para o SpinWheel**
+O componente `PublicEvaluation.tsx` ja tem acesso ao `campaign`. Vamos:
+- Extrair `wheel_primary_color` e `wheel_secondary_color` do campaign
+- Passar como props para `<SpinWheel />`
+
+**3. Implementar verificacao de cooldown**
+Quando `roulette_cooldown_hours > 0`:
+- Ao abrir a pagina publica, verificar no `localStorage` se existe um registro de ultimo giro para aquela campanha
+- Se o tempo decorrido for menor que o cooldown, pular a roleta e ir direto ao formulario
+- Apos girar, salvar o timestamp no localStorage
+- Formato da chave: `roulette_last_spin_{campaignId}`
 
 ### Arquivos alterados
 
-**1. Migracao SQL** — nova migracao para adicionar as 3 colunas
+1. **`src/components/public-evaluation/SpinWheel.tsx`**
+   - Adicionar props `primaryColor?` e `secondaryColor?`
+   - Usar `prize.color || wheelColor` nos segmentos
+   - Aplicar cores na borda e botao central
 
-**2. `src/integrations/supabase/types.ts`** — atualizar Row/Insert/Update de `evaluation_campaigns` com os novos campos
-
-**3. `src/hooks/use-evaluation-campaigns.ts`** — incluir os novos campos no `useUpdateCampaign`
-
-**4. `src/components/pdv/evaluations/RoulettePreview.tsx`** — aceitar props `primaryColor` e `secondaryColor` opcionais (fallback para as cores atuais hardcoded), e usar as cores reais de cada premio (`prize.color`) nos segmentos ao inves de alternancia fixa
-
-**5. `src/pages/pdv/evaluations/coupons/CouponsRoulettes.tsx`** — reescrever o card de cada campanha para incluir:
-- Inputs de cor primaria/secundaria (color pickers) com save automatico
-- Input de cooldown em horas
-- Toggle de ativo/inativo da roleta
-- Preview da roleta usando cores customizadas e cores dos premios
-- Edicao inline dos premios (editar/deletar) + botao de adicionar premio
-- Reutilizar `PrizeDialog` para criar/editar premios
+2. **`src/pages/PublicEvaluation.tsx`**
+   - Extrair cores e cooldown do campaign
+   - Passar `primaryColor`/`secondaryColor` para SpinWheel
+   - Logica de cooldown: verificar localStorage antes de mostrar roleta, salvar timestamp apos giro
 
 ### Detalhes tecnicos
-- As cores dos segmentos da roleta usarao `prize.color` (ja existe no schema) — as cores primaria/secundaria servem como fallback para premios sem cor definida e para a borda/centro
-- O cooldown sera salvo em horas no campo `roulette_cooldown_hours` e verificado na pagina publica (se o cliente ja girou dentro do periodo, nao pode girar novamente)
-- O `useUpdateCampaign` ja suporta campos extras via cast `as any`, mas vamos tipar corretamente
-
-### Resultado visual
-Cada card de campanha mostra: formulario de configuracao a esquerda (cores, cooldown, lista de premios editavel) + preview interativo da roleta a direita, atualizado em tempo real conforme o usuario muda cores e premios.
+- O cooldown e verificado client-side via localStorage (simples e sem custo de banco). Nao impede fraude, mas atende ao caso de uso normal de limitar giros repetidos do mesmo dispositivo.
+- As cores dos segmentos priorizam `prize.color` (definido por premio), com fallback para alternancia `primaryColor`/`secondaryColor`.
 
