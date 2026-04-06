@@ -1,44 +1,29 @@
 
 
-## Fase 4 - Melhorar Aniversariantes
+## Fase 5 - Melhorar Prêmios Emitidos (CouponsManagement)
 
 ### O que muda
-Enriquecer a pagina `ClientsBirthdays.tsx` com mais dados, acoes diretas (WhatsApp, detalhes, bonus), e busca.
+Transformar a tabela atual em uma gestao completa com acoes diretas, preview visual do cupom, validacao inline, WhatsApp, exportacao CSV e filtro por status.
 
-### Alteracoes em `src/pages/pdv/evaluations/clients/ClientsBirthdays.tsx`
+### Alteracoes em `src/pages/pdv/evaluations/coupons/CouponsManagement.tsx`
 
-**Interface BirthdayClient ampliada:**
-```typescript
-interface BirthdayClient {
-  name: string;
-  whatsapp: string;
-  birthDate: string;
-  age: number;
-  daysUntil: number;
-  firstEvaluation: string;  // data cadastro
-  lastEvaluation: string;   // ultimo contato
-  evaluations: EvaluationWithAnswers[];
-}
-```
+**Renomear titulo:** "Gestao de Cupons" -> "Premios Emitidos"
 
-**Novas colunas na tabela:**
-- Data de Cadastro (primeira avaliacao)
-- Ultimo Contato (avaliacao mais recente)
+**Novo filtro por status:** Select com opcoes "Todos", "Ativo", "Resgatado", "Expirado" ao lado do filtro de campanha.
 
-**Botoes de acao por linha:**
-- WhatsApp: link `wa.me` usando `formatPhoneForWhatsApp`
-- Detalhes: reutiliza `ClientDetailDialog` ja criado na Fase 3 (com historico de avaliacoes)
+**Coluna "Data Utilizacao":** Mostrar `redeemed_at` formatado quando resgatado, ou "-" quando nao.
 
-**Melhorias de UI:**
-- Campo de busca por nome/telefone
-- Colunas de Cadastro e Ultimo Contato com `hidden md:table-cell` para responsividade
-- Coluna de acoes sempre visivel com botoes compactos
+**Botoes de acao por linha (nova coluna Acoes):**
+- WhatsApp: link `wa.me` usando `formatPhoneForWhatsApp` + `WhatsAppIcon`
+- Validar/Resgatar: botao que chama `useRedeemCoupon` (so aparece se status = Ativo)
+- Preview: abre modal com visual do cupom (codigo, premio, validade, cliente) + botao de copiar codigo
+- Deletar: confirmacao + delete
 
-**Dados:** Expandir o `useMemo` para guardar `firstEvaluation`, `lastEvaluation` e `evaluations[]` ao agrupar por whatsapp — mesmo pattern usado no `ClientsManagement`.
+**Exportar CSV:** Botao no header que gera CSV com todos os dados filtrados (codigo, cliente, whatsapp, premio, campanha, status, data criacao, validade, data utilizacao).
 
-### Arquivos editados
-1. `src/pages/pdv/evaluations/clients/ClientsBirthdays.tsx` — reescrever com novos dados e acoes
+**Novo componente:** `CouponPreviewDialog.tsx` em `src/components/pdv/evaluations/` — modal com visual estilizado do cupom mostrando codigo grande, premio, validade, nome do cliente, e botao "Copiar Codigo".
 
-### Nao inclui nesta fase
-- Modal de gerar bonus/cupom (requer logica de selecionar campanha/premio — fica para fase futura se necessario)
+### Arquivos
+1. `src/pages/pdv/evaluations/coupons/CouponsManagement.tsx` — reescrever com acoes e filtros
+2. `src/components/pdv/evaluations/CouponPreviewDialog.tsx` — novo componente de preview
 
