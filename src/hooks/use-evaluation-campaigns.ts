@@ -180,7 +180,7 @@ export const useCreateCampaignQuestion = () => {
 export const useUpdateCampaignQuestion = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, campaign_id, ...data }: { id: string; campaign_id: string; question_text?: string; is_active?: boolean; order_position?: number }) => {
+    mutationFn: async ({ id, campaign_id, ...data }: { id: string; campaign_id: string; question_text?: string; question_type?: string; options?: string[] | null; is_active?: boolean; order_position?: number }) => {
       const { error } = await supabase
         .from("evaluation_campaign_questions")
         .update(data)
