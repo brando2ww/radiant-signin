@@ -1,5 +1,7 @@
 import type { CampaignPrize } from "@/hooks/use-campaign-prizes";
 
+const WHEEL_COLORS = ["#1a1a2e", "#722F37"];
+
 interface RoulettePreviewProps {
   prizes: CampaignPrize[];
   size?: number;
@@ -19,74 +21,95 @@ export function RoulettePreview({ prizes, size = 200 }: RoulettePreviewProps) {
 
   const totalProb = prizes.reduce((s, p) => s + Number(p.probability), 0);
   let cumDeg = 0;
-  const segments = prizes.map((p) => {
+  const segments = prizes.map((p, i) => {
     const deg = totalProb > 0 ? (Number(p.probability) / totalProb) * 360 : 360 / prizes.length;
     const start = cumDeg;
     cumDeg += deg;
-    return { ...p, startDeg: start, deg };
+    return { ...p, startDeg: start, deg, wheelColor: WHEEL_COLORS[i % 2] };
   });
-
-  const gradient = segments
-    .map((s) => `${s.color} ${s.startDeg}deg ${s.startDeg + s.deg}deg`)
-    .join(", ");
 
   const r = size / 2;
 
+  const svgSegments = segments.map((s) => {
+    const startRad = ((s.startDeg - 90) * Math.PI) / 180;
+    const endRad = ((s.startDeg + s.deg - 90) * Math.PI) / 180;
+    const x1 = r + r * Math.cos(startRad);
+    const y1 = r + r * Math.sin(startRad);
+    const x2 = r + r * Math.cos(endRad);
+    const y2 = r + r * Math.sin(endRad);
+    const largeArc = s.deg > 180 ? 1 : 0;
+    const path = `M ${r} ${r} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+
+    const midAngleDeg = s.startDeg + s.deg / 2;
+    const midAngleRad = ((midAngleDeg - 90) * Math.PI) / 180;
+    const textR = r * 0.58;
+    const tx = r + textR * Math.cos(midAngleRad);
+    const ty = r + textR * Math.sin(midAngleRad);
+
+    let textRotation = midAngleDeg;
+    const needsFlip = midAngleDeg > 90 && midAngleDeg < 270;
+    if (needsFlip) textRotation += 180;
+
+    const fontSize = Math.max(7, Math.min(11, s.deg / 4));
+    const maxChars = Math.max(8, Math.floor(s.deg / 5));
+    const label = s.name.length > maxChars ? s.name.slice(0, maxChars - 1) + "…" : s.name;
+
+    return (
+      <g key={s.id}>
+        <path d={path} fill={s.wheelColor} stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" />
+        <text
+          x={tx}
+          y={ty}
+          textAnchor="middle"
+          dominantBaseline="central"
+          transform={`rotate(${textRotation}, ${tx}, ${ty})`}
+          fill="white"
+          fontSize={fontSize}
+          fontWeight="700"
+          fontFamily="system-ui, sans-serif"
+          style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9))" }}
+        >
+          {label}
+        </text>
+      </g>
+    );
+  });
+
+  const centerSize = size * 0.18;
+
   return (
     <div className="relative" style={{ width: size, height: size }}>
-      <div
-        className="rounded-full border-4 border-background shadow-lg"
-        style={{
-          width: size,
-          height: size,
-          background: `conic-gradient(${gradient})`,
-        }}
-      />
-      {/* Labels */}
-      {segments.map((s) => {
-        const midAngle = ((s.startDeg + s.deg / 2) * Math.PI) / 180;
-        const labelR = r * 0.65;
-        const x = r + labelR * Math.sin(midAngle);
-        const y = r - labelR * Math.cos(midAngle);
-        const rotation = s.startDeg + s.deg / 2;
-        return (
-          <span
-            key={s.id}
-            className="absolute text-[9px] font-bold text-white drop-shadow-md pointer-events-none whitespace-nowrap"
-            style={{
-              left: x,
-              top: y,
-              transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
-              maxWidth: r * 0.6,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {s.name}
-          </span>
-        );
-      })}
-      {/* Center circle */}
-      <div
-        className="absolute bg-background rounded-full shadow-md border-2 border-border"
-        style={{
-          width: size * 0.18,
-          height: size * 0.18,
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-        }}
-      />
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="rounded-full"
+        style={{ border: "3px solid #d4a843" }}
+      >
+        {svgSegments}
+        {segments.map((s) => {
+          const rad = ((s.startDeg - 90) * Math.PI) / 180;
+          return (
+            <line
+              key={`line-${s.id}`}
+              x1={r}
+              y1={r}
+              x2={r + r * Math.cos(rad)}
+              y2={r + r * Math.sin(rad)}
+              stroke="rgba(255,255,255,0.15)"
+              strokeWidth="1"
+            />
+          );
+        })}
+        {/* Center circle */}
+        <circle cx={r} cy={r} r={centerSize / 2} fill="white" stroke="#d4a843" strokeWidth="2" />
+      </svg>
       {/* Pointer */}
       <div
         className="absolute"
-        style={{
-          top: -8,
-          left: "50%",
-          transform: "translateX(-50%)",
-        }}
+        style={{ top: -6, left: "50%", transform: "translateX(-50%)" }}
       >
-        <div className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[16px] border-t-primary" />
+        <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[13px] border-t-red-500" />
       </div>
     </div>
   );
