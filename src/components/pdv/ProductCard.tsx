@@ -24,6 +24,12 @@ export function ProductCard({ product, onEdit, onDelete, isSharedToDelivery, onS
   const { recipes, calculateCMV } = usePDVRecipes(product.id);
   const cmv = calculateCMV(recipes);
 
+  // Defer dialog-opening actions to the next tick to avoid Radix
+  // DropdownMenu + Dialog pointer-events conflict
+  const deferAction = (fn: () => void) => {
+    window.setTimeout(fn, 0);
+  };
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative aspect-video bg-muted">
