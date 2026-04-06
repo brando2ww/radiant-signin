@@ -138,7 +138,7 @@ export const useGeocodedPoints = (cepData: CEPData[]) => {
         if (cancelled) return;
         const coords = await geocodeCEP(item.zipCode);
         if (coords) {
-          results.push({ lat: coords.lat, lng: coords.lng, intensity: item.orderCount });
+          results.push({ lat: coords.lat, lng: coords.lng, intensity: item.orderCount, zipCode: item.zipCode, neighborhood: item.neighborhood });
         }
         // rate limit
         await new Promise(r => setTimeout(r, 300));
