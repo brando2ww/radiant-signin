@@ -1,56 +1,29 @@
 
 
-## Funil de Compra no Relatório do Delivery
+## Pins de pedidos + zoom automático no mapa de calor
 
-### Problema
-Atualmente não há rastreamento interno dos eventos do funil (visualização, carrinho, conversão). O hook `useMarketingTracking` envia dados apenas para Meta Pixel / Google Analytics, mas não persiste no banco.
+### O que muda
 
-### Solução
+**Arquivo: `src/components/delivery/heatmap/DeliveryHeatMap.tsx`**
 
-#### 1. Nova tabela: `delivery_funnel_events`
-Criar via migration para registrar cada evento do funil:
-- `id` (uuid, PK)
-- `user_id` (uuid) — dono do estabelecimento
-- `session_id` (text) — identificador anônimo do visitante (gerado no browser)
-- `event_type` (text) — `page_view`, `add_to_cart`, `purchase`
-- `metadata` (jsonb, nullable) — dados extras (produto, valor, etc.)
-- `created_at` (timestamptz)
+1. **Adicionar markers (pins)** para cada ponto no mapa, além do heatmap layer
+   - Usar `L.circleMarker` (bolinha colorida) em vez do pin padrão do Leaflet (que precisa de imagens externas)
+   - Cada marker mostra um popup com: CEP, quantidade de pedidos
+   - Para isso, o `HeatmapPoint` precisa incluir info extra (CEP, bairro) — expandir a interface ou passar dados adicionais
 
-RLS: INSERT público (anon), SELECT apenas para o dono (`auth.uid() = user_id`).
+2. **Zoom automático nos pins** em vez de abrir mapa geral do Brasil
+   - Atualmente o mapa inicia em `setView([-14.235, -51.9253], 4)` (visão geral do Brasil)
+   - Quando há pontos, o `fitBounds` já funciona mas o zoom inicial permanece largo
+   - Solução: aumentar o `maxZoom` no fitBounds e usar padding menor para dar mais zoom nos pins
+   - Quando não há pontos, mostrar uma mensagem em vez do mapa vazio do Brasil
 
-#### 2. Registrar eventos no PublicMenu
-Atualizar `src/pages/PublicMenu.tsx` e componentes do carrinho/checkout:
-- Gerar `sessionId` com `crypto.randomUUID()` e guardar no `sessionStorage`
-- Na abertura da página → inserir evento `page_view`
-- Ao adicionar item ao carrinho → inserir evento `add_to_cart`
-- Ao concluir pedido → inserir evento `purchase`
-- Inserções via `supabase.from("delivery_funnel_events").insert(...)` (com `anon` key, sem auth necessário)
+**Arquivo: `src/hooks/use-delivery-heatmap.ts`**
 
-#### 3. Hook: `src/hooks/use-delivery-funnel.ts`
-- Busca eventos agrupados por `event_type` no período selecionado
-- Retorna contagens: `{ pageViews, addToCarts, purchases }` e taxas de conversão entre etapas
+- Expandir `HeatmapPoint` para incluir `zipCode` e `neighborhood` para exibir no popup dos markers
 
-#### 4. Componente: `src/components/delivery/reports/PurchaseFunnel.tsx`
-- Visualização em formato de funil com 3 etapas:
-  - **Visualizações** (topo, mais largo)
-  - **Adicionaram ao carrinho** (meio)
-  - **Converteram** (base, mais estreito)
-- Cada etapa mostra: quantidade absoluta, % em relação à etapa anterior, e % total
-- Visual com barras decrescentes estilizadas em gradiente (tipo funil)
-- Card com métricas: taxa de conversão geral (views → purchases), taxa carrinho → compra
+### Detalhes técnicos
 
-#### 5. Integrar ao ReportsTab
-Adicionar `<PurchaseFunnel>` no `src/components/delivery/ReportsTab.tsx` após os relatórios existentes, usando o mesmo filtro de período.
-
-### Arquivos
-
-| Ação | Arquivo |
-|------|---------|
-| Migration | `delivery_funnel_events` table + RLS |
-| Modificar | `src/pages/PublicMenu.tsx` — registrar `page_view` |
-| Modificar | `src/components/public-menu/ShoppingCart.tsx` — registrar `add_to_cart` |
-| Modificar | `src/components/public-menu/checkout/OrderConfirmation.tsx` — registrar `purchase` |
-| Criar | `src/hooks/use-delivery-funnel.ts` |
-| Criar | `src/components/delivery/reports/PurchaseFunnel.tsx` |
-| Modificar | `src/components/delivery/ReportsTab.tsx` — adicionar funil |
+- Markers: `L.circleMarker([lat, lng], { radius: 8, color: '#3b82f6', fillOpacity: 0.8 })` com `.bindPopup(...)`
+- FitBounds: usar `maxZoom: 15` para garantir zoom próximo quando há poucos pontos
+- Limpar markers junto com o heat layer ao atualizar dados (armazenar em ref de `L.LayerGroup`)
 
