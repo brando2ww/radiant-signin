@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Link2, ExternalLink, CheckCircle2, AlertCircle, FileDown } from "lucide-react";
+import { Link2, ExternalLink, CheckCircle2, AlertCircle, FileDown, RefreshCw } from "lucide-react";
 import { useIFoodIntegration } from "@/hooks/use-ifood-integration";
 import { IFoodConnectionDialog } from "./IFoodConnectionDialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +15,7 @@ import { toast } from "sonner";
 
 export function IntegrationsTab() {
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
-  const { settings, isLoading, isConnected, disconnectIFood, updateSettings } = useIFoodIntegration();
+  const { settings, isLoading, isConnected, disconnectIFood, updateSettings, syncReviews } = useIFoodIntegration();
   const { settings: pdvSettings, updateSettings: updatePDVSettings, isUpdating } = usePDVSettings();
   const [nfeCnpj, setNfeCnpj] = useState("");
 
@@ -112,7 +112,20 @@ export function IntegrationsTab() {
                       updateSettings.mutate({ ifood_sync_menu: checked })
                     }
                   />
-                </div>
+               </div>
+               
+               <div className="pt-2">
+                 <Button
+                   variant="outline"
+                   size="sm"
+                   className="w-full"
+                   onClick={() => syncReviews.mutate()}
+                   disabled={syncReviews.isPending}
+                 >
+                   <RefreshCw className={`mr-2 h-4 w-4 ${syncReviews.isPending ? "animate-spin" : ""}`} />
+                   {syncReviews.isPending ? "Sincronizando..." : "Sincronizar Avaliações do iFood"}
+                 </Button>
+               </div>
               </div>
             )}
 

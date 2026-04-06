@@ -113,6 +113,29 @@ export function useIFoodIntegration() {
     },
   });
 
+  const syncReviews = useMutation({
+    mutationFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data, error } = await supabase.functions.invoke("ifood-sync-reviews", {
+        body: { user_id: user.id },
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      const count = data?.imported || 0;
+      toast.success(`${count} avaliação(ões) importada(s) do iFood`);
+      queryClient.invalidateQueries({ queryKey: ["ifood-settings"] });
+    },
+    onError: (error) => {
+      console.error("Error syncing reviews:", error);
+      toast.error("Erro ao sincronizar avaliações do iFood");
+    },
+  });
+
   const isConnected = settings?.ifood_enabled && settings?.ifood_merchant_id;
 
   return {
@@ -122,5 +145,6 @@ export function useIFoodIntegration() {
     connectIFood,
     disconnectIFood,
     updateSettings,
+    syncReviews,
   };
 }
