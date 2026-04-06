@@ -297,6 +297,7 @@ export const ProductOptionDialog = ({
                     </Label>
                     <div className="flex gap-2 items-center">
                       <Popover
+                        modal={false}
                         open={openPopoverIndex === index}
                         onOpenChange={(open) => setOpenPopoverIndex(open ? index : null)}
                       >
