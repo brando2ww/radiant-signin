@@ -1,8 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Eye, EyeOff, Star, Settings2 } from "lucide-react";
-import { DeliveryProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/use-delivery-products";
+import { Copy, Edit, Trash2, Eye, EyeOff, Star, Settings2 } from "lucide-react";
+import { DeliveryProduct, useUpdateProduct, useDeleteProduct, useCreateProduct } from "@/hooks/use-delivery-products";
 import { useProductOptions } from "@/hooks/use-product-options";
 import { useState } from "react";
 import { ProductDialog } from "./ProductDialog";
@@ -23,7 +23,7 @@ interface ProductListProps {
   categoryId: string | null;
 }
 
-const ProductListItem = ({ product, onEdit }: { product: DeliveryProduct; onEdit: () => void }) => {
+const ProductListItem = ({ product, onEdit, onDuplicate }: { product: DeliveryProduct; onEdit: () => void; onDuplicate: () => void }) => {
   const { data: options = [] } = useProductOptions(product.id);
   const updateProduct = useUpdateProduct();
 
@@ -78,6 +78,15 @@ const ProductListItem = ({ product, onEdit }: { product: DeliveryProduct; onEdit
                 size="icon"
                 variant="ghost"
                 className="h-8 w-8"
+                onClick={onDuplicate}
+                title="Duplicar"
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8"
                 onClick={onEdit}
               >
                 <Edit className="h-4 w-4" />
@@ -126,6 +135,15 @@ export const ProductList = ({ products, categoryId }: ProductListProps) => {
   const [deletingProduct, setDeletingProduct] = useState<DeliveryProduct | null>(null);
   const { data: categories = [] } = useDeliveryCategories();
   const deleteProduct = useDeleteProduct();
+  const createProduct = useCreateProduct();
+
+  const handleDuplicate = (product: DeliveryProduct) => {
+    const { id, user_id, created_at, updated_at, ...productData } = product;
+    createProduct.mutate({
+      ...productData,
+      name: `${product.name} (cópia)`,
+    });
+  };
 
   const handleDelete = () => {
     if (deletingProduct) {
@@ -149,6 +167,7 @@ export const ProductList = ({ products, categoryId }: ProductListProps) => {
               key={product.id}
               product={product}
               onEdit={() => setEditingProduct(product)}
+              onDuplicate={() => handleDuplicate(product)}
             />
           ))}
           {products.length === 0 && (

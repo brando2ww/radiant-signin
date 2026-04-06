@@ -94,6 +94,11 @@ export default function PDVProducts() {
     }
   };
 
+  const handleDuplicate = (product: PDVProduct) => {
+    const { id, user_id, created_at, updated_at, ...productData } = product;
+    createProduct({ ...productData, name: `${product.name} (cópia)` });
+  };
+
   const handleDelete = () => {
     if (deleteDialog) {
       deleteProduct(deleteDialog, {
@@ -206,6 +211,7 @@ export default function PDVProducts() {
               product={product}
               onEdit={handleEdit}
               onDelete={(id) => setDeleteDialog(id)}
+              onDuplicate={handleDuplicate}
               isSharedToDelivery={sharedIds.has(product.id)}
               onShareToDelivery={(p) => setShareProduct(p)}
             />
