@@ -1,0 +1,1 @@
+ALTER TABLE public.business_settings ADD COLUMN IF NOT EXISTS background_color TEXT DEFAULT '#f8fafc';

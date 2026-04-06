@@ -11,6 +11,7 @@ import {
   usePublicCampaignQuestions,
   useSubmitCampaignEvaluation,
 } from "@/hooks/use-evaluation-campaigns";
+import { usePublicBusinessSettings } from "@/hooks/use-business-settings";
 import { usePublicCampaignPrizes, useRegisterPrizeWin, type CampaignPrize } from "@/hooks/use-campaign-prizes";
 import { SpinWheel } from "@/components/public-evaluation/SpinWheel";
 import { PrizeResult } from "@/components/public-evaluation/PrizeResult";
@@ -67,10 +68,12 @@ export default function PublicEvaluation() {
   const [answers, setAnswers] = useState<Record<string, { score: number; comment: string }>>({});
   const [npsScore, setNpsScore] = useState<number | null>(null);
 
-  const bgColor = (campaign as any)?.background_color || "#f8fafc";
-  const logoUrl = (campaign as any)?.logo_url;
-  const welcomeMsg = (campaign as any)?.welcome_message;
-  const thankYouMsg = (campaign as any)?.thank_you_message;
+  const { settings: businessSettings } = usePublicBusinessSettings((campaign as any)?.user_id || "");
+
+  const bgColor = (businessSettings as any)?.background_color || "#f8fafc";
+  const logoUrl = businessSettings?.logo_url;
+  const welcomeMsg = businessSettings?.welcome_message;
+  const thankYouMsg = businessSettings?.thank_you_message;
 
   // Progress calculation (reordered: questions → NPS → personal data)
   const progress = useMemo(() => {
