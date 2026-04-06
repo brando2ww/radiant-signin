@@ -1639,11 +1639,14 @@ export type Database = {
           is_active: boolean
           logo_url: string | null
           name: string
+          roulette_cooldown_hours: number | null
           roulette_enabled: boolean
           thank_you_message: string | null
           updated_at: string
           user_id: string
           welcome_message: string | null
+          wheel_primary_color: string | null
+          wheel_secondary_color: string | null
         }
         Insert: {
           background_color?: string | null
@@ -1653,11 +1656,14 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           name: string
+          roulette_cooldown_hours?: number | null
           roulette_enabled?: boolean
           thank_you_message?: string | null
           updated_at?: string
           user_id: string
           welcome_message?: string | null
+          wheel_primary_color?: string | null
+          wheel_secondary_color?: string | null
         }
         Update: {
           background_color?: string | null
@@ -1667,11 +1673,14 @@ export type Database = {
           is_active?: boolean
           logo_url?: string | null
           name?: string
+          roulette_cooldown_hours?: number | null
           roulette_enabled?: boolean
           thank_you_message?: string | null
           updated_at?: string
           user_id?: string
           welcome_message?: string | null
+          wheel_primary_color?: string | null
+          wheel_secondary_color?: string | null
         }
         Relationships: []
       }

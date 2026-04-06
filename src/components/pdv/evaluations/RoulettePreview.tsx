@@ -1,13 +1,19 @@
 import type { CampaignPrize } from "@/hooks/use-campaign-prizes";
 
-const WHEEL_COLORS = ["#1a1a2e", "#722F37"];
+const DEFAULT_PRIMARY = "#1a1a2e";
+const DEFAULT_SECONDARY = "#722F37";
 
 interface RoulettePreviewProps {
   prizes: CampaignPrize[];
   size?: number;
+  primaryColor?: string;
+  secondaryColor?: string;
 }
 
-export function RoulettePreview({ prizes, size = 200 }: RoulettePreviewProps) {
+export function RoulettePreview({ prizes, size = 200, primaryColor, secondaryColor }: RoulettePreviewProps) {
+  const pc = primaryColor || DEFAULT_PRIMARY;
+  const sc = secondaryColor || DEFAULT_SECONDARY;
+
   if (!prizes.length) {
     return (
       <div
@@ -24,7 +30,7 @@ export function RoulettePreview({ prizes, size = 200 }: RoulettePreviewProps) {
     ...p,
     startDeg: i * equalDeg,
     deg: equalDeg,
-    wheelColor: WHEEL_COLORS[i % 2],
+    wheelColor: p.color || (i % 2 === 0 ? pc : sc),
   }));
 
   const r = size / 2;
@@ -50,7 +56,6 @@ export function RoulettePreview({ prizes, size = 200 }: RoulettePreviewProps) {
     if (needsFlip) textRotation += 180;
 
     const fontSize = Math.max(7, Math.min(11, equalDeg / 4));
-    const label = s.name;
 
     return (
       <g key={s.id}>
@@ -67,7 +72,7 @@ export function RoulettePreview({ prizes, size = 200 }: RoulettePreviewProps) {
           fontFamily="system-ui, sans-serif"
           style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9))" }}
         >
-          {label}
+          {s.name}
         </text>
       </g>
     );
@@ -82,7 +87,7 @@ export function RoulettePreview({ prizes, size = 200 }: RoulettePreviewProps) {
         height={size}
         viewBox={`0 0 ${size} ${size}`}
         className="rounded-full"
-        style={{ border: "3px solid #d4a843" }}
+        style={{ border: `3px solid #d4a843` }}
       >
         {svgSegments}
         {segments.map((s) => {
@@ -99,10 +104,8 @@ export function RoulettePreview({ prizes, size = 200 }: RoulettePreviewProps) {
             />
           );
         })}
-        {/* Center circle */}
         <circle cx={r} cy={r} r={centerSize / 2} fill="white" stroke="#d4a843" strokeWidth="2" />
       </svg>
-      {/* Pointer */}
       <div
         className="absolute"
         style={{ top: -6, left: "50%", transform: "translateX(-50%)" }}
