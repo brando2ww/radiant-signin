@@ -4,8 +4,13 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { CartItem } from "@/pages/PublicMenu";
 import { DeliveryCustomer, useCreateOrder } from "@/hooks/use-delivery-customers";
-import { ChevronLeft, Loader2, MapPin, CreditCard, Clock } from "lucide-react";
+import { ChevronLeft, Loader2, MapPin, CreditCard, Clock, Star } from "lucide-react";
 import { trackFunnelEvent } from "@/hooks/use-delivery-funnel";
+import { useEarnPoints, useLoyaltySettings, useCustomerPoints, useLoyaltyPrizes, useRedeemPoints } from "@/hooks/use-delivery-loyalty";
+import { LoyaltyBanner } from "@/components/public-menu/LoyaltyBanner";
+import { LoyaltyRedeemSheet } from "@/components/public-menu/LoyaltyRedeemSheet";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface OrderConfirmationProps {
   userId: string;
@@ -54,6 +59,37 @@ export const OrderConfirmation = ({
   selectedAddressId,
 }: OrderConfirmationProps) => {
   const createOrder = useCreateOrder();
+  const earnPoints = useEarnPoints();
+  const redeemPoints = useRedeemPoints();
+  const { data: loyaltySettings } = useLoyaltySettings(userId);
+  const { data: customerPoints = 0 } = useCustomerPoints(userId, customer.id);
+  const { data: prizes = [] } = useLoyaltyPrizes(userId);
+  const [loyaltyDiscount, setLoyaltyDiscount] = useState(0);
+  const [redeemedPointsAmount, setRedeemedPointsAmount] = useState(0);
+
+  const loyaltyActive = loyaltySettings?.is_active ?? false;
+  const activePrizes = prizes.filter((p: any) => p.is_active && (!p.max_quantity || p.redeemed_count < p.max_quantity));
+
+  const effectiveTotal = (orderType === "delivery" ? total : subtotal - discount) - loyaltyDiscount;
+
+  const handleCashbackRedeem = (pointsToUse: number) => {
+    if (!loyaltySettings) return;
+    const discountValue = pointsToUse * Number(loyaltySettings.cashback_value_per_point);
+    setLoyaltyDiscount(discountValue);
+    setRedeemedPointsAmount(pointsToUse);
+    toast.success(`Cashback de R$ ${discountValue.toFixed(2)} aplicado!`);
+  };
+
+  const handlePrizeRedeem = (prize: any) => {
+    redeemPoints.mutate({
+      user_id: userId,
+      customer_id: customer.id,
+      points: prize.points_cost,
+      reference_id: prize.id,
+      description: `Resgate: ${prize.name}`,
+    });
+    toast.success(`Prêmio "${prize.name}" resgatado!`);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,9 +104,9 @@ export const OrderConfirmation = ({
       orderType,
       subtotal,
       deliveryFee: orderType === "delivery" ? deliveryFee : 0,
-      discount,
+      discount: discount + loyaltyDiscount,
       couponCode,
-      total: orderType === "delivery" ? total : subtotal - discount,
+      total: Math.max(0, effectiveTotal),
       paymentMethod,
       changeFor,
       notes,
@@ -90,7 +126,33 @@ export const OrderConfirmation = ({
 
     createOrder.mutate(orderData, {
       onSuccess: (order) => {
-        trackFunnelEvent(userId, "purchase", { orderId: order.id, total });
+        trackFunnelEvent(userId, "purchase", { orderId: order.id, total: effectiveTotal });
+
+        // Earn loyalty points
+        if (loyaltyActive && loyaltySettings) {
+          const pointsEarned = Math.floor(effectiveTotal * Number(loyaltySettings.points_per_real));
+          if (pointsEarned > 0) {
+            earnPoints.mutate({
+              user_id: userId,
+              customer_id: customer.id,
+              points: pointsEarned,
+              reference_id: order.id,
+              description: `Pedido #${order.order_number || order.id.slice(0, 8)}`,
+            });
+          }
+        }
+
+        // Deduct redeemed cashback points
+        if (redeemedPointsAmount > 0) {
+          redeemPoints.mutate({
+            user_id: userId,
+            customer_id: customer.id,
+            points: redeemedPointsAmount,
+            reference_id: order.id,
+            description: `Cashback no pedido #${order.order_number || order.id.slice(0, 8)}`,
+          });
+        }
+
         onConfirm(order.id);
       },
     });
@@ -99,6 +161,29 @@ export const OrderConfirmation = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
+        {/* Loyalty Banner */}
+        {loyaltyActive && customerPoints > 0 && loyaltySettings && (
+          <div className="space-y-2">
+            <LoyaltyBanner points={customerPoints} cashbackPerPoint={Number(loyaltySettings.cashback_value_per_point)} />
+            <LoyaltyRedeemSheet
+              points={customerPoints}
+              minPointsRedeem={loyaltySettings.min_points_redeem}
+              cashbackPerPoint={Number(loyaltySettings.cashback_value_per_point)}
+              prizes={activePrizes}
+              onRedeemCashback={handleCashbackRedeem}
+              onRedeemPrize={handlePrizeRedeem}
+            />
+          </div>
+        )}
+
+        {/* Loyalty earning info */}
+        {loyaltyActive && loyaltySettings && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 rounded-lg px-3 py-2">
+            <Star className="h-3 w-3 text-primary" />
+            <span>Você ganhará <strong>{Math.floor(effectiveTotal * Number(loyaltySettings.points_per_real))}</strong> pontos com este pedido!</span>
+          </div>
+        )}
+
         {/* Address */}
         {orderType === "delivery" && addressText && (
           <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
@@ -206,16 +291,16 @@ export const OrderConfirmation = ({
               <span>-R$ {discount.toFixed(2)}</span>
             </div>
           )}
+          {loyaltyDiscount > 0 && (
+            <div className="flex justify-between text-green-600">
+              <span>Cashback (pontos):</span>
+              <span>-R$ {loyaltyDiscount.toFixed(2)}</span>
+            </div>
+          )}
           <Separator />
           <div className="flex justify-between text-lg font-bold">
             <span>Total:</span>
-            <span>
-              R${" "}
-              {(orderType === "delivery"
-                ? total
-                : subtotal - discount
-              ).toFixed(2)}
-            </span>
+            <span>R$ {Math.max(0, effectiveTotal).toFixed(2)}</span>
           </div>
         </div>
 

@@ -34,6 +34,7 @@ import DeliveryCoupons from "./pdv/delivery/Coupons";
 import DeliverySettings from "./pdv/delivery/Settings";
 import DeliveryReports from "./pdv/delivery/Reports";
 import DeliveryHeatMap from "./pdv/delivery/HeatMap";
+import DeliveryLoyalty from "./pdv/delivery/Loyalty";
 import ComandasPage from "./pdv/Comandas";
 import Quotations from "./pdv/purchases/Quotations";
 import PurchaseOrders from "./pdv/purchases/PurchaseOrders";
@@ -112,6 +113,7 @@ export default function PDV() {
               <Route path="delivery/configuracoes" element={<RoleRoute path="/pdv/delivery/configuracoes" canAccess={canAccess} defaultRoute={defaultRoute}><DeliverySettings /></RoleRoute>} />
               <Route path="delivery/relatorios" element={<RoleRoute path="/pdv/delivery/relatorios" canAccess={canAccess} defaultRoute={defaultRoute}><DeliveryReports /></RoleRoute>} />
               <Route path="delivery/mapa-calor" element={<RoleRoute path="/pdv/delivery/mapa-calor" canAccess={canAccess} defaultRoute={defaultRoute}><DeliveryHeatMap /></RoleRoute>} />
+              <Route path="delivery/fidelidade" element={<RoleRoute path="/pdv/delivery/fidelidade" canAccess={canAccess} defaultRoute={defaultRoute}><DeliveryLoyalty /></RoleRoute>} />
               
               {/* Administrador */}
               <Route path="dashboard" element={<RoleRoute path="/pdv/dashboard" canAccess={canAccess} defaultRoute={defaultRoute}><PDVDashboard /></RoleRoute>} />
