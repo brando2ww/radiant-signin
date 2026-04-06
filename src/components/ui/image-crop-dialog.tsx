@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop } from "react-image-crop";
 import "react-image-crop/dist/ReactCrop.css";
 import {
@@ -44,10 +44,27 @@ export function ImageCropDialog({
   const [processing, setProcessing] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
+  useEffect(() => {
+    if (open) {
+      setCrop(undefined);
+      setCompletedCrop(undefined);
+    }
+  }, [open, imageSrc]);
+
   const onImageLoad = useCallback(
     (e: React.SyntheticEvent<HTMLImageElement>) => {
-      const { naturalWidth, naturalHeight } = e.currentTarget;
-      setCrop(centerAspectCrop(naturalWidth, naturalHeight, aspectRatio));
+      const { naturalWidth, naturalHeight, width, height } = e.currentTarget;
+      const percentCrop = centerAspectCrop(naturalWidth, naturalHeight, aspectRatio);
+      setCrop(percentCrop);
+
+      const pixelCrop: PixelCrop = {
+        unit: "px",
+        x: (percentCrop.x / 100) * width,
+        y: (percentCrop.y / 100) * height,
+        width: (percentCrop.width / 100) * width,
+        height: (percentCrop.height / 100) * height,
+      };
+      setCompletedCrop(pixelCrop);
     },
     [aspectRatio]
   );
