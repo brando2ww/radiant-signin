@@ -13,6 +13,7 @@ export interface BusinessSettings {
   cover_url?: string;
   primary_color: string;
   secondary_color: string;
+  background_color?: string;
   welcome_message: string;
   thank_you_message: string;
 }
@@ -61,6 +62,7 @@ export function useBusinessSettings() {
           cover_url: updates.cover_url,
           primary_color: updates.primary_color || "#3b82f6",
           secondary_color: updates.secondary_color || "#8b5cf6",
+          background_color: updates.background_color || "#f8fafc",
           welcome_message: updates.welcome_message || "Olá! Queremos ouvir você 😊",
           thank_you_message: updates.thank_you_message || "Obrigado! Esperamos vê-lo novamente em breve!",
         };
