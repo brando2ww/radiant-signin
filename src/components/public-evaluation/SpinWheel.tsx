@@ -194,7 +194,7 @@ export function SpinWheel({ prizes, onResult, disabled, primaryColor, secondaryC
           disabled={spinning || disabled}
           className="mt-4 px-8 py-4 bg-primary text-primary-foreground rounded-2xl font-bold text-lg shadow-lg hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 animate-bounce"
         >
-          🎡 Girar Roleta!
+          Girar Roleta!
         </button>
       )}
     </div>
