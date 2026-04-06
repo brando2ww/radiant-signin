@@ -1,38 +1,49 @@
 
 
-## Adicionar redimensionamento/crop de imagem antes do upload
+## Fix: Recorte de imagem produzindo resultado errado
 
-### Visao geral
-Ao selecionar uma imagem (capa ou logo), abrir um dialog com ferramenta de crop/redimensionamento. O usuario ajusta a area desejada e so depois a imagem e enviada ao Supabase.
+### Problema raiz
+Dois bugs no `ImageCropDialog`:
 
-### Biblioteca
-Instalar `react-image-crop` — leve, sem dependencias, suporta aspect ratio fixo.
+1. **Estado persistente entre aberturas**: `crop` e `completedCrop` não resetam quando o dialog abre com nova imagem. Valores do crop anterior podem ser usados no novo.
+2. **`completedCrop` nunca definido no load inicial**: O `onImageLoad` seta o `crop` (em %) mas nunca dispara `onComplete`, então `completedCrop` (PixelCrop) fica `undefined` até o usuário arrastar manualmente. Quando o usuário arrasta minimamente, o pixel crop pode não corresponder ao visual.
 
-### Arquivos
+### Correção em `src/components/ui/image-crop-dialog.tsx`
 
-| Acao | Arquivo | O que |
-|------|---------|-------|
-| Criar | `src/components/ui/image-crop-dialog.tsx` | Dialog reutilizavel com canvas crop |
-| Modificar | `src/components/delivery/PersonalizationTab.tsx` | Integrar dialog de crop no fluxo de upload |
+1. **Resetar estado quando o dialog abre ou `imageSrc` muda**: Adicionar `useEffect` que limpa `crop`, `completedCrop` quando `open` muda para `true` ou `imageSrc` muda.
 
-### Fluxo
+2. **Capturar PixelCrop no `onImageLoad`**: Após calcular o crop inicial com `centerAspectCrop`, converter manualmente para pixel coordinates usando as dimensões renderizadas da imagem e setar `completedCrop` imediatamente — assim o botão "Confirmar" já funciona sem o usuário precisar arrastar.
 
-1. Usuario seleciona arquivo → abre `ImageCropDialog` com preview
-2. Para **capa**: aspect ratio 3:1 (1200x400). Para **logo**: aspect ratio 1:1 (circular)
-3. Usuario ajusta a area de crop arrastando/redimensionando
-4. Clica "Confirmar" → canvas gera um `Blob` recortado → upload normal ao Supabase
-5. Clica "Cancelar" → fecha sem fazer nada
+3. **Usar `useCallback` corretamente**: Garantir que o `handleConfirm` sempre use o `completedCrop` mais recente.
 
-### Detalhes tecnicos
+### Mudança resumida
 
-**`ImageCropDialog`**:
-- Props: `open`, `onOpenChange`, `imageSrc` (object URL), `aspectRatio`, `onCropComplete(blob: Blob)`
-- Usa `ReactCrop` do `react-image-crop` para selecao visual
-- Ao confirmar, desenha a area selecionada em um `<canvas>` offscreen e exporta como blob via `canvas.toBlob()`
-- Aspect ratios: capa = `3/1`, logo = `1/1` (com `circularCrop`)
+```typescript
+// Reset on open/image change
+useEffect(() => {
+  if (open) {
+    setCrop(undefined);
+    setCompletedCrop(undefined);
+  }
+}, [open, imageSrc]);
 
-**`PersonalizationTab` mudancas**:
-- Ao selecionar arquivo, cria object URL e abre o dialog de crop em vez de fazer upload direto
-- State novo: `cropDialogOpen`, `cropImageSrc`, `cropField`, `cropAspect`
-- Apos crop, converte blob em File e chama o `uploadFile` existente
+// On image load: set both crop AND completedCrop
+const onImageLoad = useCallback((e) => {
+  const { naturalWidth, naturalHeight, width, height } = e.currentTarget;
+  const percentCrop = centerAspectCrop(naturalWidth, naturalHeight, aspectRatio);
+  setCrop(percentCrop);
+  
+  // Convert % crop to pixel crop for completedCrop
+  const pixelCrop: PixelCrop = {
+    unit: "px",
+    x: (percentCrop.x / 100) * width,
+    y: (percentCrop.y / 100) * height,
+    width: (percentCrop.width / 100) * width,
+    height: (percentCrop.height / 100) * height,
+  };
+  setCompletedCrop(pixelCrop);
+}, [aspectRatio]);
+```
+
+Apenas 1 arquivo modificado: `src/components/ui/image-crop-dialog.tsx`.
 
