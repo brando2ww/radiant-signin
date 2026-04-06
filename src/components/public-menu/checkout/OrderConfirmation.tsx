@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { CartItem } from "@/pages/PublicMenu";
 import { DeliveryCustomer, useCreateOrder } from "@/hooks/use-delivery-customers";
 import { ChevronLeft, Loader2, MapPin, CreditCard, Clock } from "lucide-react";
+import { trackFunnelEvent } from "@/hooks/use-delivery-funnel";
 
 interface OrderConfirmationProps {
   userId: string;

@@ -8,6 +8,7 @@ import { usePublicCategories, usePublicProducts } from "@/hooks/use-public-menu"
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMarketingTracking } from "@/hooks/use-marketing-tracking";
+import { trackFunnelEvent } from "@/hooks/use-delivery-funnel";
 
 export interface CartItem {
   productId: string;
@@ -126,8 +127,18 @@ const PublicMenu = () => {
     }
   }, [settings, trackPageView]);
 
+  // Track funnel page_view
+  useEffect(() => {
+    if (userId) {
+      trackFunnelEvent(userId, "page_view");
+    }
+  }, [userId]);
+
   const addToCart = (item: CartItem) => {
     setCart((prev) => [...prev, item]);
+    if (userId) {
+      trackFunnelEvent(userId, "add_to_cart", { productId: item.productId, name: item.name });
+    }
   };
 
   const removeFromCart = (index: number) => {
