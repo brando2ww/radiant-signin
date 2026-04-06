@@ -4,8 +4,13 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { CartItem } from "@/pages/PublicMenu";
 import { DeliveryCustomer, useCreateOrder } from "@/hooks/use-delivery-customers";
-import { ChevronLeft, Loader2, MapPin, CreditCard, Clock } from "lucide-react";
+import { ChevronLeft, Loader2, MapPin, CreditCard, Clock, Star } from "lucide-react";
 import { trackFunnelEvent } from "@/hooks/use-delivery-funnel";
+import { useEarnPoints, useLoyaltySettings, useCustomerPoints, useLoyaltyPrizes, useRedeemPoints } from "@/hooks/use-delivery-loyalty";
+import { LoyaltyBanner } from "@/components/public-menu/LoyaltyBanner";
+import { LoyaltyRedeemSheet } from "@/components/public-menu/LoyaltyRedeemSheet";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface OrderConfirmationProps {
   userId: string;
