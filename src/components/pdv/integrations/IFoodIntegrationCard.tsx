@@ -80,45 +80,47 @@ export function IFoodIntegrationCard() {
           )}
 
           {isConnected && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="ifood-auto-accept" className="text-sm">
-                  Aceitar pedidos automaticamente
-                </Label>
-                <Switch
-                  id="ifood-auto-accept"
-                  checked={settings?.ifood_auto_accept || false}
-                  onCheckedChange={(checked) =>
-                    updateSettings.mutate({ ifood_auto_accept: checked })
-                  }
-                />
+            <>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="ifood-auto-accept" className="text-sm">
+                    Aceitar pedidos automaticamente
+                  </Label>
+                  <Switch
+                    id="ifood-auto-accept"
+                    checked={settings?.ifood_auto_accept || false}
+                    onCheckedChange={(checked) =>
+                      updateSettings.mutate({ ifood_auto_accept: checked })
+                    }
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="ifood-sync-menu" className="text-sm">
+                    Sincronizar cardápio automaticamente
+                  </Label>
+                  <Switch
+                    id="ifood-sync-menu"
+                    checked={settings?.ifood_sync_menu || false}
+                    onCheckedChange={(checked) =>
+                      updateSettings.mutate({ ifood_sync_menu: checked })
+                    }
+                  />
+                </div>
               </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="ifood-sync-menu" className="text-sm">
-                  Sincronizar cardápio automaticamente
-                </Label>
-                <Switch
-                  id="ifood-sync-menu"
-                  checked={settings?.ifood_sync_menu || false}
-                  onCheckedChange={(checked) =>
-                    updateSettings.mutate({ ifood_sync_menu: checked })
-                  }
-                />
-              </div>
-            </div>
 
-            <div className="pt-2 border-t">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => syncReviews.mutate()}
-                disabled={syncReviews.isPending}
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${syncReviews.isPending ? "animate-spin" : ""}`} />
-                {syncReviews.isPending ? "Sincronizando..." : "Sincronizar Avaliações do iFood"}
-              </Button>
-            </div>
+              <div className="pt-2 border-t">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => syncReviews.mutate()}
+                  disabled={syncReviews.isPending}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${syncReviews.isPending ? "animate-spin" : ""}`} />
+                  {syncReviews.isPending ? "Sincronizando..." : "Sincronizar Avaliações do iFood"}
+                </Button>
+              </div>
+            </>
           )}
 
           <div className="text-xs text-muted-foreground space-y-0.5">
