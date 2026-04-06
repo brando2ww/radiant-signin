@@ -4,6 +4,8 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { useCreateAddress } from "@/hooks/use-delivery-customers";
 import { Loader2 } from "lucide-react";
+import { CEPInput } from "@/components/ui/cep-input";
+import { useCEPLookup } from "@/hooks/use-cep-lookup";
 
 interface AddressFormProps {
   customerId: string;
@@ -23,6 +25,21 @@ export const AddressForm = ({ customerId, onSuccess, onCancel }: AddressFormProp
   const [reference, setReference] = useState("");
 
   const createAddress = useCreateAddress();
+  const { lookupCEP, isLoading: isLoadingCEP } = useCEPLookup();
+
+  const handleCEPChange = async (value: string) => {
+    setZipCode(value);
+    const clean = value.replace(/\D/g, "");
+    if (clean.length === 8) {
+      const data = await lookupCEP(value);
+      if (data) {
+        if (data.logradouro) setStreet(data.logradouro);
+        if (data.bairro) setNeighborhood(data.bairro);
+        if (data.localidade) setCity(data.localidade);
+        if (data.uf) setState(data.uf);
+      }
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,13 +84,16 @@ export const AddressForm = ({ customerId, onSuccess, onCancel }: AddressFormProp
 
         <div className="space-y-2">
           <Label htmlFor="zipCode">CEP</Label>
-          <Input
-            id="zipCode"
-            value={zipCode}
-            onChange={(e) => setZipCode(e.target.value)}
-            placeholder="00000-000"
-            maxLength={9}
-          />
+          <div className="relative">
+            <CEPInput
+              id="zipCode"
+              value={zipCode}
+              onChange={handleCEPChange}
+            />
+            {isLoadingCEP && (
+              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+            )}
+          </div>
         </div>
       </div>
 
