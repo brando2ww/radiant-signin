@@ -242,6 +242,12 @@ export default function PDVProducts() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ShareToDeliveryDialog
+        open={!!shareProduct}
+        onOpenChange={(open) => !open && setShareProduct(null)}
+        product={shareProduct}
+      />
     </div>
   );
 }
