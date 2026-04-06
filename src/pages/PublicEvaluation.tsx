@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { Star, CheckCircle2, ClipboardList, BarChart3, User, Sparkles, Send } from "lucide-react";
+import { Star, CheckCircle2, ClipboardList, BarChart3, User, Sparkles, Send, ExternalLink } from "lucide-react";
 import {
   usePublicCampaign,
   usePublicCampaignQuestions,
@@ -74,6 +74,7 @@ export default function PublicEvaluation() {
   const logoUrl = businessSettings?.logo_url;
   const welcomeMsg = businessSettings?.welcome_message;
   const thankYouMsg = businessSettings?.thank_you_message;
+  const googleReviewUrl = businessSettings?.google_review_url;
 
   // Progress calculation (reordered: questions → NPS → personal data)
   const progress = useMemo(() => {
@@ -218,6 +219,8 @@ export default function PublicEvaluation() {
 
   // === PHASE: DONE ===
   if (currentPhase === "done") {
+    const showGoogleRedirect = npsScore !== null && npsScore >= 9 && googleReviewUrl;
+
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: bgColor }}>
         <div className="text-center space-y-5 max-w-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -229,6 +232,27 @@ export default function PublicEvaluation() {
           <p className="text-muted-foreground leading-relaxed text-sm">
             {thankYouMsg || "Sua avaliação foi enviada com sucesso. Agradecemos pelo seu feedback!"}
           </p>
+          {showGoogleRedirect && (
+            <div className="space-y-3 pt-2 animate-in fade-in duration-700">
+              <p className="text-sm font-medium text-foreground">
+                Ficamos felizes com sua nota! 🎉<br />
+                Que tal compartilhar sua experiência no Google?
+              </p>
+              <Button
+                className="gap-2 w-full"
+                onClick={() => window.open(googleReviewUrl, "_blank")}
+              >
+                <ExternalLink className="h-4 w-4" />
+                Avaliar no Google
+              </Button>
+              <button
+                className="text-xs text-muted-foreground underline hover:text-foreground transition-colors"
+                onClick={() => {}}
+              >
+                Pular
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
