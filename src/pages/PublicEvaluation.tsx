@@ -135,6 +135,26 @@ export default function PublicEvaluation() {
     }));
   };
 
+  const handleSetSelectedOptions = (questionId: string, selectedOptions: string[]) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: { ...prev[questionId], score: 0, comment: prev[questionId]?.comment || "", selectedOptions },
+    }));
+  };
+
+  const handleToggleOption = (questionId: string, option: string) => {
+    setAnswers((prev) => {
+      const current = prev[questionId]?.selectedOptions || [];
+      const next = current.includes(option)
+        ? current.filter((o) => o !== option)
+        : [...current, option];
+      return {
+        ...prev,
+        [questionId]: { ...prev[questionId], score: 0, comment: prev[questionId]?.comment || "", selectedOptions: next },
+      };
+    });
+  };
+
   const handleSetComment = (questionId: string, comment: string) => {
     setAnswers((prev) => ({
       ...prev,
