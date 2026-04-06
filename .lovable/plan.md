@@ -1,40 +1,40 @@
 
-## Etapa 4 — Relatórios com Dados Reais (Diário / Semanal / Mensal)
 
-### O que será feito
-Implementar as 3 páginas de relatórios usando o hook `useCustomerEvaluations` existente, filtrando por período, e o `useEvaluationStats` para computar KPIs. Cada página terá KPI cards + gráficos Recharts.
+## Etapa 5 — Clientes com Dados Reais (Painel / Gestão / Aniversariantes)
+
+### Fonte de dados
+Todas as 3 páginas usarão o hook `useCustomerEvaluations()` (sem filtro de data) para buscar todas as avaliações e agrupar por `customer_whatsapp`. Não precisa de schema novo.
 
 ### Páginas
 
-**1. Relatório Diário** (`ReportDaily.tsx`)
-- Filtra avaliações do dia atual (`startDate = hoje`, `endDate = hoje`)
-- KPI cards: Total respostas do dia, Média satisfação, NPS do dia, Alertas negativos (nota < 3)
-- Tabela de alertas negativos com nome do cliente, WhatsApp, média e comentários
-- Gráfico de distribuição por hora do dia (BarChart)
+**1. ClientsPanel.tsx — Painel de KPIs**
+- KPI cards: Total clientes únicos (distinct whatsapp), Recorrentes (2+ avaliações), Média de avaliações/cliente, Novos no mês (primeira avaliação no mês atual)
+- Gráfico: Evolução de novos clientes por mês (BarChart últimos 6 meses)
+- Gráfico: Distribuição de recorrência (PieChart: 1 avaliação, 2-3, 4+)
 
-**2. Relatório Semanal** (`ReportWeekly.tsx`)
-- Filtra avaliações da semana atual (seg-dom) e semana anterior
-- KPI cards com variação percentual (↑↓): Respostas, Média, NPS — semana atual vs anterior
-- Gráfico comparativo: respostas por dia da semana atual vs anterior (BarChart agrupado)
-- Gráfico de evolução da satisfação diária (AreaChart, últimos 14 dias)
+**2. ClientsManagement.tsx — Gestão / Tabela**
+- Busca por nome ou WhatsApp
+- Tabela com colunas: Nome, WhatsApp, Total avaliações, NPS médio, Última avaliação, Campanhas
+- Ordenação por total de avaliações (desc)
+- Badge colorido para NPS (Promotor/Neutro/Detrator)
+- Paginação (10 por página)
 
-**3. Relatório Mensal** (`ReportMonthly.tsx`)
-- Filtra avaliações do mês atual
-- KPI cards: Total respostas, Média, NPS, Promotores %
-- NPS Donut (PieChart com promotores/neutros/detratores)
-- Distribuição de notas (BarChart 1-5 estrelas)
-- Satisfação por dia da semana (BarChart)
-- Distribuição por faixa etária (BarChart)
-- Botão de exportar CSV usando `useExportEvaluations`
+**3. ClientsBirthdays.tsx — Aniversariantes**
+- Filtro por período: 7, 15, 30 dias (Select)
+- Contagem de aniversariantes no período selecionado
+- Tabela: Nome, WhatsApp, Data de aniversário, Idade, Dias restantes
+- Ordenado por dias restantes (mais próximo primeiro)
+- Usa `customer_birth_date` das avaliações, agrupado por whatsapp
 
 ### Detalhes técnicos
-- Reutiliza `useCustomerEvaluations({ startDate, endDate })` passando filtros de data com `date-fns` (`startOfDay`, `startOfWeek`, `startOfMonth`)
-- Reutiliza `useEvaluationStats(startDate, endDate)` para cálculos de NPS, faixa etária, etc.
-- Reutiliza padrão visual do `CampaignReports.tsx` (CustomTooltip, COLORS, cards)
-- Gráficos com Recharts (já no projeto)
-- Sem mudanças de schema/banco
+- Reutiliza `useCustomerEvaluations()` para buscar dados
+- Agrupamento client-side por `customer_whatsapp` com `useMemo`
+- `date-fns` para cálculos de aniversário (differenceInDays, addDays, isBefore, isAfter)
+- Recharts para gráficos (BarChart, PieChart)
+- Sem mudanças de banco ou novos hooks — tudo computado localmente
 
 ### Arquivos editados
-- `src/pages/pdv/evaluations/reports/ReportDaily.tsx` — reescrever com dados reais
-- `src/pages/pdv/evaluations/reports/ReportWeekly.tsx` — reescrever com dados reais
-- `src/pages/pdv/evaluations/reports/ReportMonthly.tsx` — reescrever com dados reais
+- `src/pages/pdv/evaluations/clients/ClientsPanel.tsx`
+- `src/pages/pdv/evaluations/clients/ClientsManagement.tsx`
+- `src/pages/pdv/evaluations/clients/ClientsBirthdays.tsx`
+
