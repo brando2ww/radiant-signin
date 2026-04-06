@@ -621,8 +621,10 @@ export type Database = {
           customer_name: string
           customer_whatsapp: string
           evaluation_date: string
+          external_id: string | null
           id: string
           nps_score: number | null
+          source: string
           user_id: string
         }
         Insert: {
@@ -632,8 +634,10 @@ export type Database = {
           customer_name: string
           customer_whatsapp: string
           evaluation_date?: string
+          external_id?: string | null
           id?: string
           nps_score?: number | null
+          source?: string
           user_id: string
         }
         Update: {
@@ -643,8 +647,10 @@ export type Database = {
           customer_name?: string
           customer_whatsapp?: string
           evaluation_date?: string
+          external_id?: string | null
           id?: string
           nps_score?: number | null
+          source?: string
           user_id?: string
         }
         Relationships: [
