@@ -9,7 +9,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Upload, X, Image as ImageIcon, Palette, Save } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { ImageCropDialog } from "@/components/ui/image-crop-dialog";
 
 export function PersonalizationTab() {
   const { user } = useAuth();
@@ -28,11 +27,6 @@ export function PersonalizationTab() {
     thank_you_message: "Obrigado! Esperamos vê-lo novamente em breve!",
   });
 
-  // Crop dialog state
-  const [cropDialogOpen, setCropDialogOpen] = useState(false);
-  const [cropImageSrc, setCropImageSrc] = useState("");
-  const [cropField, setCropField] = useState<"logo_url" | "cover_url">("cover_url");
-
   useEffect(() => {
     if (settings) {
       setFormData({
@@ -49,27 +43,15 @@ export function PersonalizationTab() {
     }
   }, [settings]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, field: "logo_url" | "cover_url") => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, field: "logo_url" | "cover_url") => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    setCropImageSrc(objectUrl);
-    setCropField(field);
-    setCropDialogOpen(true);
-    // Reset input so same file can be re-selected
     e.target.value = "";
-  };
-
-  const handleCropComplete = async (blob: Blob) => {
-    // Clean up object URL
-    if (cropImageSrc) URL.revokeObjectURL(cropImageSrc);
-
     try {
-      const fileName = cropField === "logo_url" ? "logo" : "cover";
-      const file = new File([blob], `${fileName}.jpg`, { type: "image/jpeg" });
+      const fileName = field === "logo_url" ? "logo" : "cover";
       const url = await uploadFile(file, fileName);
       if (url) {
-        setFormData(prev => ({ ...prev, [cropField]: url }));
+        setFormData(prev => ({ ...prev, [field]: url }));
         toast.success("Imagem enviada com sucesso!");
       }
     } catch (error) {
@@ -96,19 +78,6 @@ export function PersonalizationTab() {
 
   return (
     <>
-      <ImageCropDialog
-        open={cropDialogOpen}
-        onOpenChange={(open) => {
-          setCropDialogOpen(open);
-          if (!open && cropImageSrc) URL.revokeObjectURL(cropImageSrc);
-        }}
-        imageSrc={cropImageSrc}
-        aspectRatio={cropField === "logo_url" ? 1 : 3}
-        circularCrop={cropField === "logo_url"}
-        onCropComplete={handleCropComplete}
-        title={cropField === "logo_url" ? "Recortar logo" : "Recortar foto de capa"}
-      />
-
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Cover Image */}
         <Card>
