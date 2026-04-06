@@ -360,43 +360,99 @@ export default function PublicEvaluation() {
 
                 {questions.map((q, idx) => {
                   const score = answers[q.id]?.score || 0;
+                  const qType = (q as any).question_type || "stars";
+                  const qOptions = ((q as any).options || []) as string[];
+                  const selected = answers[q.id]?.selectedOptions || [];
+
                   return (
                     <div key={q.id} className="space-y-3">
                       <p className="text-sm font-medium text-foreground leading-snug">
                         {idx + 1}. {q.question_text}
                       </p>
-                      <div className="flex items-center gap-2">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            onClick={() => handleSetScore(q.id, s)}
-                            className="p-0.5 transition-all duration-200 active:scale-75"
-                          >
-                            <Star
-                              className={`h-10 w-10 transition-all duration-300 ${
-                                s <= score
-                                  ? "text-amber-400 fill-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)] scale-110"
-                                  : "text-muted-foreground/15 hover:text-amber-300/50"
+
+                      {qType === "stars" && (
+                        <>
+                          <div className="flex items-center gap-2">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <button
+                                key={s}
+                                type="button"
+                                onClick={() => handleSetScore(q.id, s)}
+                                className="p-0.5 transition-all duration-200 active:scale-75"
+                              >
+                                <Star
+                                  className={`h-10 w-10 transition-all duration-300 ${
+                                    s <= score
+                                      ? "text-amber-400 fill-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.4)] scale-110"
+                                      : "text-muted-foreground/15 hover:text-amber-300/50"
+                                  }`}
+                                />
+                              </button>
+                            ))}
+                          </div>
+                          {score > 0 && score < 5 && (
+                            <div className="space-y-1.5 animate-fade-in">
+                              <Label className="text-xs text-muted-foreground">
+                                O que aconteceu? (opcional)
+                              </Label>
+                              <Textarea
+                                value={answers[q.id]?.comment || ""}
+                                onChange={(e) => handleSetComment(q.id, e.target.value)}
+                                placeholder="Conte-nos o que podemos melhorar..."
+                                maxLength={500}
+                                className="min-h-[70px] rounded-xl text-sm border-border/40 bg-white/50 dark:bg-background/50"
+                              />
+                            </div>
+                          )}
+                        </>
+                      )}
+
+                      {qType === "single_choice" && (
+                        <RadioGroup
+                          value={selected[0] || ""}
+                          onValueChange={(val) => handleSetSelectedOptions(q.id, [val])}
+                          className="space-y-2"
+                        >
+                          {qOptions.map((opt) => (
+                            <label
+                              key={opt}
+                              className={`flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer transition-all ${
+                                selected[0] === opt
+                                  ? "border-primary bg-primary/5 shadow-sm"
+                                  : "border-border/40 bg-white/50 dark:bg-background/50 hover:border-border"
                               }`}
-                            />
-                          </button>
-                        ))}
-                      </div>
-                      {score > 0 && score < 5 && (
-                        <div className="space-y-1.5 animate-fade-in">
-                          <Label className="text-xs text-muted-foreground">
-                            O que aconteceu? (opcional)
-                          </Label>
-                          <Textarea
-                            value={answers[q.id]?.comment || ""}
-                            onChange={(e) => handleSetComment(q.id, e.target.value)}
-                            placeholder="Conte-nos o que podemos melhorar..."
-                            maxLength={500}
-                            className="min-h-[70px] rounded-xl text-sm border-border/40 bg-white/50 dark:bg-background/50"
-                          />
+                            >
+                              <RadioGroupItem value={opt} />
+                              <span className="text-sm">{opt}</span>
+                            </label>
+                          ))}
+                        </RadioGroup>
+                      )}
+
+                      {qType === "multiple_choice" && (
+                        <div className="space-y-2">
+                          {qOptions.map((opt) => {
+                            const checked = selected.includes(opt);
+                            return (
+                              <label
+                                key={opt}
+                                className={`flex items-center gap-3 rounded-xl border px-4 py-3 cursor-pointer transition-all ${
+                                  checked
+                                    ? "border-primary bg-primary/5 shadow-sm"
+                                    : "border-border/40 bg-white/50 dark:bg-background/50 hover:border-border"
+                                }`}
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={() => handleToggleOption(q.id, opt)}
+                                />
+                                <span className="text-sm">{opt}</span>
+                              </label>
+                            );
+                          })}
                         </div>
                       )}
+
                       {idx < questions.length - 1 && (
                         <div className="border-b border-border/20 pt-1" />
                       )}
