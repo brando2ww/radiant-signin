@@ -10,6 +10,7 @@ interface PrizeDialogProps {
   onOpenChange: (open: boolean) => void;
   prize?: CampaignPrize | null;
   onSave: (data: { name: string; color: string; probability: number; max_quantity: number | null; coupon_validity_days: number }) => void;
+
   saving?: boolean;
 }
 
