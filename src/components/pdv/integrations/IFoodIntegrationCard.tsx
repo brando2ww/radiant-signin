@@ -106,6 +106,19 @@ export function IFoodIntegrationCard() {
                 />
               </div>
             </div>
+
+            <div className="pt-2 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => syncReviews.mutate()}
+                disabled={syncReviews.isPending}
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${syncReviews.isPending ? "animate-spin" : ""}`} />
+                {syncReviews.isPending ? "Sincronizando..." : "Sincronizar Avaliações do iFood"}
+              </Button>
+            </div>
           )}
 
           <div className="text-xs text-muted-foreground space-y-0.5">
