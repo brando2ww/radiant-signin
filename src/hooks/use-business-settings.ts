@@ -16,6 +16,7 @@ export interface BusinessSettings {
   background_color?: string;
   welcome_message: string;
   thank_you_message: string;
+  google_review_url?: string;
 }
 
 // Hook para o usuário autenticado gerenciar suas configurações
@@ -65,6 +66,7 @@ export function useBusinessSettings() {
           background_color: updates.background_color || "#f8fafc",
           welcome_message: updates.welcome_message || "Olá! Queremos ouvir você 😊",
           thank_you_message: updates.thank_you_message || "Obrigado! Esperamos vê-lo novamente em breve!",
+          google_review_url: updates.google_review_url || null,
         };
 
         const { data, error } = await supabase

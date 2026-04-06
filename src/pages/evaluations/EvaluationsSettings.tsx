@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { LogOut, Moon, Sun, Palette, Type, Image as ImageIcon, Save, Upload } from "lucide-react";
+import { LogOut, Moon, Sun, Palette, Type, Image as ImageIcon, Save, Upload, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -30,6 +30,7 @@ export default function EvaluationsSettings() {
   const [bgColor, setBgColor] = useState("#f8fafc");
   const [welcomeMessage, setWelcomeMessage] = useState("");
   const [thankYouMessage, setThankYouMessage] = useState("");
+  const [googleReviewUrl, setGoogleReviewUrl] = useState("");
 
   useEffect(() => {
     if (settings) {
@@ -37,6 +38,7 @@ export default function EvaluationsSettings() {
       setBgColor((settings as any).background_color || "#f8fafc");
       setWelcomeMessage(settings.welcome_message || "");
       setThankYouMessage(settings.thank_you_message || "");
+      setGoogleReviewUrl(settings.google_review_url || "");
     }
   }, [settings]);
 
@@ -75,6 +77,7 @@ export default function EvaluationsSettings() {
       background_color: bgColor,
       welcome_message: welcomeMessage,
       thank_you_message: thankYouMessage,
+      google_review_url: googleReviewUrl || undefined,
     } as any);
   };
 
@@ -192,6 +195,31 @@ export default function EvaluationsSettings() {
                 className="min-h-[80px]"
               />
               <p className="text-xs text-muted-foreground">Exibida após o envio da avaliação.</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Google Review */}
+        <Card className="mb-4">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ExternalLink className="h-4 w-4" /> Avaliação Google
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Quando o cliente der nota 9 ou 10 no NPS, ele será convidado a avaliar no Google.
+            </p>
+            <div className="space-y-2">
+              <Label>Link do Google Reviews</Label>
+              <Input
+                value={googleReviewUrl}
+                onChange={(e) => setGoogleReviewUrl(e.target.value)}
+                placeholder="https://g.page/r/seu-negocio/review"
+              />
+              <p className="text-xs text-muted-foreground">
+                Para encontrar o link: pesquise seu negócio no Google → clique em "Escrever avaliação" → copie o URL da página.
+              </p>
             </div>
           </CardContent>
         </Card>
