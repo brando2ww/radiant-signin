@@ -1,63 +1,56 @@
 
 
-## Mapa de Calor de Pedidos por CEP — Nova página no Delivery
+## Funil de Compra no Relatório do Delivery
 
-### Resumo
-Criar uma nova página "Mapa de Calor" dentro do módulo Delivery que exibe um mapa interativo com heatmap baseado nos CEPs dos pedidos, além de um relatório com ranking de CEPs/bairros e métricas de concentração.
+### Problema
+Atualmente não há rastreamento interno dos eventos do funil (visualização, carrinho, conversão). O hook `useMarketingTracking` envia dados apenas para Meta Pixel / Google Analytics, mas não persiste no banco.
 
-### Dados disponíveis
-A tabela `delivery_orders` tem `delivery_address_id` que referencia `delivery_addresses`, que contém `zip_code`, `neighborhood`, `city`, e `state`. Para construir o heatmap, vamos:
-1. Buscar pedidos com seus endereços (join)
-2. Agrupar por CEP
-3. Converter CEPs em coordenadas via API ViaCEP + geocoding simples (centro do CEP)
+### Solução
 
-### Abordagem do mapa
-Usar **Leaflet** (via `react-leaflet`) com plugin de heatmap (`leaflet.heat`). É leve, gratuito, sem necessidade de API key (usa OpenStreetMap tiles). Alternativa seria Google Maps, mas requer chave de API.
+#### 1. Nova tabela: `delivery_funnel_events`
+Criar via migration para registrar cada evento do funil:
+- `id` (uuid, PK)
+- `user_id` (uuid) — dono do estabelecimento
+- `session_id` (text) — identificador anônimo do visitante (gerado no browser)
+- `event_type` (text) — `page_view`, `add_to_cart`, `purchase`
+- `metadata` (jsonb, nullable) — dados extras (produto, valor, etc.)
+- `created_at` (timestamptz)
 
-### Arquivos a criar/modificar
+RLS: INSERT público (anon), SELECT apenas para o dono (`auth.uid() = user_id`).
 
-**1. Novo: `src/pages/pdv/delivery/HeatMap.tsx`**
-- Página principal com título, filtros de período (date range picker) e dois painéis:
-  - **Mapa**: componente Leaflet com layer de heatmap
-  - **Relatório**: tabela com ranking de CEPs (quantidade de pedidos, receita, ticket médio, % do total)
-- Cards de resumo: total de CEPs atendidos, CEP com mais pedidos, bairro mais frequente, raio de cobertura
+#### 2. Registrar eventos no PublicMenu
+Atualizar `src/pages/PublicMenu.tsx` e componentes do carrinho/checkout:
+- Gerar `sessionId` com `crypto.randomUUID()` e guardar no `sessionStorage`
+- Na abertura da página → inserir evento `page_view`
+- Ao adicionar item ao carrinho → inserir evento `add_to_cart`
+- Ao concluir pedido → inserir evento `purchase`
+- Inserções via `supabase.from("delivery_funnel_events").insert(...)` (com `anon` key, sem auth necessário)
 
-**2. Novo: `src/hooks/use-delivery-heatmap.ts`**
-- Hook que busca pedidos com join na `delivery_addresses` para pegar `zip_code`, `neighborhood`, `city`
-- Agrupa por CEP: conta pedidos, soma receita
-- Retorna dados formatados para o mapa e para a tabela
+#### 3. Hook: `src/hooks/use-delivery-funnel.ts`
+- Busca eventos agrupados por `event_type` no período selecionado
+- Retorna contagens: `{ pageViews, addToCarts, purchases }` e taxas de conversão entre etapas
 
-**3. Novo: `src/components/delivery/heatmap/DeliveryHeatMap.tsx`**
-- Componente do mapa Leaflet com heatmap layer
-- Recebe array de `{ lat, lng, intensity }` e renderiza o mapa centrado na média das coordenadas
-- Usa geocoding por CEP (ViaCEP retorna IBGE code, usaremos uma abordagem de cache/lookup para converter CEPs em lat/lng via API pública do IBGE ou nominatim)
+#### 4. Componente: `src/components/delivery/reports/PurchaseFunnel.tsx`
+- Visualização em formato de funil com 3 etapas:
+  - **Visualizações** (topo, mais largo)
+  - **Adicionaram ao carrinho** (meio)
+  - **Converteram** (base, mais estreito)
+- Cada etapa mostra: quantidade absoluta, % em relação à etapa anterior, e % total
+- Visual com barras decrescentes estilizadas em gradiente (tipo funil)
+- Card com métricas: taxa de conversão geral (views → purchases), taxa carrinho → compra
 
-**4. Novo: `src/components/delivery/heatmap/CEPRankingTable.tsx`**
-- Tabela com colunas: CEP, Bairro, Cidade, Qtd Pedidos, Receita, Ticket Médio, % Total
-- Ordenável por coluna
-- Barra de progresso visual na coluna de quantidade
+#### 5. Integrar ao ReportsTab
+Adicionar `<PurchaseFunnel>` no `src/components/delivery/ReportsTab.tsx` após os relatórios existentes, usando o mesmo filtro de período.
 
-**5. Modificar: `src/pages/PDV.tsx`**
-- Adicionar rota `delivery/mapa-calor` apontando para `HeatMap`
+### Arquivos
 
-**6. Modificar: `src/components/pdv/PDVHeaderNav.tsx`**
-- Adicionar item "Mapa de Calor" na seção Delivery com ícone `MapPin`
-
-### Geocoding de CEPs
-Para converter CEPs em coordenadas geográficas:
-- Usar a API gratuita do Nominatim (OpenStreetMap): `https://nominatim.openstreetmap.org/search?postalcode={cep}&country=BR&format=json`
-- Fazer cache dos resultados por CEP para evitar chamadas repetidas
-- Rate limit: máximo 1 req/segundo — processar em sequência com delay
-- Fallback: se não encontrar coordenadas, agrupar na tabela mas não plotar no mapa
-
-### Dependências a instalar
-- `react-leaflet` + `leaflet` (mapa base)
-- `leaflet.heat` (plugin de heatmap)
-- Types: `@types/leaflet`
-
-### Fluxo do usuário
-1. Acessa Delivery → Mapa de Calor
-2. Vê o mapa com pontos de calor concentrados nos CEPs com mais pedidos
-3. Abaixo do mapa, vê cards de resumo e tabela com ranking detalhado
-4. Pode filtrar por período para analisar diferentes janelas de tempo
+| Ação | Arquivo |
+|------|---------|
+| Migration | `delivery_funnel_events` table + RLS |
+| Modificar | `src/pages/PublicMenu.tsx` — registrar `page_view` |
+| Modificar | `src/components/public-menu/ShoppingCart.tsx` — registrar `add_to_cart` |
+| Modificar | `src/components/public-menu/checkout/OrderConfirmation.tsx` — registrar `purchase` |
+| Criar | `src/hooks/use-delivery-funnel.ts` |
+| Criar | `src/components/delivery/reports/PurchaseFunnel.tsx` |
+| Modificar | `src/components/delivery/ReportsTab.tsx` — adicionar funil |
 
