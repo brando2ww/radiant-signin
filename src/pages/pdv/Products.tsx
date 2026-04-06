@@ -33,10 +33,13 @@ export default function PDVProducts() {
     isDeleting,
   } = usePDVProducts();
 
+  const { data: sharedIds = new Set<string>() } = useSharedProductIds();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [shareProduct, setShareProduct] = useState<PDVProduct | null>(null);
 
   // Filtros
   const [search, setSearch] = useState("");
