@@ -33,8 +33,19 @@ async function geocodeCEP(cep: string): Promise<{ lat: number; lng: number } | n
   if (geocodeCache[clean] !== undefined) return geocodeCache[clean];
 
   try {
+    // Step 1: resolve CEP to address via ViaCEP
+    const viaCepRes = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+    const viaCepData = await viaCepRes.json();
+    if (viaCepData.erro) {
+      geocodeCache[clean] = null;
+      return null;
+    }
+
+    // Step 2: geocode using city + state + neighborhood (Nominatim can't resolve BR postal codes)
+    const parts = [viaCepData.bairro, viaCepData.localidade, viaCepData.uf, "Brazil"].filter(Boolean);
+    const query = parts.join(", ");
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?postalcode=${clean}&country=BR&format=json&limit=1`,
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`,
       { headers: { "User-Agent": "VelaraPDV/1.0" } }
     );
     const data = await res.json();
@@ -43,6 +54,22 @@ async function geocodeCEP(cep: string): Promise<{ lat: number; lng: number } | n
       geocodeCache[clean] = result;
       return result;
     }
+
+    // Fallback: try only city + state
+    if (viaCepData.bairro) {
+      const fallbackQuery = `${viaCepData.localidade}, ${viaCepData.uf}, Brazil`;
+      const fallbackRes = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(fallbackQuery)}&format=json&limit=1`,
+        { headers: { "User-Agent": "VelaraPDV/1.0" } }
+      );
+      const fallbackData = await fallbackRes.json();
+      if (fallbackData && fallbackData.length > 0) {
+        const result = { lat: parseFloat(fallbackData[0].lat), lng: parseFloat(fallbackData[0].lon) };
+        geocodeCache[clean] = result;
+        return result;
+      }
+    }
+
     geocodeCache[clean] = null;
     return null;
   } catch {
@@ -141,7 +168,7 @@ export const useGeocodedPoints = (cepData: CEPData[]) => {
           results.push({ lat: coords.lat, lng: coords.lng, intensity: item.orderCount, zipCode: item.zipCode, neighborhood: item.neighborhood });
         }
         // rate limit
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 200));
       }
       if (!cancelled) {
         setPoints(results);
