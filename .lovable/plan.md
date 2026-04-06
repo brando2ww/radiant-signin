@@ -1,48 +1,27 @@
 
 
-## Melhorar Página de Campanhas
+## Melhorar Interface de Criação de Perguntas
 
 ### Problema
-A página atual é muito básica: apenas um grid de cards simples com nome, badge de status, contagem de respostas e data. Sem métricas visuais, sem ações rápidas, sem indicadores de desempenho.
+Atualmente a criação de perguntas é inline — um input solto no topo da lista com um select ao lado. Não há separação visual clara, labels explicativos, nem preview do que está sendo criado. É confuso especialmente para tipos de escolha múltipla.
 
-### Melhorias Propostas
+### Solução
+Substituir o formulário inline por um **Dialog dedicado** ("Nova Pergunta") aberto por um botão "+ Nova Pergunta". O dialog terá:
 
-**1. Cards de campanha enriquecidos (`CampaignCard.tsx`)**
-- Mini barra de progresso mostrando NPS médio da campanha (verde/amarelo/vermelho)
-- Ícone de QR code com tooltip "Copiar link"
-- Botão de ações rápidas (menu dropdown): Editar, Copiar link, Desativar, Excluir
-- Indicador visual de "última resposta há X tempo" (ex: "Última resposta há 2h")
-- Contagem de perguntas configuradas
-- Hover com elevação mais pronunciada e borda sutil
+**1. Estrutura do Dialog (`QuestionFormDialog.tsx` — novo componente)**
+- Título: "Nova Pergunta"
+- **Step 1 — Tipo**: 3 cards clicáveis lado a lado (Estrelas, Escolha Única, Múltipla Escolha) com ícone, título e descrição curta. Card selecionado com borda colorida.
+- **Step 2 — Texto**: Input com label "Texto da pergunta" e placeholder contextual por tipo
+- **Step 3 — Opções** (só para tipos de escolha): Seção com label "Opções de resposta", lista de chips removíveis, input para adicionar, contador "mínimo 2 opções"
+- **Preview**: Seção lateral/inferior mostrando como a pergunta aparecerá para o cliente (mini preview com estrelas ou botões de opção)
+- Footer: Cancelar + "Adicionar Pergunta"
 
-**2. KPI cards no topo da página (`EvaluationsCampaigns.tsx` e `Evaluations.tsx`)**
-- Total de campanhas ativas
-- Total de respostas (todas as campanhas)
-- NPS médio geral
-- Exibidos em cards compactos acima do grid
+**2. Atualizar `CampaignQuestionManager.tsx`**
+- Remover o formulário inline (input + select no topo)
+- Manter botões "+ Nova Pergunta" (abre dialog) e "Importar Template"
+- Lista de perguntas existentes fica igual
 
-**3. Filtros e busca**
-- Campo de busca por nome de campanha
-- Filtro por status (Todas / Ativas / Inativas)
-- Ordenação (Mais recentes / Mais respostas / Alfabética)
-
-**4. Empty state melhorado**
-- Ícone maior e mais expressivo (Megaphone)
-- Texto explicativo mais detalhado com bullet points de funcionalidades
-- CTA mais destacado
-
-**5. Menu de ações na campanha (novo componente `CampaignActions`)**
-- DropdownMenu com: Copiar link, Ver QR Code, Ativar/Desativar, Excluir
-- Confirmação antes de excluir (AlertDialog)
-
-### Arquivos alterados
-1. **`src/components/pdv/evaluations/CampaignCard.tsx`** — card enriquecido com NPS, ações, timestamps
-2. **`src/pages/evaluations/EvaluationsCampaigns.tsx`** — KPI cards, filtros, busca, empty state
-3. **`src/pages/pdv/Evaluations.tsx`** — mesmas melhorias (versão PDV da mesma página)
-4. **`src/hooks/use-evaluation-campaigns.ts`** — adicionar `avg_nps`, `last_response_at`, `question_count` ao `CampaignWithStats`
-
-### Detalhes técnicos
-- O `avg_nps` e `last_response_at` serão calculados no mesmo loop que já conta `total_responses`, usando queries adicionais ao Supabase
-- Filtros e busca são client-side (quantidade de campanhas é pequena)
-- Delete usa `useDeleteCampaign` já existente com AlertDialog de confirmação
+### Arquivos
+1. **`src/components/pdv/evaluations/QuestionFormDialog.tsx`** — novo dialog de criação
+2. **`src/components/pdv/evaluations/CampaignQuestionManager.tsx`** — simplificar, usar o novo dialog
 
