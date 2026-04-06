@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Star, CheckCircle2, ClipboardList, BarChart3, User, Sparkles, Send, ExternalLink } from "lucide-react";
 import {
   usePublicCampaign,
@@ -65,7 +67,7 @@ export default function PublicEvaluation() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [birthDate, setBirthDate] = useState("");
-  const [answers, setAnswers] = useState<Record<string, { score: number; comment: string }>>({});
+  const [answers, setAnswers] = useState<Record<string, { score: number; comment: string; selectedOptions?: string[] }>>({});
   const [npsScore, setNpsScore] = useState<number | null>(null);
 
   const { settings: businessSettings } = usePublicBusinessSettings((campaign as any)?.user_id || "");
@@ -79,7 +81,12 @@ export default function PublicEvaluation() {
   // Progress calculation (reordered: questions → NPS → personal data)
   const progress = useMemo(() => {
     const totalQuestions = questions?.length || 0;
-    const answeredQuestions = questions?.filter((q) => answers[q.id]?.score > 0).length || 0;
+    const answeredQuestions = questions?.filter((q) => {
+      const a = answers[q.id];
+      const qType = (q as any).question_type || "stars";
+      if (qType === "stars") return a?.score > 0;
+      return a?.selectedOptions && a.selectedOptions.length > 0;
+    }).length || 0;
     const hasNps = npsScore !== null ? 1 : 0;
     const hasName = name.trim() ? 1 : 0;
     const hasPhone = phone.replace(/\D/g, "").length >= 10 ? 1 : 0;
@@ -135,7 +142,12 @@ export default function PublicEvaluation() {
     }));
   };
 
-  const allQuestionsAnswered = questions?.every((q) => answers[q.id]?.score > 0) ?? true;
+  const allQuestionsAnswered = questions?.every((q) => {
+    const a = answers[q.id];
+    const qType = (q as any).question_type || "stars";
+    if (qType === "stars") return a?.score > 0;
+    return a?.selectedOptions && a.selectedOptions.length > 0;
+  }) ?? true;
   const canSubmit =
     name.trim() &&
     phone.replace(/\D/g, "").length >= 10 &&
@@ -165,6 +177,7 @@ export default function PublicEvaluation() {
           questionId: q.id,
           score: answers[q.id]?.score || 0,
           comment: answers[q.id]?.comment?.trim() || undefined,
+          selectedOptions: answers[q.id]?.selectedOptions,
         })),
       },
       {
