@@ -1,38 +1,49 @@
 
 
-## Estrategia: Redirecionamento para Google Reviews (NPS 9-10)
+## Importar Avaliações do iFood para o Sistema
 
-### Conceito
-Quando o cliente der nota 9 ou 10 no NPS, apos enviar a avaliacao, ele sera redirecionado automaticamente para avaliar no Google. O dono do estabelecimento configura o link do Google Reviews nas configuracoes.
+### Contexto
+O iFood possui uma API de Reviews (v2) que permite listar avaliações dos clientes: `GET /review/v2.0/merchants/{merchantId}/reviews`. Cada review contém score (1-5), comentário, data, e dados do pedido. A ideia e criar um job que puxa essas avaliações periodicamente e insere na tabela `customer_evaluations` do sistema.
 
-### Implementacao
+### Implementação
 
-**1. Adicionar coluna `google_review_url` na tabela `business_settings`**
-- Migration: `ALTER TABLE business_settings ADD COLUMN google_review_url text;`
-- Campo opcional — se nao estiver preenchido, o fluxo continua como hoje
+**1. Nova Edge Function `ifood-sync-reviews`**
+- Busca todos os usuários com `ifood_enabled = true` na `pdv_settings`
+- Para cada um, chama a API do iFood: `GET /review/v2.0/merchants/{merchantId}/reviews`
+- Faz refresh do token automaticamente se expirado
+- Mapeia cada review do iFood para um registro em `customer_evaluations`:
+  - `customer_name` = nome do cliente no pedido (ou "Cliente iFood")
+  - `nps_score` = score do iFood convertido (1-5 → escala 0-10)
+  - `evaluation_date` = data da review
+- Insere em `evaluation_answers` o score como resposta a uma pergunta padrão "Avaliação iFood"
+- Controle de duplicatas: salvar `ifood_review_id` para não reimportar
 
-**2. Configuracoes (`src/pages/evaluations/EvaluationsSettings.tsx`)**
-- Novo card "Avaliacao Google" com:
-  - Campo de input para o link do Google Reviews
-  - Icone do Google e instrucoes de como encontrar o link
-  - Salvar junto com as demais configuracoes via `saveSettings`
-- Adicionar estado `googleReviewUrl` e incluir no `useEffect` e `handleSavePersonalization`
+**2. Migration: adicionar campos de controle**
+- `customer_evaluations`: adicionar `source` (text, default 'manual') e `external_id` (text, nullable, unique)
+- Isso permite diferenciar avaliações do iFood das manuais e evitar duplicatas
 
-**3. Hook `use-business-settings.ts`**
-- Adicionar `google_review_url` ao tipo `BusinessSettings`
-- Incluir no select e no upsert
+**3. Cron Job (pg_cron + pg_net)**
+- Agendar a function para rodar a cada 30 minutos
+- Usa `pg_cron` para chamar a edge function automaticamente
 
-**4. Fluxo publico (`src/pages/PublicEvaluation.tsx`)**
-- Ler `google_review_url` de `businessSettings`
-- Na fase "done": se NPS >= 9 e `google_review_url` existir, mostrar tela especial com:
-  - Mensagem de agradecimento + "Ficariamos muito felizes com sua avaliacao no Google!"
-  - Botao "Avaliar no Google" que abre o link em nova aba
-  - Botao secundario "Pular" para quem nao quiser
-- Se NPS < 9 ou link nao configurado: fluxo normal (tela de agradecimento atual)
+**4. Botão de sync manual na UI**
+- No card de integração iFood (`IFoodIntegrationCard`), adicionar botão "Sincronizar Avaliações"
+- Chama a edge function sob demanda
+- Mostra última data de sync e contagem importada
 
-### Arquivos alterados
-1. **Migration SQL** — adicionar `google_review_url` a `business_settings`
-2. **`src/hooks/use-business-settings.ts`** — tipo + select/upsert
-3. **`src/pages/evaluations/EvaluationsSettings.tsx`** — card de configuracao do link Google
-4. **`src/pages/PublicEvaluation.tsx`** — logica de redirecionamento na fase "done"
+**5. Filtro no Dashboard**
+- No dashboard de avaliações, mostrar badge "iFood" nas avaliações importadas
+- Permitir filtrar por fonte (manual vs iFood)
+
+### Arquivos alterados/criados
+1. **Migration SQL** — `source` e `external_id` em `customer_evaluations`
+2. **`supabase/functions/ifood-sync-reviews/index.ts`** — nova edge function
+3. **`src/hooks/use-ifood-integration.ts`** — adicionar mutation `syncReviews`
+4. **`src/components/pdv/integrations/IFoodIntegrationCard.tsx`** — botão de sync
+5. **SQL insert (pg_cron)** — agendar job automático
+
+### Limitações importantes
+- A API de Reviews do iFood requer homologação separada do módulo de Review — o cliente precisa ter esse módulo ativo no iFood
+- O token OAuth já existente precisa ter permissão para o escopo de reviews
+- Reviews do iFood não trazem WhatsApp/data de nascimento do cliente, esses campos ficarão vazios ou com valores padrão
 
