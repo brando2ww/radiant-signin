@@ -2,10 +2,12 @@ import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Package, Grid3x3, List } from "lucide-react";
-import { usePDVProducts } from "@/hooks/use-pdv-products";
+import { usePDVProducts, PDVProduct } from "@/hooks/use-pdv-products";
+import { useSharedProductIds } from "@/hooks/use-share-to-delivery";
 import { ProductCard } from "@/components/pdv/ProductCard";
 import { ProductDialog } from "@/components/pdv/ProductDialog";
 import { ProductFilters } from "@/components/pdv/ProductFilters";
+import { ShareToDeliveryDialog } from "@/components/pdv/ShareToDeliveryDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
