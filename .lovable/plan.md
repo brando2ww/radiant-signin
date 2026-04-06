@@ -1,29 +1,34 @@
 
 
-## Pins de pedidos + zoom automático no mapa de calor
+## Fix: Geocoding de CEPs brasileiros no mapa de calor
 
-### O que muda
+### Problema
+O Nominatim não consegue resolver CEPs brasileiros (ex: `95170416`) em coordenadas. A função `geocodeCEP` retorna `null` para todos os CEPs, resultando em `points = []` e o mapa mostrando "Nenhum pedido com CEP encontrado".
 
-**Arquivo: `src/components/delivery/heatmap/DeliveryHeatMap.tsx`**
+### Solução
+Usar uma abordagem em duas etapas:
+1. **ViaCEP** (`https://viacep.com.br/ws/{cep}/json/`) para obter cidade, estado e logradouro do CEP
+2. **Nominatim** com busca por cidade+estado+bairro (que funciona) em vez de postalcode (que não funciona para BR)
 
-1. **Adicionar markers (pins)** para cada ponto no mapa, além do heatmap layer
-   - Usar `L.circleMarker` (bolinha colorida) em vez do pin padrão do Leaflet (que precisa de imagens externas)
-   - Cada marker mostra um popup com: CEP, quantidade de pedidos
-   - Para isso, o `HeatmapPoint` precisa incluir info extra (CEP, bairro) — expandir a interface ou passar dados adicionais
+### Arquivo a modificar
 
-2. **Zoom automático nos pins** em vez de abrir mapa geral do Brasil
-   - Atualmente o mapa inicia em `setView([-14.235, -51.9253], 4)` (visão geral do Brasil)
-   - Quando há pontos, o `fitBounds` já funciona mas o zoom inicial permanece largo
-   - Solução: aumentar o `maxZoom` no fitBounds e usar padding menor para dar mais zoom nos pins
-   - Quando não há pontos, mostrar uma mensagem em vez do mapa vazio do Brasil
+**`src/hooks/use-delivery-heatmap.ts`** — Reescrever a função `geocodeCEP`:
 
-**Arquivo: `src/hooks/use-delivery-heatmap.ts`**
+```typescript
+async function geocodeCEP(cep: string) {
+  // 1. Buscar dados do CEP via ViaCEP
+  const viaCepRes = await fetch(`https://viacep.com.br/ws/${clean}/json/`);
+  const viaCepData = await viaCepRes.json();
+  if (viaCepData.erro) return null;
 
-- Expandir `HeatmapPoint` para incluir `zipCode` e `neighborhood` para exibir no popup dos markers
+  // 2. Geocodificar usando cidade + estado + bairro
+  const query = `${viaCepData.bairro}, ${viaCepData.localidade}, ${viaCepData.uf}, Brazil`;
+  const nominatimRes = await fetch(
+    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`
+  );
+  // ... extrair lat/lng
+}
+```
 
-### Detalhes técnicos
-
-- Markers: `L.circleMarker([lat, lng], { radius: 8, color: '#3b82f6', fillOpacity: 0.8 })` com `.bindPopup(...)`
-- FitBounds: usar `maxZoom: 15` para garantir zoom próximo quando há poucos pontos
-- Limpar markers junto com o heat layer ao atualizar dados (armazenar em ref de `L.LayerGroup`)
+Também reduzir o delay entre requests de 300ms para 200ms (ViaCEP não tem rate limit rígido, e o delay do Nominatim de 1req/s já é respeitado pelo processamento sequencial).
 
