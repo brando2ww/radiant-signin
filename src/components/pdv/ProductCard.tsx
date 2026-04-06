@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Edit, MoreVertical, Package, Send, Trash2 } from "lucide-react";
+import { Copy, Edit, MoreVertical, Package, Send, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,11 +16,12 @@ interface ProductCardProps {
   product: PDVProduct;
   onEdit: (product: PDVProduct) => void;
   onDelete: (id: string) => void;
+  onDuplicate?: (product: PDVProduct) => void;
   isSharedToDelivery?: boolean;
   onShareToDelivery?: (product: PDVProduct) => void;
 }
 
-export function ProductCard({ product, onEdit, onDelete, isSharedToDelivery, onShareToDelivery }: ProductCardProps) {
+export function ProductCard({ product, onEdit, onDelete, onDuplicate, isSharedToDelivery, onShareToDelivery }: ProductCardProps) {
   const { recipes, calculateCMV } = usePDVRecipes(product.id);
   const cmv = calculateCMV(recipes);
 
@@ -56,6 +57,12 @@ export function ProductCard({ product, onEdit, onDelete, isSharedToDelivery, onS
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
+              {onDuplicate && (
+                <DropdownMenuItem onClick={() => deferAction(() => onDuplicate(product))}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Duplicar
+                </DropdownMenuItem>
+              )}
               {!isSharedToDelivery && onShareToDelivery && (
                 <DropdownMenuItem onClick={() => deferAction(() => onShareToDelivery(product))}>
                   <Send className="mr-2 h-4 w-4" />
