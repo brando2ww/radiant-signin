@@ -66,10 +66,15 @@ export function ProductCard({ product, onEdit, onDelete, isSharedToDelivery, onS
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="absolute top-2 left-2">
+        <div className="absolute top-2 left-2 flex gap-1">
           <Badge variant={product.is_available ? "default" : "secondary"}>
             {product.is_available ? "Disponível" : "Indisponível"}
           </Badge>
+          {isSharedToDelivery && (
+            <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              Delivery
+            </Badge>
+          )}
         </div>
       </div>
       <CardContent className="p-4">
