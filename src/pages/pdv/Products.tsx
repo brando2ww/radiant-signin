@@ -2,10 +2,12 @@ import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Package, Grid3x3, List } from "lucide-react";
-import { usePDVProducts } from "@/hooks/use-pdv-products";
+import { usePDVProducts, PDVProduct } from "@/hooks/use-pdv-products";
+import { useSharedProductIds } from "@/hooks/use-share-to-delivery";
 import { ProductCard } from "@/components/pdv/ProductCard";
 import { ProductDialog } from "@/components/pdv/ProductDialog";
 import { ProductFilters } from "@/components/pdv/ProductFilters";
+import { ShareToDeliveryDialog } from "@/components/pdv/ShareToDeliveryDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
@@ -31,10 +33,13 @@ export default function PDVProducts() {
     isDeleting,
   } = usePDVProducts();
 
+  const { data: sharedIds = new Set<string>() } = useSharedProductIds();
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [shareProduct, setShareProduct] = useState<PDVProduct | null>(null);
 
   // Filtros
   const [search, setSearch] = useState("");
@@ -201,6 +206,8 @@ export default function PDVProducts() {
               product={product}
               onEdit={handleEdit}
               onDelete={(id) => setDeleteDialog(id)}
+              isSharedToDelivery={sharedIds.has(product.id)}
+              onShareToDelivery={(p) => setShareProduct(p)}
             />
           ))}
         </div>
@@ -235,6 +242,12 @@ export default function PDVProducts() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ShareToDeliveryDialog
+        open={!!shareProduct}
+        onOpenChange={(open) => !open && setShareProduct(null)}
+        product={shareProduct}
+      />
     </div>
   );
 }

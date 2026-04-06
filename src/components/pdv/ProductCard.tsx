@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Edit, MoreVertical, Package, Trash2 } from "lucide-react";
+import { Edit, MoreVertical, Package, Send, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,9 +16,11 @@ interface ProductCardProps {
   product: PDVProduct;
   onEdit: (product: PDVProduct) => void;
   onDelete: (id: string) => void;
+  isSharedToDelivery?: boolean;
+  onShareToDelivery?: (product: PDVProduct) => void;
 }
 
-export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
+export function ProductCard({ product, onEdit, onDelete, isSharedToDelivery, onShareToDelivery }: ProductCardProps) {
   const { recipes, calculateCMV } = usePDVRecipes(product.id);
   const cmv = calculateCMV(recipes);
 
@@ -48,6 +50,12 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
+              {!isSharedToDelivery && onShareToDelivery && (
+                <DropdownMenuItem onClick={() => onShareToDelivery(product)}>
+                  <Send className="mr-2 h-4 w-4" />
+                  Enviar para Delivery
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={() => onDelete(product.id)}
                 className="text-destructive focus:text-destructive"
@@ -58,10 +66,15 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="absolute top-2 left-2">
+        <div className="absolute top-2 left-2 flex gap-1">
           <Badge variant={product.is_available ? "default" : "secondary"}>
             {product.is_available ? "Disponível" : "Indisponível"}
           </Badge>
+          {isSharedToDelivery && (
+            <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              Delivery
+            </Badge>
+          )}
         </div>
       </div>
       <CardContent className="p-4">
