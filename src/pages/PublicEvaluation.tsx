@@ -326,7 +326,7 @@ export default function PublicEvaluation() {
                           </button>
                         ))}
                       </div>
-                      {score > 0 && score <= 2 && (
+                      {score > 0 && score < 5 && (
                         <div className="space-y-1.5 animate-fade-in">
                           <Label className="text-xs text-muted-foreground">
                             O que aconteceu? (opcional)
