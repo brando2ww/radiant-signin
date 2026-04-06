@@ -137,7 +137,7 @@ export function CampaignCard({ campaign, onClick }: CampaignCardProps) {
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">NPS Médio</span>
                 <span className="font-semibold">
-                  {campaign.avg_nps.toFixed(1)} — {getNpsLabel(campaign.avg_nps)}
+                  {(campaign.avg_nps ?? 0).toFixed(1)} — {getNpsLabel(campaign.avg_nps ?? 0)}
                 </span>
               </div>
               <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">

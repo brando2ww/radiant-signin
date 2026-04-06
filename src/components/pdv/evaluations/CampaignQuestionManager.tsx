@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, GripVertical, FileDown, X, Star, List, CheckSquare } from "lucide-react";
+import { Plus, Trash2, GripVertical, FileDown, Star, List, CheckSquare } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCampaignQuestions,
@@ -12,6 +10,7 @@ import {
   useUpdateCampaignQuestion,
   useDeleteCampaignQuestion,
 } from "@/hooks/use-evaluation-campaigns";
+import { QuestionFormDialog } from "./QuestionFormDialog";
 
 const RESTAURANT_TEMPLATES: { text: string; type: string; options?: string[] }[] = [
   { text: "Como avalia a qualidade da comida?", type: "stars" },
@@ -43,52 +42,29 @@ interface Props {
 }
 
 export function CampaignQuestionManager({ campaignId }: Props) {
-  const [newQuestion, setNewQuestion] = useState("");
-  const [questionType, setQuestionType] = useState("stars");
-  const [options, setOptions] = useState<string[]>([]);
-  const [newOption, setNewOption] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data: questions, isLoading } = useCampaignQuestions(campaignId);
   const createQuestion = useCreateCampaignQuestion();
   const updateQuestion = useUpdateCampaignQuestion();
   const deleteQuestion = useDeleteCampaignQuestion();
 
-  const handleAddOption = () => {
-    const trimmed = newOption.trim();
-    if (!trimmed || options.includes(trimmed)) return;
-    setOptions((prev) => [...prev, trimmed]);
-    setNewOption("");
-  };
-
-  const handleRemoveOption = (idx: number) => {
-    setOptions((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const handleAdd = () => {
-    if (!newQuestion.trim()) return;
-    if (questionType !== "stars" && options.length < 2) {
-      toast.error("Adicione pelo menos 2 opções para perguntas de escolha.");
-      return;
-    }
+  const handleAddQuestion = (data: { question_text: string; question_type: string; options?: string[] }) => {
     createQuestion.mutate(
       {
         campaign_id: campaignId,
-        question_text: newQuestion.trim(),
+        question_text: data.question_text,
         order_position: (questions?.length || 0) + 1,
-        question_type: questionType,
-        options: questionType !== "stars" ? options : undefined,
+        question_type: data.question_type,
+        options: data.options,
       },
       {
-        onSuccess: () => {
-          setNewQuestion("");
-          setQuestionType("stars");
-          setOptions([]);
-        },
+        onSuccess: () => setDialogOpen(false),
       }
     );
   };
 
-  const handleImportTemplate = async () => {
+  const handleImportTemplate = () => {
     const startPos = (questions?.length || 0) + 1;
     for (let i = 0; i < RESTAURANT_TEMPLATES.length; i++) {
       const t = RESTAURANT_TEMPLATES[i];
@@ -103,74 +79,23 @@ export function CampaignQuestionManager({ campaignId }: Props) {
     toast.success("Template de restaurante importado!");
   };
 
-  const isChoiceType = questionType !== "stars";
-
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3">
-        <div className="flex gap-2">
-          <Input
-            value={newQuestion}
-            onChange={(e) => setNewQuestion(e.target.value)}
-            placeholder="Digite uma nova pergunta..."
-            maxLength={200}
-            onKeyDown={(e) => e.key === "Enter" && !isChoiceType && handleAdd()}
-          />
-          <Select value={questionType} onValueChange={setQuestionType}>
-            <SelectTrigger className="w-[180px] shrink-0">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(QUESTION_TYPE_LABELS).map(([value, { label, icon }]) => (
-                <SelectItem key={value} value={value}>
-                  <span className="flex items-center gap-2">{icon} {label}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {isChoiceType && (
-          <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
-            <p className="text-xs text-muted-foreground font-medium">Opções de resposta:</p>
-            <div className="flex flex-wrap gap-1.5">
-              {options.map((opt, idx) => (
-                <span
-                  key={idx}
-                  className="inline-flex items-center gap-1 text-xs bg-background border rounded-full px-2.5 py-1"
-                >
-                  {opt}
-                  <button onClick={() => handleRemoveOption(idx)} className="text-muted-foreground hover:text-destructive">
-                    <X className="h-3 w-3" />
-                  </button>
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <Input
-                value={newOption}
-                onChange={(e) => setNewOption(e.target.value)}
-                placeholder="Adicionar opção..."
-                maxLength={100}
-                className="h-8 text-sm"
-                onKeyDown={(e) => e.key === "Enter" && handleAddOption()}
-              />
-              <Button size="sm" variant="outline" onClick={handleAddOption} disabled={!newOption.trim()} className="h-8 shrink-0">
-                <Plus className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <Button onClick={handleAdd} disabled={!newQuestion.trim() || createQuestion.isPending} className="gap-2">
-            <Plus className="h-4 w-4" /> Adicionar
-          </Button>
-          <Button variant="outline" onClick={handleImportTemplate} disabled={createQuestion.isPending} className="gap-2">
-            <FileDown className="h-4 w-4" /> Importar Template Restaurante
-          </Button>
-        </div>
+      <div className="flex gap-2">
+        <Button onClick={() => setDialogOpen(true)} className="gap-2">
+          <Plus className="h-4 w-4" /> Nova Pergunta
+        </Button>
+        <Button variant="outline" onClick={handleImportTemplate} disabled={createQuestion.isPending} className="gap-2">
+          <FileDown className="h-4 w-4" /> Importar Template
+        </Button>
       </div>
+
+      <QuestionFormDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSubmit={handleAddQuestion}
+        isPending={createQuestion.isPending}
+      />
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
