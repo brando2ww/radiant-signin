@@ -73,7 +73,7 @@ export function getFunnelSessionId(): string {
 export async function trackFunnelEvent(
   userId: string,
   eventType: "page_view" | "add_to_cart" | "purchase",
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, string | number | boolean | null>
 ) {
   const sessionId = getFunnelSessionId();
   await supabase.from("delivery_funnel_events").insert([{
