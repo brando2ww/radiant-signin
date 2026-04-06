@@ -52,12 +52,12 @@ export function ProductCard({ product, onEdit, onDelete, isSharedToDelivery, onS
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(product)}>
+              <DropdownMenuItem onClick={() => deferAction(() => onEdit(product))}>
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
               {!isSharedToDelivery && onShareToDelivery && (
-                <DropdownMenuItem onClick={() => onShareToDelivery(product)}>
+                <DropdownMenuItem onClick={() => deferAction(() => onShareToDelivery(product))}>
                   <Send className="mr-2 h-4 w-4" />
                   Enviar para Delivery
                 </DropdownMenuItem>
