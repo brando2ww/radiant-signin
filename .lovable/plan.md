@@ -1,37 +1,30 @@
 
 
-## Segmentos Iguais na Roleta (Visual) com Probabilidade Respeitada no Sorteio
+## Mover Personalização da Campanha para Configurações de Avaliação
 
-### Problema
-Atualmente, o tamanho visual de cada segmento é proporcional à probabilidade. Um prêmio com 5% fica minúsculo e ilegível (ex: "Garrafa de Vinho" aparece como "Garrafa..."), enquanto prêmios com 40-50% dominam a roleta.
-
-### Solução
-Separar visual de lógica:
-- **Visual**: todos os segmentos com tamanho igual (`360 / prizes.length` graus)
-- **Sorteio**: `pickPrize()` já usa probabilidade ponderada — não muda nada
-- **Spin landing**: calcular ângulo de parada usando os segmentos visuais (iguais), não os ponderados
+### O que muda
+A aba "Personalização" sai de dentro da campanha (`CampaignDetail`) e vai para a página de Configurações (`/pdv/avaliacoes/configuracoes`). As configurações visuais (logo, cor de fundo, mensagens) passam a ser globais do usuário, não por campanha.
 
 ### Arquivos a editar
 
-**1. `src/components/pdv/evaluations/RoulettePreview.tsx`**
-- Linha 25: trocar `deg` de proporcional à probabilidade para `360 / prizes.length`
-- Remover truncamento de label (linha 54-55) — com segmentos iguais, todos terão espaço suficiente
-- Font size fixo ou baseado em `360 / prizes.length`
+**1. `src/pages/evaluations/EvaluationsSettings.tsx`**
+- Importar e renderizar `CampaignPersonalization` adaptado (ou criar uma nova seção inline) com os cards de Logo, Cor de Fundo e Mensagens
+- Em vez de usar `campaignId`, salvar em `business_settings` via `useBusinessSettings` (que já tem `logo_url`, `welcome_message`, `thank_you_message`, `primary_color`)
+- Adicionar seção "Personalização da Pesquisa" antes dos cards de Perfil/Aparência
 
-**2. `src/components/public-evaluation/SpinWheel.tsx`**
-- Linha 23: trocar `deg` para `360 / prizes.length` (visual igual)
-- Linha 39-43: ajustar cálculo de `midAngle`/`targetAngle` para usar segmentos visuais iguais (já que a roleta gira visualmente com fatias iguais)
-- `pickPrize()` continua usando probabilidade real — sem alteração
+**2. `src/components/pdv/evaluations/CampaignPersonalization.tsx`**
+- Refatorar para não depender de `campaignId` — usar `useBusinessSettings` em vez de `useUpdateCampaign`
+- Campos: `logo_url`, `background_color` (precisará ser adicionado ao `business_settings` ou usar `primary_color`), `welcome_message`, `thank_you_message`
+
+**3. `src/components/pdv/evaluations/CampaignDetail.tsx`**
+- Remover a aba "Personalização" do TabsList e o TabsContent correspondente
+- Remover import de `CampaignPersonalization`
+
+**4. `src/pages/PublicEvaluation.tsx`**
+- Alterar a leitura de `bgColor`, `logoUrl`, `welcomeMsg`, `thankYouMsg` de `campaign` para `business_settings` do user (usando `usePublicBusinessSettings(campaign.user_id)`)
 
 ### Detalhes técnicos
-```text
-Antes (visual proporcional):
-  Garrafa 5%  → fatia de 18°  → texto ilegível
-  Drink  45%  → fatia de 162° → enorme
-
-Depois (visual igual):
-  Garrafa → fatia de 120° → texto legível
-  Drink   → fatia de 120° → mesmo tamanho
-  Sorteio → Garrafa ainda cai 5% das vezes
-```
+- `business_settings` já possui `logo_url`, `welcome_message`, `thank_you_message` — reutilizamos esses campos
+- Para `background_color`, verificaremos se a coluna existe na tabela; se não, usaremos `primary_color` ou adicionaremos via migration
+- A roleta e perguntas continuam por campanha; apenas branding/mensagens ficam globais
 
