@@ -9,19 +9,33 @@ import { useCEPLookup } from "@/hooks/use-cep-lookup";
 
 interface AddressFormProps {
   customerId: string;
+  initialZipCode?: string;
+  initialStreet?: string;
+  initialNeighborhood?: string;
+  initialCity?: string;
+  initialState?: string;
   onSuccess: (addressId: string, addressText: string) => void;
   onCancel: () => void;
 }
 
-export const AddressForm = ({ customerId, onSuccess, onCancel }: AddressFormProps) => {
+export const AddressForm = ({
+  customerId,
+  initialZipCode = "",
+  initialStreet = "",
+  initialNeighborhood = "",
+  initialCity = "",
+  initialState = "",
+  onSuccess,
+  onCancel,
+}: AddressFormProps) => {
   const [label, setLabel] = useState("Casa");
-  const [zipCode, setZipCode] = useState("");
-  const [street, setStreet] = useState("");
+  const [zipCode, setZipCode] = useState(initialZipCode);
+  const [street, setStreet] = useState(initialStreet);
   const [number, setNumber] = useState("");
   const [complement, setComplement] = useState("");
-  const [neighborhood, setNeighborhood] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
+  const [neighborhood, setNeighborhood] = useState(initialNeighborhood);
+  const [city, setCity] = useState(initialCity);
+  const [state, setState] = useState(initialState);
   const [reference, setReference] = useState("");
 
   const createAddress = useCreateAddress();
