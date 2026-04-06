@@ -175,7 +175,10 @@ export const ProductOptionDialog = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog modal={false} open={open} onOpenChange={(val) => {
+      if (!val) setOpenPopoverIndex(null);
+      onOpenChange(val);
+    }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{option ? "Editar Opção" : "Nova Opção"}</DialogTitle>
