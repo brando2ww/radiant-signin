@@ -18,6 +18,8 @@ export interface HeatmapPoint {
   lat: number;
   lng: number;
   intensity: number;
+  zipCode: string;
+  neighborhood: string;
 }
 
 interface GeoCache {
