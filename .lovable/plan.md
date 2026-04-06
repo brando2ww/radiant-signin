@@ -1,49 +1,50 @@
 
 
-## Importar Avaliações do iFood para o Sistema
+## Tipos de Perguntas nas Avaliações: Estrelas, Múltipla Escolha e Pesquisa
 
-### Contexto
-O iFood possui uma API de Reviews (v2) que permite listar avaliações dos clientes: `GET /review/v2.0/merchants/{merchantId}/reviews`. Cada review contém score (1-5), comentário, data, e dados do pedido. A ideia e criar um job que puxa essas avaliações periodicamente e insere na tabela `customer_evaluations` do sistema.
+### Situação Atual
+Hoje as perguntas só suportam um tipo: **estrelas (1-5)**. A tabela `evaluation_campaign_questions` não tem campo de tipo, e `evaluation_answers` só armazena `score` (number) e `comment` (text).
 
-### Implementação
+### Mudanças Propostas
 
-**1. Nova Edge Function `ifood-sync-reviews`**
-- Busca todos os usuários com `ifood_enabled = true` na `pdv_settings`
-- Para cada um, chama a API do iFood: `GET /review/v2.0/merchants/{merchantId}/reviews`
-- Faz refresh do token automaticamente se expirado
-- Mapeia cada review do iFood para um registro em `customer_evaluations`:
-  - `customer_name` = nome do cliente no pedido (ou "Cliente iFood")
-  - `nps_score` = score do iFood convertido (1-5 → escala 0-10)
-  - `evaluation_date` = data da review
-- Insere em `evaluation_answers` o score como resposta a uma pergunta padrão "Avaliação iFood"
-- Controle de duplicatas: salvar `ifood_review_id` para não reimportar
+**1. Migration: Adicionar suporte a tipos de pergunta**
 
-**2. Migration: adicionar campos de controle**
-- `customer_evaluations`: adicionar `source` (text, default 'manual') e `external_id` (text, nullable, unique)
-- Isso permite diferenciar avaliações do iFood das manuais e evitar duplicatas
+Na tabela `evaluation_campaign_questions`:
+- Novo campo `question_type` (text, default `'stars'`) — valores: `stars`, `multiple_choice`, `single_choice`
+- Novo campo `options` (jsonb, nullable) — array de opções para perguntas de escolha, ex: `["Instagram", "Indicação", "Google", "Passou na frente"]`
 
-**3. Cron Job (pg_cron + pg_net)**
-- Agendar a function para rodar a cada 30 minutos
-- Usa `pg_cron` para chamar a edge function automaticamente
+Na tabela `evaluation_answers`:
+- Novo campo `selected_options` (jsonb, nullable) — armazena as opções escolhidas pelo cliente (array de strings)
+- O campo `score` existente continua para perguntas de estrelas; será `0` para perguntas de escolha
 
-**4. Botão de sync manual na UI**
-- No card de integração iFood (`IFoodIntegrationCard`), adicionar botão "Sincronizar Avaliações"
-- Chama a edge function sob demanda
-- Mostra última data de sync e contagem importada
+**2. CampaignQuestionManager — Interface de criação**
 
-**5. Filtro no Dashboard**
-- No dashboard de avaliações, mostrar badge "iFood" nas avaliações importadas
-- Permitir filtrar por fonte (manual vs iFood)
+Ao adicionar pergunta, o usuário escolhe o tipo:
+- **Estrelas** (padrão) — funciona como hoje
+- **Escolha única** — ex: "Como conheceu nosso restaurante?" com opções configuráveis
+- **Múltipla escolha** — ex: "O que mais gostou?" com seleção de várias opções
+
+Para tipos de escolha, aparece um sub-formulário para adicionar/remover opções (chips editáveis).
+
+Template atualizado com pergunta "Como conheceu o restaurante?" pré-configurada como escolha única.
+
+**3. PublicEvaluation — Renderização por tipo**
+
+No formulário público, cada pergunta renderiza conforme o tipo:
+- `stars` → estrelas clicáveis (como hoje)
+- `single_choice` → radio buttons estilizados
+- `multiple_choice` → checkboxes estilizados
+
+**4. Hooks e Dashboard — Leitura dos novos campos**
+
+- `use-evaluation-campaigns.ts`: incluir `question_type` e `options` no fetch/create
+- `use-customer-evaluations.ts`: incluir `selected_options` nas respostas
+- Dashboard/Reports: exibir distribuição de respostas para perguntas de escolha (gráfico de barras com contagem por opção)
 
 ### Arquivos alterados/criados
-1. **Migration SQL** — `source` e `external_id` em `customer_evaluations`
-2. **`supabase/functions/ifood-sync-reviews/index.ts`** — nova edge function
-3. **`src/hooks/use-ifood-integration.ts`** — adicionar mutation `syncReviews`
-4. **`src/components/pdv/integrations/IFoodIntegrationCard.tsx`** — botão de sync
-5. **SQL insert (pg_cron)** — agendar job automático
-
-### Limitações importantes
-- A API de Reviews do iFood requer homologação separada do módulo de Review — o cliente precisa ter esse módulo ativo no iFood
-- O token OAuth já existente precisa ter permissão para o escopo de reviews
-- Reviews do iFood não trazem WhatsApp/data de nascimento do cliente, esses campos ficarão vazios ou com valores padrão
+1. **Migration SQL** — `question_type`, `options` em questions; `selected_options` em answers
+2. **`CampaignQuestionManager.tsx`** — seletor de tipo + editor de opções
+3. **`PublicEvaluation.tsx`** — renderização condicional por tipo
+4. **`use-evaluation-campaigns.ts`** — tipos e queries atualizados
+5. **`use-customer-evaluations.ts`** — incluir `selected_options`
 
