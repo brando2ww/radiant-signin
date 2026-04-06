@@ -206,6 +206,8 @@ export default function PDVProducts() {
               product={product}
               onEdit={handleEdit}
               onDelete={(id) => setDeleteDialog(id)}
+              isSharedToDelivery={sharedIds.has(product.id)}
+              onShareToDelivery={(p) => setShareProduct(p)}
             />
           ))}
         </div>
