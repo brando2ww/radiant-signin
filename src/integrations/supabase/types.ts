@@ -1184,6 +1184,7 @@ export type Database = {
           preparation_time: number | null
           promotional_price: number | null
           serves: number | null
+          source_pdv_product_id: string | null
           updated_at: string
           user_id: string
         }
@@ -1201,6 +1202,7 @@ export type Database = {
           preparation_time?: number | null
           promotional_price?: number | null
           serves?: number | null
+          source_pdv_product_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1218,6 +1220,7 @@ export type Database = {
           preparation_time?: number | null
           promotional_price?: number | null
           serves?: number | null
+          source_pdv_product_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1227,6 +1230,13 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "delivery_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_products_source_pdv_product_id_fkey"
+            columns: ["source_pdv_product_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_products"
             referencedColumns: ["id"]
           },
         ]
