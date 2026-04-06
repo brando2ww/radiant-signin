@@ -1,27 +1,28 @@
 
 
-## Melhorar Interface de Criação de Perguntas
+## Adicionar Edição de Perguntas Existentes
 
 ### Problema
-Atualmente a criação de perguntas é inline — um input solto no topo da lista com um select ao lado. Não há separação visual clara, labels explicativos, nem preview do que está sendo criado. É confuso especialmente para tipos de escolha múltipla.
+Atualmente só é possível criar perguntas novas. Não há como editar o texto, mudar o tipo (ex: de estrelas para múltipla escolha) ou alterar as opções de uma pergunta já criada.
 
 ### Solução
-Substituir o formulário inline por um **Dialog dedicado** ("Nova Pergunta") aberto por um botão "+ Nova Pergunta". O dialog terá:
 
-**1. Estrutura do Dialog (`QuestionFormDialog.tsx` — novo componente)**
-- Título: "Nova Pergunta"
-- **Step 1 — Tipo**: 3 cards clicáveis lado a lado (Estrelas, Escolha Única, Múltipla Escolha) com ícone, título e descrição curta. Card selecionado com borda colorida.
-- **Step 2 — Texto**: Input com label "Texto da pergunta" e placeholder contextual por tipo
-- **Step 3 — Opções** (só para tipos de escolha): Seção com label "Opções de resposta", lista de chips removíveis, input para adicionar, contador "mínimo 2 opções"
-- **Preview**: Seção lateral/inferior mostrando como a pergunta aparecerá para o cliente (mini preview com estrelas ou botões de opção)
-- Footer: Cancelar + "Adicionar Pergunta"
+**1. Adaptar `QuestionFormDialog.tsx` para modo edição**
+- Aceitar prop opcional `initialData` com `id`, `question_text`, `question_type`, `options`
+- Quando `initialData` presente: pré-preencher todos os campos, mudar título para "Editar Pergunta" e botão para "Salvar Alterações"
+- Ao fechar/submeter, resetar normalmente
 
-**2. Atualizar `CampaignQuestionManager.tsx`**
-- Remover o formulário inline (input + select no topo)
-- Manter botões "+ Nova Pergunta" (abre dialog) e "Importar Template"
-- Lista de perguntas existentes fica igual
+**2. Adicionar botão de editar em `CampaignQuestionManager.tsx`**
+- Novo state `editingQuestion` para armazenar a pergunta selecionada para edição
+- Botão de edição (ícone Pencil) ao lado do botão de excluir em cada card
+- Ao clicar, abre o dialog com os dados da pergunta preenchidos
+- No submit do modo edição, chama `updateQuestion.mutate` com `question_text`, `question_type` e `options`
 
-### Arquivos
-1. **`src/components/pdv/evaluations/QuestionFormDialog.tsx`** — novo dialog de criação
-2. **`src/components/pdv/evaluations/CampaignQuestionManager.tsx`** — simplificar, usar o novo dialog
+**3. Atualizar `useUpdateCampaignQuestion` no hook**
+- Expandir os tipos aceitos no `mutationFn` para incluir `question_type` e `options` (atualmente só aceita `question_text`, `is_active`, `order_position`)
+
+### Arquivos alterados
+1. `src/components/pdv/evaluations/QuestionFormDialog.tsx` — prop `initialData`, título/botão dinâmico
+2. `src/components/pdv/evaluations/CampaignQuestionManager.tsx` — state de edição, botão Pencil, handler de update
+3. `src/hooks/use-evaluation-campaigns.ts` — expandir tipos do `useUpdateCampaignQuestion`
 
