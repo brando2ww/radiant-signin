@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { EvaluationsSubNav } from "@/components/pdv/evaluations/EvaluationsSubNav";
+
 import { lazy, Suspense } from "react";
 
 const EvaluationsDashboard = lazy(() => import("@/pages/evaluations/EvaluationsDashboard"));
@@ -20,7 +20,6 @@ function PageLoader() {
 export default function EvaluationsLayout() {
   return (
     <div className="flex flex-col">
-      <EvaluationsSubNav />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route index element={<EvaluationsDashboard />} />

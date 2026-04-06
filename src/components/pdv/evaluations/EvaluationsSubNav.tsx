@@ -22,7 +22,7 @@ export function EvaluationsSubNav() {
   };
 
   return (
-    <div className="sticky top-14 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div className="z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-11 items-center px-4 gap-1 overflow-x-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
