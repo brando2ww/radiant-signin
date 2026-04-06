@@ -1,37 +1,38 @@
 
 
-## Melhorar visual do Funil de Compra
+## Adicionar redimensionamento/crop de imagem antes do upload
 
-### Problema
-O funil atual usa barras horizontais com larguras proporcionais, mas quando os valores são 0 ou muito baixos, as barras ficam visualmente estranhas — barras coloridas grandes mostrando "0%" sem forma de funil real.
+### Visao geral
+Ao selecionar uma imagem (capa ou logo), abrir um dialog com ferramenta de crop/redimensionamento. O usuario ajusta a area desejada e so depois a imagem e enviada ao Supabase.
 
-### Solução
-Redesenhar o funil com um visual de **funil real em formato trapézio** — cada etapa é uma barra centralizada que vai ficando mais estreita, criando o efeito visual clássico de funil. Usar cores do sistema (sem gradientes coloridos, respeitando o design memory).
+### Biblioteca
+Instalar `react-image-crop` — leve, sem dependencias, suporta aspect ratio fixo.
 
-### Design proposto
+### Arquivos
 
-```text
-┌─────────────────────────────────┐
-│    👁 Visualizaram    120       │  ← barra larga (100%)
-│  ███████████████████████████    │
-│                                 │
-│    🛒 Add carrinho    45        │  ← barra média (~60%)
-│     █████████████████████       │
-│                                 │
-│    ✅ Compraram       12        │  ← barra estreita (~30%)
-│       ███████████████           │
-│                                 │
-│   Setas entre etapas com        │
-│   taxa de conversão (37.5%)     │
-└─────────────────────────────────┘
-```
+| Acao | Arquivo | O que |
+|------|---------|-------|
+| Criar | `src/components/ui/image-crop-dialog.tsx` | Dialog reutilizavel com canvas crop |
+| Modificar | `src/components/delivery/PersonalizationTab.tsx` | Integrar dialog de crop no fluxo de upload |
 
-### Mudanças no arquivo `PurchaseFunnel.tsx`
+### Fluxo
 
-1. **Layout de funil centralizado**: Barras centralizadas com `mx-auto`, largura decrescente, criando forma de funil
-2. **Setas entre etapas**: Adicionar indicador visual (chevron/seta) entre cada etapa mostrando a taxa de conversão daquela transição
-3. **Cores do sistema**: Usar `bg-primary`, `bg-muted-foreground`, `bg-muted` em vez de blue/amber/green gradients
-4. **Valores dentro da barra**: Manter o número e percentual dentro da barra, mas com melhor contraste
-5. **Largura mínima maior quando 0**: Quando todos os valores são 0, mostrar o formato de funil com larguras fixas proporcionais (100%, 65%, 35%) para manter a forma visual
-6. **Cards de conversão**: Manter os 3 cards inferiores mas com ícones de seta entre eles
+1. Usuario seleciona arquivo → abre `ImageCropDialog` com preview
+2. Para **capa**: aspect ratio 3:1 (1200x400). Para **logo**: aspect ratio 1:1 (circular)
+3. Usuario ajusta a area de crop arrastando/redimensionando
+4. Clica "Confirmar" → canvas gera um `Blob` recortado → upload normal ao Supabase
+5. Clica "Cancelar" → fecha sem fazer nada
+
+### Detalhes tecnicos
+
+**`ImageCropDialog`**:
+- Props: `open`, `onOpenChange`, `imageSrc` (object URL), `aspectRatio`, `onCropComplete(blob: Blob)`
+- Usa `ReactCrop` do `react-image-crop` para selecao visual
+- Ao confirmar, desenha a area selecionada em um `<canvas>` offscreen e exporta como blob via `canvas.toBlob()`
+- Aspect ratios: capa = `3/1`, logo = `1/1` (com `circularCrop`)
+
+**`PersonalizationTab` mudancas**:
+- Ao selecionar arquivo, cria object URL e abre o dialog de crop em vez de fazer upload direto
+- State novo: `cropDialogOpen`, `cropImageSrc`, `cropField`, `cropAspect`
+- Apos crop, converte blob em File e chama o `uploadFile` existente
 
