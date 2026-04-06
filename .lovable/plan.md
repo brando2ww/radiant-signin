@@ -1,48 +1,57 @@
 
-## Corrigir clique nos insumos do combobox
 
-### Diagnóstico confirmado
-- `ProductOptionDialog` já está com `Dialog modal={false}` e o seletor já está com `Popover modal={false}`.
-- O problema continua porque os wrappers base ainda criam camadas portaled com a mesma faixa de z-index:
-  - `src/components/ui/dialog.tsx` sempre renderiza `DialogOverlay`
-  - `src/components/ui/popover.tsx` sempre renderiza `PopoverPrimitive.Portal` no `body`
-- Na sessão, o dropdown abre e fecha, mas o clique não está chegando no `CommandItem`; ele “passa” para elementos do dialog por baixo. Por isso a lista aparece, mas selecionar “Camarão a Milanesa” não atualiza nada.
+## Compartilhar Produto PDV com Delivery
 
-### Implementação
-1. **`src/components/ui/popover.tsx`**
-   - Adicionar suporte a `container` no portal do popover.
-   - Encaminhar esse valor para `PopoverPrimitive.Portal container={...}`.
-   - Manter o comportamento atual como fallback quando nenhum container for passado.
+### Resumo
+Adicionar um botão "Delivery" no card de cada produto PDV. Ao clicar, abre um dialog para selecionar a categoria do delivery. O produto é então copiado para a tabela `delivery_products` com os dados mapeados. Um badge visual indica quais produtos já foram compartilhados.
 
-2. **`src/components/delivery/ProductOptionDialog.tsx`**
-   - Criar um `ref` para o `DialogContent`.
-   - Renderizar o dropdown do insumo dentro do próprio dialog, em vez de deixar o portal ir para `document.body`:
-     ```tsx
-     <PopoverContent container={dialogContentRef.current} ... />
-     ```
-   - Manter `Dialog modal={false}` e `Popover modal={false}`.
-   - Garantir `type="button"` no trigger e no botão de limpar vínculo.
-   - Continuar resetando `openPopoverIndex` ao fechar o dialog.
-   - Adicionar `DialogDescription` (ou `aria-describedby={undefined}`) para remover o warning atual do console.
+### Rastreamento do vínculo
+Criar uma coluna `source_pdv_product_id` na tabela `delivery_products` para rastrear a origem. Isso permite:
+- Mostrar badge "No Delivery" nos produtos já compartilhados
+- Evitar duplicatas
+- Futuramente sincronizar alterações
 
-3. **Não mexer nos hooks**
-   - `handleSelectIngredient` e `use-product-options.ts` não parecem ser a causa.
-   - O problema é de camada/portal/interação, não de salvamento.
+### Migration SQL
+```sql
+ALTER TABLE delivery_products 
+ADD COLUMN source_pdv_product_id uuid REFERENCES pdv_products(id) ON DELETE SET NULL;
+```
 
-### Resultado esperado
-- Clicar em um item da lista seleciona no primeiro clique.
-- O popover fecha normalmente.
-- O botão passa a mostrar o insumo escolhido.
-- Quantidade/unidade continuam editáveis.
-- O vínculo continua salvando e reabrindo corretamente.
+### Arquivos a modificar/criar
 
-### Validação
-1. Abrir produto > Opções e Complementos > criar/editar opção.
-2. Abrir “Buscar insumo...”.
-3. Clicar em itens diferentes da lista.
-4. Confirmar:
-   - seleção no primeiro clique,
-   - botão atualizado com o nome do insumo,
-   - quantidade/unidade visíveis,
-   - salvar e reabrir mantendo o vínculo,
-   - teste completo dentro do dialog de produto.
+1. **`src/hooks/use-share-to-delivery.ts`** (novo)
+   - Hook com mutation para copiar produto PDV → delivery_products
+   - Mapeia campos: `name`, `description`, `image_url`, `preparation_time`, `serves`, `price_delivery` (ou `price_salon`) → `base_price`
+   - Query para verificar quais produtos PDV já têm vínculo (busca `source_pdv_product_id`)
+
+2. **`src/components/pdv/ShareToDeliveryDialog.tsx`** (novo)
+   - Dialog com select de categorias do delivery (`useDeliveryCategories`)
+   - Campo de preço pré-preenchido (editável)
+   - Botão confirmar que executa a mutation
+
+3. **`src/components/pdv/ProductCard.tsx`**
+   - Adicionar badge "Delivery" (verde) quando o produto já está compartilhado
+   - Adicionar item "Enviar para Delivery" no dropdown menu
+   - Ao clicar, abre o `ShareToDeliveryDialog`
+
+4. **`src/pages/pdv/Products.tsx`**
+   - Passar dados de vínculo (set de IDs compartilhados) para os cards
+
+### Fluxo do usuário
+1. Usuário vê produto no PDV → clica no menu "⋮" → "Enviar para Delivery"
+2. Abre dialog com: nome do produto (readonly), seletor de categoria, preço (editável)
+3. Confirma → produto aparece na listagem do delivery
+4. Badge "Delivery" aparece no card do produto PDV
+
+### Mapeamento de campos
+| PDV | Delivery |
+|-----|----------|
+| name | name |
+| description | description |
+| image_url | image_url |
+| price_delivery ou price_salon | base_price |
+| preparation_time | preparation_time |
+| serves | serves |
+| — | category_id (selecionado) |
+| id | source_pdv_product_id |
+
