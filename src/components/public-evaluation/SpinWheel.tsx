@@ -29,7 +29,7 @@ export function SpinWheel({ prizes, onResult, disabled, primaryColor, secondaryC
     ...p,
     startDeg: i * equalDeg,
     deg: equalDeg,
-    wheelColor: p.color || (i % 2 === 0 ? pc : sc),
+    wheelColor: i % 2 === 0 ? pc : sc,
   }));
 
   const gradient = segments

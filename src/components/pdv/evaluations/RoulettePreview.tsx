@@ -30,7 +30,7 @@ export function RoulettePreview({ prizes, size = 200, primaryColor, secondaryCol
     ...p,
     startDeg: i * equalDeg,
     deg: equalDeg,
-    wheelColor: p.color || (i % 2 === 0 ? pc : sc),
+    wheelColor: i % 2 === 0 ? pc : sc,
   }));
 
   const r = size / 2;
