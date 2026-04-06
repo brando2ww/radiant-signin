@@ -90,6 +90,17 @@ export default function PublicEvaluation() {
     return totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
   }, [questions, answers, npsScore, name, phone, birthDate]);
 
+  const wheelPrimary = (campaign as any)?.wheel_primary_color || undefined;
+  const wheelSecondary = (campaign as any)?.wheel_secondary_color || undefined;
+  const cooldownHours = Number((campaign as any)?.roulette_cooldown_hours) || 0;
+
+  const isCoolingDown = useMemo(() => {
+    if (!campaignId || cooldownHours <= 0) return false;
+    const lastSpin = localStorage.getItem(`roulette_last_spin_${campaignId}`);
+    if (!lastSpin) return false;
+    return Date.now() - Number(lastSpin) < cooldownHours * 3600000;
+  }, [campaignId, cooldownHours]);
+
   if (loadingCampaign || loadingQuestions) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: bgColor }}>
@@ -106,7 +117,7 @@ export default function PublicEvaluation() {
     );
   }
 
-  const showRoulette = rouletteEnabled && prizes.length > 0;
+  const showRoulette = rouletteEnabled && prizes.length > 0 && !isCoolingDown;
   const currentPhase = showRoulette ? phase : (phase === "roulette" ? "form" : phase);
 
   const handleSetScore = (questionId: string, score: number) => {
@@ -133,6 +144,9 @@ export default function PublicEvaluation() {
 
   const handleSpinResult = (prize: CampaignPrize) => {
     setWonPrize(prize);
+    if (campaignId) {
+      localStorage.setItem(`roulette_last_spin_${campaignId}`, String(Date.now()));
+    }
     setTimeout(() => setPhase("form"), 1500);
   };
 
@@ -255,7 +269,7 @@ export default function PublicEvaluation() {
         {/* === PHASE: ROULETTE === */}
         {currentPhase === "roulette" && (
           <div className="flex justify-center py-8">
-            <SpinWheel prizes={prizes} onResult={handleSpinResult} />
+            <SpinWheel prizes={prizes} onResult={handleSpinResult} primaryColor={wheelPrimary} secondaryColor={wheelSecondary} />
           </div>
         )}
 

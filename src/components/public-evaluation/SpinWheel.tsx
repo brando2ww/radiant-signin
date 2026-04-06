@@ -2,20 +2,26 @@ import { useState, useRef } from "react";
 import type { CampaignPrize } from "@/hooks/use-campaign-prizes";
 import { pickPrize } from "@/hooks/use-campaign-prizes";
 
-const WHEEL_COLORS = ["#1a1a2e", "#722F37"];
+const DEFAULT_PRIMARY = "#1a1a2e";
+const DEFAULT_SECONDARY = "#722F37";
 
 interface SpinWheelProps {
   prizes: CampaignPrize[];
   onResult: (prize: CampaignPrize) => void;
   disabled?: boolean;
+  primaryColor?: string;
+  secondaryColor?: string;
 }
 
-export function SpinWheel({ prizes, onResult, disabled }: SpinWheelProps) {
+export function SpinWheel({ prizes, onResult, disabled, primaryColor, secondaryColor }: SpinWheelProps) {
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const resultRef = useRef<CampaignPrize | null>(null);
 
   if (!prizes.length) return null;
+
+  const pc = primaryColor || DEFAULT_PRIMARY;
+  const sc = secondaryColor || DEFAULT_SECONDARY;
 
   const totalProb = prizes.reduce((s, p) => s + Number(p.probability), 0);
   const equalDeg = 360 / prizes.length;
@@ -23,7 +29,7 @@ export function SpinWheel({ prizes, onResult, disabled }: SpinWheelProps) {
     ...p,
     startDeg: i * equalDeg,
     deg: equalDeg,
-    wheelColor: WHEEL_COLORS[i % 2],
+    wheelColor: p.color || (i % 2 === 0 ? pc : sc),
   }));
 
   const gradient = segments
@@ -122,7 +128,7 @@ export function SpinWheel({ prizes, onResult, disabled }: SpinWheelProps) {
             height: size,
             transform: `rotate(${rotation}deg)`,
             transition: spinning ? "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)" : "none",
-            border: "6px solid #d4a843",
+            border: `6px solid ${pc}`,
           }}
         >
           <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
@@ -156,7 +162,7 @@ export function SpinWheel({ prizes, onResult, disabled }: SpinWheelProps) {
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
-            borderColor: "#d4a843",
+            borderColor: pc,
           }}
         >
           {spinning ? "..." : "GIRAR"}
@@ -175,7 +181,7 @@ export function SpinWheel({ prizes, onResult, disabled }: SpinWheelProps) {
               style={{
                 left: dx,
                 top: dy,
-                backgroundColor: i % 2 === 0 ? "#d4a843" : "#fff",
+                backgroundColor: i % 2 === 0 ? pc : "#fff",
               }}
             />
           );
