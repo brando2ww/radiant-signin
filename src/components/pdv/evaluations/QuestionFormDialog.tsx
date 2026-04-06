@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -73,25 +73,19 @@ export function QuestionFormDialog({ open, onOpenChange, onSubmit, isPending, in
 
   const isEditing = !!initialData;
 
-  // Populate fields when initialData changes
-  useState(() => {});
-  // Use effect-like pattern via open + initialData
-  const prevOpenRef = useState({ open: false, id: "" })[0];
-  if (open && initialData && prevOpenRef.id !== initialData.id) {
-    prevOpenRef.open = true;
-    prevOpenRef.id = initialData.id;
-    // Schedule state updates
-    setTimeout(() => {
+  useEffect(() => {
+    if (open && initialData) {
       setType(initialData.question_type);
       setText(initialData.question_text);
       setOptions(initialData.options || []);
       setNewOption("");
-    }, 0);
-  }
-  if (!open && prevOpenRef.open) {
-    prevOpenRef.open = false;
-    prevOpenRef.id = "";
-  }
+    } else if (!open) {
+      setType("stars");
+      setText("");
+      setOptions([]);
+      setNewOption("");
+    }
+  }, [open, initialData]);
 
   const isChoiceType = type !== "stars";
   const canSubmit = text.trim() && (!isChoiceType || options.length >= 2);
