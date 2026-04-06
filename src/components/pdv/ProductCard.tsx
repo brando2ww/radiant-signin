@@ -24,6 +24,12 @@ export function ProductCard({ product, onEdit, onDelete, isSharedToDelivery, onS
   const { recipes, calculateCMV } = usePDVRecipes(product.id);
   const cmv = calculateCMV(recipes);
 
+  // Defer dialog-opening actions to the next tick to avoid Radix
+  // DropdownMenu + Dialog pointer-events conflict
+  const deferAction = (fn: () => void) => {
+    window.setTimeout(fn, 0);
+  };
+
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
       <div className="relative aspect-video bg-muted">
@@ -46,12 +52,12 @@ export function ProductCard({ product, onEdit, onDelete, isSharedToDelivery, onS
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(product)}>
+              <DropdownMenuItem onClick={() => deferAction(() => onEdit(product))}>
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
               {!isSharedToDelivery && onShareToDelivery && (
-                <DropdownMenuItem onClick={() => onShareToDelivery(product)}>
+                <DropdownMenuItem onClick={() => deferAction(() => onShareToDelivery(product))}>
                   <Send className="mr-2 h-4 w-4" />
                   Enviar para Delivery
                 </DropdownMenuItem>
