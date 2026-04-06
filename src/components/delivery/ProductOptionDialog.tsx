@@ -60,6 +60,7 @@ export const ProductOptionDialog = ({
   productId,
   onSave,
 }: ProductOptionDialogProps) => {
+  const dialogContentRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState("");
   const [type, setType] = useState<"single" | "multiple">("single");
   const [isRequired, setIsRequired] = useState(false);
@@ -179,7 +180,7 @@ export const ProductOptionDialog = ({
       if (!val) setOpenPopoverIndex(null);
       onOpenChange(val);
     }}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent ref={dialogContentRef} className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{option ? "Editar Opção" : "Nova Opção"}</DialogTitle>
         </DialogHeader>
@@ -319,7 +320,7 @@ export const ProductOptionDialog = ({
                               : "Buscar insumo..."}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0" align="start">
+                        <PopoverContent className="w-[300px] p-0" align="start" container={dialogContentRef.current}>
                           <Command>
                             <CommandInput placeholder="Buscar insumo..." />
                             <CommandList>
