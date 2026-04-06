@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, CheckCircle2, Circle } from "lucide-react";
+import { Edit, Trash2, CheckCircle2, Circle, Package } from "lucide-react";
 import { ProductOption } from "@/hooks/use-product-options";
 import {
   AlertDialog,
@@ -59,6 +59,12 @@ export const ProductOptionCard = ({ option, onEdit, onDelete }: ProductOptionCar
                     {item.price_adjustment > 0 ? "+" : ""}
                     R$ {item.price_adjustment.toFixed(2)}
                   </span>
+                )}
+                {item.ingredient_id && (
+                  <Badge variant="outline" className="text-xs gap-1 py-0 h-5">
+                    <Package className="h-3 w-3" />
+                    {item.ingredient_quantity} {item.ingredient_unit || "un"}
+                  </Badge>
                 )}
               </div>
             ))}

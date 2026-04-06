@@ -9,6 +9,10 @@ export interface ProductOptionItem {
   price_adjustment: number;
   is_available: boolean;
   order_position: number;
+  // Ingredient link fields (loaded from recipes)
+  ingredient_id?: string;
+  ingredient_quantity?: number;
+  ingredient_unit?: string;
 }
 
 export interface ProductOption {
@@ -38,7 +42,6 @@ export const useProductOptions = (productId?: string) => {
 
       if (optionsError) throw optionsError;
 
-      // Fetch items for each option
       const optionsWithItems = await Promise.all(
         options.map(async (option) => {
           const { data: items, error: itemsError } = await supabase
@@ -49,9 +52,38 @@ export const useProductOptions = (productId?: string) => {
 
           if (itemsError) throw itemsError;
 
+          // Load recipes for each item to get ingredient links
+          const itemIds = (items || []).map((i) => i.id);
+          let recipesMap = new Map<string, { ingredient_id: string; quantity: number; unit: string }>();
+
+          if (itemIds.length > 0) {
+            const { data: recipes } = await supabase
+              .from("delivery_option_item_recipes")
+              .select("option_item_id, ingredient_id, quantity, unit")
+              .in("option_item_id", itemIds);
+
+            if (recipes) {
+              recipes.forEach((r) => {
+                recipesMap.set(r.option_item_id, {
+                  ingredient_id: r.ingredient_id,
+                  quantity: Number(r.quantity),
+                  unit: r.unit,
+                });
+              });
+            }
+          }
+
           return {
             ...option,
-            items: items || [],
+            items: (items || []).map((item) => {
+              const recipe = recipesMap.get(item.id);
+              return {
+                ...item,
+                ingredient_id: recipe?.ingredient_id,
+                ingredient_quantity: recipe?.quantity,
+                ingredient_unit: recipe?.unit,
+              };
+            }),
           };
         })
       );
@@ -62,12 +94,45 @@ export const useProductOptions = (productId?: string) => {
   });
 };
 
+// Helper to sync recipes after items are created/updated
+async function syncRecipes(
+  insertedItems: { id: string; ingredient_id?: string; ingredient_quantity?: number; ingredient_unit?: string }[]
+) {
+  for (const item of insertedItems) {
+    // Delete existing recipe for this item
+    await supabase
+      .from("delivery_option_item_recipes")
+      .delete()
+      .eq("option_item_id", item.id);
+
+    // Insert new recipe if ingredient is linked
+    if (item.ingredient_id && item.ingredient_quantity) {
+      await supabase
+        .from("delivery_option_item_recipes")
+        .insert({
+          option_item_id: item.id,
+          ingredient_id: item.ingredient_id,
+          quantity: item.ingredient_quantity,
+          unit: item.ingredient_unit || "un",
+        });
+    }
+  }
+}
+
 // Create a new product option
 export const useCreateProductOption = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (option: Omit<ProductOption, "id" | "items"> & { items: Omit<ProductOptionItem, "id" | "option_id">[] }) => {
+    mutationFn: async (
+      option: Omit<ProductOption, "id" | "items"> & {
+        items: (Omit<ProductOptionItem, "id" | "option_id"> & {
+          ingredient_id?: string;
+          ingredient_quantity?: number;
+          ingredient_unit?: string;
+        })[];
+      }
+    ) => {
       const { data: newOption, error: optionError } = await supabase
         .from("delivery_product_options")
         .insert({
@@ -86,7 +151,7 @@ export const useCreateProductOption = () => {
 
       // Insert items
       if (option.items.length > 0) {
-        const { error: itemsError } = await supabase
+        const { data: insertedItems, error: itemsError } = await supabase
           .from("delivery_product_option_items")
           .insert(
             option.items.map((item, index) => ({
@@ -96,15 +161,28 @@ export const useCreateProductOption = () => {
               is_available: item.is_available,
               order_position: index,
             }))
-          );
+          )
+          .select();
 
         if (itemsError) throw itemsError;
+
+        // Sync recipes for items with ingredient links
+        if (insertedItems) {
+          const itemsWithIngredients = insertedItems.map((inserted, index) => ({
+            id: inserted.id,
+            ingredient_id: option.items[index].ingredient_id,
+            ingredient_quantity: option.items[index].ingredient_quantity,
+            ingredient_unit: option.items[index].ingredient_unit,
+          }));
+          await syncRecipes(itemsWithIngredients);
+        }
       }
 
       return newOption;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["product-options", variables.product_id] });
+      queryClient.invalidateQueries({ queryKey: ["delivery-option-recipes"] });
       toast.success("Opção criada com sucesso!");
     },
     onError: () => {
@@ -139,13 +217,122 @@ export const useUpdateProductOption = () => {
   });
 };
 
+// Full update: option + items + recipes
+export const useFullUpdateProductOption = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      optionId,
+      optionData,
+    }: {
+      optionId: string;
+      optionData: Omit<ProductOption, "id" | "items"> & {
+        items: (Omit<ProductOptionItem, "id" | "option_id"> & {
+          ingredient_id?: string;
+          ingredient_quantity?: number;
+          ingredient_unit?: string;
+        })[];
+      };
+    }) => {
+      // Update option
+      const { error: optionError } = await supabase
+        .from("delivery_product_options")
+        .update({
+          name: optionData.name,
+          type: optionData.type,
+          is_required: optionData.is_required,
+          min_selections: optionData.min_selections,
+          max_selections: optionData.max_selections,
+        })
+        .eq("id", optionId);
+
+      if (optionError) throw optionError;
+
+      // Delete old items (cascade will delete recipes via FK)
+      const { data: oldItems } = await supabase
+        .from("delivery_product_option_items")
+        .select("id")
+        .eq("option_id", optionId);
+
+      if (oldItems && oldItems.length > 0) {
+        // Delete recipes first
+        for (const oldItem of oldItems) {
+          await supabase
+            .from("delivery_option_item_recipes")
+            .delete()
+            .eq("option_item_id", oldItem.id);
+        }
+        // Delete old items
+        await supabase
+          .from("delivery_product_option_items")
+          .delete()
+          .eq("option_id", optionId);
+      }
+
+      // Insert new items
+      if (optionData.items.length > 0) {
+        const { data: insertedItems, error: itemsError } = await supabase
+          .from("delivery_product_option_items")
+          .insert(
+            optionData.items.map((item, index) => ({
+              option_id: optionId,
+              name: item.name,
+              price_adjustment: item.price_adjustment,
+              is_available: item.is_available,
+              order_position: index,
+            }))
+          )
+          .select();
+
+        if (itemsError) throw itemsError;
+
+        if (insertedItems) {
+          const itemsWithIngredients = insertedItems.map((inserted, index) => ({
+            id: inserted.id,
+            ingredient_id: optionData.items[index].ingredient_id,
+            ingredient_quantity: optionData.items[index].ingredient_quantity,
+            ingredient_unit: optionData.items[index].ingredient_unit,
+          }));
+          await syncRecipes(itemsWithIngredients);
+        }
+      }
+
+      return { product_id: optionData.product_id };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["product-options", data.product_id] });
+      queryClient.invalidateQueries({ queryKey: ["delivery-option-recipes"] });
+      toast.success("Opção atualizada com sucesso!");
+    },
+    onError: () => {
+      toast.error("Erro ao atualizar opção");
+    },
+  });
+};
+
 // Delete a product option
 export const useDeleteProductOption = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ id, productId }: { id: string; productId: string }) => {
-      // First delete all items
+      // Delete recipes for all items of this option
+      const { data: items } = await supabase
+        .from("delivery_product_option_items")
+        .select("id")
+        .eq("option_id", id);
+
+      if (items && items.length > 0) {
+        for (const item of items) {
+          await supabase
+            .from("delivery_option_item_recipes")
+            .delete()
+            .eq("option_item_id", item.id);
+        }
+      }
+
+      // Delete all items
       const { error: itemsError } = await supabase
         .from("delivery_product_option_items")
         .delete()
@@ -153,7 +340,7 @@ export const useDeleteProductOption = () => {
 
       if (itemsError) throw itemsError;
 
-      // Then delete the option
+      // Delete the option
       const { error } = await supabase
         .from("delivery_product_options")
         .delete()
@@ -229,6 +416,12 @@ export const useDeleteOptionItem = () => {
 
   return useMutation({
     mutationFn: async ({ id, productId }: { id: string; productId: string }) => {
+      // Delete recipe first
+      await supabase
+        .from("delivery_option_item_recipes")
+        .delete()
+        .eq("option_item_id", id);
+
       const { error } = await supabase
         .from("delivery_product_option_items")
         .delete()

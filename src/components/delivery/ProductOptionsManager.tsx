@@ -7,7 +7,7 @@ import { ProductOptionDialog } from "./ProductOptionDialog";
 import {
   useProductOptions,
   useCreateProductOption,
-  useUpdateProductOption,
+  useFullUpdateProductOption,
   useDeleteProductOption,
   ProductOption,
 } from "@/hooks/use-product-options";
@@ -23,24 +23,16 @@ export const ProductOptionsManager = ({ productId }: ProductOptionsManagerProps)
 
   const { data: options = [], isLoading } = useProductOptions(productId);
   const createOption = useCreateProductOption();
-  const updateOption = useUpdateProductOption();
+  const fullUpdateOption = useFullUpdateProductOption();
   const deleteOption = useDeleteProductOption();
 
   const handleSaveOption = (optionData: any) => {
     if (editingOption) {
-      // Update existing option (simplified - you'd need more complex logic for items)
-      updateOption.mutate({
-        id: editingOption.id,
-        updates: {
-          name: optionData.name,
-          type: optionData.type,
-          is_required: optionData.is_required,
-          min_selections: optionData.min_selections,
-          max_selections: optionData.max_selections,
-        },
+      fullUpdateOption.mutate({
+        optionId: editingOption.id,
+        optionData,
       });
     } else {
-      // Create new option
       createOption.mutate(optionData);
     }
     setEditingOption(undefined);

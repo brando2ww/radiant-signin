@@ -18,15 +18,39 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Plus, Trash2, Search, Package, Check } from "lucide-react";
 import { ProductOption, ProductOptionItem } from "@/hooks/use-product-options";
+import { usePDVIngredients } from "@/hooks/use-pdv-ingredients";
+import { cn } from "@/lib/utils";
+
+export interface OptionItemWithIngredient {
+  name: string;
+  price_adjustment: number;
+  is_available: boolean;
+  ingredient_id?: string;
+  ingredient_quantity?: number;
+  ingredient_unit?: string;
+}
 
 interface ProductOptionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   option?: ProductOption;
   productId: string;
-  onSave: (option: Omit<ProductOption, "id" | "items"> & { items: Omit<ProductOptionItem, "id" | "option_id">[] }) => void;
+  onSave: (option: Omit<ProductOption, "id" | "items"> & { items: (Omit<ProductOptionItem, "id" | "option_id"> & { ingredient_id?: string; ingredient_quantity?: number; ingredient_unit?: string })[] }) => void;
 }
 
 export const ProductOptionDialog = ({
@@ -41,9 +65,12 @@ export const ProductOptionDialog = ({
   const [isRequired, setIsRequired] = useState(false);
   const [minSelections, setMinSelections] = useState(0);
   const [maxSelections, setMaxSelections] = useState(1);
-  const [items, setItems] = useState<Array<{ name: string; price_adjustment: number; is_available: boolean }>>([
+  const [items, setItems] = useState<OptionItemWithIngredient[]>([
     { name: "", price_adjustment: 0, is_available: true },
   ]);
+  const [openPopoverIndex, setOpenPopoverIndex] = useState<number | null>(null);
+
+  const { ingredients } = usePDVIngredients();
 
   useEffect(() => {
     if (option) {
@@ -57,10 +84,12 @@ export const ProductOptionDialog = ({
           name: item.name,
           price_adjustment: item.price_adjustment,
           is_available: item.is_available,
+          ingredient_id: (item as any).ingredient_id,
+          ingredient_quantity: (item as any).ingredient_quantity,
+          ingredient_unit: (item as any).ingredient_unit,
         })) || [{ name: "", price_adjustment: 0, is_available: true }]
       );
     } else {
-      // Reset form for new option
       setName("");
       setType("single");
       setIsRequired(false);
@@ -80,9 +109,36 @@ export const ProductOptionDialog = ({
     }
   };
 
-  const handleItemChange = (index: number, field: keyof typeof items[0], value: any) => {
+  const handleItemChange = (index: number, field: string, value: any) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
+    setItems(newItems);
+  };
+
+  const handleSelectIngredient = (index: number, ingredientId: string) => {
+    const ingredient = ingredients.find((i) => i.id === ingredientId);
+    if (!ingredient) return;
+
+    const newItems = [...items];
+    newItems[index] = {
+      ...newItems[index],
+      name: newItems[index].name || ingredient.name,
+      ingredient_id: ingredientId,
+      ingredient_unit: ingredient.unit,
+      ingredient_quantity: newItems[index].ingredient_quantity || 1,
+    };
+    setItems(newItems);
+    setOpenPopoverIndex(null);
+  };
+
+  const handleClearIngredient = (index: number) => {
+    const newItems = [...items];
+    newItems[index] = {
+      ...newItems[index],
+      ingredient_id: undefined,
+      ingredient_quantity: undefined,
+      ingredient_unit: undefined,
+    };
     setItems(newItems);
   };
 
@@ -100,12 +156,22 @@ export const ProductOptionDialog = ({
       max_selections: type === "multiple" ? maxSelections : 1,
       order_position: option?.order_position || 0,
       items: items.map((item, index) => ({
-        ...item,
+        name: item.name,
+        price_adjustment: item.price_adjustment,
+        is_available: item.is_available,
         order_position: index,
+        ingredient_id: item.ingredient_id,
+        ingredient_quantity: item.ingredient_quantity,
+        ingredient_unit: item.ingredient_unit,
       })),
     });
 
     onOpenChange(false);
+  };
+
+  const getIngredientName = (ingredientId?: string) => {
+    if (!ingredientId) return null;
+    return ingredients.find((i) => i.id === ingredientId)?.name;
   };
 
   return (
@@ -188,38 +254,128 @@ export const ProductOptionDialog = ({
 
             <div className="space-y-3">
               {items.map((item, index) => (
-                <div key={index} className="flex gap-2 items-start p-3 border rounded-lg">
-                  <div className="flex-1 space-y-2">
-                    <Input
-                      placeholder="Nome do item *"
-                      value={item.name}
-                      onChange={(e) => handleItemChange(index, "name", e.target.value)}
-                    />
-                    <div className="flex gap-2 items-center">
-                      <CurrencyInput
-                        value={item.price_adjustment}
-                        onChange={(v) => handleItemChange(index, "price_adjustment", Number(v) || 0)}
-                        className="flex-1"
+                <div key={index} className="p-3 border rounded-lg space-y-3">
+                  <div className="flex gap-2 items-start">
+                    <div className="flex-1 space-y-2">
+                      <Input
+                        placeholder="Nome do item *"
+                        value={item.name}
+                        onChange={(e) => handleItemChange(index, "name", e.target.value)}
                       />
-                      <Label className="flex items-center gap-2 whitespace-nowrap">
-                        <Switch
-                          checked={item.is_available}
-                          onCheckedChange={(checked) => handleItemChange(index, "is_available", checked)}
+                      <div className="flex gap-2 items-center">
+                        <CurrencyInput
+                          value={item.price_adjustment}
+                          onChange={(v) => handleItemChange(index, "price_adjustment", Number(v) || 0)}
+                          className="flex-1"
                         />
-                        <span className="text-sm">Disponível</span>
-                      </Label>
+                        <Label className="flex items-center gap-2 whitespace-nowrap">
+                          <Switch
+                            checked={item.is_available}
+                            onCheckedChange={(checked) => handleItemChange(index, "is_available", checked)}
+                          />
+                          <span className="text-sm">Disponível</span>
+                        </Label>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => handleRemoveItem(index)}
+                      disabled={items.length === 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Ingredient linking */}
+                  <div className="border-t pt-3 space-y-2">
+                    <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Package className="h-3 w-3" />
+                      Vincular ao Estoque (opcional)
+                    </Label>
+                    <div className="flex gap-2 items-center">
+                      <Popover
+                        open={openPopoverIndex === index}
+                        onOpenChange={(open) => setOpenPopoverIndex(open ? index : null)}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className={cn(
+                              "flex-1 justify-start text-left font-normal",
+                              !item.ingredient_id && "text-muted-foreground"
+                            )}
+                          >
+                            <Search className="h-3.5 w-3.5 mr-2 shrink-0" />
+                            {item.ingredient_id
+                              ? getIngredientName(item.ingredient_id)
+                              : "Buscar insumo..."}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Buscar insumo..." />
+                            <CommandList>
+                              <CommandEmpty>Nenhum insumo encontrado</CommandEmpty>
+                              <CommandGroup>
+                                {ingredients.map((ing) => (
+                                  <CommandItem
+                                    key={ing.id}
+                                    value={ing.name}
+                                    onSelect={() => handleSelectIngredient(index, ing.id)}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        item.ingredient_id === ing.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <div className="flex-1">
+                                      <span>{ing.name}</span>
+                                      <span className="text-xs text-muted-foreground ml-2">
+                                        ({ing.unit}) - R$ {Number(ing.unit_cost).toFixed(2)}
+                                      </span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+
+                      {item.ingredient_id && (
+                        <>
+                          <Input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            placeholder="Qtd"
+                            value={item.ingredient_quantity || ""}
+                            onChange={(e) =>
+                              handleItemChange(index, "ingredient_quantity", Number(e.target.value) || 0)
+                            }
+                            className="w-24"
+                          />
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {item.ingredient_unit || "un"}
+                          </span>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-muted-foreground"
+                            onClick={() => handleClearIngredient(index)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="text-destructive"
-                    onClick={() => handleRemoveItem(index)}
-                    disabled={items.length === 1}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               ))}
             </div>
