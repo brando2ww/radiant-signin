@@ -1,37 +1,42 @@
 
 
-## Fix: Redirect goes to /pdv even for evaluation-only tenants
+## Vincular Itens de Opção a Insumos do Estoque
 
-### Root Cause
+### Contexto
+Hoje os itens de opção (adicionais) são criados com nome livre. A tabela `delivery_option_item_recipes` já existe e conecta option items a `pdv_ingredients`, mas o dialog de criação não oferece essa vinculação. Quando um pedido sai com um adicional, o sistema não sabe qual insumo baixar.
 
-In `use-user-modules.ts`, the `isLoading` returned only tracks the `modules` query. But there's a prior query for `tenantId` whose loading state is ignored. During login:
+### Solução
+Adicionar um seletor de ingrediente (combobox com busca) em cada item da opção no `ProductOptionDialog`. Ao selecionar um ingrediente, o nome e custo são preenchidos automaticamente. Após salvar, criar os registros em `delivery_option_item_recipes`.
 
-1. User authenticates → `useEffect` in Index.tsx fires
-2. `tenantId` query is still loading → `tenantId` is `undefined`
-3. `hasModule()` hits line 68: "If no tenant_id found, allow all" → returns `true`
-4. `getDefaultModuleRoute()` → `hasModule('pdv')` is `true` → returns `/pdv/dashboard`
-5. User gets redirected to PDV before modules even load
+### Mudanças
 
-### Fix — 1 file change
+**1. `src/components/delivery/ProductOptionDialog.tsx`**
+- Importar `usePDVIngredients` para listar ingredientes disponíveis
+- Adicionar campo `ingredient_id` e `quantity` ao estado de cada item
+- Renderizar um Combobox (Popover + Command) para buscar/selecionar ingrediente
+- Ao selecionar ingrediente: auto-preencher `name` com nome do ingrediente
+- Adicionar campo de quantidade do insumo por item
+- Passar `ingredient_id` e `quantity` no `onSave`
 
-**`src/hooks/use-user-modules.ts`**
+**2. `src/hooks/use-product-options.ts`**
+- No `useCreateProductOption`, após inserir items, criar registros em `delivery_option_item_recipes` para items que têm `ingredient_id`
+- No `useUpdateProductOption` (ou criar mutation dedicada), sincronizar recipes ao editar
 
-1. Capture the `isLoading` state from the `tenantId` query (rename to `isLoadingTenantId`)
-2. Combine both loading states: `const isLoading = isLoadingTenantId || isLoadingModules`
-3. This ensures `Index.tsx` waits for both queries before calling `getDefaultModuleRoute()`
+**3. `src/components/delivery/ProductOptionCard.tsx`**
+- Exibir badge "Vinculado ao estoque" nos items que têm receita associada
+- Mostrar nome do ingrediente e quantidade vinculada
 
-```ts
-const { data: tenantId, isLoading: isLoadingTenantId } = useQuery({ ... });
-const { data: modules = [], isLoading: isLoadingModules } = useQuery({ ... });
-// ...
-return {
-  modules,
-  isLoading: isLoadingTenantId || isLoadingModules,
-  hasModule,
-  getDefaultModuleRoute,
-  tenantId,
-};
+### Fluxo do usuário
+
+```text
+[Nova Opção] → "Adicionais"
+  Item 1: [🔍 Buscar ingrediente...] → "Bacon" (auto-preenche nome)
+           Qtd insumo: 0.050 kg | Preço adicional: R$ 5,00
+  Item 2: [🔍 Buscar ingrediente...] → "Queijo Cheddar"
+           Qtd insumo: 0.030 kg | Preço adicional: R$ 3,00
+[Criar Opção] → Salva items + cria recipes no estoque
 ```
 
-No other files need changes — `Index.tsx` already checks `modulesLoading` before redirecting.
+### Resultado
+Ao processar um pedido com adicional "Bacon", o sistema já terá o vínculo `option_item → ingredient (0.050 kg)` para dar baixa no estoque automaticamente.
 
