@@ -26,6 +26,9 @@ export interface CampaignQuestion {
 
 export interface CampaignWithStats extends EvaluationCampaign {
   total_responses: number;
+  avg_nps: number | null;
+  last_response_at: string | null;
+  question_count: number;
 }
 
 export const useEvaluationCampaigns = () => {
@@ -43,17 +46,30 @@ export const useEvaluationCampaigns = () => {
 
       if (error) throw error;
 
-      // Count responses per campaign
+      // Fetch stats per campaign
       const campaigns: CampaignWithStats[] = [];
       for (const campaign of data) {
-        const { count } = await supabase
+        const { data: evals, count } = await supabase
           .from("customer_evaluations")
+          .select("nps_score, created_at", { count: "exact" })
+          .eq("campaign_id", campaign.id)
+          .order("created_at", { ascending: false });
+
+        const { count: qCount } = await supabase
+          .from("evaluation_campaign_questions")
           .select("*", { count: "exact", head: true })
-          .eq("campaign_id", campaign.id);
+          .eq("campaign_id", campaign.id)
+          .eq("is_active", true);
+
+        const scores = (evals || []).map(e => e.nps_score).filter((s): s is number => s !== null);
+        const avg_nps = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
 
         campaigns.push({
           ...campaign,
           total_responses: count || 0,
+          avg_nps,
+          last_response_at: evals && evals.length > 0 ? evals[0].created_at : null,
+          question_count: qCount || 0,
         });
       }
 
