@@ -42,7 +42,7 @@ import ShoppingList from "./pdv/purchases/ShoppingList";
 import Integrations from "./pdv/Integrations";
 import Users from "./pdv/Users";
 import UserForm from "./pdv/UserForm";
-import Evaluations from "./pdv/Evaluations";
+import EvaluationsLayout from "./pdv/EvaluationsLayout";
 import FranchiseImport from "./pdv/FranchiseImport";
 import Tasks from "./pdv/Tasks";
 import Customers from "./pdv/Customers";
@@ -136,7 +136,7 @@ export default function PDV() {
               <Route path="integracoes/*" element={<RoleRoute path="/pdv/integracoes" canAccess={canAccess} defaultRoute={defaultRoute}><Integrations /></RoleRoute>} />
               
               {/* Avaliações */}
-              <Route path="avaliacoes" element={<RoleRoute path="/pdv/avaliacoes" canAccess={canAccess} defaultRoute={defaultRoute}><Evaluations /></RoleRoute>} />
+              <Route path="avaliacoes/*" element={<RoleRoute path="/pdv/avaliacoes" canAccess={canAccess} defaultRoute={defaultRoute}><EvaluationsLayout /></RoleRoute>} />
               
               {/* Franquia */}
               <Route path="franquia" element={<RoleRoute path="/pdv/franquia" canAccess={canAccess} defaultRoute={defaultRoute}><FranchiseImport /></RoleRoute>} />
