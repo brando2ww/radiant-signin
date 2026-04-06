@@ -18,13 +18,13 @@ export function SpinWheel({ prizes, onResult, disabled }: SpinWheelProps) {
   if (!prizes.length) return null;
 
   const totalProb = prizes.reduce((s, p) => s + Number(p.probability), 0);
-  let cumDeg = 0;
-  const segments = prizes.map((p, i) => {
-    const deg = totalProb > 0 ? (Number(p.probability) / totalProb) * 360 : 360 / prizes.length;
-    const start = cumDeg;
-    cumDeg += deg;
-    return { ...p, startDeg: start, deg, wheelColor: WHEEL_COLORS[i % 2] };
-  });
+  const equalDeg = 360 / prizes.length;
+  const segments = prizes.map((p, i) => ({
+    ...p,
+    startDeg: i * equalDeg,
+    deg: equalDeg,
+    wheelColor: WHEEL_COLORS[i % 2],
+  }));
 
   const gradient = segments
     .map((s) => `${s.wheelColor} ${s.startDeg}deg ${s.startDeg + s.deg}deg`)

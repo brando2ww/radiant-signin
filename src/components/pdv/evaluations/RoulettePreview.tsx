@@ -19,14 +19,13 @@ export function RoulettePreview({ prizes, size = 200 }: RoulettePreviewProps) {
     );
   }
 
-  const totalProb = prizes.reduce((s, p) => s + Number(p.probability), 0);
-  let cumDeg = 0;
-  const segments = prizes.map((p, i) => {
-    const deg = totalProb > 0 ? (Number(p.probability) / totalProb) * 360 : 360 / prizes.length;
-    const start = cumDeg;
-    cumDeg += deg;
-    return { ...p, startDeg: start, deg, wheelColor: WHEEL_COLORS[i % 2] };
-  });
+  const equalDeg = 360 / prizes.length;
+  const segments = prizes.map((p, i) => ({
+    ...p,
+    startDeg: i * equalDeg,
+    deg: equalDeg,
+    wheelColor: WHEEL_COLORS[i % 2],
+  }));
 
   const r = size / 2;
 
@@ -50,9 +49,8 @@ export function RoulettePreview({ prizes, size = 200 }: RoulettePreviewProps) {
     const needsFlip = midAngleDeg > 90 && midAngleDeg < 270;
     if (needsFlip) textRotation += 180;
 
-    const fontSize = Math.max(7, Math.min(11, s.deg / 4));
-    const maxChars = Math.max(8, Math.floor(s.deg / 5));
-    const label = s.name.length > maxChars ? s.name.slice(0, maxChars - 1) + "…" : s.name;
+    const fontSize = Math.max(7, Math.min(11, equalDeg / 4));
+    const label = s.name;
 
     return (
       <g key={s.id}>
