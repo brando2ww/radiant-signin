@@ -225,6 +225,7 @@ export type Database = {
       }
       business_settings: {
         Row: {
+          background_color: string | null
           business_description: string | null
           business_name: string
           business_slogan: string | null
@@ -240,6 +241,7 @@ export type Database = {
           welcome_message: string | null
         }
         Insert: {
+          background_color?: string | null
           business_description?: string | null
           business_name: string
           business_slogan?: string | null
@@ -255,6 +257,7 @@ export type Database = {
           welcome_message?: string | null
         }
         Update: {
+          background_color?: string | null
           business_description?: string | null
           business_name?: string
           business_slogan?: string | null
