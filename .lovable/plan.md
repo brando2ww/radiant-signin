@@ -1,45 +1,36 @@
 
 
-## Fase 8 - Enriquecer Relatorios (Diario, Semanal, Mensal)
+## Melhorar Tela de Configuracao de Roleta + Cores Primaria/Secundaria
 
-### Contexto
-Os relatorios atuais sao basicos comparados ao concorrente. Faltam: NPS por pergunta individual (com donuts), perfil de clientes (novos vs recorrentes), tabela paginada de respostas, secao de aniversariantes/cupons, e exportacao CSV nos relatorios diario/semanal.
+### Problema atual
+- A roleta usa `prize.color` (cor individual do premio) como prioridade, ignorando as cores primaria/secundaria da campanha
+- A UI das telas de configuracao (tanto em `/cupons/roletas` quanto dentro da campanha) e basica e pode ser muito melhorada
+- O campo "Cor da Fatia" no PrizeDialog nao faz mais sentido se as cores sao controladas pela campanha
 
 ### O que muda
 
-**1. Relatorio Diario (`ReportDaily.tsx`) — reescrever**
-Adicionar ao que ja existe (KPIs + hourly chart + alertas):
-- **NPS Donut**: distribuicao promotores/neutros/detratores do dia
-- **NPS por Pergunta**: para cada pergunta da avaliacao, calcular o NPS individual e mostrar mini-donut ou barra horizontal
-- **Perfil de Clientes**: donut mostrando "Novos" vs "Recorrentes" (baseado em quantas avaliacoes o cliente tem no historico total)
-- **Tabela de Respostas**: lista paginada com nome, whatsapp, media, NPS, horario — limitada a 10 por pagina
-- **Exportar CSV**: botao no header
+**1. Cores da roleta sempre usam primaria/secundaria da campanha**
+- `RoulettePreview.tsx` e `SpinWheel.tsx`: remover prioridade de `prize.color`, sempre alternar entre `primaryColor` e `secondaryColor`
+- `PrizeDialog.tsx`: remover o campo "Cor da Fatia" do formulario (a cor e definida pela campanha, nao pelo premio)
 
-**2. Relatorio Semanal (`ReportWeekly.tsx`) — enriquecer**
-Adicionar ao comparativo existente:
-- **NPS Donut** da semana atual
-- **NPS por Pergunta** (barras horizontais com media de cada pergunta)
-- **Perfil de Clientes** (novos vs recorrentes na semana)
-- **Exportar CSV**
+**2. Melhorar UI do `CouponsRoulettes.tsx` (pagina /cupons/roletas)**
+- Layout mais organizado com secoes visuais claras
+- Cores primaria/secundaria com preview lado a lado + hex input editavel
+- Cooldown com icone e descricao mais clara
+- Lista de premios com cards mais ricos (barra de probabilidade visual por premio, badge de status)
+- Preview da roleta maior e mais destacado
+- Separadores visuais e spacing melhorados
 
-**3. Relatorio Mensal (`ReportMonthly.tsx`) — enriquecer**
-Adicionar ao que ja existe (KPIs + NPS donut + score dist + weekday + age):
-- **NPS por Pergunta** (barras horizontais)
-- **Perfil de Clientes** (novos vs recorrentes no mes)
-- **Secao Aniversariantes do Mes**: listar clientes que fazem aniversario no mes corrente (dados de `customer_birth_date`)
-
-### Detalhes tecnicos
-
-- **Novos vs Recorrentes**: buscar todas as avaliacoes do usuario (sem filtro de data) para contar quantas vezes cada whatsapp aparece. Se a avaliacao no periodo e a primeira do cliente, e "Novo"; se ja tinha avaliacoes anteriores, e "Recorrente".
-- **NPS por Pergunta**: usar `evaluation_answers` agrupado por `question_id`, cruzar com `question_text` (precisa de query adicional ou usar dados ja existentes no hook `useEvaluationStats`). Calcular promotores/detratores por pergunta usando os scores 1-5 (considerar 4-5 = promotor, 1-2 = detrator, 3 = neutro — adaptacao do NPS para escala 1-5).
-- **Aniversariantes**: filtrar avaliacoes onde `customer_birth_date` tem mes igual ao mes corrente, deduplificar por whatsapp.
-- **Paginacao da tabela**: estado local com `page` e `pageSize = 10`.
+**3. Melhorar UI do `CampaignRoulette.tsx` (dentro da campanha)**
+- Adicionar configuracao de cores primaria/secundaria e cooldown (hoje so tem toggle + lista de premios)
+- Passar cores da campanha para o `RoulettePreview`
+- Mesma qualidade visual da tela de roletas
 
 ### Arquivos alterados
 
-1. **`src/pages/pdv/evaluations/reports/ReportDaily.tsx`** — adicionar NPS donut, NPS por pergunta, perfil clientes, tabela paginada, export CSV
-2. **`src/pages/pdv/evaluations/reports/ReportWeekly.tsx`** — adicionar NPS donut, NPS por pergunta, perfil clientes, export CSV
-3. **`src/pages/pdv/evaluations/reports/ReportMonthly.tsx`** — adicionar NPS por pergunta, perfil clientes, secao aniversariantes
-
-Nenhuma migracao de banco necessaria. Todos os dados ja estao disponiveis via hooks existentes.
+1. **`src/components/pdv/evaluations/RoulettePreview.tsx`** — ignorar `prize.color`, sempre usar alternancia primaria/secundaria
+2. **`src/components/public-evaluation/SpinWheel.tsx`** — mesma mudanca: ignorar `prize.color`
+3. **`src/components/pdv/evaluations/PrizeDialog.tsx`** — remover campo de cor da fatia
+4. **`src/pages/pdv/evaluations/coupons/CouponsRoulettes.tsx`** — redesign completo do card com melhor layout, hex inputs para cores, premios com cards mais ricos
+5. **`src/components/pdv/evaluations/CampaignRoulette.tsx`** — adicionar secao de cores + cooldown, passar cores para preview, melhorar layout
 
