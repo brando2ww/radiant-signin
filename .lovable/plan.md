@@ -1,56 +1,26 @@
 
 
-## Segunda Header para Avaliações dentro do PDV
+## Corrigir Sub-Nav grudada na header principal
 
-### Conceito
-Ao acessar `/pdv/avaliacoes/*`, uma segunda barra de navegação aparece abaixo da header principal do PDV, com links para as subseções do sistema de avaliações (Dashboard, Campanhas, Relatórios, Clientes, Cupons, Configurações). O restante do PDV continua sem essa segunda header.
+### Problema
+A `EvaluationsSubNav` está dentro do `<main className="flex-1 overflow-auto">`, o que causa um espaço entre a header principal e a sub-nav. O `sticky top-14` não funciona corretamente porque o container de scroll é o `<main>`, não a janela.
+
+### Solução
+Mover a `EvaluationsSubNav` para fora do `<main>` no `PDV.tsx`, renderizando-a condicionalmente quando a rota é `/pdv/avaliacoes/*`. Assim ela fica colada diretamente abaixo da header principal, ambas fixas no topo.
 
 ### Mudanças
 
-**1. Transformar `/pdv/avaliacoes` em subrotas (`src/pages/PDV.tsx`)**
-- Mudar a rota de `avaliacoes` para `avaliacoes/*` para aceitar subrotas
-- Apontar para um novo componente `EvaluationsLayout` em vez de `Evaluations`
+**1. `src/pages/PDV.tsx`**
+- Importar `useLocation` e `EvaluationsSubNav`
+- Detectar se a rota atual começa com `/pdv/avaliacoes`
+- Renderizar `<EvaluationsSubNav />` entre o `</header>` e o `<main>`, condicionalmente
+- A sub-nav fica sticky com `top-14` (logo abaixo da header de 56px)
 
-**2. Criar `src/components/pdv/evaluations/EvaluationsSubNav.tsx`**
-- Segunda header sticky abaixo da principal, com borda inferior e fundo semitransparente
-- Links horizontais: Dashboard, Campanhas, Relatórios, Clientes, Cupons, Configurações
-- Cada link usa `NavLink` com estilo ativo (similar ao `EvaluationsNav` existente)
-- Responsivo: ícones sempre visíveis, labels escondidos em telas pequenas
+**2. `src/pages/pdv/EvaluationsLayout.tsx`**
+- Remover o `<EvaluationsSubNav />` de dentro do layout (já está no nível superior)
+- Manter apenas o `<Suspense>` + `<Routes>` com as subrotas
 
-**3. Criar `src/pages/pdv/EvaluationsLayout.tsx`**
-- Renderiza o `EvaluationsSubNav` como segunda header
-- Abaixo, um `<Routes>` com subrotas:
-  - `/` → Dashboard (reutiliza `EvaluationsDashboard` existente)
-  - `/campanhas` → Lista de campanhas (reutiliza página existente)
-  - `/campanhas/:id` → Detalhe da campanha
-  - `/relatorios` → Relatórios (reutiliza `EvaluationsReports`)
-  - `/clientes` → Placeholder (página futura)
-  - `/cupons` → Placeholder (página futura)
-  - `/configuracoes` → Configurações (reutiliza `EvaluationsSettings`)
-
-**4. Ajustar páginas existentes**
-- `EvaluationsCampaigns` e `Evaluations` serão unificadas numa única página de campanhas dentro do layout
-- Detalhe da campanha vira subrota `/pdv/avaliacoes/campanhas/:id` em vez de estado interno
-
-### Resultado visual
-
-```text
-┌─────────────────────────────────────────────────┐
-│ [Logo]  Frente ▾  Delivery ▾  Admin ▾  ...      │  ← Header principal PDV
-├─────────────────────────────────────────────────┤
-│ Dashboard  Campanhas  Relatórios  Clientes  ... │  ← Segunda header (só em /avaliacoes)
-├─────────────────────────────────────────────────┤
-│                                                 │
-│              Conteúdo da subpágina               │
-│                                                 │
-└─────────────────────────────────────────────────┘
-```
-
-### Arquivos criados/editados
-- **Criar**: `src/pages/pdv/EvaluationsLayout.tsx`
-- **Criar**: `src/components/pdv/evaluations/EvaluationsSubNav.tsx`
-- **Criar**: `src/pages/pdv/evaluations/EvalClientes.tsx` (placeholder)
-- **Criar**: `src/pages/pdv/evaluations/EvalCupons.tsx` (placeholder)
-- **Editar**: `src/pages/PDV.tsx` — rota `avaliacoes/*` → `EvaluationsLayout`
-- **Reutilizar**: `EvaluationsDashboard`, `EvaluationsReports`, `EvaluationsSettings`, `EvaluationsCampaigns`
+**3. `src/components/pdv/evaluations/EvaluationsSubNav.tsx`**
+- Remover `sticky top-14` pois a posição será controlada pelo container pai no PDV.tsx
+- Manter apenas `border-b` e o fundo com backdrop-blur
 
