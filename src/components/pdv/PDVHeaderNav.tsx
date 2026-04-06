@@ -33,6 +33,7 @@ import {
   UtensilsCrossed,
   Tag,
   Palette,
+  MapPin,
   Store,
   Megaphone,
   Plug,
@@ -94,6 +95,7 @@ const sectionItems: Section[] = [
       { title: "Cupons", url: "/pdv/delivery/cupons", icon: Tag },
       { title: "Configurações", url: "/pdv/delivery/configuracoes", icon: Settings },
       { title: "Relatórios", url: "/pdv/delivery/relatorios", icon: BarChart3 },
+      { title: "Mapa de Calor", url: "/pdv/delivery/mapa-calor", icon: MapPin },
     ],
   },
   {
