@@ -20,7 +20,7 @@ interface ProductCardProps {
   onShareToDelivery?: (product: PDVProduct) => void;
 }
 
-export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
+export function ProductCard({ product, onEdit, onDelete, isSharedToDelivery, onShareToDelivery }: ProductCardProps) {
   const { recipes, calculateCMV } = usePDVRecipes(product.id);
   const cmv = calculateCMV(recipes);
 
@@ -50,6 +50,12 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
+              {!isSharedToDelivery && onShareToDelivery && (
+                <DropdownMenuItem onClick={() => onShareToDelivery(product)}>
+                  <Send className="mr-2 h-4 w-4" />
+                  Enviar para Delivery
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={() => onDelete(product.id)}
                 className="text-destructive focus:text-destructive"
