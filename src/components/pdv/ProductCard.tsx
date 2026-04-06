@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Edit, MoreVertical, Package, Trash2 } from "lucide-react";
+import { Edit, MoreVertical, Package, Send, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +16,8 @@ interface ProductCardProps {
   product: PDVProduct;
   onEdit: (product: PDVProduct) => void;
   onDelete: (id: string) => void;
+  isSharedToDelivery?: boolean;
+  onShareToDelivery?: (product: PDVProduct) => void;
 }
 
 export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
