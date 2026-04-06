@@ -1,29 +1,39 @@
 
 
-## Fase 5 - Melhorar Prêmios Emitidos (CouponsManagement)
+## Fase 6 - Melhorar Roletas (CouponsRoulettes)
 
 ### O que muda
-Transformar a tabela atual em uma gestao completa com acoes diretas, preview visual do cupom, validacao inline, WhatsApp, exportacao CSV e filtro por status.
+Transformar a pagina de roletas de uma visao somente-leitura para uma interface de edicao completa com cores customizaveis, preview interativo usando as cores reais dos premios, e campo de cooldown.
 
-### Alteracoes em `src/pages/pdv/evaluations/coupons/CouponsManagement.tsx`
+### Migracao de banco de dados
+Adicionar 3 colunas na tabela `evaluation_campaigns`:
+- `wheel_primary_color` (text, default `#1a1a2e`)
+- `wheel_secondary_color` (text, default `#722F37`)
+- `roulette_cooldown_hours` (integer, default `0` — 0 = sem cooldown)
 
-**Renomear titulo:** "Gestao de Cupons" -> "Premios Emitidos"
+### Arquivos alterados
 
-**Novo filtro por status:** Select com opcoes "Todos", "Ativo", "Resgatado", "Expirado" ao lado do filtro de campanha.
+**1. Migracao SQL** — nova migracao para adicionar as 3 colunas
 
-**Coluna "Data Utilizacao":** Mostrar `redeemed_at` formatado quando resgatado, ou "-" quando nao.
+**2. `src/integrations/supabase/types.ts`** — atualizar Row/Insert/Update de `evaluation_campaigns` com os novos campos
 
-**Botoes de acao por linha (nova coluna Acoes):**
-- WhatsApp: link `wa.me` usando `formatPhoneForWhatsApp` + `WhatsAppIcon`
-- Validar/Resgatar: botao que chama `useRedeemCoupon` (so aparece se status = Ativo)
-- Preview: abre modal com visual do cupom (codigo, premio, validade, cliente) + botao de copiar codigo
-- Deletar: confirmacao + delete
+**3. `src/hooks/use-evaluation-campaigns.ts`** — incluir os novos campos no `useUpdateCampaign`
 
-**Exportar CSV:** Botao no header que gera CSV com todos os dados filtrados (codigo, cliente, whatsapp, premio, campanha, status, data criacao, validade, data utilizacao).
+**4. `src/components/pdv/evaluations/RoulettePreview.tsx`** — aceitar props `primaryColor` e `secondaryColor` opcionais (fallback para as cores atuais hardcoded), e usar as cores reais de cada premio (`prize.color`) nos segmentos ao inves de alternancia fixa
 
-**Novo componente:** `CouponPreviewDialog.tsx` em `src/components/pdv/evaluations/` — modal com visual estilizado do cupom mostrando codigo grande, premio, validade, nome do cliente, e botao "Copiar Codigo".
+**5. `src/pages/pdv/evaluations/coupons/CouponsRoulettes.tsx`** — reescrever o card de cada campanha para incluir:
+- Inputs de cor primaria/secundaria (color pickers) com save automatico
+- Input de cooldown em horas
+- Toggle de ativo/inativo da roleta
+- Preview da roleta usando cores customizadas e cores dos premios
+- Edicao inline dos premios (editar/deletar) + botao de adicionar premio
+- Reutilizar `PrizeDialog` para criar/editar premios
 
-### Arquivos
-1. `src/pages/pdv/evaluations/coupons/CouponsManagement.tsx` — reescrever com acoes e filtros
-2. `src/components/pdv/evaluations/CouponPreviewDialog.tsx` — novo componente de preview
+### Detalhes tecnicos
+- As cores dos segmentos da roleta usarao `prize.color` (ja existe no schema) — as cores primaria/secundaria servem como fallback para premios sem cor definida e para a borda/centro
+- O cooldown sera salvo em horas no campo `roulette_cooldown_hours` e verificado na pagina publica (se o cliente ja girou dentro do periodo, nao pode girar novamente)
+- O `useUpdateCampaign` ja suporta campos extras via cast `as any`, mas vamos tipar corretamente
+
+### Resultado visual
+Cada card de campanha mostra: formulario de configuracao a esquerda (cores, cooldown, lista de premios editavel) + preview interativo da roleta a direita, atualizado em tempo real conforme o usuario muda cores e premios.
 
