@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, GripVertical, FileDown, Star, List, CheckSquare } from "lucide-react";
+import { Plus, Trash2, GripVertical, FileDown, Star, List, CheckSquare, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   useCampaignQuestions,
@@ -43,25 +43,64 @@ interface Props {
 
 export function CampaignQuestionManager({ campaignId }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<{
+    id: string;
+    question_text: string;
+    question_type: string;
+    options?: string[];
+  } | null>(null);
 
   const { data: questions, isLoading } = useCampaignQuestions(campaignId);
   const createQuestion = useCreateCampaignQuestion();
   const updateQuestion = useUpdateCampaignQuestion();
   const deleteQuestion = useDeleteCampaignQuestion();
 
-  const handleAddQuestion = (data: { question_text: string; question_type: string; options?: string[] }) => {
-    createQuestion.mutate(
-      {
-        campaign_id: campaignId,
-        question_text: data.question_text,
-        order_position: (questions?.length || 0) + 1,
-        question_type: data.question_type,
-        options: data.options,
-      },
-      {
-        onSuccess: () => setDialogOpen(false),
-      }
-    );
+  const handleSubmitQuestion = (data: { question_text: string; question_type: string; options?: string[] }) => {
+    if (editingQuestion) {
+      updateQuestion.mutate(
+        {
+          id: editingQuestion.id,
+          campaign_id: campaignId,
+          question_text: data.question_text,
+          question_type: data.question_type,
+          options: data.options || null,
+        },
+        {
+          onSuccess: () => {
+            setDialogOpen(false);
+            setEditingQuestion(null);
+          },
+        }
+      );
+    } else {
+      createQuestion.mutate(
+        {
+          campaign_id: campaignId,
+          question_text: data.question_text,
+          order_position: (questions?.length || 0) + 1,
+          question_type: data.question_type,
+          options: data.options,
+        },
+        {
+          onSuccess: () => setDialogOpen(false),
+        }
+      );
+    }
+  };
+
+  const handleOpenEdit = (q: any) => {
+    setEditingQuestion({
+      id: q.id,
+      question_text: q.question_text,
+      question_type: (q as any).question_type || "stars",
+      options: ((q as any).options as string[]) || [],
+    });
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) setEditingQuestion(null);
   };
 
   const handleImportTemplate = () => {
@@ -92,9 +131,10 @@ export function CampaignQuestionManager({ campaignId }: Props) {
 
       <QuestionFormDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSubmit={handleAddQuestion}
-        isPending={createQuestion.isPending}
+        onOpenChange={handleCloseDialog}
+        onSubmit={handleSubmitQuestion}
+        isPending={editingQuestion ? updateQuestion.isPending : createQuestion.isPending}
+        initialData={editingQuestion}
       />
 
       {isLoading ? (
@@ -124,6 +164,14 @@ export function CampaignQuestionManager({ campaignId }: Props) {
                         updateQuestion.mutate({ id: q.id, campaign_id: campaignId, is_active: checked })
                       }
                     />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => handleOpenEdit(q)}
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"

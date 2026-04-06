@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +46,13 @@ const PLACEHOLDERS: Record<string, string> = {
   multiple_choice: "Ex: O que mais gostou na experiência?",
 };
 
+interface QuestionInitialData {
+  id: string;
+  question_text: string;
+  question_type: string;
+  options?: string[];
+}
+
 interface QuestionFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -55,13 +62,30 @@ interface QuestionFormDialogProps {
     options?: string[];
   }) => void;
   isPending?: boolean;
+  initialData?: QuestionInitialData | null;
 }
 
-export function QuestionFormDialog({ open, onOpenChange, onSubmit, isPending }: QuestionFormDialogProps) {
+export function QuestionFormDialog({ open, onOpenChange, onSubmit, isPending, initialData }: QuestionFormDialogProps) {
   const [type, setType] = useState("stars");
   const [text, setText] = useState("");
   const [options, setOptions] = useState<string[]>([]);
   const [newOption, setNewOption] = useState("");
+
+  const isEditing = !!initialData;
+
+  useEffect(() => {
+    if (open && initialData) {
+      setType(initialData.question_type);
+      setText(initialData.question_text);
+      setOptions(initialData.options || []);
+      setNewOption("");
+    } else if (!open) {
+      setType("stars");
+      setText("");
+      setOptions([]);
+      setNewOption("");
+    }
+  }, [open, initialData]);
 
   const isChoiceType = type !== "stars";
   const canSubmit = text.trim() && (!isChoiceType || options.length >= 2);
@@ -99,7 +123,7 @@ export function QuestionFormDialog({ open, onOpenChange, onSubmit, isPending }: 
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[560px] gap-0 p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4">
-          <DialogTitle>Nova Pergunta</DialogTitle>
+          <DialogTitle>{isEditing ? "Editar Pergunta" : "Nova Pergunta"}</DialogTitle>
           <DialogDescription>
             Configure o tipo e o conteúdo da pergunta para seus clientes.
           </DialogDescription>
@@ -254,7 +278,7 @@ export function QuestionFormDialog({ open, onOpenChange, onSubmit, isPending }: 
             Cancelar
           </Button>
           <Button onClick={handleSubmit} disabled={!canSubmit || isPending}>
-            Adicionar Pergunta
+            {isEditing ? "Salvar Alterações" : "Adicionar Pergunta"}
           </Button>
         </DialogFooter>
       </DialogContent>
