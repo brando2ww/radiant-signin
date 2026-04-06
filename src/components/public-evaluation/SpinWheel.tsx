@@ -2,6 +2,8 @@ import { useState, useRef } from "react";
 import type { CampaignPrize } from "@/hooks/use-campaign-prizes";
 import { pickPrize } from "@/hooks/use-campaign-prizes";
 
+const WHEEL_COLORS = ["#1a1a2e", "#722F37"];
+
 interface SpinWheelProps {
   prizes: CampaignPrize[];
   onResult: (prize: CampaignPrize) => void;
@@ -17,15 +19,15 @@ export function SpinWheel({ prizes, onResult, disabled }: SpinWheelProps) {
 
   const totalProb = prizes.reduce((s, p) => s + Number(p.probability), 0);
   let cumDeg = 0;
-  const segments = prizes.map((p) => {
+  const segments = prizes.map((p, i) => {
     const deg = totalProb > 0 ? (Number(p.probability) / totalProb) * 360 : 360 / prizes.length;
     const start = cumDeg;
     cumDeg += deg;
-    return { ...p, startDeg: start, deg };
+    return { ...p, startDeg: start, deg, wheelColor: WHEEL_COLORS[i % 2] };
   });
 
   const gradient = segments
-    .map((s) => `${s.color} ${s.startDeg}deg ${s.startDeg + s.deg}deg`)
+    .map((s) => `${s.wheelColor} ${s.startDeg}deg ${s.startDeg + s.deg}deg`)
     .join(", ");
 
   const handleSpin = () => {
@@ -49,65 +51,95 @@ export function SpinWheel({ prizes, onResult, disabled }: SpinWheelProps) {
     }, 4200);
   };
 
-  const size = 300;
+  const size = 320;
   const r = size / 2;
+
+  // Build SVG segments and labels
+  const svgSegments = segments.map((s) => {
+    const startRad = ((s.startDeg - 90) * Math.PI) / 180;
+    const endRad = ((s.startDeg + s.deg - 90) * Math.PI) / 180;
+    const x1 = r + r * Math.cos(startRad);
+    const y1 = r + r * Math.sin(startRad);
+    const x2 = r + r * Math.cos(endRad);
+    const y2 = r + r * Math.sin(endRad);
+    const largeArc = s.deg > 180 ? 1 : 0;
+    const path = `M ${r} ${r} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+
+    // Text along the mid-angle, radially from center outward
+    const midAngleDeg = s.startDeg + s.deg / 2;
+    const midAngleRad = ((midAngleDeg - 90) * Math.PI) / 180;
+
+    // Position text at ~58% of radius
+    const textR = r * 0.58;
+    const tx = r + textR * Math.cos(midAngleRad);
+    const ty = r + textR * Math.sin(midAngleRad);
+
+    // Rotate text to align radially (pointing outward)
+    // Text reads from center → edge
+    let textRotation = midAngleDeg;
+    // If in bottom half, flip so text is never upside down
+    const needsFlip = midAngleDeg > 90 && midAngleDeg < 270;
+    if (needsFlip) {
+      textRotation += 180;
+    }
+
+    const fontSize = Math.max(10, Math.min(15, s.deg / 4));
+
+    return (
+      <g key={s.id}>
+        <path d={path} fill={s.wheelColor} stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+        <text
+          x={tx}
+          y={ty}
+          textAnchor="middle"
+          dominantBaseline="central"
+          transform={`rotate(${textRotation}, ${tx}, ${ty})`}
+          fill="white"
+          fontSize={fontSize}
+          fontWeight="700"
+          fontFamily="system-ui, sans-serif"
+          style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.9))" }}
+        >
+          {s.name}
+        </text>
+      </g>
+    );
+  });
 
   return (
     <div className="flex flex-col items-center gap-10">
       <div className="relative" style={{ width: size, height: size }}>
         {/* Pointer at top */}
-        <div className="absolute z-10" style={{ top: -12, left: "50%", transform: "translateX(-50%)" }}>
-          <div className="w-0 h-0 border-l-[14px] border-l-transparent border-r-[14px] border-r-transparent border-t-[22px] border-t-red-500 drop-shadow-lg" />
+        <div className="absolute z-10" style={{ top: -14, left: "50%", transform: "translateX(-50%)" }}>
+          <div className="w-0 h-0 border-l-[16px] border-l-transparent border-r-[16px] border-r-transparent border-t-[26px] border-t-red-500 drop-shadow-lg" />
         </div>
 
         {/* Wheel */}
         <div
-          className="rounded-full border-[6px] border-yellow-400 shadow-2xl"
+          className="rounded-full shadow-2xl overflow-hidden"
           style={{
             width: size,
             height: size,
-            background: `conic-gradient(${gradient})`,
             transform: `rotate(${rotation}deg)`,
             transition: spinning ? "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)" : "none",
+            border: "6px solid #d4a843",
           }}
         >
-          {/* SVG overlay for radial text labels */}
-          <svg width={size} height={size} className="absolute inset-0 pointer-events-none">
+          <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+            {svgSegments}
+            {/* Separator lines */}
             {segments.map((s) => {
-              const midAngleDeg = s.startDeg + s.deg / 2;
-              const midAngleRad = (midAngleDeg * Math.PI) / 180;
-
-              // Position label at 62% of radius
-              const labelR = r * 0.62;
-              const cx = r + labelR * Math.sin(midAngleRad);
-              const cy = r - labelR * Math.cos(midAngleRad);
-
-              // Rotate text to align radially; flip if in bottom half so it's never upside down
-              let textRot = midAngleDeg;
-              const flipped = midAngleDeg > 90 && midAngleDeg < 270;
-              if (flipped) textRot += 180;
-
-              // Truncate long names
-              const maxChars = Math.max(6, Math.floor(s.deg / 8));
-              const label = s.name.length > maxChars ? s.name.slice(0, maxChars - 1) + "…" : s.name;
-
+              const rad = ((s.startDeg - 90) * Math.PI) / 180;
               return (
-                <text
-                  key={s.id}
-                  x={cx}
-                  y={cy}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  transform={`rotate(${textRot}, ${cx}, ${cy})`}
-                  fill="white"
-                  fontSize="11"
-                  fontWeight="bold"
-                  style={{
-                    filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8))",
-                  }}
-                >
-                  {label}
-                </text>
+                <line
+                  key={`line-${s.id}`}
+                  x1={r}
+                  y1={r}
+                  x2={r + r * Math.cos(rad)}
+                  y2={r + r * Math.sin(rad)}
+                  stroke="rgba(255,255,255,0.15)"
+                  strokeWidth="1.5"
+                />
               );
             })}
           </svg>
@@ -117,29 +149,34 @@ export function SpinWheel({ prizes, onResult, disabled }: SpinWheelProps) {
         <button
           onClick={handleSpin}
           disabled={spinning || disabled}
-          className="absolute bg-white rounded-full shadow-xl border-4 border-yellow-400 font-bold text-xs text-primary hover:scale-105 active:scale-95 transition-transform disabled:opacity-50"
+          className="absolute bg-white rounded-full shadow-xl border-4 font-bold text-xs text-primary hover:scale-105 active:scale-95 transition-transform disabled:opacity-50"
           style={{
-            width: size * 0.22,
-            height: size * 0.22,
+            width: size * 0.2,
+            height: size * 0.2,
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
+            borderColor: "#d4a843",
           }}
         >
           {spinning ? "..." : "GIRAR"}
         </button>
 
-        {/* Decorative dots around the wheel */}
-        {Array.from({ length: 20 }).map((_, i) => {
-          const angle = (i * 18 * Math.PI) / 180;
-          const dotR = r + 2;
-          const dx = r + dotR * Math.sin(angle) - 4;
-          const dy = r - dotR * Math.cos(angle) - 4;
+        {/* Decorative dots */}
+        {Array.from({ length: 24 }).map((_, i) => {
+          const angle = (i * 15 * Math.PI) / 180;
+          const dotR = r + 4;
+          const dx = r + dotR * Math.sin(angle) - 3;
+          const dy = r - dotR * Math.cos(angle) - 3;
           return (
             <div
               key={i}
-              className={`absolute w-2 h-2 rounded-full ${i % 2 === 0 ? "bg-yellow-300" : "bg-white"}`}
-              style={{ left: dx, top: dy }}
+              className="absolute w-1.5 h-1.5 rounded-full"
+              style={{
+                left: dx,
+                top: dy,
+                backgroundColor: i % 2 === 0 ? "#d4a843" : "#fff",
+              }}
             />
           );
         })}
