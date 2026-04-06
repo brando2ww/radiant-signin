@@ -851,6 +851,119 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_loyalty_points: {
+        Row: {
+          created_at: string
+          customer_id: string
+          description: string | null
+          id: string
+          points: number
+          reference_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          id?: string
+          points: number
+          reference_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          id?: string
+          points?: number
+          reference_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_loyalty_points_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_loyalty_prizes: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          max_quantity: number | null
+          name: string
+          points_cost: number
+          redeemed_count: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          max_quantity?: number | null
+          name: string
+          points_cost: number
+          redeemed_count?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          max_quantity?: number | null
+          name?: string
+          points_cost?: number
+          redeemed_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      delivery_loyalty_settings: {
+        Row: {
+          cashback_value_per_point: number
+          created_at: string
+          id: string
+          is_active: boolean
+          min_points_redeem: number
+          points_per_real: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cashback_value_per_point?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          min_points_redeem?: number
+          points_per_real?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cashback_value_per_point?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          min_points_redeem?: number
+          points_per_real?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       delivery_option_item_recipes: {
         Row: {
           created_at: string
