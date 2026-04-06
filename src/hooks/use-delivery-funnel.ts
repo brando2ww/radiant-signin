@@ -76,10 +76,10 @@ export async function trackFunnelEvent(
   metadata?: Record<string, unknown>
 ) {
   const sessionId = getFunnelSessionId();
-  await supabase.from("delivery_funnel_events").insert({
+  await supabase.from("delivery_funnel_events").insert([{
     user_id: userId,
     session_id: sessionId,
     event_type: eventType,
     metadata: metadata || null,
-  });
+  }]);
 }

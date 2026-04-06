@@ -90,6 +90,7 @@ export const OrderConfirmation = ({
 
     createOrder.mutate(orderData, {
       onSuccess: (order) => {
+        trackFunnelEvent(userId, "purchase", { orderId: order.id, total });
         onConfirm(order.id);
       },
     });

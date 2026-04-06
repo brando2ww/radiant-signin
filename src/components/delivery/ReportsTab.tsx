@@ -8,6 +8,7 @@ import { DeliveryMetricsCards } from "./reports/DeliveryMetrics";
 import { SalesChart } from "./reports/SalesChart";
 import { TopProducts } from "./reports/TopProducts";
 import { OrdersAnalysis } from "./reports/OrdersAnalysis";
+import { PurchaseFunnel } from "./reports/PurchaseFunnel";
 import { subDays, startOfMonth, endOfMonth } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { Loader2 } from "lucide-react";
@@ -95,6 +96,12 @@ export const ReportsTab = () => {
           {metrics && <OrdersAnalysis metrics={metrics} />}
           
           {topProducts && <TopProducts products={topProducts} />}
+
+          <PurchaseFunnel
+            userId={user?.id || ""}
+            startDate={startDate}
+            endDate={endDate}
+          />
         </>
       )}
     </div>
