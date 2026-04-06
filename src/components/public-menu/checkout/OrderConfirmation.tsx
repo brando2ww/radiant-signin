@@ -291,16 +291,16 @@ export const OrderConfirmation = ({
               <span>-R$ {discount.toFixed(2)}</span>
             </div>
           )}
+          {loyaltyDiscount > 0 && (
+            <div className="flex justify-between text-green-600">
+              <span>Cashback (pontos):</span>
+              <span>-R$ {loyaltyDiscount.toFixed(2)}</span>
+            </div>
+          )}
           <Separator />
           <div className="flex justify-between text-lg font-bold">
             <span>Total:</span>
-            <span>
-              R${" "}
-              {(orderType === "delivery"
-                ? total
-                : subtotal - discount
-              ).toFixed(2)}
-            </span>
+            <span>R$ {Math.max(0, effectiveTotal).toFixed(2)}</span>
           </div>
         </div>
 
