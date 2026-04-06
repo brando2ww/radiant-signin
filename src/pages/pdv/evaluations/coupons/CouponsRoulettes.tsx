@@ -6,11 +6,87 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Progress } from "@/components/ui/progress";
-import { CircleDot, Plus, Pencil, Trash2, Clock } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
+import { CircleDot, Plus, Pencil, Trash2, Clock, Palette, Gift, Trophy, AlertCircle } from "lucide-react";
 import { useEvaluationCampaigns, useUpdateCampaign } from "@/hooks/use-evaluation-campaigns";
 import { useCampaignPrizes, useCreatePrize, useUpdatePrize, useDeletePrize, type CampaignPrize } from "@/hooks/use-campaign-prizes";
 import { RoulettePreview } from "@/components/pdv/evaluations/RoulettePreview";
 import { PrizeDialog } from "@/components/pdv/evaluations/PrizeDialog";
+
+function ColorInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
+      <div className="flex items-center gap-2">
+        <div className="relative">
+          <input
+            type="color"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-12 h-12 rounded-xl cursor-pointer border-2 border-input hover:border-primary transition-colors"
+          />
+        </div>
+        <Input
+          value={value}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (/^#[0-9a-fA-F]{0,6}$/.test(v)) onChange(v);
+          }}
+          className="h-10 w-28 font-mono text-sm uppercase"
+          maxLength={7}
+        />
+      </div>
+    </div>
+  );
+}
+
+function PrizeCard({ prize, index, primaryColor, secondaryColor, onEdit, onDelete }: {
+  prize: CampaignPrize;
+  index: number;
+  primaryColor: string;
+  secondaryColor: string;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const wheelColor = index % 2 === 0 ? primaryColor : secondaryColor;
+  const prob = Number(prize.probability);
+
+  return (
+    <div className="flex items-center gap-3 p-3 rounded-xl border bg-card hover:shadow-sm transition-shadow">
+      <div className="w-8 h-8 rounded-lg shrink-0 flex items-center justify-center text-white font-bold text-xs" style={{ backgroundColor: wheelColor }}>
+        {index + 1}
+      </div>
+      <div className="flex-1 min-w-0 space-y-1">
+        <div className="flex items-center gap-2">
+          <p className={`font-medium text-sm truncate ${prize.is_active ? "text-foreground" : "text-muted-foreground line-through"}`}>
+            {prize.name}
+          </p>
+          {!prize.is_active && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Inativo</Badge>}
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 max-w-[120px]">
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(prob, 100)}%`, backgroundColor: wheelColor }} />
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-muted-foreground">{prob}%</span>
+          <span className="text-xs text-muted-foreground">
+            {prize.max_quantity !== null ? `${prize.redeemed_count}/${prize.max_quantity}` : "∞"}
+          </span>
+          <span className="text-xs text-muted-foreground">{prize.coupon_validity_days}d</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-0.5">
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit}>
+          <Pencil className="h-3 w-3" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={onDelete}>
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function CampaignRouletteCard({ campaign }: { campaign: any }) {
   const { data: prizes = [] } = useCampaignPrizes(campaign.id);
@@ -42,107 +118,127 @@ function CampaignRouletteCard({ campaign }: { campaign: any }) {
   };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">{campaign.name}</CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl flex items-center justify-center" style={{ background: `linear-gradient(135deg, ${wheelPrimary}, ${wheelSecondary})` }}>
+              <Gift className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">{campaign.name}</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">Configuração da roleta de prêmios</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
             <Badge variant={campaign.is_active ? "secondary" : "destructive"}>
               {campaign.is_active ? "Ativa" : "Inativa"}
             </Badge>
+            <Switch checked={rouletteEnabled} onCheckedChange={(v) => handleFieldSave("roulette_enabled", v)} />
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="grid gap-6 md:grid-cols-[1fr_auto]">
+
+      <Separator />
+
+      <CardContent className="pt-6">
+        <div className="grid gap-8 lg:grid-cols-[1fr_280px]">
           {/* Left: Config */}
-          <div className="space-y-5">
-            {/* Toggle */}
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Roleta ativa</Label>
-              <Switch checked={rouletteEnabled} onCheckedChange={(v) => handleFieldSave("roulette_enabled", v)} />
-            </div>
-
-            {/* Colors */}
-            <div className="flex items-center gap-4">
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Cor Primária</Label>
-                <input
-                  type="color"
-                  value={wheelPrimary}
-                  onChange={(e) => handleFieldSave("wheel_primary_color", e.target.value)}
-                  className="w-10 h-10 rounded cursor-pointer border border-input"
-                />
+          <div className="space-y-6">
+            {/* Colors + Cooldown Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Palette className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold">Aparência da Roleta</h3>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Cor Secundária</Label>
-                <input
-                  type="color"
-                  value={wheelSecondary}
-                  onChange={(e) => handleFieldSave("wheel_secondary_color", e.target.value)}
-                  className="w-10 h-10 rounded cursor-pointer border border-input"
-                />
-              </div>
-              <div className="space-y-1 flex-1">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> Cooldown (horas)
-                </Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={cooldownHours}
-                  onChange={(e) => handleFieldSave("roulette_cooldown_hours", Number(e.target.value))}
-                  className="h-10 w-24"
-                />
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 rounded-xl bg-muted/50 border">
+                <ColorInput label="Cor Primária" value={wheelPrimary} onChange={(v) => handleFieldSave("wheel_primary_color", v)} />
+                <ColorInput label="Cor Secundária" value={wheelSecondary} onChange={(v) => handleFieldSave("wheel_secondary_color", v)} />
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                    <Clock className="h-3 w-3" /> Cooldown
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={cooldownHours}
+                      onChange={(e) => handleFieldSave("roulette_cooldown_hours", Number(e.target.value))}
+                      className="h-10 w-20"
+                    />
+                    <span className="text-xs text-muted-foreground">horas</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">Intervalo entre giros do mesmo cliente</p>
+                </div>
               </div>
             </div>
 
-            {/* Probability bar */}
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Probabilidades</span>
-                <span className={totalProbability === 100 ? "text-green-600 font-semibold" : "text-destructive font-semibold"}>
-                  {totalProbability}%
-                </span>
-              </div>
-              <Progress value={Math.min(totalProbability, 100)} className="h-2" />
-            </div>
+            <Separator />
 
-            {/* Prizes list */}
-            <div className="space-y-2">
+            {/* Prizes Section */}
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">{prizes.length} prêmios</p>
-                <Button size="sm" variant="outline" onClick={() => { setEditingPrize(null); setDialogOpen(true); }} className="gap-1 h-7 text-xs">
-                  <Plus className="h-3 w-3" /> Adicionar
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-semibold">Prêmios ({prizes.length})</h3>
+                </div>
+                <Button size="sm" onClick={() => { setEditingPrize(null); setDialogOpen(true); }} className="gap-1.5 h-8">
+                  <Plus className="h-3.5 w-3.5" /> Adicionar
                 </Button>
               </div>
-              {prizes.map((p) => (
-                <div key={p.id} className="flex items-center gap-2 text-sm border-b last:border-0 pb-1">
-                  <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: p.color }} />
-                  <span className={`flex-1 truncate ${p.is_active ? "text-foreground" : "text-muted-foreground line-through"}`}>{p.name}</span>
-                  <span className="text-xs text-muted-foreground">{p.probability}%</span>
-                  <span className="text-xs text-muted-foreground">{p.redeemed_count}{p.max_quantity ? `/${p.max_quantity}` : ""}</span>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setEditingPrize(p); setDialogOpen(true); }}>
-                    <Pencil className="h-3 w-3" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => deletePrize.mutate({ id: p.id, campaign_id: campaign.id })}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+
+              {/* Probability indicator */}
+              <div className="space-y-2 p-3 rounded-lg bg-muted/50 border">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Soma das probabilidades</span>
+                  <span className={totalProbability === 100 ? "text-green-600 font-bold" : "text-destructive font-bold"}>
+                    {totalProbability}%
+                  </span>
                 </div>
-              ))}
-              {prizes.length === 0 && <p className="text-xs text-muted-foreground">Nenhum prêmio cadastrado</p>}
+                <Progress value={Math.min(totalProbability, 100)} className="h-2" />
+                {totalProbability !== 100 && prizes.length > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs text-destructive">
+                    <AlertCircle className="h-3 w-3" />
+                    <span>A soma deve ser exatamente 100%</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Prize cards */}
+              <div className="space-y-2">
+                {prizes.map((p, i) => (
+                  <PrizeCard
+                    key={p.id}
+                    prize={p}
+                    index={i}
+                    primaryColor={wheelPrimary}
+                    secondaryColor={wheelSecondary}
+                    onEdit={() => { setEditingPrize(p); setDialogOpen(true); }}
+                    onDelete={() => deletePrize.mutate({ id: p.id, campaign_id: campaign.id })}
+                  />
+                ))}
+                {prizes.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Gift className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                    <p className="text-sm">Nenhum prêmio cadastrado</p>
+                    <p className="text-xs">Adicione prêmios para configurar a roleta</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
           {/* Right: Preview */}
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-xs text-muted-foreground font-medium">Preview</p>
-            <RoulettePreview
-              prizes={prizes}
-              size={180}
-              primaryColor={wheelPrimary}
-              secondaryColor={wheelSecondary}
-            />
+          <div className="flex flex-col items-center gap-3">
+            <h3 className="text-sm font-semibold text-muted-foreground">Preview</h3>
+            <div className="sticky top-4 p-6 rounded-2xl bg-muted/30 border">
+              <RoulettePreview
+                prizes={prizes}
+                size={220}
+                primaryColor={wheelPrimary}
+                secondaryColor={wheelSecondary}
+              />
+            </div>
           </div>
         </div>
       </CardContent>
@@ -167,16 +263,20 @@ export default function CouponsRoulettes() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Roletas</h1>
-        <p className="text-sm text-muted-foreground">Configure cores, prêmios e cooldown de cada roleta</p>
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <CircleDot className="h-6 w-6 text-primary" />
+          Roletas
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">Configure as cores, prêmios e cooldown de cada roleta</p>
       </div>
 
       {rouletteCampaigns.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <CircleDot className="h-5 w-5" />
-              <p className="text-sm">Nenhuma campanha com roleta encontrada</p>
+            <div className="flex flex-col items-center gap-3 py-8 text-muted-foreground">
+              <CircleDot className="h-10 w-10 opacity-40" />
+              <p className="text-sm font-medium">Nenhuma campanha com roleta encontrada</p>
+              <p className="text-xs">Ative a roleta em uma campanha para configurá-la aqui</p>
             </div>
           </CardContent>
         </Card>

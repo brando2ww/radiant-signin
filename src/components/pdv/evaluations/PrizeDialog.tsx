@@ -10,15 +10,11 @@ interface PrizeDialogProps {
   onOpenChange: (open: boolean) => void;
   prize?: CampaignPrize | null;
   onSave: (data: { name: string; color: string; probability: number; max_quantity: number | null; coupon_validity_days: number }) => void;
-
   saving?: boolean;
 }
 
-const DEFAULT_COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899", "#14b8a6"];
-
 export function PrizeDialog({ open, onOpenChange, prize, onSave, saving }: PrizeDialogProps) {
   const [name, setName] = useState("");
-  const [color, setColor] = useState("#6366f1");
   const [probability, setProbability] = useState(10);
   const [maxQty, setMaxQty] = useState<string>("");
   const [validityDays, setValidityDays] = useState(7);
@@ -26,13 +22,11 @@ export function PrizeDialog({ open, onOpenChange, prize, onSave, saving }: Prize
   useEffect(() => {
     if (prize) {
       setName(prize.name);
-      setColor(prize.color);
       setProbability(Number(prize.probability));
       setMaxQty(prize.max_quantity !== null ? String(prize.max_quantity) : "");
       setValidityDays(prize.coupon_validity_days);
     } else {
       setName("");
-      setColor(DEFAULT_COLORS[Math.floor(Math.random() * DEFAULT_COLORS.length)]);
       setProbability(10);
       setMaxQty("");
       setValidityDays(7);
@@ -43,7 +37,7 @@ export function PrizeDialog({ open, onOpenChange, prize, onSave, saving }: Prize
     if (!name.trim()) return;
     onSave({
       name: name.trim(),
-      color,
+      color: prize?.color || "#6366f1",
       probability,
       max_quantity: maxQty ? parseInt(maxQty) : null,
       coupon_validity_days: validityDays,
@@ -61,24 +55,6 @@ export function PrizeDialog({ open, onOpenChange, prize, onSave, saving }: Prize
           <div className="space-y-2">
             <Label>Nome do Prêmio *</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Sobremesa Grátis" />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Cor da Fatia</Label>
-            <div className="flex items-center gap-2">
-              <input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="w-10 h-10 rounded cursor-pointer border-0" />
-              <div className="flex gap-1.5 flex-wrap">
-                {DEFAULT_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setColor(c)}
-                    className={`w-7 h-7 rounded-full border-2 transition-all ${color === c ? "border-foreground scale-110" : "border-transparent"}`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-              </div>
-            </div>
           </div>
 
           <div className="space-y-2">
