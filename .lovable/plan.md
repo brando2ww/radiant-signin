@@ -1,18 +1,23 @@
 
 
-## Remover funcionalidade de recorte de imagem
+## Adicionar funcionalidade de "Duplicar" produto (PDV e Delivery)
 
-### O que fazer
-Reverter a integração do dialog de crop no `PersonalizationTab.tsx`, voltando ao upload direto sem etapa de recorte.
+### O que muda
 
-### Mudanças
+**1. `src/components/pdv/ProductCard.tsx`**
+- Adicionar item "Duplicar" no DropdownMenu (icone `Copy`)
+- Nova prop `onDuplicate: (product: PDVProduct) => void`
 
-**`src/components/delivery/PersonalizationTab.tsx`**:
-- Remover import do `ImageCropDialog`
-- Remover estados de crop (`cropDialogOpen`, `cropImageSrc`, `cropField`, `cropAspect`)
-- Alterar `handleFileSelect` para fazer upload direto (sem abrir dialog de crop)
-- Remover `handleCropComplete`
-- Remover o componente `<ImageCropDialog />` do JSX
+**2. `src/pages/pdv/Products.tsx`**
+- Implementar `handleDuplicate`: chama `createProduct` com os dados do produto original (sem id), adicionando " (cópia)" ao nome
 
-O componente `ImageCropDialog` pode ser mantido no código caso seja útil futuramente em outros lugares, ou removido se preferir limpeza total.
+**3. `src/components/delivery/ProductList.tsx`**
+- Adicionar botao "Duplicar" (icone `Copy`) ao lado dos botoes existentes no `ProductListItem`
+- Usar `useCreateProduct` para inserir copia do produto com " (cópia)" no nome, mesma categoria e dados
+
+### Comportamento
+- Duplica todos os campos do produto exceto `id`, `created_at`, `updated_at`
+- Nome recebe sufixo " (cópia)"
+- Toast de sucesso ao duplicar
+- Produto duplicado aparece na lista apos invalidacao do cache
 
