@@ -1,6 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { DashboardMetricCard } from "@/components/pdv/DashboardMetricCard";
-import { useCustomerEvaluations } from "@/hooks/use-customer-evaluations";
+import { useCustomerEvaluations, useExportEvaluations } from "@/hooks/use-customer-evaluations";
+import { useEvaluationQuestionTexts, useAllTimeCustomerWhatsapps } from "@/hooks/use-evaluation-report-helpers";
+import { NpsDonut } from "@/components/evaluations/reports/NpsDonut";
+import { NpsPerQuestion } from "@/components/evaluations/reports/NpsPerQuestion";
+import { CustomerProfile } from "@/components/evaluations/reports/CustomerProfile";
 import {
   format, startOfWeek, endOfWeek, subWeeks, eachDayOfInterval,
 } from "date-fns";
@@ -9,7 +14,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   AreaChart, Area, Legend,
 } from "recharts";
-import { CalendarDays, MessageSquare, Star, TrendingUp, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { CalendarDays, MessageSquare, Star, TrendingUp, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemo } from "react";
 
@@ -43,18 +48,23 @@ export default function ReportWeekly() {
     endDate: format(prevWeekEnd, "yyyy-MM-dd"),
   });
 
+  const { data: questionTexts } = useEvaluationQuestionTexts();
+  const { data: allTimeWhatsapps } = useAllTimeCustomerWhatsapps();
+  const exportMutation = useExportEvaluations();
+
   const isLoading = loadingCurrent || loadingPrev;
 
   const calcStats = (evals: typeof currentEvals) => {
-    if (!evals || evals.length === 0) return { total: 0, avgSat: 0, nps: 0 };
+    if (!evals || evals.length === 0) return { total: 0, avgSat: 0, nps: 0, promoters: 0, detractors: 0, neutrals: 0 };
     const total = evals.length;
     const allScores = evals.flatMap(e => e.evaluation_answers.map(a => a.score));
     const avgSat = allScores.length > 0 ? allScores.reduce((s, v) => s + v, 0) / allScores.length : 0;
     const npsScores = evals.filter(e => e.nps_score !== null).map(e => e.nps_score!);
     const promoters = npsScores.filter(s => s >= 9).length;
     const detractors = npsScores.filter(s => s <= 6).length;
+    const neutrals = npsScores.length - promoters - detractors;
     const nps = npsScores.length > 0 ? Math.round(((promoters - detractors) / npsScores.length) * 100) : 0;
-    return { total, avgSat, nps };
+    return { total, avgSat, nps, promoters, detractors, neutrals };
   };
 
   const current = useMemo(() => calcStats(currentEvals), [currentEvals]);
@@ -65,30 +75,21 @@ export default function ReportWeekly() {
     return Math.round(((curr - prv) / prv) * 100);
   };
 
-  // Comparative chart data by day of week
   const weekdayNames = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
   const comparisonData = useMemo(() => {
     const currentDays = eachDayOfInterval({ start: currentWeekStart, end: currentWeekEnd });
     const prevDays = eachDayOfInterval({ start: prevWeekStart, end: prevWeekEnd });
-
     return weekdayNames.map((name, i) => {
-      const currDay = currentDays[i];
-      const prevDay = prevDays[i];
-      const currDayStr = currDay ? format(currDay, "yyyy-MM-dd") : "";
-      const prevDayStr = prevDay ? format(prevDay, "yyyy-MM-dd") : "";
-
-      const currCount = (currentEvals || []).filter(e =>
-        e.evaluation_date.startsWith(currDayStr)
-      ).length;
-      const prevCount = (prevEvals || []).filter(e =>
-        e.evaluation_date.startsWith(prevDayStr)
-      ).length;
-
-      return { dia: name, "Semana Atual": currCount, "Semana Anterior": prevCount };
+      const currDayStr = currentDays[i] ? format(currentDays[i], "yyyy-MM-dd") : "";
+      const prevDayStr = prevDays[i] ? format(prevDays[i], "yyyy-MM-dd") : "";
+      return {
+        dia: name,
+        "Semana Atual": (currentEvals || []).filter(e => e.evaluation_date.startsWith(currDayStr)).length,
+        "Semana Anterior": (prevEvals || []).filter(e => e.evaluation_date.startsWith(prevDayStr)).length,
+      };
     });
   }, [currentEvals, prevEvals, currentWeekStart, prevWeekStart]);
 
-  // Daily satisfaction evolution (14 days)
   const evolutionData = useMemo(() => {
     const allEvals = [...(prevEvals || []), ...(currentEvals || [])];
     const days = eachDayOfInterval({ start: prevWeekStart, end: currentWeekEnd });
@@ -97,12 +98,21 @@ export default function ReportWeekly() {
       const dayEvals = allEvals.filter(e => e.evaluation_date.startsWith(dayStr));
       const scores = dayEvals.flatMap(e => e.evaluation_answers.map(a => a.score));
       const avg = scores.length > 0 ? scores.reduce((s, v) => s + v, 0) / scores.length : 0;
-      return {
-        data: format(day, "dd/MM"),
-        satisfação: Number(avg.toFixed(2)),
-      };
+      return { data: format(day, "dd/MM"), satisfação: Number(avg.toFixed(2)) };
     });
   }, [currentEvals, prevEvals, prevWeekStart, currentWeekEnd]);
+
+  // New vs Recurring
+  const { newCount, recurringCount } = useMemo(() => {
+    if (!currentEvals || !allTimeWhatsapps) return { newCount: 0, recurringCount: 0 };
+    let n = 0, r = 0;
+    currentEvals.forEach(e => {
+      const firstDate = allTimeWhatsapps.get(e.customer_whatsapp);
+      if (firstDate && e.evaluation_date <= firstDate) n++;
+      else r++;
+    });
+    return { newCount: n, recurringCount: r };
+  }, [currentEvals, allTimeWhatsapps]);
 
   if (isLoading) {
     return (
@@ -124,34 +134,43 @@ export default function ReportWeekly() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Relatório Semanal</h1>
-        <p className="text-sm text-muted-foreground">
-          {format(currentWeekStart, "dd/MM")} — {format(currentWeekEnd, "dd/MM/yyyy")} vs semana anterior
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Relatório Semanal</h1>
+          <p className="text-sm text-muted-foreground">
+            {format(currentWeekStart, "dd/MM")} — {format(currentWeekEnd, "dd/MM/yyyy")} vs semana anterior
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => exportMutation.mutate({ startDate: format(currentWeekStart, "yyyy-MM-dd"), endDate: format(currentWeekEnd, "yyyy-MM-dd") })}
+          disabled={exportMutation.isPending}
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Exportar CSV
+        </Button>
       </div>
 
-      {/* KPI Cards with trends */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <DashboardMetricCard
-          title="Respostas"
-          value={current.total}
-          icon={MessageSquare}
-          trend={{ value: totalChange, isPositive: totalChange >= 0 }}
-        />
-        <DashboardMetricCard
-          title="Média Satisfação"
-          value={current.avgSat.toFixed(1)}
-          icon={Star}
-          trend={{ value: satChange, isPositive: satChange >= 0 }}
-        />
-        <DashboardMetricCard
-          title="NPS"
-          value={current.nps}
-          icon={TrendingUp}
-          trend={{ value: npsChange, isPositive: npsChange >= 0 }}
-        />
+        <DashboardMetricCard title="Respostas" value={current.total} icon={MessageSquare} trend={{ value: totalChange, isPositive: totalChange >= 0 }} />
+        <DashboardMetricCard title="Média Satisfação" value={current.avgSat.toFixed(1)} icon={Star} trend={{ value: satChange, isPositive: satChange >= 0 }} />
+        <DashboardMetricCard title="NPS" value={current.nps} icon={TrendingUp} trend={{ value: npsChange, isPositive: npsChange >= 0 }} />
       </div>
+
+      {/* NPS Donut + Customer Profile */}
+      {current.total > 0 && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <NpsDonut promoters={current.promoters} neutrals={current.neutrals} detractors={current.detractors} nps={current.nps} title="NPS da Semana" />
+          <CustomerProfile newCount={newCount} recurringCount={recurringCount} />
+        </div>
+      )}
+
+      {/* NPS per Question */}
+      {current.total > 0 && currentEvals && (
+        <NpsPerQuestion evaluations={currentEvals} questionTexts={questionTexts} />
+      )}
 
       {/* Comparative bar chart */}
       <Card>
@@ -191,14 +210,7 @@ export default function ReportWeekly() {
               <XAxis dataKey="data" fontSize={12} />
               <YAxis domain={[0, 5]} fontSize={12} />
               <Tooltip content={<CustomTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="satisfação"
-                name="Satisfação"
-                stroke="hsl(var(--primary))"
-                fill="hsl(var(--primary))"
-                fillOpacity={0.15}
-              />
+              <Area type="monotone" dataKey="satisfação" name="Satisfação" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.15} />
             </AreaChart>
           </ResponsiveContainer>
         </CardContent>
