@@ -16,6 +16,8 @@ export interface CampaignQuestion {
   id: string;
   campaign_id: string;
   question_text: string;
+  question_type: string;
+  options: string[] | null;
   order_position: number;
   is_active: boolean;
   created_at: string;
@@ -141,10 +143,14 @@ export const useCampaignQuestions = (campaignId: string) => {
 export const useCreateCampaignQuestion = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { campaign_id: string; question_text: string; order_position: number }) => {
+    mutationFn: async (data: { campaign_id: string; question_text: string; order_position: number; question_type?: string; options?: string[] }) => {
+      const { question_type, options, ...rest } = data;
+      const insertData: any = { ...rest };
+      if (question_type) insertData.question_type = question_type;
+      if (options) insertData.options = options;
       const { error } = await supabase
         .from("evaluation_campaign_questions")
-        .insert(data);
+        .insert(insertData);
       if (error) throw error;
     },
     onSuccess: (_, vars) => {
@@ -282,7 +288,7 @@ export const useSubmitCampaignEvaluation = () => {
       customerName: string;
       customerWhatsapp: string;
       customerBirthDate: string;
-      answers: { questionId: string; score: number; comment?: string }[];
+      answers: { questionId: string; score: number; comment?: string; selectedOptions?: string[] }[];
       npsScore: number;
     }) => {
       const evaluationId = crypto.randomUUID();
@@ -306,6 +312,7 @@ export const useSubmitCampaignEvaluation = () => {
         question_id: a.questionId,
         score: a.score,
         comment: a.comment || null,
+        selected_options: a.selectedOptions || null,
       }));
 
       const { error: answersError } = await supabase
