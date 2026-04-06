@@ -49,9 +49,8 @@ export function RoulettePreview({ prizes, size = 200 }: RoulettePreviewProps) {
     const needsFlip = midAngleDeg > 90 && midAngleDeg < 270;
     if (needsFlip) textRotation += 180;
 
-    const fontSize = Math.max(7, Math.min(11, s.deg / 4));
-    const maxChars = Math.max(8, Math.floor(s.deg / 5));
-    const label = s.name.length > maxChars ? s.name.slice(0, maxChars - 1) + "…" : s.name;
+    const fontSize = Math.max(7, Math.min(11, equalDeg / 4));
+    const label = s.name;
 
     return (
       <g key={s.id}>
