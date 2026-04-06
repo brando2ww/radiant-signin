@@ -44,6 +44,27 @@ export default function ReportDaily() {
   const [page, setPage] = useState(0);
   const pageSize = 10;
 
+  // Hooks must be before early return
+  const { newCount, recurringCount } = useMemo(() => {
+    if (!evaluations || !allTimeWhatsapps) return { newCount: 0, recurringCount: 0 };
+    let n = 0, r = 0;
+    evaluations.forEach(e => {
+      const firstDate = allTimeWhatsapps.get(e.customer_whatsapp);
+      if (firstDate && e.evaluation_date <= firstDate) n++;
+      else r++;
+    });
+    return { newCount: n, recurringCount: r };
+  }, [evaluations, allTimeWhatsapps]);
+
+  const tableData = useMemo(() => {
+    return (evaluations || []).map(e => {
+      const avg = e.evaluation_answers.length > 0
+        ? e.evaluation_answers.reduce((s, a) => s + a.score, 0) / e.evaluation_answers.length
+        : 0;
+      return { ...e, avgScore: avg };
+    });
+  }, [evaluations]);
+
   if (isLoading) {
     return (
       <div className="p-4 md:p-6 space-y-6">
@@ -80,28 +101,6 @@ export default function ReportDaily() {
     hora: `${String(i).padStart(2, "0")}h`,
     respostas: hourlyMap.get(i) || 0,
   })).filter((_, i) => i >= 6 && i <= 23);
-
-  // New vs Recurring
-  const { newCount, recurringCount } = useMemo(() => {
-    if (!evaluations || !allTimeWhatsapps) return { newCount: 0, recurringCount: 0 };
-    let n = 0, r = 0;
-    evaluations.forEach(e => {
-      const firstDate = allTimeWhatsapps.get(e.customer_whatsapp);
-      if (firstDate && e.evaluation_date <= firstDate) n++;
-      else r++;
-    });
-    return { newCount: n, recurringCount: r };
-  }, [evaluations, allTimeWhatsapps]);
-
-  // Paginated table
-  const tableData = useMemo(() => {
-    return (evaluations || []).map(e => {
-      const avg = e.evaluation_answers.length > 0
-        ? e.evaluation_answers.reduce((s, a) => s + a.score, 0) / e.evaluation_answers.length
-        : 0;
-      return { ...e, avgScore: avg };
-    });
-  }, [evaluations]);
 
   const totalPages = Math.ceil(tableData.length / pageSize);
   const pagedData = tableData.slice(page * pageSize, (page + 1) * pageSize);
