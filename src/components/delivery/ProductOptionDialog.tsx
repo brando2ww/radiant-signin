@@ -180,7 +180,7 @@ export const ProductOptionDialog = ({
       if (!val) setOpenPopoverIndex(null);
       onOpenChange(val);
     }}>
-      <DialogContent ref={dialogContentRef} className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent ref={dialogContentRef} hideOverlay className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{option ? "Editar Opção" : "Nova Opção"}</DialogTitle>
         </DialogHeader>
