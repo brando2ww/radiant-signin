@@ -4,14 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ExternalLink, CheckCircle2 } from "lucide-react";
+import { ExternalLink, CheckCircle2, RefreshCw } from "lucide-react";
 import { useIFoodIntegration } from "@/hooks/use-ifood-integration";
 import { IFoodConnectionDialog } from "@/components/pdv/settings/IFoodConnectionDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function IFoodIntegrationCard() {
   const [showConnectionDialog, setShowConnectionDialog] = useState(false);
-  const { settings, isLoading, isConnected, disconnectIFood, updateSettings } = useIFoodIntegration();
+  const { settings, isLoading, isConnected, disconnectIFood, updateSettings, syncReviews } = useIFoodIntegration();
 
   if (isLoading) {
     return (
