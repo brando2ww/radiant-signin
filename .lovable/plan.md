@@ -1,40 +1,63 @@
 
 
-## Fluxo de entrega em etapas: Tipo → CEP → Formulário
+## Mapa de Calor de Pedidos por CEP — Nova página no Delivery
 
-### Problema atual
-Ao clicar "Continuar" com Delivery selecionado, o sistema mostra diretamente a lista de endereços ou o formulário completo. O usuário quer um fluxo em etapas:
-1. Escolher Delivery ou Retirada
-2. Se Delivery, pedir o CEP primeiro (sozinho)
-3. Após digitar o CEP e buscar, mostrar o formulário com campos preenchidos
+### Resumo
+Criar uma nova página "Mapa de Calor" dentro do módulo Delivery que exibe um mapa interativo com heatmap baseado nos CEPs dos pedidos, além de um relatório com ranking de CEPs/bairros e métricas de concentração.
 
-### Implementação
+### Dados disponíveis
+A tabela `delivery_orders` tem `delivery_address_id` que referencia `delivery_addresses`, que contém `zip_code`, `neighborhood`, `city`, e `state`. Para construir o heatmap, vamos:
+1. Buscar pedidos com seus endereços (join)
+2. Agrupar por CEP
+3. Converter CEPs em coordenadas via API ViaCEP + geocoding simples (centro do CEP)
 
-**Arquivo: `src/components/public-menu/checkout/DeliveryAddress.tsx`**
+### Abordagem do mapa
+Usar **Leaflet** (via `react-leaflet`) com plugin de heatmap (`leaflet.heat`). É leve, gratuito, sem necessidade de API key (usa OpenStreetMap tiles). Alternativa seria Google Maps, mas requer chave de API.
 
-Adicionar uma etapa intermediária de CEP entre a seleção de tipo e o formulário/lista de endereços:
+### Arquivos a criar/modificar
 
-- Criar estado `step` com valores: `"type"` | `"cep"` | `"address"` | `"form"`
-- **Etapa "type"** (atual): radio Delivery / Retirar no Local + botão Continuar
-  - Se pickup → confirma direto
-  - Se delivery e já tem endereços salvos → vai para etapa "address" (lista)
-  - Se delivery e não tem endereços → vai para etapa "cep"
-- **Etapa "cep"** (nova): campo CEP isolado com `CEPInput` + `useCEPLookup`
-  - Ao completar 8 dígitos, busca dados automaticamente
-  - Botão "Continuar" (habilitado quando CEP válido foi buscado)
-  - Ao continuar, passa os dados do CEP para o `AddressForm`
-- **Etapa "address"**: lista de endereços existentes + botão "Novo Endereço" (que leva à etapa "cep")
-- **Etapa "form"**: `AddressForm` recebendo dados pré-preenchidos do CEP
+**1. Novo: `src/pages/pdv/delivery/HeatMap.tsx`**
+- Página principal com título, filtros de período (date range picker) e dois painéis:
+  - **Mapa**: componente Leaflet com layer de heatmap
+  - **Relatório**: tabela com ranking de CEPs (quantidade de pedidos, receita, ticket médio, % do total)
+- Cards de resumo: total de CEPs atendidos, CEP com mais pedidos, bairro mais frequente, raio de cobertura
 
-**Arquivo: `src/components/public-menu/checkout/AddressForm.tsx`**
+**2. Novo: `src/hooks/use-delivery-heatmap.ts`**
+- Hook que busca pedidos com join na `delivery_addresses` para pegar `zip_code`, `neighborhood`, `city`
+- Agrupa por CEP: conta pedidos, soma receita
+- Retorna dados formatados para o mapa e para a tabela
 
-- Adicionar props opcionais para valores iniciais: `initialZipCode`, `initialStreet`, `initialNeighborhood`, `initialCity`, `initialState`
-- Inicializar os estados com esses valores quando fornecidos
-- O CEP já vem preenchido e os campos auto-completados; usuário só precisa adicionar número, complemento, etc.
+**3. Novo: `src/components/delivery/heatmap/DeliveryHeatMap.tsx`**
+- Componente do mapa Leaflet com heatmap layer
+- Recebe array de `{ lat, lng, intensity }` e renderiza o mapa centrado na média das coordenadas
+- Usa geocoding por CEP (ViaCEP retorna IBGE code, usaremos uma abordagem de cache/lookup para converter CEPs em lat/lng via API pública do IBGE ou nominatim)
+
+**4. Novo: `src/components/delivery/heatmap/CEPRankingTable.tsx`**
+- Tabela com colunas: CEP, Bairro, Cidade, Qtd Pedidos, Receita, Ticket Médio, % Total
+- Ordenável por coluna
+- Barra de progresso visual na coluna de quantidade
+
+**5. Modificar: `src/pages/PDV.tsx`**
+- Adicionar rota `delivery/mapa-calor` apontando para `HeatMap`
+
+**6. Modificar: `src/components/pdv/PDVHeaderNav.tsx`**
+- Adicionar item "Mapa de Calor" na seção Delivery com ícone `MapPin`
+
+### Geocoding de CEPs
+Para converter CEPs em coordenadas geográficas:
+- Usar a API gratuita do Nominatim (OpenStreetMap): `https://nominatim.openstreetmap.org/search?postalcode={cep}&country=BR&format=json`
+- Fazer cache dos resultados por CEP para evitar chamadas repetidas
+- Rate limit: máximo 1 req/segundo — processar em sequência com delay
+- Fallback: se não encontrar coordenadas, agrupar na tabela mas não plotar no mapa
+
+### Dependências a instalar
+- `react-leaflet` + `leaflet` (mapa base)
+- `leaflet.heat` (plugin de heatmap)
+- Types: `@types/leaflet`
 
 ### Fluxo do usuário
-1. Seleciona "Delivery" → clica Continuar
-2. Vê tela com campo CEP → digita CEP → dados são buscados automaticamente
-3. Clica Continuar → vê formulário com rua/bairro/cidade/estado já preenchidos
-4. Preenche número e complemento → salva
+1. Acessa Delivery → Mapa de Calor
+2. Vê o mapa com pontos de calor concentrados nos CEPs com mais pedidos
+3. Abaixo do mapa, vê cards de resumo e tabela com ranking detalhado
+4. Pode filtrar por período para analisar diferentes janelas de tempo
 
