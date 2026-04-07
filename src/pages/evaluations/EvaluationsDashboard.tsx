@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useEvaluationCampaigns } from "@/hooks/use-evaluation-campaigns";
 import { useCustomerEvaluations, useEvaluationStats, useExportEvaluations, EvaluationWithAnswers } from "@/hooks/use-customer-evaluations";
+import { format, subDays, startOfMonth } from "date-fns";
 import { useEvaluationQuestionTexts } from "@/hooks/use-evaluation-report-helpers";
 import { useDashboardCoupons, useBirthdayCount } from "@/hooks/use-dashboard-stats";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -160,6 +161,42 @@ export default function EvaluationsDashboard() {
 
       {/* NPS Criteria */}
       <NPSCriteriaSection criteria={criteriaStats} />
+
+      {/* NPS Suggestions from detractors/neutrals */}
+      {(() => {
+        const suggestions = (evaluations || [])
+          .filter((e: any) => e.nps_comment && e.nps_score !== null && e.nps_score <= 8)
+          .slice(0, 5);
+        if (suggestions.length === 0) return null;
+        return (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-amber-500" />
+                Sugestões de Detratores / Neutros
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {suggestions.map((e: any) => (
+                <div key={e.id} className="border rounded-lg p-3 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{e.customer_name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold ${e.nps_score <= 6 ? 'text-destructive' : 'text-amber-600'}`}>
+                        NPS: {e.nps_score}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {format(new Date(e.evaluation_date), "dd/MM/yyyy")}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{e.nps_comment}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Recent responses */}
       <RecentResponsesTable
