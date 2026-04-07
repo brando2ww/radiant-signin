@@ -99,7 +99,9 @@ export const DeliverySettings = () => {
   };
 
   const handleRemoveZone = (index: number) => {
-    setZones(zones.filter((_, i) => i !== index));
+    const updatedZones = zones.filter((_, i) => i !== index);
+    setZones(updatedZones);
+    updateSettings.mutate({ delivery_zones: updatedZones as any });
   };
 
   const handleSave = () => {
