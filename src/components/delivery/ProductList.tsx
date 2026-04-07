@@ -29,7 +29,7 @@ interface ProductListProps {
   categoryId: string | null;
 }
 
-const ProductListItem = ({ product, onEdit, onDuplicate }: { product: DeliveryProduct; onEdit: () => void; onDuplicate: () => void }) => {
+const ProductListItem = ({ product, onEdit, onDuplicate, onDelete }: { product: DeliveryProduct; onEdit: () => void; onDuplicate: () => void; onDelete: () => void }) => {
   const { data: options = [] } = useProductOptions(product.id);
   const updateProduct = useUpdateProduct();
 
