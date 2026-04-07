@@ -1,7 +1,13 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Copy, Edit, Trash2, Eye, EyeOff, Star, Settings2 } from "lucide-react";
+import { Copy, Edit, Trash2, Eye, EyeOff, Star, Settings2, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { DeliveryProduct, useUpdateProduct, useDeleteProduct, useCreateProduct } from "@/hooks/use-delivery-products";
 import { useProductOptions } from "@/hooks/use-product-options";
 import { useState } from "react";
