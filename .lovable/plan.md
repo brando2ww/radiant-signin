@@ -1,54 +1,35 @@
 
 
-## Melhorar Validação de Cupons: Lista + Busca por Nome/Telefone
+## Cards de NPS clicáveis com lista filtrada
 
-### Situação atual
-A página de Validação de Cupons só permite buscar pelo código exato do cupom. Não há lista de cupons disponíveis nem busca por cliente.
+### O que muda
+Ao clicar nos cards de Promotores, Neutros ou Detratores no Dashboard, o sistema irá abrir um Dialog/Modal com a lista dos clientes daquela categoria, permitindo visualização rápida sem sair da página.
 
-### Solução
+### Implementação
 
-**1. Hook `use-all-prize-wins.ts`** — Adicionar busca por nome/telefone
-- Nova mutation `useSearchCouponsByCustomer` que busca em `campaign_prize_wins` usando `ilike` no `customer_name` ou `eq` no `customer_whatsapp` (com formatação)
-- Retorna array de resultados
+**1. `DashboardKPICards.tsx`** — Tornar os 3 cards clicáveis
+- Adicionar prop `onNpsClick?: (category: "promoters" | "neutrals" | "detractors") => void`
+- Aplicar `cursor-pointer hover:shadow-md transition` nos cards de NPS
+- Chamar `onNpsClick` ao clicar em cada card
 
-**2. Página `CouponsValidation.tsx`** — Expandir com 2 seções:
+**2. `EvaluationsDashboard.tsx`** — Gerenciar estado do dialog
+- Adicionar estado `npsFilter: "promoters" | "neutrals" | "detractors" | null`
+- Filtrar `evaluations` por `nps_score` conforme a categoria clicada:
+  - Promotores: `nps_score >= 9`
+  - Neutros: `nps_score >= 7 && nps_score <= 8`
+  - Detratores: `nps_score <= 6`
+- Passar `onNpsClick` para `DashboardKPICards`
+- Renderizar novo componente `NPSDetailDialog`
 
-**Seção 1 (existente, melhorada): Buscar Cupom**
-- Manter busca por código
-- Adicionar segundo campo de busca por nome ou telefone do cliente
-- Ao buscar por cliente, exibir lista de cupons encontrados (pode ter múltiplos)
-
-**Seção 2 (nova): Lista de Cupons Disponíveis**
-- Card abaixo da busca com tabela/lista de todos os cupons ativos (não resgatados, não expirados)
-- Colunas: Código, Cliente, WhatsApp, Prêmio, Validade, Status, Ação (Resgatar)
-- Filtro de status: Todos / Ativos / Resgatados / Expirados
-- Usar `useAllPrizeWins` já existente (já traz todos os cupons com detalhes)
-- Paginação ou scroll para listas grandes
-
-### Fluxo
-```text
-┌─────────────────────────────────────────────┐
-│  Validação de Cupons                        │
-│                                             │
-│  ┌─ Buscar Cupom ────────────────────────┐  │
-│  │ [Código do cupom...        ] [Validar]│  │
-│  │ [Nome ou telefone do cliente] [Buscar]│  │
-│  │                                       │  │
-│  │ (resultados da busca aqui)            │  │
-│  └───────────────────────────────────────┘  │
-│                                             │
-│  ┌─ Cupons Disponíveis ─────────────────┐   │
-│  │ [Todos ▼] [🔍 Filtrar...]            │   │
-│  │                                       │  │
-│  │ Código  | Cliente | Prêmio | Status   │  │
-│  │ ABC-123 | João    | Pizza  | Ativo  ▶ │  │
-│  │ DEF-456 | Maria   | Refri  | Resgat.  │  │
-│  │ ...                                   │  │
-│  └───────────────────────────────────────┘  │
-└─────────────────────────────────────────────┘
-```
+**3. Novo componente `NPSDetailDialog.tsx`** (`src/components/evaluations/dashboard/`)
+- Dialog com título dinâmico ("Promotores" / "Neutros" / "Detratores")
+- Tabela com colunas: Nome, WhatsApp, NPS, Comentário, Data
+- Link para WhatsApp no telefone
+- Busca por nome/telefone
+- Exibir `nps_comment` quando disponível (especialmente para detratores/neutros)
 
 ### Arquivos alterados
-1. **`src/hooks/use-all-prize-wins.ts`** — Adicionar `useSearchCouponsByCustomer` (busca por nome/telefone via `ilike`/`or`)
-2. **`src/pages/pdv/evaluations/coupons/CouponsValidation.tsx`** — Adicionar campo de busca por cliente, lista completa de cupons com filtros e ação de resgate inline
+1. `src/components/evaluations/dashboard/DashboardKPICards.tsx` — adicionar prop `onNpsClick` e cursor pointer
+2. `src/pages/evaluations/EvaluationsDashboard.tsx` — estado do filtro + renderizar dialog
+3. **Novo**: `src/components/evaluations/dashboard/NPSDetailDialog.tsx` — dialog com lista filtrada
 
