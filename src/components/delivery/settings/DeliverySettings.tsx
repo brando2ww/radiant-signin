@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Loader2, MapPin } from "lucide-react";
+import { Plus, Trash2, Loader2, MapPin, Settings2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   useDeliverySettings,
@@ -17,6 +17,7 @@ import { useIBGEStates, useIBGECities } from "@/hooks/use-ibge-lookup";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { ExcludedZones, ExcludedCEP } from "./ExcludedZones";
 import { NeighborhoodCombobox } from "./NeighborhoodCombobox";
+import { NeighborhoodSelectorModal } from "./NeighborhoodSelectorModal";
 
 export const DeliverySettings = () => {
   const { data: settings } = useDeliverySettings();
@@ -35,6 +36,7 @@ export const DeliverySettings = () => {
   const [selectedCityCode, setSelectedCityCode] = useState<number | undefined>();
   const [coveredCity, setCoveredCity] = useState<CoveredCity | null>(null);
   const [excludedCeps, setExcludedCeps] = useState<ExcludedCEP[]>([]);
+  const [neighborhoodModalOpen, setNeighborhoodModalOpen] = useState(false);
 
   const { cities, isLoading: isLoadingCities } = useIBGECities(selectedUF);
 
@@ -65,6 +67,17 @@ export const DeliverySettings = () => {
     const city = cities.find((c) => c.nome === cityName);
     setSelectedCityCode(city?.id);
     setCoveredCity({ uf: selectedUF, city: cityName, ibge_code: city?.id });
+    setTimeout(() => setNeighborhoodModalOpen(true), 0);
+  };
+
+  const handleNeighborhoodConfirm = (selected: string[]) => {
+    const fee = Number(defaultDeliveryFee) || 5;
+    const existingMap = new Map(zones.map((z) => [z.neighborhood, z.fee]));
+    const newZones = selected.map((name) => ({
+      neighborhood: name,
+      fee: existingMap.get(name) ?? fee,
+    }));
+    setZones(newZones);
   };
 
   const handleRemoveCity = () => {
@@ -191,10 +204,14 @@ export const DeliverySettings = () => {
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="secondary" className="text-sm py-1 px-3">
                 📍 {coveredCity.city}/{coveredCity.uf}
               </Badge>
+              <Button size="sm" variant="outline" onClick={() => setNeighborhoodModalOpen(true)}>
+                <Settings2 className="h-4 w-4 mr-1" />
+                Gerenciar bairros
+              </Button>
               <Button size="sm" variant="ghost" onClick={handleRemoveCity}>
                 Alterar cidade
               </Button>
