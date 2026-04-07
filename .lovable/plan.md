@@ -1,51 +1,54 @@
 
 
-## Sugestão Automática para NPS Baixo + Exibição no Dashboard
+## Melhorar Validação de Cupons: Lista + Busca por Nome/Telefone
 
-### Problema
-Quando o cliente dá uma nota NPS baixa (detrator: 0-6) ou neutra (7-8), não há campo para ele explicar o motivo. Essa informação é valiosa para melhoria do negócio.
+### Situação atual
+A página de Validação de Cupons só permite buscar pelo código exato do cupom. Não há lista de cupons disponíveis nem busca por cliente.
 
 ### Solução
 
-#### 1. Migração: Adicionar coluna `nps_comment` na tabela `customer_evaluations`
-```sql
-ALTER TABLE public.customer_evaluations
-  ADD COLUMN nps_comment text;
+**1. Hook `use-all-prize-wins.ts`** — Adicionar busca por nome/telefone
+- Nova mutation `useSearchCouponsByCustomer` que busca em `campaign_prize_wins` usando `ilike` no `customer_name` ou `eq` no `customer_whatsapp` (com formatação)
+- Retorna array de resultados
+
+**2. Página `CouponsValidation.tsx`** — Expandir com 2 seções:
+
+**Seção 1 (existente, melhorada): Buscar Cupom**
+- Manter busca por código
+- Adicionar segundo campo de busca por nome ou telefone do cliente
+- Ao buscar por cliente, exibir lista de cupons encontrados (pode ter múltiplos)
+
+**Seção 2 (nova): Lista de Cupons Disponíveis**
+- Card abaixo da busca com tabela/lista de todos os cupons ativos (não resgatados, não expirados)
+- Colunas: Código, Cliente, WhatsApp, Prêmio, Validade, Status, Ação (Resgatar)
+- Filtro de status: Todos / Ativos / Resgatados / Expirados
+- Usar `useAllPrizeWins` já existente (já traz todos os cupons com detalhes)
+- Paginação ou scroll para listas grandes
+
+### Fluxo
+```text
+┌─────────────────────────────────────────────┐
+│  Validação de Cupons                        │
+│                                             │
+│  ┌─ Buscar Cupom ────────────────────────┐  │
+│  │ [Código do cupom...        ] [Validar]│  │
+│  │ [Nome ou telefone do cliente] [Buscar]│  │
+│  │                                       │  │
+│  │ (resultados da busca aqui)            │  │
+│  └───────────────────────────────────────┘  │
+│                                             │
+│  ┌─ Cupons Disponíveis ─────────────────┐   │
+│  │ [Todos ▼] [🔍 Filtrar...]            │   │
+│  │                                       │  │
+│  │ Código  | Cliente | Prêmio | Status   │  │
+│  │ ABC-123 | João    | Pizza  | Ativo  ▶ │  │
+│  │ DEF-456 | Maria   | Refri  | Resgat.  │  │
+│  │ ...                                   │  │
+│  └───────────────────────────────────────┘  │
+└─────────────────────────────────────────────┘
 ```
 
-#### 2. Formulário público (`src/pages/PublicEvaluation.tsx`)
-- Adicionar estado `npsComment`
-- Após o usuário selecionar NPS ≤ 8 (neutro ou detrator), exibir automaticamente um `Textarea` com animação fade-in:
-  - Placeholder: "O que podemos melhorar?" 
-  - Label: "Deixe uma sugestão (opcional)"
-  - maxLength: 500
-- Passar `npsComment` no `handleSubmit`
-
-#### 3. Mutação de envio (`src/hooks/use-evaluation-campaigns.ts`)
-- Adicionar `npsComment?: string` no tipo do `data`
-- Incluir `nps_comment: data.npsComment || null` no insert de `customer_evaluations`
-
-#### 4. Dashboard — Exibição dos comentários
-
-**`src/hooks/use-customer-evaluations.ts`**
-- Incluir `nps_comment` no select da query de avaliações
-- Adicionar ao tipo `EvaluationWithAnswers`
-
-**`src/components/evaluations/dashboard/RecentResponsesTable.tsx`**
-- Exibir ícone de balão de comentário quando há `nps_comment`
-- No detalhe/tooltip, mostrar o comentário NPS
-
-**`src/components/pdv/evaluations/CampaignLeads.tsx`** (se aplicável)
-- Mostrar coluna de sugestão NPS na listagem de leads
-
-**Nova seção no Dashboard (`src/pages/evaluations/EvaluationsDashboard.tsx`)**
-- Card "Sugestões de Detratores/Neutros" listando os comentários NPS mais recentes com nome do cliente, nota e data
-
 ### Arquivos alterados
-1. **Migração SQL** — nova coluna `nps_comment`
-2. **`src/pages/PublicEvaluation.tsx`** — textarea condicional após NPS ≤ 8
-3. **`src/hooks/use-evaluation-campaigns.ts`** — incluir `nps_comment` no insert
-4. **`src/hooks/use-customer-evaluations.ts`** — incluir `nps_comment` no select/tipo
-5. **`src/components/evaluations/dashboard/RecentResponsesTable.tsx`** — exibir comentário NPS
-6. **`src/pages/evaluations/EvaluationsDashboard.tsx`** — card de sugestões recentes
+1. **`src/hooks/use-all-prize-wins.ts`** — Adicionar `useSearchCouponsByCustomer` (busca por nome/telefone via `ilike`/`or`)
+2. **`src/pages/pdv/evaluations/coupons/CouponsValidation.tsx`** — Adicionar campo de busca por cliente, lista completa de cupons com filtros e ação de resgate inline
 
