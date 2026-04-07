@@ -97,3 +97,24 @@ export async function searchStreetByName(
     return [];
   }
 }
+
+const SEARCH_TERMS = ["Rua", "Avenida", "Travessa", "Alameda", "Estrada", "Rodovia", "Praça"];
+
+export async function fetchAllNeighborhoods(
+  uf: string,
+  city: string
+): Promise<string[]> {
+  if (!uf || !city) return [];
+  try {
+    const results = await Promise.all(
+      SEARCH_TERMS.map((term) => searchStreetByName(uf, city, term))
+    );
+    const allBairros = results.flat().map((r) => r.bairro).filter(Boolean);
+    const unique = [...new Set(allBairros)].sort((a, b) =>
+      a.localeCompare(b, "pt-BR")
+    );
+    return unique;
+  } catch {
+    return [];
+  }
+}
