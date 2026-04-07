@@ -69,6 +69,7 @@ export default function PublicEvaluation() {
   const [birthDate, setBirthDate] = useState("");
   const [answers, setAnswers] = useState<Record<string, { score: number; comment: string; selectedOptions?: string[] }>>({});
   const [npsScore, setNpsScore] = useState<number | null>(null);
+  const [npsComment, setNpsComment] = useState("");
 
   const { settings: businessSettings } = usePublicBusinessSettings((campaign as any)?.user_id || "");
 
@@ -193,6 +194,7 @@ export default function PublicEvaluation() {
         customerWhatsapp: phone,
         customerBirthDate: birthDate,
         npsScore,
+        npsComment: npsScore !== null && npsScore <= 8 ? npsComment.trim() : undefined,
         answers: questions.map((q) => ({
           questionId: q.id,
           score: answers[q.id]?.score || 0,
@@ -492,6 +494,20 @@ export default function PublicEvaluation() {
                 <span>😞 Nada provável</span>
                 <span>😍 Muito provável</span>
               </div>
+              {npsScore !== null && npsScore <= 8 && (
+                <div className="space-y-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <Label className="text-xs text-muted-foreground">
+                    Deixe uma sugestão (opcional)
+                  </Label>
+                  <Textarea
+                    value={npsComment}
+                    onChange={(e) => setNpsComment(e.target.value)}
+                    placeholder="O que podemos melhorar?"
+                    maxLength={500}
+                    className="min-h-[70px] rounded-xl text-sm border-border/40 bg-white/50 dark:bg-background/50"
+                  />
+                </div>
+              )}
             </section>
 
             {/* SECTION 3: Personal Data (last — reduces friction) */}

@@ -9,6 +9,7 @@ export interface CustomerEvaluation {
   customer_whatsapp: string;
   customer_birth_date: string;
   nps_score: number | null;
+  nps_comment?: string | null;
   evaluation_date: string;
   created_at: string;
   campaign_id?: string | null;
@@ -45,6 +46,7 @@ export const useCustomerEvaluations = (filters?: { startDate?: string; endDate?:
             comment
           )
         `)
+        // nps_comment is included via * selector
         .eq("user_id", user.id)
         .order("evaluation_date", { ascending: false });
 
