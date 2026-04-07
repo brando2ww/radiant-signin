@@ -174,6 +174,7 @@ export const ProductList = ({ products, categoryId }: ProductListProps) => {
               product={product}
               onEdit={() => setEditingProduct(product)}
               onDuplicate={() => handleDuplicate(product)}
+              onDelete={() => setDeletingProduct(product)}
             />
           ))}
           {products.length === 0 && (
