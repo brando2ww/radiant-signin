@@ -289,6 +289,15 @@ export const DeliverySettings = () => {
           Salvar Configurações
         </Button>
       </div>
+
+      <NeighborhoodSelectorModal
+        open={neighborhoodModalOpen}
+        onOpenChange={setNeighborhoodModalOpen}
+        uf={coveredCity?.uf || selectedUF}
+        city={coveredCity?.city || selectedCity}
+        existingNeighborhoods={zones.map((z) => z.neighborhood)}
+        onConfirm={handleNeighborhoodConfirm}
+      />
     </div>
   );
 };
