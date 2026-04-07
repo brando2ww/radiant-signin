@@ -11,8 +11,8 @@ interface Evaluation {
   id: string;
   customer_name: string;
   customer_whatsapp: string;
-  nps_score: number | null;
-  nps_comment: string | null;
+  nps_score?: number | null;
+  nps_comment?: string | null;
   evaluation_date: string;
   created_at: string;
 }
