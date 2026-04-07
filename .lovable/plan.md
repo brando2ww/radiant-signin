@@ -1,49 +1,36 @@
 
 
-## Sistema de Cobertura de Entrega por CEP (Híbrido)
+## Autocomplete de Bairros via ViaCEP
 
-### Visão Geral
-Substituir o sistema atual de "Zonas de Entrega" (bairros manuais) por um sistema híbrido com 3 seções:
+### Problema
+O campo de bairro é um input de texto livre — não sugere bairros reais da cidade selecionada.
 
-1. **Cobertura por Cidade/Bairros** — Selecionar UF → Cidade (API IBGE), depois adicionar bairros com taxa individual
-2. **Exclusões** — Bloquear CEPs específicos ou buscar ruas pelo nome (via ViaCEP) para impedir entregas
+### Solução
+Substituir o `Input` de bairro por um **Combobox com autocomplete** que busca bairros reais via ViaCEP. Quando o usuário digita 3+ caracteres, faz uma busca `viacep.com.br/ws/{UF}/{cidade}/{texto}/json/` e extrai os valores únicos do campo `bairro` dos resultados como sugestões.
 
-### APIs Externas (gratuitas, sem chave)
-- **IBGE**: `servicodados.ibge.gov.br/api/v1/localidades/estados/{UF}/municipios` — lista municípios por estado
-- **ViaCEP**: `viacep.com.br/ws/{UF}/{cidade}/{rua}/json/` — busca ruas por nome (retorna CEP, bairro, logradouro)
+### Arquivos alterados
 
-### Mudanças no Banco de Dados
-**Migração** — Adicionar 2 colunas JSONB na tabela `delivery_settings`:
-- `excluded_ceps` (JSONB, default `[]`) — Lista de objetos `{ cep, street, neighborhood, reason? }`
-- `covered_city` (JSONB, default `null`) — Objeto `{ uf, city, ibge_code }` para a cidade selecionada
+**1. `src/hooks/use-ibge-lookup.ts`** — Nova função `searchNeighborhoods`
+- Recebe `uf`, `city`, `query` (texto digitado)
+- Busca ViaCEP por rua (`/ws/{UF}/{city}/{query}/json/`)
+- Extrai valores únicos de `bairro` dos resultados
+- Retorna lista de strings (nomes de bairros)
 
-O campo `delivery_zones` existente continua sendo usado para bairros com taxas.
+**2. `src/components/delivery/settings/NeighborhoodCombobox.tsx`** (novo)
+- Componente com input + dropdown de sugestões
+- Debounce de 400ms no input antes de buscar
+- Mostra loading spinner durante busca
+- Lista de bairros filtrados como opções clicáveis
+- Ao selecionar, preenche o valor no input
+- Permite também digitar nome manualmente (caso não encontre)
 
-### Mudanças na Interface (`DeliverySettings.tsx`)
+**3. `src/components/delivery/settings/DeliverySettings.tsx`**
+- Substituir o `<Input placeholder="Nome do bairro">` (linha 232-235) pelo novo `<NeighborhoodCombobox>`
+- Passar `uf` e `city` da cidade selecionada como props
 
-**Card 1 — Configurações Gerais** (mantém igual)
-
-**Card 2 — Área de Cobertura** (substitui "Zonas de Entrega")
-- Select de UF (27 estados) → Select de Cidade (busca IBGE ao selecionar UF)
-- Badge mostrando a cidade selecionada
-- Abaixo: lista de bairros com taxa (mesmo sistema atual, mas agora contextualizado pela cidade)
-- Input para adicionar bairro + taxa
-
-**Card 3 — Exclusões de Entrega** (novo)
-- Duas formas de adicionar exclusão:
-  - **Por CEP**: Input com máscara CEP → ao digitar 8 dígitos, busca ViaCEP e mostra endereço completo → confirmar bloqueio
-  - **Por Rua**: Input de busca de rua → seleciona cidade configurada → busca ViaCEP por nome → lista resultados → selecionar ruas para bloquear (adiciona todos os CEPs daquela rua)
-- Lista de exclusões com chips removíveis mostrando CEP + rua/bairro
-- Campo opcional de motivo por exclusão
-
-### Arquivos Alterados
-
-1. **Migração SQL** — Adicionar `excluded_ceps` e `covered_city` em `delivery_settings`
-2. **`src/hooks/use-delivery-settings.ts`** — Expandir interfaces `DeliverySettings` com novos campos; parsear JSON
-3. **`src/hooks/use-ibge-lookup.ts`** (novo) — Hook para buscar estados e municípios via API IBGE
-4. **`src/components/delivery/settings/DeliverySettings.tsx`** — Refatorar UI com os 3 cards: Configurações Gerais, Área de Cobertura (UF/cidade + bairros), Exclusões (CEP + rua)
-5. **`src/components/delivery/settings/ExcludedZones.tsx`** (novo) — Componente para gerenciar a lista de CEPs/ruas bloqueados
-
-### Fluxo de Validação no Checkout
-O campo `delivery_zones` (bairros atendidos) e `excluded_ceps` (bloqueios) serão verificados no checkout público quando o cliente informa o CEP de entrega — se o CEP está na lista de exclusão ou o bairro não está coberto, exibe mensagem de "Endereço fora da área de entrega".
+### Fluxo do usuário
+1. Seleciona cidade (já implementado)
+2. Começa a digitar o nome do bairro → após 3 caracteres, aparece dropdown com sugestões reais
+3. Clica na sugestão ou continua digitando manualmente
+4. Define a taxa e clica em `+` para adicionar
 
