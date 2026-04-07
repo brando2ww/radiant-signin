@@ -64,39 +64,39 @@ const ProductListItem = ({ product, onEdit, onDuplicate, onDelete }: { product: 
                 </p>
               )}
             </div>
-            <div className="flex gap-1 shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
               {product.is_featured && (
                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
               )}
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8"
-                onClick={handleToggleAvailability}
-              >
-                {product.is_available ? (
-                  <Eye className="h-4 w-4" />
-                ) : (
-                  <EyeOff className="h-4 w-4" />
-                )}
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8"
-                onClick={onDuplicate}
-                title="Duplicar"
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-8 w-8"
-                onClick={onEdit}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="icon" variant="ghost" className="h-8 w-8">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={onEdit}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onDuplicate}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Duplicar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleToggleAvailability}>
+                    {product.is_available ? (
+                      <EyeOff className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Eye className="mr-2 h-4 w-4" />
+                    )}
+                    {product.is_available ? "Ocultar" : "Mostrar"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Excluir
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
