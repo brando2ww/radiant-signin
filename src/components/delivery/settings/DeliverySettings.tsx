@@ -16,6 +16,7 @@ import {
 import { useIBGEStates, useIBGECities } from "@/hooks/use-ibge-lookup";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { ExcludedZones, ExcludedCEP } from "./ExcludedZones";
+import { NeighborhoodCombobox } from "./NeighborhoodCombobox";
 
 export const DeliverySettings = () => {
   const { data: settings } = useDeliverySettings();
@@ -229,10 +230,12 @@ export const DeliverySettings = () => {
               </div>
             )}
             <div className="flex gap-2">
-              <Input
-                placeholder="Nome do bairro"
+              <NeighborhoodCombobox
                 value={newZoneNeighborhood}
-                onChange={(e) => setNewZoneNeighborhood(e.target.value)}
+                onChange={setNewZoneNeighborhood}
+                uf={coveredCity?.uf || selectedUF}
+                city={coveredCity?.city || selectedCity}
+                className="flex-1"
               />
               <CurrencyInput
                 value={newZoneFee}
