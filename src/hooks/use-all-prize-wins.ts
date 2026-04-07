@@ -97,3 +97,45 @@ export const useLookupCoupon = () => {
     },
   });
 };
+
+export const useSearchCouponsByCustomer = () => {
+  return useMutation({
+    mutationFn: async (search: string) => {
+      const term = search.trim();
+      if (!term) throw new Error("Digite um nome ou telefone");
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      const { data: campaigns } = await supabase
+        .from("evaluation_campaigns")
+        .select("id, name")
+        .eq("user_id", user.id);
+      if (!campaigns?.length) return [];
+
+      const campaignIds = campaigns.map((c) => c.id);
+      const campaignMap = new Map(campaigns.map((c) => [c.id, c.name]));
+
+      const { data: prizes } = await supabase
+        .from("campaign_prizes")
+        .select("id, name")
+        .in("campaign_id", campaignIds);
+      const prizeMap = new Map((prizes || []).map((p) => [p.id, p.name]));
+
+      const { data: wins, error } = await supabase
+        .from("campaign_prize_wins")
+        .select("*")
+        .in("campaign_id", campaignIds)
+        .or(`customer_name.ilike.%${term}%,customer_whatsapp.ilike.%${term}%`)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+
+      return (wins || []).map((w) => ({
+        ...w,
+        prize_name: prizeMap.get(w.prize_id) || "Prêmio removido",
+        campaign_name: campaignMap.get(w.campaign_id) || "Campanha removida",
+      })) as PrizeWinWithDetails[];
+    },
+  });
+};
