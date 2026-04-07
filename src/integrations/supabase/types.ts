@@ -623,6 +623,7 @@ export type Database = {
           evaluation_date: string
           external_id: string | null
           id: string
+          nps_comment: string | null
           nps_score: number | null
           source: string
           user_id: string
@@ -636,6 +637,7 @@ export type Database = {
           evaluation_date?: string
           external_id?: string | null
           id?: string
+          nps_comment?: string | null
           nps_score?: number | null
           source?: string
           user_id: string
@@ -649,6 +651,7 @@ export type Database = {
           evaluation_date?: string
           external_id?: string | null
           id?: string
+          nps_comment?: string | null
           nps_score?: number | null
           source?: string
           user_id?: string
