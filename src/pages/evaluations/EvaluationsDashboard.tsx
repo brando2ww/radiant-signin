@@ -1,15 +1,16 @@
 import { useState, useMemo } from "react";
 import { useEvaluationCampaigns } from "@/hooks/use-evaluation-campaigns";
 import { useCustomerEvaluations, useEvaluationStats, useExportEvaluations, EvaluationWithAnswers } from "@/hooks/use-customer-evaluations";
-import { format, subDays, startOfMonth } from "date-fns";
 import { useEvaluationQuestionTexts } from "@/hooks/use-evaluation-report-helpers";
 import { useDashboardCoupons, useBirthdayCount } from "@/hooks/use-dashboard-stats";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { DateRange } from "react-day-picker";
 import { format, subDays, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { MessageSquare } from "lucide-react";
 import DashboardKPICards from "@/components/evaluations/dashboard/DashboardKPICards";
 import { FunnelChart, WeeklyResponsesChart } from "@/components/evaluations/dashboard/DashboardCharts";
 import NPSCriteriaSection from "@/components/evaluations/dashboard/NPSCriteriaSection";
