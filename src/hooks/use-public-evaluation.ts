@@ -47,16 +47,15 @@ export interface SubmitEvaluationData {
   customerWhatsapp: string;
   customerBirthDate: string;
   npsScore: number | null;
+  npsComment?: string;
   answers: { questionId: string; score: number }[];
 }
 
 export const useSubmitEvaluation = () => {
   return useMutation({
     mutationFn: async (data: SubmitEvaluationData) => {
-      // Gerar ID no cliente para evitar SELECT após INSERT
       const evaluationId = crypto.randomUUID();
 
-      // Inserir a avaliação sem SELECT
       const { error: evalError } = await supabase
         .from("customer_evaluations")
         .insert({
@@ -66,11 +65,11 @@ export const useSubmitEvaluation = () => {
           customer_whatsapp: data.customerWhatsapp,
           customer_birth_date: data.customerBirthDate,
           nps_score: data.npsScore,
-        });
+          nps_comment: data.npsComment || null,
+        } as any);
 
       if (evalError) throw evalError;
 
-      // Inserir as respostas usando o ID gerado
       const answers = data.answers.map(answer => ({
         evaluation_id: evaluationId,
         question_id: answer.questionId,

@@ -37,6 +37,8 @@ export default function RecentResponsesTable({ evaluations, onExportCSV, onViewD
   };
 
   const getLastComment = (e: EvaluationWithAnswers) => {
+    // Priorizar nps_comment, depois comentários das respostas
+    if ((e as any).nps_comment) return (e as any).nps_comment;
     const withComment = e.evaluation_answers.filter(a => a.comment);
     return withComment.length > 0 ? withComment[withComment.length - 1].comment : null;
   };

@@ -1,0 +1,1 @@
+ALTER TABLE public.customer_evaluations ADD COLUMN nps_comment text;

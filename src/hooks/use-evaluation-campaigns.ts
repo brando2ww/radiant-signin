@@ -306,6 +306,7 @@ export const useSubmitCampaignEvaluation = () => {
       customerBirthDate: string;
       answers: { questionId: string; score: number; comment?: string; selectedOptions?: string[] }[];
       npsScore: number;
+      npsComment?: string;
     }) => {
       const evaluationId = crypto.randomUUID();
 
@@ -319,7 +320,8 @@ export const useSubmitCampaignEvaluation = () => {
           customer_birth_date: data.customerBirthDate,
           campaign_id: data.campaignId,
           nps_score: data.npsScore,
-        });
+          nps_comment: data.npsComment || null,
+        } as any);
 
       if (evalError) throw evalError;
 
