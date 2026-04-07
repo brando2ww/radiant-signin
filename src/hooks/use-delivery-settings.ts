@@ -7,6 +7,19 @@ export interface DeliveryZone {
   fee: number;
 }
 
+export interface CoveredCity {
+  uf: string;
+  city: string;
+  ibge_code?: number;
+}
+
+export interface ExcludedCEP {
+  cep: string;
+  street: string;
+  neighborhood: string;
+  reason?: string;
+}
+
 export interface BusinessHours {
   [key: string]: {
     open: string;
@@ -35,6 +48,8 @@ export interface DeliverySettings {
   whatsapp_notifications: boolean;
   meta_pixel_id?: string | null;
   google_tag_id?: string | null;
+  covered_city: CoveredCity | null;
+  excluded_ceps: ExcludedCEP[];
   created_at: string;
   updated_at: string;
 }
@@ -56,12 +71,13 @@ export const useDeliverySettings = () => {
       
       if (!data) return null;
       
-      // Parse JSON fields
       return {
         ...data,
         delivery_zones: (data.delivery_zones as any) || [],
         business_hours: (data.business_hours as any) || {},
         blocked_dates: (data.blocked_dates as any) || [],
+        covered_city: (data.covered_city as any) || null,
+        excluded_ceps: (data.excluded_ceps as any) || [],
       } as DeliverySettings;
     },
   });
@@ -77,7 +93,6 @@ export const useCreateOrUpdateSettings = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Check if settings exist
       const { data: existing } = await supabase
         .from("delivery_settings")
         .select("id")
@@ -85,7 +100,6 @@ export const useCreateOrUpdateSettings = () => {
         .maybeSingle();
 
       if (existing) {
-        // Update
         const { data, error } = await supabase
           .from("delivery_settings")
           .update(settings as any)
@@ -96,7 +110,6 @@ export const useCreateOrUpdateSettings = () => {
         if (error) throw error;
         return data;
       } else {
-        // Create
         const { data, error } = await supabase
           .from("delivery_settings")
           .insert({ ...settings, user_id: user.id } as any)

@@ -1444,10 +1444,12 @@ export type Database = {
           auto_accept_orders: boolean | null
           blocked_dates: Json | null
           business_hours: Json | null
+          covered_city: Json | null
           created_at: string
           default_delivery_fee: number | null
           delivery_zones: Json | null
           estimated_preparation_time: number | null
+          excluded_ceps: Json | null
           google_tag_id: string | null
           id: string
           is_open: boolean | null
@@ -1467,10 +1469,12 @@ export type Database = {
           auto_accept_orders?: boolean | null
           blocked_dates?: Json | null
           business_hours?: Json | null
+          covered_city?: Json | null
           created_at?: string
           default_delivery_fee?: number | null
           delivery_zones?: Json | null
           estimated_preparation_time?: number | null
+          excluded_ceps?: Json | null
           google_tag_id?: string | null
           id?: string
           is_open?: boolean | null
@@ -1490,10 +1494,12 @@ export type Database = {
           auto_accept_orders?: boolean | null
           blocked_dates?: Json | null
           business_hours?: Json | null
+          covered_city?: Json | null
           created_at?: string
           default_delivery_fee?: number | null
           delivery_zones?: Json | null
           estimated_preparation_time?: number | null
+          excluded_ceps?: Json | null
           google_tag_id?: string | null
           id?: string
           is_open?: boolean | null
