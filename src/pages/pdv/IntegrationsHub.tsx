@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { ResponsivePageHeader } from "@/components/ui/responsive-page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Bike } from "lucide-react";
+import { ArrowRight, Bike, TabletSmartphone } from "lucide-react";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 
 import pagseguroLogo from "@/assets/integrations/pagseguro.png";
@@ -98,6 +98,14 @@ const integrations: IntegrationItem[] = [
     logo: velaraLogo,
     category: "Delivery",
     categoryColor: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  },
+  {
+    slug: "ativar-dispositivo",
+    name: "Ativar Dispositivo",
+    description: "Vincule este PDV ao seu estabelecimento usando o token de ativação gerado no painel administrativo.",
+    fallbackIcon: TabletSmartphone,
+    category: "Dispositivo",
+    categoryColor: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
   },
 ];
 

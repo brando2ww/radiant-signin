@@ -20,6 +20,7 @@ import { GetnetIntegrationCard } from "@/components/pdv/integrations/GetnetInteg
 import { RedeIntegrationCard } from "@/components/pdv/integrations/RedeIntegrationCard";
 import { WhatsAppConnectionCard } from "@/components/pdv/settings/WhatsAppConnectionCard";
 import { DeliveryProprioIntegrationCard } from "@/components/pdv/integrations/DeliveryProprioIntegrationCard";
+import { DeviceActivationCard } from "@/components/pdv/integrations/DeviceActivationCard";
 
 import ifoodLogo from "@/assets/integrations/ifood.png";
 import velaraLogo from "@/assets/logo_velara_preto.png";
@@ -266,6 +267,28 @@ const integrations: Record<string, IntegrationData> = {
     component: DeliveryProprioIntegrationCard,
     docsUrl: "/pdv/delivery/configuracoes",
     docsLabel: "Configurações do Delivery",
+  },
+  "ativar-dispositivo": {
+    title: "Ativar Dispositivo",
+    fallbackIcon: TabletSmartphone,
+    category: "Dispositivo",
+    description:
+      "Vincule este terminal PDV ao seu estabelecimento usando o token de ativação de 12 caracteres gerado no painel administrativo. Após a ativação, o dispositivo ficará associado à sua conta e pronto para operar.",
+    features: [
+      { icon: TabletSmartphone, title: "Vinculação segura", description: "O token garante que apenas dispositivos autorizados se conectem ao seu estabelecimento." },
+      { icon: Shield, title: "Token único", description: "Cada token é alfanumérico, de uso único e gerado pelo painel administrativo." },
+      { icon: CheckCircle2, title: "Ativação instantânea", description: "Ao validar o token, o dispositivo é ativado imediatamente e fica pronto para uso." },
+      { icon: Zap, title: "Status em tempo real", description: "Visualize o status de ativação e os dados do dispositivo a qualquer momento." },
+    ],
+    steps: [
+      "No painel administrativo, acesse 'Ativar Maquininha' e clique em 'Gerar código de ativação'.",
+      "Copie o token de 12 caracteres exibido na tela.",
+      "Cole o token no campo de ativação abaixo e clique em 'Validar Token'.",
+      "Após a validação, o dispositivo estará vinculado e pronto para operar.",
+    ],
+    component: DeviceActivationCard,
+    docsUrl: "#",
+    docsLabel: "Documentação interna",
   },
 };
 

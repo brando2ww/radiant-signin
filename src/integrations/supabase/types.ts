@@ -2515,6 +2515,30 @@ export type Database = {
         }
         Relationships: []
       }
+      pdv_device_config: {
+        Row: {
+          activated_at: string
+          activation_token: string
+          id: string
+          is_active: boolean
+          user_id: string
+        }
+        Insert: {
+          activated_at?: string
+          activation_token: string
+          id?: string
+          is_active?: boolean
+          user_id: string
+        }
+        Update: {
+          activated_at?: string
+          activation_token?: string
+          id?: string
+          is_active?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       pdv_financial_transactions: {
         Row: {
           amount: number
@@ -4351,6 +4375,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pdv_transactions: {
+        Row: {
+          amount: number
+          cancelled_at: string | null
+          created_at: string
+          flag: string | null
+          id: string
+          last_digits: string | null
+          method: string
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          cancelled_at?: string | null
+          created_at?: string
+          flag?: string | null
+          id?: string
+          last_digits?: string | null
+          method: string
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          cancelled_at?: string | null
+          created_at?: string
+          flag?: string | null
+          id?: string
+          last_digits?: string | null
+          method?: string
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
