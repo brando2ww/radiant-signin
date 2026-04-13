@@ -1,33 +1,37 @@
 
 
-## Corrigir fluxo de ativação: separar "Pendente" de "Ativo"
+## Corrigir tabela `pdv_device_config` e código do componente
 
-### Problema
-Atualmente o token é inserido com `is_active: true` no momento da geração. Isso faz o PDV mostrar "Ativo" imediatamente, antes do outro sistema (maquininha) consumir/validar o token. O status deveria ser "Pendente" até a maquininha confirmar.
+### Problema atual na tabela
+- `activated_at` tem default `now()` e NOT NULL — sempre preenche ao inserir
+- `is_active` tem default `true` — ignora o `false` do código
+- Não existe coluna `created_at` — causa erro no `order("created_at")`
 
-### Solução
-Usar `is_active: false` na geração do token. O outro sistema, ao validar o token, fará `UPDATE ... SET is_active = true, activated_at = now()`. O PDV exibe 3 estados:
+### Migration SQL
 
-1. **Sem token** — botão "Gerar código de ativação"
-2. **Token gerado, pendente** (`is_active = false`) — exibe token com botão Copiar + badge "Pendente de ativação" (amarelo) + botão "Verificar status"
-3. **Ativado** (`is_active = true`) — badge "Ativo" (verde) + dados de ativação
+```sql
+-- Adicionar created_at
+ALTER TABLE pdv_device_config 
+  ADD COLUMN created_at timestamptz NOT NULL DEFAULT now();
 
-### Alterações
+-- Tornar activated_at nullable com default null
+ALTER TABLE pdv_device_config 
+  ALTER COLUMN activated_at DROP NOT NULL,
+  ALTER COLUMN activated_at SET DEFAULT NULL;
 
-**`src/components/pdv/integrations/DeviceActivationCard.tsx`**
-- No `handleGenerateToken`: mudar `is_active: true` para `is_active: false` e remover `activated_at`
-- No `checkExistingDevice`: buscar qualquer registro do user (remover filtro `is_active = true`), ordenar por criação desc, pegar o mais recente
-- Adicionar estado intermediário "Pendente": badge amarelo, exibe token + Copiar + instrução, botão "Verificar status" que re-busca o registro
-- Manter estado "Ativo" quando `is_active = true` (confirmado pela maquininha)
+-- Mudar default de is_active para false
+ALTER TABLE pdv_device_config 
+  ALTER COLUMN is_active SET DEFAULT false;
 
-### Fluxo visual
-
-```text
-Sem token          → [Gerar código]
-Token pendente     → Badge "Pendente" (amarelo) + token + Copiar + [Verificar status]  
-Token ativo        → Badge "Ativo" (verde) + dados de ativação
+-- Corrigir registros existentes que foram criados com defaults errados
+UPDATE pdv_device_config 
+  SET activated_at = NULL, is_active = false 
+  WHERE activated_at IS NOT NULL AND is_active = true;
 ```
 
-### Arquivo alterado
-1. `src/components/pdv/integrations/DeviceActivationCard.tsx`
+### Código (`DeviceActivationCard.tsx`)
+O código já está correto para o novo schema — insere com `is_active: false` sem `activated_at`, e ordena por `created_at`. Nenhuma alteração de código necessária após a migration.
+
+### Arquivos alterados
+1. **Nova migration SQL** — corrige schema da tabela `pdv_device_config`
 
