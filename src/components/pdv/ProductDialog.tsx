@@ -25,10 +25,52 @@ import { PDVProduct } from "@/hooks/use-pdv-products";
 import { useProductImageUpload } from "@/hooks/use-product-image-upload";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useState, useEffect } from "react";
-import { Image as ImageIcon, Upload, X } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Image as ImageIcon, Upload, X, Info } from "lucide-react";
 import { ProductRecipeManager } from "./ProductRecipeManager";
+import { PDVProductOptionsManager } from "./PDVProductOptionsManager";
 import { usePDVRecipes } from "@/hooks/use-pdv-recipes";
+import { ImageCropDialog } from "@/components/ui/image-crop-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  NCM_CODES,
+  CEST_CODES,
+  CST_ICMS_CODES,
+  CSOSN_CODES,
+  CFOP_CODES,
+  CST_PIS_COFINS_CODES,
+  ORIGIN_CODES,
+} from "@/data/fiscal-codes";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+
+const WEEKDAYS = [
+  { value: 0, label: "Dom" },
+  { value: 1, label: "Seg" },
+  { value: 2, label: "Ter" },
+  { value: 3, label: "Qua" },
+  { value: 4, label: "Qui" },
+  { value: 5, label: "Sex" },
+  { value: 6, label: "Sáb" },
+];
 
 interface ProductDialogProps {
   open: boolean;
@@ -36,6 +78,53 @@ interface ProductDialogProps {
   product: PDVProduct | null;
   onSubmit: (data: any) => void;
   isSubmitting: boolean;
+}
+
+function FiscalCombobox({
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { code: string; label: string }[];
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.code === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" role="combobox" className="w-full justify-between h-10 font-normal text-left">
+          <span className="truncate">{selected ? selected.label : placeholder}</span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[350px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar..." />
+          <CommandList>
+            <CommandEmpty>Nenhum resultado</CommandEmpty>
+            <CommandGroup>
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt.code}
+                  value={opt.label}
+                  onSelect={() => {
+                    onChange(opt.code);
+                    setOpen(false);
+                  }}
+                >
+                  {opt.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export function ProductDialog({
@@ -48,6 +137,9 @@ export function ProductDialog({
   const { uploadImage, isUploading } = useProductImageUpload();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { calculateCMV, recipes } = usePDVRecipes(product?.id);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
+  const [isSubstituicaoTributaria, setIsSubstituicaoTributaria] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -62,6 +154,7 @@ export function ProductDialog({
       serves: product?.serves || 1,
       is_available: product?.is_available ?? true,
       is_sold_by_weight: product?.is_sold_by_weight ?? false,
+      available_days: (product as any)?.available_days || [],
       ncm: product?.ncm || "",
       cest: product?.cest || "",
       cfop: product?.cfop || "",
@@ -95,6 +188,7 @@ export function ProductDialog({
         serves: product.serves,
         is_available: product.is_available,
         is_sold_by_weight: product.is_sold_by_weight,
+        available_days: (product as any)?.available_days || [],
         ncm: product.ncm || "",
         cest: product.cest || "",
         cfop: product.cfop || "",
@@ -109,6 +203,8 @@ export function ProductDialog({
         tax_unit: product.tax_unit || "",
         ean: product.ean || "",
       });
+      // Determine ST mode
+      setIsSubstituicaoTributaria(!!(product.csosn && product.csosn.length > 0));
     }
   }, [product, form]);
 
@@ -118,18 +214,39 @@ export function ProductDialog({
     setPreviewImage(null);
   });
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = await uploadImage(file);
-      if (url) {
-        form.setValue("image_url", url);
-        setPreviewImage(url);
-      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setRawImageSrc(reader.result as string);
+        setCropDialogOpen(true);
+      };
+      reader.readAsDataURL(file);
     }
+    e.target.value = "";
   };
 
+  const handleCropComplete = useCallback(async (blob: Blob) => {
+    const file = new File([blob], "product-image.jpg", { type: "image/jpeg" });
+    const url = await uploadImage(file);
+    if (url) {
+      form.setValue("image_url", url);
+      setPreviewImage(url);
+    }
+  }, [uploadImage, form]);
+
   const currentImage = previewImage || form.watch("image_url");
+  const availableDays = form.watch("available_days") || [];
+
+  const toggleDay = (day: number) => {
+    const current = form.getValues("available_days") || [];
+    if (current.includes(day)) {
+      form.setValue("available_days", current.filter((d: number) => d !== day));
+    } else {
+      form.setValue("available_days", [...current, day].sort());
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -145,9 +262,23 @@ export function ProductDialog({
         <Form {...form}>
           <form onSubmit={handleSubmit} className="space-y-6">
              <Tabs defaultValue="basic">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="basic">Básico</TabsTrigger>
                 <TabsTrigger value="pricing">Preços</TabsTrigger>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <TabsTrigger value="options" disabled={!product}>
+                        Opções
+                      </TabsTrigger>
+                    </TooltipTrigger>
+                    {!product && (
+                      <TooltipContent>
+                        <p>Salve o produto primeiro para configurar opções</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -173,7 +304,7 @@ export function ProductDialog({
                     <FormItem>
                       <FormLabel>Imagem do Produto</FormLabel>
                       <FormControl>
-                        <div className="space-y-4">
+                        <div className="space-y-2">
                           {currentImage ? (
                             <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
                               <img
@@ -215,11 +346,15 @@ export function ProductDialog({
                                 type="file"
                                 accept="image/*"
                                 className="hidden"
-                                onChange={handleImageUpload}
+                                onChange={handleImageSelect}
                                 disabled={isUploading}
                               />
                             </label>
                           )}
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Info className="h-3 w-3" />
+                            Resolução ideal: 800x600px (4:3)
+                          </p>
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -414,6 +549,45 @@ export function ProductDialog({
                     </FormItem>
                   )}
                 />
+
+                {/* Available Days */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div>
+                    <FormLabel>Disponível nos dias</FormLabel>
+                    <FormDescription>
+                      Deixe todos desmarcados para disponibilidade diária
+                    </FormDescription>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {WEEKDAYS.map((day) => (
+                      <label
+                        key={day.value}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer text-sm transition-colors ${
+                          availableDays.includes(day.value)
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "hover:bg-muted"
+                        }`}
+                      >
+                        <Checkbox
+                          checked={availableDays.includes(day.value)}
+                          onCheckedChange={() => toggleDay(day.value)}
+                          className="sr-only"
+                        />
+                        {day.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="options" className="space-y-4 mt-4">
+                {product ? (
+                  <PDVProductOptionsManager productId={product.id} />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    Salve o produto primeiro para configurar opções
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="recipe" className="space-y-4 mt-4">
@@ -453,9 +627,13 @@ export function ProductDialog({
                         <FormItem>
                           <FormLabel>NCM</FormLabel>
                           <FormControl>
-                            <Input placeholder="21069090" maxLength={8} {...field} />
+                            <FiscalCombobox
+                              value={field.value}
+                              onChange={field.onChange}
+                              options={NCM_CODES}
+                              placeholder="Selecione o NCM"
+                            />
                           </FormControl>
-                          <FormDescription>8 dígitos</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -468,7 +646,12 @@ export function ProductDialog({
                       <FormItem>
                         <FormLabel>CEST</FormLabel>
                         <FormControl>
-                          <Input placeholder="1700700" maxLength={7} {...field} />
+                          <FiscalCombobox
+                            value={field.value}
+                            onChange={field.onChange}
+                            options={CEST_CODES}
+                            placeholder="Selecione o CEST"
+                          />
                         </FormControl>
                         <FormDescription>Código Especificador da Substituição Tributária</FormDescription>
                         <FormMessage />
@@ -479,6 +662,18 @@ export function ProductDialog({
 
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">ICMS</h4>
+                  
+                  <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
+                    <Checkbox
+                      checked={isSubstituicaoTributaria}
+                      onCheckedChange={(v) => setIsSubstituicaoTributaria(!!v)}
+                    />
+                    <div>
+                      <span className="text-sm font-medium">Simples Nacional (CSOSN)</span>
+                      <p className="text-xs text-muted-foreground">Marque se o estabelecimento é optante do Simples Nacional</p>
+                    </div>
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -487,9 +682,13 @@ export function ProductDialog({
                         <FormItem>
                           <FormLabel>Origem</FormLabel>
                           <FormControl>
-                            <Input placeholder="0" maxLength={1} {...field} />
+                            <FiscalCombobox
+                              value={field.value}
+                              onChange={field.onChange}
+                              options={ORIGIN_CODES}
+                              placeholder="Selecione a origem"
+                            />
                           </FormControl>
-                          <FormDescription>0=Nacional, 1=Estrangeira importação direta...</FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -501,41 +700,58 @@ export function ProductDialog({
                         <FormItem>
                           <FormLabel>CFOP</FormLabel>
                           <FormControl>
-                            <Input placeholder="5102" maxLength={4} {...field} />
+                            <FiscalCombobox
+                              value={field.value}
+                              onChange={field.onChange}
+                              options={CFOP_CODES}
+                              placeholder="Selecione o CFOP"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="cst_icms"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CST ICMS</FormLabel>
-                          <FormControl>
-                            <Input placeholder="00" maxLength={3} {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="csosn"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>CSOSN</FormLabel>
-                          <FormControl>
-                            <Input placeholder="102" maxLength={4} {...field} />
-                          </FormControl>
-                          <FormDescription>Simples Nacional</FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    {isSubstituicaoTributaria ? (
+                      <FormField
+                        control={form.control}
+                        name="csosn"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>CSOSN</FormLabel>
+                            <FormControl>
+                              <FiscalCombobox
+                                value={field.value}
+                                onChange={field.onChange}
+                                options={CSOSN_CODES}
+                                placeholder="Selecione o CSOSN"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ) : (
+                      <FormField
+                        control={form.control}
+                        name="cst_icms"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>CST ICMS</FormLabel>
+                            <FormControl>
+                              <FiscalCombobox
+                                value={field.value}
+                                onChange={field.onChange}
+                                options={CST_ICMS_CODES}
+                                placeholder="Selecione o CST"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                     <FormField
                       control={form.control}
                       name="icms_rate"
@@ -568,7 +784,12 @@ export function ProductDialog({
                         <FormItem>
                           <FormLabel>CST PIS</FormLabel>
                           <FormControl>
-                            <Input placeholder="01" maxLength={2} {...field} />
+                            <FiscalCombobox
+                              value={field.value}
+                              onChange={field.onChange}
+                              options={CST_PIS_COFINS_CODES}
+                              placeholder="Selecione o CST PIS"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -600,7 +821,12 @@ export function ProductDialog({
                         <FormItem>
                           <FormLabel>CST COFINS</FormLabel>
                           <FormControl>
-                            <Input placeholder="01" maxLength={2} {...field} />
+                            <FiscalCombobox
+                              value={field.value}
+                              onChange={field.onChange}
+                              options={CST_PIS_COFINS_CODES}
+                              placeholder="Selecione o CST COFINS"
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -663,6 +889,17 @@ export function ProductDialog({
           </form>
         </Form>
       </DialogContent>
+
+      {rawImageSrc && (
+        <ImageCropDialog
+          open={cropDialogOpen}
+          onOpenChange={setCropDialogOpen}
+          imageSrc={rawImageSrc}
+          aspectRatio={4 / 3}
+          onCropComplete={handleCropComplete}
+          title="Recortar imagem do produto"
+        />
+      )}
     </Dialog>
   );
 }
