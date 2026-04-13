@@ -101,7 +101,7 @@ const integrations: IntegrationItem[] = [
   },
   {
     slug: "ativar-dispositivo",
-    name: "Ativar Dispositivo",
+    name: "Ativar VelaraPay",
     description: "Vincule este PDV ao seu estabelecimento usando o token de ativação gerado no painel administrativo.",
     fallbackIcon: TabletSmartphone,
     category: "Dispositivo",
