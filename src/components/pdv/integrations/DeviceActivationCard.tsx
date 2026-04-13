@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { CheckCircle2, Loader2, TabletSmartphone, Copy, AlertCircle } from "lucide-react";
+import { CheckCircle2, Loader2, TabletSmartphone, Copy, AlertCircle, KeyRound } from "lucide-react";
 
 interface DeviceConfig {
   id: string;
@@ -16,9 +15,15 @@ interface DeviceConfig {
   is_active: boolean;
 }
 
+const generateToken = () => {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  return Array.from({ length: 12 }, () =>
+    chars[Math.floor(Math.random() * chars.length)]
+  ).join("");
+};
+
 export function DeviceActivationCard() {
   const { user } = useAuth();
-  const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [activeDevice, setActiveDevice] = useState<DeviceConfig | null>(null);
@@ -47,44 +52,31 @@ export function DeviceActivationCard() {
     }
   };
 
-  const handleValidateToken = async () => {
-    const cleanToken = token.trim().toUpperCase();
-    if (cleanToken.length !== 12) {
-      toast.error("O token deve ter exatamente 12 caracteres.");
-      return;
-    }
-
+  const handleGenerateToken = async () => {
     setLoading(true);
     try {
+      const token = generateToken();
       const { data, error } = await (supabase as any)
         .from("pdv_device_config")
-        .select("*")
-        .eq("activation_token", cleanToken)
-        .eq("is_active", true)
-        .maybeSingle();
+        .insert({
+          user_id: user!.id,
+          activation_token: token,
+          is_active: true,
+          activated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
 
       if (error) {
-        toast.error("Erro ao validar token.");
+        toast.error("Erro ao gerar código de ativação.");
+        console.error(error);
         return;
       }
 
-      if (!data) {
-        toast.error("Token inválido ou inexistente.");
-        return;
-      }
-
-      const device = data as DeviceConfig;
-
-      if (device.user_id !== user!.id) {
-        toast.error("Este token não pertence à sua conta.");
-        return;
-      }
-
-      setActiveDevice(device);
-      setToken("");
-      toast.success("Dispositivo ativado com sucesso!");
+      setActiveDevice(data as DeviceConfig);
+      toast.success("Código de ativação gerado com sucesso!");
     } catch (err) {
-      toast.error("Erro inesperado ao validar token.");
+      toast.error("Erro inesperado ao gerar código.");
     } finally {
       setLoading(false);
     }
@@ -107,7 +99,6 @@ export function DeviceActivationCard() {
 
   return (
     <div className="space-y-4">
-      {/* Status Card */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center justify-between">
@@ -135,7 +126,7 @@ export function DeviceActivationCard() {
               </div>
               <div className="grid gap-2 text-sm">
                 <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
-                  <span className="text-muted-foreground">Token</span>
+                  <span className="text-muted-foreground">Código de ativação</span>
                   <span className="flex items-center gap-2 font-mono font-medium">
                     {activeDevice.activation_token}
                     <button
@@ -147,7 +138,7 @@ export function DeviceActivationCard() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2">
-                  <span className="text-muted-foreground">Ativado em</span>
+                  <span className="text-muted-foreground">Gerado em</span>
                   <span className="font-medium">
                     {new Date(activeDevice.activated_at).toLocaleDateString("pt-BR", {
                       day: "2-digit",
@@ -159,44 +150,28 @@ export function DeviceActivationCard() {
                   </span>
                 </div>
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Cole este código no sistema da maquininha para vincular o dispositivo.
+              </p>
             </div>
           ) : (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <AlertCircle className="h-4 w-4" />
-              <span>Nenhum dispositivo vinculado. Cole o token de ativação abaixo.</span>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <AlertCircle className="h-4 w-4" />
+                <span>Nenhum dispositivo vinculado. Gere um código de ativação abaixo.</span>
+              </div>
+              <Button onClick={handleGenerateToken} disabled={loading} className="w-full">
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <KeyRound className="h-4 w-4 mr-2" />
+                )}
+                Gerar código de ativação
+              </Button>
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Activation Form */}
-      {!activeDevice && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Ativar Dispositivo</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Cole o código de ativação de 12 caracteres gerado no painel administrativo.
-            </p>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Ex: A1B2C3D4E5F6"
-                value={token}
-                onChange={(e) => setToken(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12))}
-                className="font-mono tracking-widest uppercase"
-                maxLength={12}
-              />
-              <Button onClick={handleValidateToken} disabled={loading || token.length !== 12}>
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Validar Token"}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {token.length}/12 caracteres
-            </p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
