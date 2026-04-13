@@ -119,8 +119,8 @@ export function CampaignRoulette({ campaignId }: CampaignRouletteProps) {
                 <Input
                   type="number"
                   min={0}
-                  value={cooldownHours}
-                  onChange={(e) => handleFieldSave("roulette_cooldown_hours", Number(e.target.value))}
+                  defaultValue={cooldownHours}
+                  onBlur={(e) => handleFieldSave("roulette_cooldown_hours", Number(e.target.value))}
                   className="h-10 w-20"
                 />
                 <span className="text-xs text-muted-foreground">horas</span>

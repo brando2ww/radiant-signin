@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { ImageCropDialog } from "@/components/ui/image-crop-dialog";
 import { DeliveryProduct, useCreateProduct, useUpdateProduct } from "@/hooks/use-delivery-products";
 import { DeliveryCategory } from "@/hooks/use-delivery-categories";
 import { useProductImageUpload } from "@/hooks/use-product-image-upload";
@@ -27,6 +29,17 @@ import { ProductOptionsManager } from "./ProductOptionsManager";
 import { DeliveryRecipeManager } from "./DeliveryRecipeManager";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { toast } from "sonner";
+import { Info } from "lucide-react";
+
+const WEEKDAYS = [
+  { value: 0, label: "Dom" },
+  { value: 1, label: "Seg" },
+  { value: 2, label: "Ter" },
+  { value: 3, label: "Qua" },
+  { value: 4, label: "Qui" },
+  { value: 5, label: "Sex" },
+  { value: 6, label: "Sáb" },
+];
 
 interface ProductDialogProps {
   open: boolean;
@@ -54,6 +67,9 @@ export const ProductDialog = ({
   const [isFeatured, setIsFeatured] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  const [availableDays, setAvailableDays] = useState<number[]>([]);
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
 
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
@@ -72,6 +88,7 @@ export const ProductDialog = ({
       setIsFeatured(product.is_featured);
       setCurrentImageUrl(product.image_url || null);
       setImageFile(null);
+      setAvailableDays((product as any).available_days || []);
     } else {
       setCategoryId(categories[0]?.id || "");
       setName("");
@@ -84,6 +101,7 @@ export const ProductDialog = ({
       setIsFeatured(false);
       setCurrentImageUrl(null);
       setImageFile(null);
+      setAvailableDays([]);
     }
   }, [product, categories, open]);
 
@@ -117,6 +135,7 @@ export const ProductDialog = ({
       is_featured: isFeatured,
       image_url: imageUrl,
       order_position: 0,
+      available_days: availableDays,
     };
 
     if (product) {
@@ -151,6 +170,31 @@ export const ProductDialog = ({
     setImageFile(null);
   };
 
+  const toggleDay = (day: number) => {
+    setAvailableDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()
+    );
+  };
+
+  const handleImageForCrop = (file: File | null) => {
+    if (!file) {
+      setImageFile(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRawImageSrc(reader.result as string);
+      setCropDialogOpen(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCropComplete = useCallback(async (blob: Blob) => {
+    const file = new File([blob], "product-image.jpg", { type: "image/jpeg" });
+    setImageFile(file);
+    setCurrentImageUrl(URL.createObjectURL(blob));
+  }, []);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -171,7 +215,11 @@ export const ProductDialog = ({
 
           <TabsContent value="details" className="space-y-4 mt-4">
             <form onSubmit={handleSubmit} className="space-y-4">
-              <ImageUpload value={currentImageUrl || undefined} onChange={setImageFile} onRemove={handleRemoveImage} disabled={isUploading} />
+              <ImageUpload value={currentImageUrl || undefined} onChange={handleImageForCrop} onRemove={handleRemoveImage} disabled={isUploading} />
+              <p className="text-xs text-muted-foreground flex items-center gap-1 -mt-1">
+                <Info className="h-3 w-3" />
+                Resolução ideal: 800x600px (4:3)
+              </p>
               
               <div className="space-y-2">
                 <Label>Categoria *</Label>
@@ -232,6 +280,33 @@ export const ProductDialog = ({
                 </div>
               </div>
 
+              {/* Available Days */}
+              <div className="rounded-lg border p-4 space-y-3">
+                <div>
+                  <Label>Disponível nos dias</Label>
+                  <p className="text-xs text-muted-foreground">Deixe todos desmarcados para disponibilidade diária</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {WEEKDAYS.map((day) => (
+                    <label
+                      key={day.value}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer text-sm transition-colors ${
+                        availableDays.includes(day.value)
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "hover:bg-muted"
+                      }`}
+                    >
+                      <Checkbox
+                        checked={availableDays.includes(day.value)}
+                        onCheckedChange={() => toggleDay(day.value)}
+                        className="sr-only"
+                      />
+                      {day.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
                 <Button type="submit" disabled={createProduct.isPending || updateProduct.isPending || isUploading}>
@@ -252,6 +327,17 @@ export const ProductDialog = ({
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {rawImageSrc && (
+        <ImageCropDialog
+          open={cropDialogOpen}
+          onOpenChange={setCropDialogOpen}
+          imageSrc={rawImageSrc}
+          aspectRatio={4 / 3}
+          onCropComplete={handleCropComplete}
+          title="Recortar imagem do produto"
+        />
+      )}
     </Dialog>
   );
 };
