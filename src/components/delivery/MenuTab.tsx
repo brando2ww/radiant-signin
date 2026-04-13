@@ -6,16 +6,22 @@ import { ProductList } from "./ProductList";
 import { CategoryDialog } from "./CategoryDialog";
 import { ProductDialog } from "./ProductDialog";
 import { useDeliveryCategories } from "@/hooks/use-delivery-categories";
-import { useDeliveryProducts } from "@/hooks/use-delivery-products";
+import { useDeliveryProducts, DeliveryProduct } from "@/hooks/use-delivery-products";
 import { SeedDemoButton } from "./SeedDemoButton";
 
 export const MenuTab = () => {
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [createdProduct, setCreatedProduct] = useState<DeliveryProduct | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const { data: categories = [] } = useDeliveryCategories();
   const { data: products = [] } = useDeliveryProducts(selectedCategory || undefined);
+
+  const handleProductCreated = (product: DeliveryProduct) => {
+    setIsProductDialogOpen(false);
+    setCreatedProduct(product);
+  };
 
   return (
     <div className="space-y-6">
@@ -63,6 +69,15 @@ export const MenuTab = () => {
       <ProductDialog
         open={isProductDialogOpen}
         onOpenChange={setIsProductDialogOpen}
+        categories={categories}
+        onProductCreated={handleProductCreated}
+      />
+
+      {/* Re-open in edit mode after creation */}
+      <ProductDialog
+        open={!!createdProduct}
+        onOpenChange={(open) => !open && setCreatedProduct(null)}
+        product={createdProduct || undefined}
         categories={categories}
       />
     </div>
