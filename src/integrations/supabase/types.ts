@@ -2517,22 +2517,25 @@ export type Database = {
       }
       pdv_device_config: {
         Row: {
-          activated_at: string
+          activated_at: string | null
           activation_token: string
+          created_at: string
           id: string
           is_active: boolean
           user_id: string
         }
         Insert: {
-          activated_at?: string
+          activated_at?: string | null
           activation_token: string
+          created_at?: string
           id?: string
           is_active?: boolean
           user_id: string
         }
         Update: {
-          activated_at?: string
+          activated_at?: string | null
           activation_token?: string
+          created_at?: string
           id?: string
           is_active?: boolean
           user_id?: string
