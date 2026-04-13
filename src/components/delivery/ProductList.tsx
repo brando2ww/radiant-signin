@@ -153,8 +153,13 @@ export const ProductList = ({ products, categoryId }: ProductListProps) => {
 
   const handleDelete = () => {
     if (deletingProduct) {
-      deleteProduct.mutate(deletingProduct.id);
-      setDeletingProduct(null);
+      deleteProduct.mutate(deletingProduct.id, {
+        onSuccess: () => setDeletingProduct(null),
+        onError: () => {
+          toast.error("Erro ao excluir produto");
+          setDeletingProduct(null);
+        },
+      });
     }
   };
 
