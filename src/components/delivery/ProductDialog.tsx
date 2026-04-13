@@ -33,6 +33,7 @@ interface ProductDialogProps {
   onOpenChange: (open: boolean) => void;
   product?: DeliveryProduct;
   categories: DeliveryCategory[];
+  onProductCreated?: (product: DeliveryProduct) => void;
 }
 
 export const ProductDialog = ({
@@ -40,6 +41,7 @@ export const ProductDialog = ({
   onOpenChange,
   product,
   categories,
+  onProductCreated,
 }: ProductDialogProps) => {
   const [categoryId, setCategoryId] = useState("");
   const [name, setName] = useState("");
@@ -124,7 +126,14 @@ export const ProductDialog = ({
       );
     } else {
       createProduct.mutate(productData, {
-        onSuccess: () => { onOpenChange(false); setImageFile(null); },
+        onSuccess: (data) => {
+          setImageFile(null);
+          if (onProductCreated) {
+            onProductCreated(data as DeliveryProduct);
+          } else {
+            onOpenChange(false);
+          }
+        },
       });
     }
   };

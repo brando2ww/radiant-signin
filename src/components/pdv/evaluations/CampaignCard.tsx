@@ -73,8 +73,13 @@ export function CampaignCard({ campaign, onClick }: CampaignCardProps) {
   };
 
   const handleDelete = () => {
-    deleteCampaign.mutate(campaign.id);
-    setDeleteOpen(false);
+    deleteCampaign.mutate(campaign.id, {
+      onSuccess: () => setDeleteOpen(false),
+      onError: () => {
+        toast.error("Erro ao excluir campanha");
+        setDeleteOpen(false);
+      },
+    });
   };
 
   const npsPercent = campaign.avg_nps !== null ? (campaign.avg_nps / 10) * 100 : 0;

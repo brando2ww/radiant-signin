@@ -1,3 +1,4 @@
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -153,8 +154,13 @@ export const ProductList = ({ products, categoryId }: ProductListProps) => {
 
   const handleDelete = () => {
     if (deletingProduct) {
-      deleteProduct.mutate(deletingProduct.id);
-      setDeletingProduct(null);
+      deleteProduct.mutate(deletingProduct.id, {
+        onSuccess: () => setDeletingProduct(null),
+        onError: () => {
+          toast.error("Erro ao excluir produto");
+          setDeletingProduct(null);
+        },
+      });
     }
   };
 
