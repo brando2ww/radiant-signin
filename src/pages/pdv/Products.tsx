@@ -89,7 +89,10 @@ export default function PDVProducts() {
       );
     } else {
       createProduct(data, {
-        onSuccess: () => setDialogOpen(false),
+        onSuccess: (createdProduct) => {
+          // Re-open in edit mode so Recipe tab is accessible
+          setSelectedProduct(createdProduct);
+        },
       });
     }
   };
