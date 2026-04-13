@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Plus, Minus } from "lucide-react";
 import { usePDVProducts } from "@/hooks/use-pdv-products";
+import { usePDVProductOptionsForOrder } from "@/hooks/use-pdv-product-options";
+import { ProductOptionSelector, SelectedOption } from "./ProductOptionSelector";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -22,6 +24,8 @@ interface AddItemDialogProps {
   onAddItem: (item: any) => void;
   source?: string;
 }
+
+type Step = "search" | "options" | "quantity";
 
 export function AddItemDialog({
   open,
@@ -35,31 +39,63 @@ export function AddItemDialog({
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
+  const [step, setStep] = useState<Step>("search");
+  const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([]);
+
+  const { data: productOptions } = usePDVProductOptionsForOrder(selectedProduct?.id);
 
   const getPrice = (product: any) => {
     if (source === "balcao") return product.price_balcao ?? product.price_salon;
     if (source === "delivery") return product.price_delivery ?? product.price_salon;
     return product.price_salon;
   };
+
   const filteredProducts = useMemo(() => {
+    const today = new Date().getDay();
     return products.filter(
       (p) =>
         p.is_available &&
+        (!(p as any).available_days?.length || (p as any).available_days.includes(today)) &&
         (p.name.toLowerCase().includes(search.toLowerCase()) ||
           p.category.toLowerCase().includes(search.toLowerCase()))
     );
   }, [products, search]);
 
+  const optionsExtra = selectedOptions.reduce(
+    (total, opt) => total + opt.items.reduce((s, i) => s + i.priceAdjustment, 0),
+    0
+  );
+
+  const handleSelectProduct = (product: any) => {
+    setSelectedProduct(product);
+    setSelectedOptions([]);
+    setQuantity(1);
+    setNotes("");
+    // Check if product has options - we'll know after the query loads
+    // For now go to quantity, we'll redirect if needed
+    setStep("quantity");
+  };
+
+  // If product has options and we're at quantity step but haven't selected options yet, show options
+  const showOptions = step === "quantity" && productOptions && productOptions.length > 0 && selectedOptions.length === 0;
+  const effectiveStep = showOptions ? "options" : step;
+
   const handleAddItem = () => {
     if (!selectedProduct) return;
+
+    const optionsNotes = selectedOptions
+      .map((opt) => `${opt.optionName}: ${opt.items.map((i) => i.itemName).join(", ")}`)
+      .join("; ");
+
+    const fullNotes = [optionsNotes, notes.trim()].filter(Boolean).join(" | ");
 
     onAddItem({
       order_id: orderId,
       product_id: selectedProduct.id,
       product_name: selectedProduct.name,
       quantity,
-      unit_price: getPrice(selectedProduct),
-      notes: notes.trim() || undefined,
+      unit_price: getPrice(selectedProduct) + optionsExtra,
+      notes: fullNotes || undefined,
     });
 
     // Reset
@@ -67,6 +103,23 @@ export function AddItemDialog({
     setQuantity(1);
     setNotes("");
     setSearch("");
+    setStep("search");
+    setSelectedOptions([]);
+  };
+
+  const handleBack = () => {
+    if (effectiveStep === "options") {
+      setSelectedProduct(null);
+      setStep("search");
+    } else if (step === "quantity") {
+      if (productOptions && productOptions.length > 0) {
+        setSelectedOptions([]);
+        setStep("quantity"); // Will show options
+      } else {
+        setSelectedProduct(null);
+        setStep("search");
+      }
+    }
   };
 
   return (
@@ -79,7 +132,7 @@ export function AddItemDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {!selectedProduct ? (
+        {effectiveStep === "search" && (
           <div className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -96,7 +149,7 @@ export function AddItemDialog({
                 {filteredProducts.map((product) => (
                   <button
                     key={product.id}
-                    onClick={() => setSelectedProduct(product)}
+                    onClick={() => handleSelectProduct(product)}
                     className="text-left p-3 rounded-lg border hover:border-primary transition-colors"
                   >
                     <div className="space-y-1">
@@ -111,7 +164,31 @@ export function AddItemDialog({
               </div>
             </ScrollArea>
           </div>
-        ) : (
+        )}
+
+        {effectiveStep === "options" && selectedProduct && productOptions && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-lg border bg-muted/50">
+              <p className="font-semibold text-lg">{selectedProduct.name}</p>
+              <p className="text-lg font-bold mt-1">
+                R$ {getPrice(selectedProduct).toFixed(2)}
+              </p>
+            </div>
+            <ProductOptionSelector
+              options={productOptions}
+              onConfirm={(selections) => {
+                setSelectedOptions(selections);
+                setStep("quantity");
+              }}
+              onBack={() => {
+                setSelectedProduct(null);
+                setStep("search");
+              }}
+            />
+          </div>
+        )}
+
+        {effectiveStep === "quantity" && step === "quantity" && selectedProduct && (selectedOptions.length > 0 || !productOptions?.length) && (
           <div className="space-y-4">
             <div className="p-4 rounded-lg border bg-muted/50">
               <p className="font-semibold text-lg">{selectedProduct.name}</p>
@@ -119,8 +196,17 @@ export function AddItemDialog({
                 {selectedProduct.category}
               </p>
               <p className="text-lg font-bold mt-2">
-                R$ {getPrice(selectedProduct).toFixed(2)}
+                R$ {(getPrice(selectedProduct) + optionsExtra).toFixed(2)}
               </p>
+              {selectedOptions.length > 0 && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  {selectedOptions.map((opt) => (
+                    <p key={opt.optionId}>
+                      {opt.optionName}: {opt.items.map((i) => i.itemName).join(", ")}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
@@ -169,7 +255,7 @@ export function AddItemDialog({
               <div className="flex items-center justify-between">
                 <span className="font-medium">Subtotal</span>
                 <span className="text-xl font-bold">
-                  R$ {(getPrice(selectedProduct) * quantity).toFixed(2)}
+                  R$ {((getPrice(selectedProduct) + optionsExtra) * quantity).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -178,20 +264,15 @@ export function AddItemDialog({
 
         <DialogFooter>
           {selectedProduct && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelectedProduct(null);
-                setQuantity(1);
-                setNotes("");
-              }}
-            >
+            <Button variant="outline" onClick={handleBack}>
               Voltar
             </Button>
           )}
-          <Button onClick={handleAddItem} disabled={!selectedProduct}>
-            Adicionar ao Pedido
-          </Button>
+          {effectiveStep === "quantity" && step === "quantity" && (
+            <Button onClick={handleAddItem} disabled={!selectedProduct}>
+              Adicionar ao Pedido
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

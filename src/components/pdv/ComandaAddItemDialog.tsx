@@ -11,6 +11,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Plus, Minus, Loader2 } from "lucide-react";
 import { usePDVProducts, PDVProduct } from "@/hooks/use-pdv-products";
+import { usePDVProductOptionsForOrder } from "@/hooks/use-pdv-product-options";
+import { ProductOptionSelector, SelectedOption } from "./ProductOptionSelector";
 import { cn } from "@/lib/utils";
 
 interface ComandaAddItemDialogProps {
@@ -26,6 +28,8 @@ interface ComandaAddItemDialogProps {
   isLoading?: boolean;
 }
 
+type Step = "search" | "options" | "quantity";
+
 export function ComandaAddItemDialog({
   open,
   onOpenChange,
@@ -37,10 +41,16 @@ export function ComandaAddItemDialog({
   const [selectedProduct, setSelectedProduct] = useState<PDVProduct | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
+  const [step, setStep] = useState<Step>("search");
+  const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([]);
 
+  const { data: productOptions } = usePDVProductOptionsForOrder(selectedProduct?.id);
+
+  const today = new Date().getDay();
   const filteredProducts = products.filter(
     (p) =>
       p.is_available &&
+      (!(p as any).available_days?.length || (p as any).available_days.includes(today)) &&
       (p.name.toLowerCase().includes(search.toLowerCase()) ||
         p.category?.toLowerCase().includes(search.toLowerCase()))
   );
@@ -49,21 +59,36 @@ export function ComandaAddItemDialog({
     return product.price_salon || product.price_balcao || product.price_delivery || 0;
   };
 
+  const optionsExtra = selectedOptions.reduce(
+    (total, opt) => total + opt.items.reduce((s, i) => s + i.priceAdjustment, 0),
+    0
+  );
+
   const handleSelectProduct = (product: PDVProduct) => {
     setSelectedProduct(product);
+    setSelectedOptions([]);
     setQuantity(1);
     setNotes("");
+    setStep("quantity");
   };
+
+  const showOptions = step === "quantity" && productOptions && productOptions.length > 0 && selectedOptions.length === 0;
+  const effectiveStep = showOptions ? "options" : step;
 
   const handleAddItem = async () => {
     if (!selectedProduct) return;
+
+    const optionsNotes = selectedOptions
+      .map((opt) => `${opt.optionName}: ${opt.items.map((i) => i.itemName).join(", ")}`)
+      .join("; ");
+    const fullNotes = [optionsNotes, notes.trim()].filter(Boolean).join(" | ");
 
     await onAddItem({
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       quantity,
-      unitPrice: getProductPrice(selectedProduct),
-      notes: notes || undefined,
+      unitPrice: getProductPrice(selectedProduct) + optionsExtra,
+      notes: fullNotes || undefined,
     });
 
     // Reset and close
@@ -71,6 +96,8 @@ export function ComandaAddItemDialog({
     setQuantity(1);
     setNotes("");
     setSearch("");
+    setStep("search");
+    setSelectedOptions([]);
     onOpenChange(false);
   };
 
@@ -79,6 +106,8 @@ export function ComandaAddItemDialog({
     setQuantity(1);
     setNotes("");
     setSearch("");
+    setStep("search");
+    setSelectedOptions([]);
     onOpenChange(false);
   };
 
@@ -89,9 +118,8 @@ export function ComandaAddItemDialog({
           <DialogTitle>Adicionar Item</DialogTitle>
         </DialogHeader>
 
-        {!selectedProduct ? (
+        {effectiveStep === "search" && (
           <>
-            {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -103,7 +131,6 @@ export function ComandaAddItemDialog({
               />
             </div>
 
-            {/* Products list */}
             <ScrollArea className="flex-1 -mx-6 px-6">
               {isLoadingProducts ? (
                 <div className="py-8 flex justify-center">
@@ -143,9 +170,36 @@ export function ComandaAddItemDialog({
               )}
             </ScrollArea>
           </>
-        ) : (
+        )}
+
+        {effectiveStep === "options" && selectedProduct && productOptions && (
           <>
-            {/* Selected product */}
+            <div className="p-4 bg-muted rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-lg">{selectedProduct.name}</p>
+                </div>
+                <span className="font-bold text-lg">
+                  R$ {getProductPrice(selectedProduct).toFixed(2)}
+                </span>
+              </div>
+            </div>
+            <ProductOptionSelector
+              options={productOptions}
+              onConfirm={(selections) => {
+                setSelectedOptions(selections);
+                setStep("quantity");
+              }}
+              onBack={() => {
+                setSelectedProduct(null);
+                setStep("search");
+              }}
+            />
+          </>
+        )}
+
+        {effectiveStep === "quantity" && step === "quantity" && selectedProduct && (selectedOptions.length > 0 || !productOptions?.length) && (
+          <>
             <div className="p-4 bg-muted rounded-lg">
               <div className="flex items-center justify-between">
                 <div>
@@ -157,12 +211,20 @@ export function ComandaAddItemDialog({
                   )}
                 </div>
                 <span className="font-bold text-lg">
-                  R$ {getProductPrice(selectedProduct).toFixed(2)}
+                  R$ {(getProductPrice(selectedProduct) + optionsExtra).toFixed(2)}
                 </span>
               </div>
+              {selectedOptions.length > 0 && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  {selectedOptions.map((opt) => (
+                    <p key={opt.optionId}>
+                      {opt.optionName}: {opt.items.map((i) => i.itemName).join(", ")}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {/* Quantity */}
             <div className="flex items-center justify-center gap-4 py-4">
               <Button
                 variant="outline"
@@ -184,7 +246,6 @@ export function ComandaAddItemDialog({
               </Button>
             </div>
 
-            {/* Notes */}
             <div className="space-y-2">
               <Textarea
                 value={notes}
@@ -194,18 +255,25 @@ export function ComandaAddItemDialog({
               />
             </div>
 
-            {/* Total and actions */}
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between text-lg font-bold">
                 <span>Total</span>
-                <span>R$ {(getProductPrice(selectedProduct) * quantity).toFixed(2)}</span>
+                <span>R$ {((getProductPrice(selectedProduct) + optionsExtra) * quantity).toFixed(2)}</span>
               </div>
 
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   className="flex-1"
-                  onClick={() => setSelectedProduct(null)}
+                  onClick={() => {
+                    if (productOptions && productOptions.length > 0) {
+                      setSelectedOptions([]);
+                      setStep("quantity");
+                    } else {
+                      setSelectedProduct(null);
+                      setStep("search");
+                    }
+                  }}
                 >
                   Voltar
                 </Button>
