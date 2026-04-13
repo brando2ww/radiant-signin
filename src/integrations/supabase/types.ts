@@ -5212,6 +5212,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_device_token: {
+        Args: { p_token: string }
+        Returns: {
+          device_id: string
+          owner_user_id: string
+        }[]
+      }
       get_user_child_tenant_ids: { Args: never; Returns: string[] }
       get_user_parent_tenant_ids: { Args: never; Returns: string[] }
       has_module_access: {
