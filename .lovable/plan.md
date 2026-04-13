@@ -1,33 +1,33 @@
 
 
-## Inverter fluxo: PDV gera o token, maquininha consome
+## Corrigir fluxo de ativação: separar "Pendente" de "Ativo"
 
 ### Problema
-O fluxo atual espera que o token seja gerado em outro sistema e colado aqui. O correto e o inverso: o PDV gera o token e o usuario copia para colar no sistema da maquininha.
+Atualmente o token é inserido com `is_active: true` no momento da geração. Isso faz o PDV mostrar "Ativo" imediatamente, antes do outro sistema (maquininha) consumir/validar o token. O status deveria ser "Pendente" até a maquininha confirmar.
 
-### Novo fluxo
-1. Usuario acessa Integracoes > Ativar VelaraPay
-2. Se nao tem token ativo, ve um botao "Gerar codigo de ativacao"
-3. Clica no botao → sistema gera token alfanumerico de 12 caracteres e insere na `pdv_device_config` com `user_id = auth.uid()`, `is_active = true`
-4. Token e exibido na tela com botao "Copiar"
-5. Usuario copia o token e cola no sistema da maquininha
+### Solução
+Usar `is_active: false` na geração do token. O outro sistema, ao validar o token, fará `UPDATE ... SET is_active = true, activated_at = now()`. O PDV exibe 3 estados:
+
+1. **Sem token** — botão "Gerar código de ativação"
+2. **Token gerado, pendente** (`is_active = false`) — exibe token com botão Copiar + badge "Pendente de ativação" (amarelo) + botão "Verificar status"
+3. **Ativado** (`is_active = true`) — badge "Ativo" (verde) + dados de ativação
+
+### Alterações
+
+**`src/components/pdv/integrations/DeviceActivationCard.tsx`**
+- No `handleGenerateToken`: mudar `is_active: true` para `is_active: false` e remover `activated_at`
+- No `checkExistingDevice`: buscar qualquer registro do user (remover filtro `is_active = true`), ordenar por criação desc, pegar o mais recente
+- Adicionar estado intermediário "Pendente": badge amarelo, exibe token + Copiar + instrução, botão "Verificar status" que re-busca o registro
+- Manter estado "Ativo" quando `is_active = true` (confirmado pela maquininha)
+
+### Fluxo visual
+
+```text
+Sem token          → [Gerar código]
+Token pendente     → Badge "Pendente" (amarelo) + token + Copiar + [Verificar status]  
+Token ativo        → Badge "Ativo" (verde) + dados de ativação
+```
 
 ### Arquivo alterado
-**`src/components/pdv/integrations/DeviceActivationCard.tsx`** — reescrever o componente:
-- Remover o formulario de input/validacao de token
-- Adicionar botao "Gerar codigo de ativacao" que:
-  - Gera token: `Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')`
-  - Insere na tabela `pdv_device_config` via `supabase.from('pdv_device_config').insert({ user_id, activation_token })`
-- Quando ja existe token ativo (verificado no `useEffect`), exibir o token com botao "Copiar" e instrucao "Cole este codigo no sistema da maquininha"
-- Manter o card de status (Ativo/Nao configurado) e a exibicao de data de ativacao
-
-### Geracao do token
-```typescript
-const generateToken = () => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  return Array.from({ length: 12 }, () => 
-    chars[Math.floor(Math.random() * chars.length)]
-  ).join('');
-};
-```
+1. `src/components/pdv/integrations/DeviceActivationCard.tsx`
 
