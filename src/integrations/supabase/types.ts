@@ -1326,6 +1326,7 @@ export type Database = {
       }
       delivery_products: {
         Row: {
+          available_days: Json | null
           base_price: number
           category_id: string
           created_at: string
@@ -1344,6 +1345,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          available_days?: Json | null
           base_price: number
           category_id: string
           created_at?: string
@@ -1362,6 +1364,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          available_days?: Json | null
           base_price?: number
           category_id?: string
           created_at?: string
@@ -3460,6 +3463,91 @@ export type Database = {
           },
         ]
       }
+      pdv_product_option_items: {
+        Row: {
+          created_at: string
+          id: string
+          is_available: boolean | null
+          name: string
+          option_id: string
+          order_position: number | null
+          price_adjustment: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_available?: boolean | null
+          name: string
+          option_id: string
+          order_position?: number | null
+          price_adjustment?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_available?: boolean | null
+          name?: string
+          option_id?: string
+          order_position?: number | null
+          price_adjustment?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_product_option_items_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_product_options"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_product_options: {
+        Row: {
+          created_at: string
+          id: string
+          is_required: boolean | null
+          max_selections: number | null
+          min_selections: number | null
+          name: string
+          order_position: number | null
+          product_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_required?: boolean | null
+          max_selections?: number | null
+          min_selections?: number | null
+          name: string
+          order_position?: number | null
+          product_id: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_required?: boolean | null
+          max_selections?: number | null
+          min_selections?: number | null
+          name?: string
+          order_position?: number | null
+          product_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_product_options_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_product_recipes: {
         Row: {
           created_at: string | null
@@ -3504,6 +3592,7 @@ export type Database = {
       }
       pdv_products: {
         Row: {
+          available_days: Json | null
           available_times: Json | null
           category: string
           cest: string | null
@@ -3535,6 +3624,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          available_days?: Json | null
           available_times?: Json | null
           category: string
           cest?: string | null
@@ -3566,6 +3656,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          available_days?: Json | null
           available_times?: Json | null
           category?: string
           cest?: string | null
