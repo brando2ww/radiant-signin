@@ -1,122 +1,66 @@
 
 
-# Reformular Controle de Validade
+# Vincular Sub-Produtos ao Estoque via Produtos Completos
 
-Reescrever `ExpiryTrackingPanel` como central de gestao de validades com alertas visuais, historico de perdas, formulario em drawer lateral, cadastro rapido e filtros avancados.
+## Conceito
+
+Hoje os "option items" (sub-produtos) sao registros simples com `name` e `price_adjustment` na tabela `pdv_product_option_items`. A proposta e transformar cada sub-produto em um **produto completo** (`pdv_products`), que ja tem dados fiscais (NCM, CFOP, ICMS, etc.), impressora (`printer_station`), ficha tecnica (recipes/ingredientes), e preco proprio.
+
+A tabela `pdv_product_option_items` ganha uma coluna `linked_product_id` que referencia `pdv_products`. Quando preenchida, o sistema usa os dados do produto vinculado (fiscal, impressora, preco) em vez dos campos locais.
 
 ## Mudancas no banco de dados
 
-### Migration: Novas colunas em `product_expiry_tracking`
+### Migration: Nova coluna em `pdv_product_option_items`
 
 ```sql
-ALTER TABLE public.product_expiry_tracking
-  ADD COLUMN IF NOT EXISTS category text DEFAULT 'outros',
-  ADD COLUMN IF NOT EXISTS storage_location text,
-  ADD COLUMN IF NOT EXISTS quantity numeric DEFAULT 1,
-  ADD COLUMN IF NOT EXISTS unit text DEFAULT 'unidades',
-  ADD COLUMN IF NOT EXISTS unit_cost numeric DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS temperature numeric,
-  ADD COLUMN IF NOT EXISTS discard_reason text,
-  ADD COLUMN IF NOT EXISTS discarded_quantity numeric,
-  ADD COLUMN IF NOT EXISTS discarded_at timestamptz,
-  ADD COLUMN IF NOT EXISTS origin text DEFAULT 'manual';
+ALTER TABLE public.pdv_product_option_items
+  ADD COLUMN IF NOT EXISTS linked_product_id uuid REFERENCES pdv_products(id) ON DELETE SET NULL;
 ```
 
-Campos cobrem: categoria, local de armazenamento, quantidade/unidade, custo unitario (para calculo de perdas), temperatura, motivo de descarte, quantidade descartada, data do descarte e origem (manual ou checklist).
-
-## Arquivos novos
-
-### 1. `src/components/pdv/checklists/expiry/ExpiryAlertBlock.tsx`
-
-Bloco de atencao imediata no topo:
-- 3 grupos: vencidos (fundo vermelho), vence em 1 dia (laranja), vence em 3 dias (amarelo)
-- Cada item: nome, lote, validade, local de armazenamento
-- Botoes de acao rapida: Descartar, Usar hoje, Adiar
-
-### 2. `src/components/pdv/checklists/expiry/ExpiryOverview.tsx`
-
-4 cards de indicadores:
-- Total de produtos ativos
-- Produtos em alerta (<=3 dias)
-- Vencidos nao descartados
-- Perdas do mes (quantidade + valor estimado)
-
-### 3. `src/components/pdv/checklists/expiry/ExpiryFilters.tsx`
-
-Filtros expandidos:
-- Busca por nome/lote
-- Categoria (Carnes, Lacticinios, Hortifruti, Bebidas, Secos, Congelados)
-- Local de armazenamento (Camara fria, Freezer, Prateleira, Geladeira)
-- Status (Todos, OK, Atencao, Critico, Vencido, Descartado)
-- Toggle tabela/cards
-
-### 4. `src/components/pdv/checklists/expiry/ExpiryTable.tsx`
-
-Tabela melhorada:
-- Colunas: Produto, Categoria (icone+cor), Lote, Local, Quantidade+unidade, Validade, Status, Dias (badge colorido), Quem registrou, Acoes (editar, descartar, duplicar)
-- Linhas vencidas com fundo vermelho
-- Ordenacao clicavel
-
-### 5. `src/components/pdv/checklists/expiry/ExpiryDrawer.tsx`
-
-Drawer lateral para registro/edicao:
-- Nome com autocomplete de produtos ja cadastrados
-- Categoria com icones visuais
-- Lote, data de validade, quantidade + unidade
-- Local de armazenamento
-- Valor unitario estimado (opcional)
-- Temperatura (opcional)
-- Observacao
-- Colaborador registrante (automatico)
-
-### 6. `src/components/pdv/checklists/expiry/DiscardDialog.tsx`
-
-Mini formulario de descarte:
-- Motivo (Vencido, Avariado, Contaminado, Outro)
-- Quantidade descartada
-- Observacao
-- Salva com status "descartado" e preenche campos de descarte
-
-### 7. `src/components/pdv/checklists/expiry/ExpiryLossHistory.tsx`
-
-Historico de perdas:
-- Lista de descartados: nome, lote, validade, data descarte, motivo, responsavel, valor perda
-- Totalizador: itens + valor total
-- Filtro por periodo
-- Exportar CSV
-
-### 8. `src/components/pdv/checklists/expiry/FrequentProducts.tsx`
-
-Produtos frequentes:
-- Lista dos mais cadastrados (agrupado por product_name, contagem)
-- Um clique pre-preenche drawer com nome e categoria
-- Reduz tempo de registro
+Uma unica coluna opcional. Quando `linked_product_id` esta preenchido:
+- O `price_adjustment` pode ser ignorado (usa o preco do produto vinculado)
+- O fiscal e impressora vem do produto vinculado
+- O estoque e gerido via a ficha tecnica do produto vinculado
 
 ## Arquivos editados
 
-### 9. `src/hooks/use-product-expiry.ts`
+### 1. `src/hooks/use-pdv-product-options.ts`
 
-Expandir:
-- `ExpiryItem` com novos campos (category, storage_location, quantity, unit, unit_cost, temperature, origin, discard_reason, discarded_quantity, discarded_at)
-- `useCreateExpiry` aceita todos os novos campos
-- Nova mutacao `useDiscardExpiry` que atualiza status + discard_reason + discarded_quantity + discarded_at
-- `useExpiryHistory` retorna campos de descarte
-- Novo hook `useExpiryLossSummary` que calcula perdas do mes (soma de unit_cost * discarded_quantity)
-- Novo hook `useFrequentProducts` que busca produtos mais cadastrados (group by product_name, count)
-- `useUpdateExpiry` para edicao completa de produto
+- Expandir `PDVProductOptionItem` com `linked_product_id?: string` e `linked_product?: PDVProduct`
+- No fetch, fazer join: `.select("*, linked_product:pdv_products(*)")` para trazer dados do produto vinculado
+- Expandir `createItem` e `updateItem` para aceitar `linked_product_id`
 
-### 10. `src/components/pdv/checklists/ExpiryTrackingPanel.tsx`
+### 2. `src/components/pdv/PDVProductOptionsManager.tsx`
 
-Reescrita completa:
-- Orquestra os 8 componentes novos
-- Gerencia estados: filtros, drawer aberto, dialog descarte, modo visualizacao
-- Tabs ou scroll: Produtos Ativos | Historico de Perdas
-- Estado vazio inteligente com atalhos
+- Adicionar busca de produtos do usuario (`usePDVProducts`)
+- Em cada item de opcao, mostrar botao "Vincular Produto" que abre um Popover/Command com busca nos produtos existentes
+- Quando vinculado, exibir: nome do produto, impressora, dados fiscais resumidos (NCM, CFOP)
+- Botao "Desvincular" para remover a referencia
+- Manter opcao de item sem vinculo (comportamento atual como fallback)
+- Ao criar novo item, opcao de "Criar produto e vincular" que abre o ProductDialog
+
+### 3. `src/components/pdv/ProductOptionSelector.tsx`
+
+- Quando um item tem `linked_product`, exibir informacoes adicionais (impressora, preco proprio)
+- O `price_adjustment` passa a ser o preco do produto vinculado quando disponivel
+
+### 4. `src/components/pdv/AddItemDialog.tsx` e `src/components/pdv/ComandaAddItemDialog.tsx`
+
+- Ao montar o item do pedido, se o option item tem `linked_product`, incluir o `printer_station` do produto vinculado nos dados enviados para a cozinha
+- Garantir que o preco correto (do produto vinculado) seja usado no calculo
+
+## Fluxo do usuario
+
+1. Gestor cria produto "Hamburguer" com opcao "Adicionais"
+2. Nos itens da opcao, clica "Vincular Produto"
+3. Busca e seleciona "Bacon Extra" (que ja e um produto com NCM, impressora "Cozinha", ficha tecnica com ingredientes)
+4. O "Bacon Extra" aparece como sub-produto vinculado — com estoque, fiscal e roteamento de impressora proprios
+5. Na venda, ao selecionar "Bacon Extra" como adicional do Hamburguer, o sistema sabe qual impressora enviar e desconta do estoque
 
 ## Resumo tecnico
 
-- **1 migration** (10 colunas novas em `product_expiry_tracking`)
-- **8 arquivos novos** (7 componentes + 1 dialog)
-- **2 arquivos editados** (ExpiryTrackingPanel, use-product-expiry)
+- **1 migration** (1 coluna nova em `pdv_product_option_items`)
+- **0 arquivos novos**
+- **4-5 arquivos editados** (hook de options, manager, selector, dialogs de adicionar item)
 - **0 dependencias novas**
 
