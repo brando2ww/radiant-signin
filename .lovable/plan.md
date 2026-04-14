@@ -1,100 +1,61 @@
 
 
-# Fase 5 -- Score, Evidencias, Validade e Log de Acessos
+# Sidebar de navegacao para Checklists Operacionais
 
-Todas as tabelas necessarias ja existem no banco (`operator_scores`, `checklist_evidence_reviews`, `product_expiry_tracking`, `checklist_access_logs`). Nenhuma migration necessaria.
+Substituir as 10 tabs por uma sidebar interna na pagina de Tarefas, usando sub-rotas no React Router. Cada secao vira uma rota propria (`/pdv/tarefas/painel`, `/pdv/tarefas/checklists`, etc.).
 
----
+## Abordagem
 
-## 5.1 Hook de Score da Equipe
+**Nao usar** o componente `sidebar-with-submenu.tsx` fornecido -- ele e um sidebar generico com SVGs inline e links `javascript:void(0)`. O projeto ja tem o sistema `shadcn/ui Sidebar` completo. Vou criar um sidebar interno usando os componentes existentes (`SidebarProvider`, `Sidebar`, `SidebarMenu`, etc.) que ja seguem o padrao do projeto (ver `AdminSidebar.tsx`).
 
-**Arquivo novo**: `src/hooks/use-operator-scores.ts`
+## Mudancas
 
-- `useOperatorRanking()`: para cada operador, calcula score (0-100) baseado em execucoes do periodo:
-  - Prazo (40%): `concluido` no tempo / total
-  - Completude (30%): itens preenchidos / total itens
-  - Qualidade (30%): media das avaliacoes por estrelas
-- Persiste em `operator_scores` com `period_start`/`period_end`
-- Calcula badges automaticos em JSON:
-  - "Semana Perfeita": 100% conclusao na semana
-  - "Destaque do Mês": maior score no mes
-- `useScoreHistory(operatorId, period)`: busca historico de scores por semana/mes para grafico
+### 1. Transformar `/pdv/tarefas` em layout com sub-rotas
 
-## 5.2 Componente de Score e Ranking
+**Editar `src/pages/PDV.tsx`**: mudar a rota de `tarefas` para `tarefas/*` (wildcard) para suportar sub-rotas.
 
-**Arquivo novo**: `src/components/pdv/checklists/TeamScorePanel.tsx`
+### 2. Criar sidebar interna
 
-- Ranking da equipe: lista ordenada por score com avatar, nome, posicao, score (progress bar), badges
-- Filtro por periodo: semana atual / mes atual
-- Grafico de historico (Recharts LineChart) por operador selecionado
+**Arquivo novo**: `src/components/pdv/checklists/ChecklistsSidebar.tsx`
 
-## 5.3 Hook de Evidencias
+Sidebar com os 10 itens usando `SidebarMenu`/`SidebarMenuButton`/`NavLink`:
 
-**Arquivo novo**: `src/hooks/use-checklist-evidence.ts`
+| Item | Rota | Icone |
+|------|------|-------|
+| Painel | `/pdv/tarefas` (index) | LayoutDashboard |
+| Checklists | `/pdv/tarefas/checklists` | ClipboardCheck |
+| Agendamento | `/pdv/tarefas/agendamento` | Calendar |
+| Equipe | `/pdv/tarefas/equipe` | Users |
+| Tarefas do Dia | `/pdv/tarefas/hoje` | ListChecks |
+| Configuracoes | `/pdv/tarefas/configuracoes` | Settings |
+| Score | `/pdv/tarefas/score` | Trophy |
+| Evidencias | `/pdv/tarefas/evidencias` | Camera |
+| Validade | `/pdv/tarefas/validade` | ShieldAlert |
+| Logs | `/pdv/tarefas/logs` | FileText |
 
-- `useEvidenceGallery(filters)`: busca `checklist_execution_items` com `photo_url IS NOT NULL`, join com execution/checklist/operator para metadados
-- Filtros: data, setor, colaborador
-- `reviewEvidence(executionItemId, status, comment)`: insere/atualiza `checklist_evidence_reviews`
-- `useEvidenceReviews(executionItemId)`: busca reviews de um item
+Collapsible com `collapsible="icon"`, seguindo o padrao do `AdminSidebar`.
 
-## 5.4 Componente Galeria de Evidencias
+### 3. Reescrever `src/pages/pdv/Tasks.tsx`
 
-**Arquivo novo**: `src/components/pdv/checklists/EvidenceGallery.tsx`
+Substituir o layout de tabs por:
+- `SidebarProvider` envolvendo sidebar + conteudo
+- `ChecklistsSidebar` na esquerda
+- `<Routes>` no conteudo principal renderizando cada componente na sub-rota correspondente
+- Header com titulo + botoes de acao (QR, Relatorio, Gerar Tarefas) permanece no topo
+- `SidebarTrigger` no header para colapsar/expandir
 
-- Grid de fotos com thumbnail, data, setor, operador
-- Ao clicar: modal com foto ampliada + botoes Aprovar/Reprovar/Comentar
-- Filtros por data (DatePicker), setor (Select), colaborador (Select)
-- Botao "Exportar" que baixa as fotos filtradas (zip via JSZip)
+### 4. Atualizar rota no PDV.tsx
 
-## 5.5 Hook de Controle de Validade
+Mudar `path="tarefas"` para `path="tarefas/*"` para que sub-rotas funcionem.
 
-**Arquivo novo**: `src/hooks/use-product-expiry.ts`
+### 5. Nao copiar sidebar-with-submenu.tsx
 
-- CRUD completo em `product_expiry_tracking`
-- `useExpiryAlerts()`: busca itens com `expiry_date` proxima (3 dias, 1 dia) ou vencida, atualiza status automaticamente
-- `useExpiryHistory(period)`: historico de perdas/descartes
+O componente fornecido usa markup HTML puro com classes Tailwind genericas e SVGs inline. O projeto ja tem um sistema de sidebar maduro (shadcn). Reutilizar o padrao existente garante consistencia visual e funcional.
 
-## 5.6 Componente de Validade
+## Detalhes tecnicos
 
-**Arquivo novo**: `src/components/pdv/checklists/ExpiryTrackingPanel.tsx`
-
-- CRUD: nome do produto, lote, data de validade, notas
-- Cards de alerta: vermelho (vencido), amarelo (1 dia), laranja (3 dias), verde (valido)
-- Tabela de historico com filtros e status
-
-## 5.7 Hook de Log de Acessos
-
-**Arquivo novo**: `src/hooks/use-checklist-access-logs.ts`
-
-- `logAccess(operatorId, action, details)`: insere em `checklist_access_logs`
-- `useAccessLogs(filters)`: busca logs com join em `checklist_operators` para nome
-- Integrar chamada de log no PIN login (PublicTasks) e nas acoes de execucao
-
-## 5.8 Componente de Log de Acessos
-
-**Arquivo novo**: `src/components/pdv/checklists/AccessLogsPanel.tsx`
-
-- Tabela cronologica: data/hora, operador, acao, detalhes
-- Filtros: data, operador
-
-## 5.9 Novas abas na pagina Tasks.tsx
-
-Adicionar 4 novas abas ao `TabsList`:
-- **Score** -> `TeamScorePanel`
-- **Evidencias** -> `EvidenceGallery`
-- **Validade** -> `ExpiryTrackingPanel`
-- **Logs** -> `AccessLogsPanel`
-
-## 5.10 Integrar log de acesso no PublicTasks
-
-Editar `src/pages/PublicTasks.tsx` para chamar `logAccess` apos login por PIN e ao concluir checklist.
-
----
-
-## Resumo tecnico
-
-- **0 migrations** (tabelas ja existem)
-- **~8 arquivos novos**: 4 hooks + 4 componentes
-- **~2 arquivos editados**: `Tasks.tsx` (novas abas), `PublicTasks.tsx` (log de acesso)
-- Dependencia extra: `jszip` para exportacao de fotos (instalar via npm)
+- **2 arquivos editados**: `Tasks.tsx` (reescrita), `PDV.tsx` (wildcard route)
+- **1 arquivo novo**: `ChecklistsSidebar.tsx`
+- **0 dependencias novas**
+- Reutiliza: `SidebarProvider`, `Sidebar`, `SidebarMenu*`, `NavLink`, icones `lucide-react`
 
