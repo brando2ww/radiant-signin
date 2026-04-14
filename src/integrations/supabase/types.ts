@@ -700,10 +700,15 @@ export type Database = {
       checklist_operators: {
         Row: {
           access_level: Database["public"]["Enums"]["operator_access_level"]
+          avatar_color: string | null
           created_at: string
+          default_shift: string | null
+          hired_at: string | null
           id: string
           is_active: boolean
+          last_access_at: string | null
           name: string
+          notes: string | null
           pin: string
           role: string
           sector: Database["public"]["Enums"]["checklist_sector"]
@@ -712,10 +717,15 @@ export type Database = {
         }
         Insert: {
           access_level?: Database["public"]["Enums"]["operator_access_level"]
+          avatar_color?: string | null
           created_at?: string
+          default_shift?: string | null
+          hired_at?: string | null
           id?: string
           is_active?: boolean
+          last_access_at?: string | null
           name: string
+          notes?: string | null
           pin: string
           role?: string
           sector?: Database["public"]["Enums"]["checklist_sector"]
@@ -724,10 +734,15 @@ export type Database = {
         }
         Update: {
           access_level?: Database["public"]["Enums"]["operator_access_level"]
+          avatar_color?: string | null
           created_at?: string
+          default_shift?: string | null
+          hired_at?: string | null
           id?: string
           is_active?: boolean
+          last_access_at?: string | null
           name?: string
+          notes?: string | null
           pin?: string
           role?: string
           sector?: Database["public"]["Enums"]["checklist_sector"]
