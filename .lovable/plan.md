@@ -1,57 +1,62 @@
 
 
-# Sidebar real na pagina de Checklists
+# Aprimorar Painel Principal dos Checklists Operacionais
 
-O usuario quer que o menu ocupe a lateral esquerda inteira, do header ate o fim da pagina, como um sidebar verdadeiro -- nao contido dentro do `container` do conteudo.
+Reescrever o `DashboardPanel.tsx` e expandir o hook `use-checklist-dashboard.ts` para transformar o painel em um dashboard denso e informativo.
 
-## Problema atual
+## Arquivos editados
 
-O sidebar esta dentro de `<div className="container mx-auto p-4 md:p-6">`, entao ele fica limitado ao container central com padding. Na imagem de referencia, a area vermelha mostra o sidebar colado na borda esquerda da pagina, sem padding, do topo ao fundo.
+### 1. `src/hooks/use-checklist-dashboard.ts`
 
-## Solucao
+Expandir o hook para fornecer dados adicionais:
 
-**Arquivo editado**: `src/pages/pdv/Tasks.tsx`
+- **Saude da operacao**: ja existe `healthPct`, adicionar calculo com alertas criticos pendentes para definir nivel (verde >= 90, amarelo >= 70, vermelho < 70)
+- **Tarefas criticas em aberto**: nova query filtrando execucoes atrasadas/pendentes do dia, com dados do checklist, setor, operador e horario agendado (join com `checklist_schedules.start_time`)
+- **Destaques da equipe**: reutilizar logica do `useOperatorRanking("week")` inline -- buscar melhor e pior operador da semana, e checklist com maior taxa de falha nos ultimos 7 dias
+- **Linha do tempo do dia**: retornar execucoes do dia ordenadas por `checklist_schedules.start_time` com status visual
+- **refetchInterval**: adicionar `refetchInterval: 30000` nas queries de metricas e execucoes para atualizacao automatica
 
-Reestruturar o layout para que o sidebar fique **fora** do container:
+### 2. `src/components/pdv/checklists/DashboardPanel.tsx`
 
-```text
-+----------------------------------------------------------+
-| Header (dentro do container, com padding)                |
-+----------+-----------------------------------------------+
-|          |                                               |
-| Sidebar  |  container mx-auto p-4                        |
-| border-r |  (conteudo da secao ativa)                    |
-| w-52     |                                               |
-| sem pad  |                                               |
-| esquerdo |                                               |
-|          |                                               |
-|          |                                               |
-|          |                                               |
-|          |                                               |
-+----------+-----------------------------------------------+
-```
+Reescrever completamente com layout em grid denso:
 
-### Mudancas
+**Atalhos rapidos** (topo, ao lado do date picker):
+- Botoes "Novo checklist", "Adicionar colaborador", "Ver tarefas de hoje" que chamam callbacks para navegar entre secoes (via prop ou contexto)
 
-1. Trocar o wrapper raiz de `<div className="container mx-auto p-4">` por um layout `flex`:
-   - Wrapper externo: `<div className="flex min-h-[calc(100vh-3.5rem)]">`
-   - Sidebar: `<nav className="hidden md:flex flex-col w-52 shrink-0 border-r bg-card p-3">` -- sem `rounded-lg`, com `border-r` em vez de `border` (colado na borda esquerda)
-   - Conteudo: `<div className="flex-1 overflow-auto p-4 md:p-6">` -- o padding fica so no conteudo
+**Cards do topo** (`grid-cols-5`):
+- 4 cards existentes melhorados: numero + percentual do total + mini barra de progresso (`Progress` component)
+- 5o card "Saude da Operacao": semaforo circular colorido (verde/amarelo/vermelho) com percentual
 
-2. O header (`ResponsivePageHeader`) fica dentro da area de conteudo (lado direito), nao no topo geral
+**Grid principal** (`grid-cols-2`):
+- Esquerda superior: Grafico de conclusao com linha de meta 90% (adicionar `ReferenceLine` do recharts)
+- Direita superior: Comparativo de Turnos melhorado -- mostrar 3 colunas fixas (Manha/Tarde/Noite), com taxa, quantidade, atrasos, e melhor operador por turno
+- Esquerda inferior: Tarefas criticas em aberto -- lista com nome, setor, responsavel, horario, tempo de atraso. Mensagem amigavel quando vazio
+- Direita inferior: Feed de atividade recente -- timeline com dot colorido, nome do colaborador, acao, horario
 
-3. Mobile: manter scroll horizontal no topo do conteudo (sem mudanca)
+**Linha do tempo do dia** (full width):
+- Barra horizontal ou lista vertical cronologica com todos os checklists agendados, cada um com status visual (dot colorido + label)
 
-4. Remover `rounded-lg` e `border` do sidebar, usar apenas `border-r` para dar o efeito de barra lateral continua
+**Destaques da equipe** (full width, 3 mini cards):
+- Melhor operador da semana (com score)
+- Pior desempenho (para acao)
+- Checklist com maior taxa de falha
 
-### Resultado
+### 3. `src/components/pdv/checklists/CompletionChart.tsx`
 
-- Sidebar colado na esquerda, altura total, com `border-r` separando do conteudo
-- Conteudo com padding proprio
-- Visual identico a area vermelha do desenho
+Adicionar `ReferenceLine` do recharts em y=90 com label "Meta" e cor tracejada vermelha.
 
-### Detalhes
+### 4. `src/components/pdv/checklists/ShiftComparison.tsx`
 
-- 1 arquivo editado: `src/pages/pdv/Tasks.tsx`
-- 0 arquivos novos, 0 dependencias
+Melhorar para mostrar 3 colunas fixas (Manha, Tarde, Noite) mesmo quando vazias, e adicionar campo de melhor operador por turno.
+
+### 5. `src/pages/pdv/Tasks.tsx`
+
+Passar callback `onNavigate` para o `DashboardPanel` para que os atalhos rapidos possam trocar a secao ativa (`setActiveSection`).
+
+## Resumo tecnico
+
+- **0 migrations** (dados ja existem nas tabelas)
+- **0 dependencias novas** (recharts ja esta instalado, `ReferenceLine` ja faz parte)
+- **3 arquivos editados**: `DashboardPanel.tsx` (reescrita), `use-checklist-dashboard.ts` (expandido), `CompletionChart.tsx` (linha de meta)
+- **2 arquivos com ajustes menores**: `ShiftComparison.tsx`, `Tasks.tsx`
 
