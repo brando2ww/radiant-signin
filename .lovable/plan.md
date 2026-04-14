@@ -1,52 +1,60 @@
 
 
-# Bloco 2 -- Funcionalidades Delivery/Produtos
+# Bloco 3 -- PDV/Caixa
 
-O Bloco 1 (bugs criticos) ja foi implementado. Agora vamos para o Bloco 2.
+## 3.1 Pedido do balcão aparece na cozinha sem ser enviado
+
+**Problema**: Em `use-pdv-orders.ts` linha 178, `addItem` insere com `kitchen_status: "pendente"`, fazendo itens do balcão aparecerem na cozinha. Na tela de cozinha (`use-pdv-kitchen.ts`), o filtro busca status `["pendente", "preparando", "pronto"]` sem distinguir a origem.
+
+**Solucao**: Quando `source === "balcao"`, inserir com `kitchen_status: "entregue"` para que nao aparecam na cozinha. Adicionar parametro opcional `kitchen_status` no `addItem` de `use-pdv-orders.ts`. No `Balcao.tsx`, passar `kitchen_status: "entregue"` ao chamar `addItem`.
+
+**Arquivos**: `src/hooks/use-pdv-orders.ts`, `src/pages/pdv/Balcao.tsx`
+
+---
+
+## 3.2 Botoes "Cancelar pedido" e "Fechar pedido" no caixa
+
+**Problema**: Na tela do caixa, ao cobrar via `ChargeSelectionDialog` + `PaymentDialog`, nao ha opcao de cancelar um pedido/comanda diretamente. Os botoes de cancelamento e fechamento precisam estar acessiveis.
+
+**Solucao**: Adicionar opcoes de "Cancelar" no `ChargeSelectionDialog` (botao secundario em cada card de comanda/mesa) com confirmacao e motivo. Ao cancelar comanda avulsa, chamar a mutation de cancelamento existente. Ao cancelar mesa, fechar comandas como canceladas e liberar mesa.
+
+**Arquivos**: `src/components/pdv/cashier/ChargeSelectionDialog.tsx`, possivelmente `src/hooks/use-pdv-comandas.ts` (adicionar `cancelComanda` se nao existir)
 
 ---
 
-## 2.1 Subprodutos / Opcoes de produtos no PDV
+## 3.3 Controle de consumo de funcionarios
 
-Criar tabelas `pdv_product_options` e `pdv_product_option_items` (espelho do delivery) com migration SQL. Adicionar hook `use-pdv-product-options.ts` e integrar selecao de opcoes no `AddItemDialog.tsx` e `ComandaAddItemDialog.tsx` -- quando o produto tem opcoes, mostrar tela de selecao antes de confirmar.
+**Solucao**:
+1. **Migration**: Criar tabela `pdv_employee_consumption` com campos: `id`, `user_id`, `employee_name`, `comanda_id` (nullable), `total`, `status` (aberta/paga/descontada), `notes`, `created_at`, `closed_at`. RLS por `user_id`.
+2. **Hook**: `use-pdv-employee-consumption.ts` com CRUD + listar consumos.
+3. **UI**: Novo componente `EmployeeConsumptionDialog` acessivel a partir do sidebar do caixa (`CashierActionsSidebar`). Permite criar consumo nominal para um funcionario, lanca como comanda interna. Mostra listagem de consumos pendentes com opcao de marcar como descontado/pago.
+4. **Integracao**: Ao fechar consumo como "pago", registrar movimentacao no caixa com tipo "venda" e descricao "Consumo Funcionario: [nome]".
 
-**Arquivos**: Migration SQL, novo hook, `AddItemDialog.tsx`, `ComandaAddItemDialog.tsx`
-
-## 2.2 Editar/Recortar foto do produto
-
-O componente `ImageCropDialog` ja existe em `src/components/ui/image-crop-dialog.tsx`. Integrar no fluxo de upload dos dois `ProductDialog` (PDV e Delivery). Ao selecionar imagem, abrir o crop dialog com aspect ratio 4:3, e so fazer upload do blob resultante.
-
-**Arquivos**: `src/components/pdv/ProductDialog.tsx`, `src/components/delivery/ProductDialog.tsx`
-
-## 2.3 Resolucao ideal da foto
-
-Adicionar texto "Resolucao ideal: 800x600px" abaixo da area de upload nos dois dialogs de produto.
-
-**Arquivos**: `src/components/pdv/ProductDialog.tsx`, `src/components/delivery/ProductDialog.tsx`
-
-## 2.4 Disponibilidade por dias da semana
-
-Migration para adicionar coluna `available_days jsonb DEFAULT '[]'` nas tabelas `pdv_products` e `delivery_products`. UI com checkboxes (Seg-Dom) na aba "Precos" dos dois dialogs. Filtrar no PDV e menu publico pelo dia atual.
-
-**Arquivos**: Migration SQL, `ProductDialog.tsx` (PDV e delivery), tipos, hooks, menu publico
-
-## 2.5 NCM/CEST/CST ICMS selecionaveis + Substituicao Tributaria
-
-Criar listas estaticas em codigo (top ~50 NCMs de alimentacao, CESTs, CSTs ICMS) e usar `Combobox` com busca. Adicionar checkbox "Substituicao Tributaria" que alterna entre CST e CSOSN na aba Fiscal.
-
-**Arquivos**: Novos arquivos de dados (`src/data/fiscal-codes.ts`), `src/components/pdv/ProductDialog.tsx` (aba Fiscal)
-
-## 2.6 Cooldown da avaliacao (correcao rapida)
-
-Trocar `onChange` por `onBlur` no input de cooldown em `CampaignRoulette.tsx` e `CouponsRoulettes.tsx` para salvar apenas quando o usuario sair do campo.
-
-**Arquivos**: `CampaignRoulette.tsx`, `CouponsRoulettes.tsx`
+**Arquivos**: Nova migration SQL, `src/hooks/use-pdv-employee-consumption.ts`, `src/components/pdv/cashier/EmployeeConsumptionDialog.tsx`, `src/components/pdv/cashier/CashierActionsSidebar.tsx`, `src/pages/pdv/Cashier.tsx`
 
 ---
+
+## 3.4 Configuracao de impressora por produto
+
+**Solucao**:
+1. **Migration**: Adicionar coluna `printer_station TEXT DEFAULT 'cozinha'` na tabela `pdv_products`. Valores possiveis: "cozinha", "bar", "copa", "confeitaria", ou customizado.
+2. **UI**: Adicionar campo `Select` na aba geral do `ProductDialog` (PDV) com as opcoes de estacao.
+3. **Cozinha**: Na tela Kitchen, adicionar filtro por `printer_station` para que cada terminal veja apenas seus itens. Requer join com `pdv_products` no `use-pdv-kitchen.ts`.
+
+**Arquivos**: Nova migration SQL, `src/components/pdv/ProductDialog.tsx`, `src/hooks/use-pdv-kitchen.ts`, `src/pages/pdv/Kitchen.tsx`, `src/hooks/use-pdv-products.ts` (tipo)
+
+---
+
+## Ordem de execucao
+
+1. **3.1** Fix kitchen_status do balcao (rapido)
+2. **3.2** Cancelamento no caixa
+3. **3.3** Consumo de funcionarios (migration + hook + UI)
+4. **3.4** Impressora por produto (migration + UI + filtro)
 
 ## Detalhes tecnicos
 
-- **1 migration SQL**: cria tabelas `pdv_product_options` + `pdv_product_option_items`, adiciona `available_days` em `pdv_products` e `delivery_products`
-- **~10 arquivos editados/criados**
-- O Bloco 3 (PDV/Caixa) e Bloco 4 (avaliacoes restantes) ficam para a proxima iteracao
+- **2 migrations SQL**: tabela `pdv_employee_consumption` + coluna `printer_station` em `pdv_products`
+- **~8 arquivos editados/criados**
+- Bloco 4 (avaliacoes) fica para a proxima iteracao
 
