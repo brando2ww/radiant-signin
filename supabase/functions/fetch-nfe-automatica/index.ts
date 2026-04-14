@@ -6,27 +6,52 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+async function getAccessToken(clientId: string, clientSecret: string): Promise<string> {
+  const response = await fetch("https://auth.nuvemfiscal.com.br/oauth/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: clientId,
+      client_secret: clientSecret,
+      scope: "empresa nfe",
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Erro ao obter access token Nuvem Fiscal: ${response.status} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.access_token;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const NFE_API_KEY = Deno.env.get("NFE_API_KEY");
+    const NUVEM_FISCAL_CLIENT_ID = Deno.env.get("NUVEM_FISCAL_CLIENT_ID");
+    const NUVEM_FISCAL_CLIENT_SECRET = Deno.env.get("NUVEM_FISCAL_CLIENT_SECRET");
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    if (!NFE_API_KEY) {
+    if (!NUVEM_FISCAL_CLIENT_ID || !NUVEM_FISCAL_CLIENT_SECRET) {
       return new Response(
         JSON.stringify({
           success: false,
-          message: "NFE_API_KEY não configurada. Configure o secret no Supabase para ativar a importação automática.",
+          message: "Credenciais da Nuvem Fiscal não configuradas. Configure NUVEM_FISCAL_CLIENT_ID e NUVEM_FISCAL_CLIENT_SECRET nos secrets do Supabase.",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Obtain OAuth2 access token
+    const accessToken = await getAccessToken(NUVEM_FISCAL_CLIENT_ID, NUVEM_FISCAL_CLIENT_SECRET);
 
     // Parse optional user_id from body
     let targetUserId: string | null = null;
@@ -63,12 +88,11 @@ Deno.serve(async (req) => {
       const cnpj = (tenant.nfe_auto_import_cnpj || tenant.business_cnpj || "").replace(/\D/g, "");
       if (!cnpj || cnpj.length !== 14) continue;
 
-      // Call DistDFe API (Nuvem Fiscal or similar)
       const apiUrl = `https://api.nuvemfiscal.com.br/nfe/distribuicao/documentos?cpf_cnpj=${cnpj}&ambiente=producao`;
 
       const apiResponse = await fetch(apiUrl, {
         headers: {
-          Authorization: `Bearer ${NFE_API_KEY}`,
+          Authorization: `Bearer ${accessToken}`,
           Accept: "application/json",
         },
       });
@@ -100,7 +124,6 @@ Deno.serve(async (req) => {
         const invoiceNumber = String(doc.numero || doc.invoice_number || "");
         const totalValue = Number(doc.valor_total || doc.total || 0);
 
-        // Insert new invoice with correct column names
         const { error: insertError } = await supabase.from("pdv_invoices").insert({
           user_id: tenant.user_id,
           invoice_key: invoiceKey,
