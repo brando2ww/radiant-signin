@@ -410,6 +410,33 @@ export function ProductDialog({
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="printer_station"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estação de Impressão</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a estação" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="cozinha">Cozinha</SelectItem>
+                          <SelectItem value="bar">Bar</SelectItem>
+                          <SelectItem value="copa">Copa</SelectItem>
+                          <SelectItem value="confeitaria">Confeitaria</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Define para qual terminal o item será enviado
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
