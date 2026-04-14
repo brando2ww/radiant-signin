@@ -1,132 +1,86 @@
 
 
-# Expandir Pagina de Configuracoes dos Checklists Operacionais
+# Reformular Pagina Score da Equipe
 
-Reescrever `TaskSettings.tsx` como uma pagina longa organizada por 7 secoes com navegacao por ancora no topo, adicionando novos campos de configuracao ao banco de dados e criando componentes dedicados por secao.
+Reescrever `TeamScorePanel` como uma pagina completa e motivadora de acompanhamento de desempenho, com podio visual, ranking detalhado, grafico de evolucao, secao de badges e explicacao da formula de calculo.
 
-## Mudancas no banco de dados
+## Sem mudancas no banco de dados
 
-### Migration: Novas colunas em `operational_task_settings`
-
-```sql
-ALTER TABLE public.operational_task_settings
-  ADD COLUMN IF NOT EXISTS alert_critical_enabled boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS alert_critical_delay_minutes int DEFAULT 15,
-  ADD COLUMN IF NOT EXISTS alert_overdue_enabled boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS alert_overdue_delay_minutes int DEFAULT 10,
-  ADD COLUMN IF NOT EXISTS alert_daily_summary_enabled boolean DEFAULT false,
-  ADD COLUMN IF NOT EXISTS alert_daily_summary_time text DEFAULT '22:00',
-  ADD COLUMN IF NOT EXISTS alert_daily_summary_target text DEFAULT 'gestor',
-  ADD COLUMN IF NOT EXISTS alert_temperature_enabled boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS alert_browser_notifications boolean DEFAULT false,
-  ADD COLUMN IF NOT EXISTS alert_whatsapp_number text,
-  ADD COLUMN IF NOT EXISTS report_daily_content jsonb DEFAULT '["taxa_conclusao","atrasadas","destaque","criticos","turnos"]'::jsonb,
-  ADD COLUMN IF NOT EXISTS report_weekly_enabled boolean DEFAULT false,
-  ADD COLUMN IF NOT EXISTS report_weekly_day int DEFAULT 1,
-  ADD COLUMN IF NOT EXISTS allow_late_completion boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS require_photo_default boolean DEFAULT false,
-  ADD COLUMN IF NOT EXISTS default_max_duration_minutes int DEFAULT 60,
-  ADD COLUMN IF NOT EXISTS allow_free_notes boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS show_countdown_timer boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS block_early_execution boolean DEFAULT false,
-  ADD COLUMN IF NOT EXISTS min_pin_digits int DEFAULT 4,
-  ADD COLUMN IF NOT EXISTS session_timeout_minutes int DEFAULT 30;
-```
-
-Esses campos cobrem todas as 7 secoes. Turnos ja usam JSONB (campo `shifts`) — sera expandido para incluir `color` e `activeDays` por turno. Setores serao gerenciados via tabela separada ou enum existente `checklist_sector`.
+As tabelas `operator_scores`, `checklist_operators`, `checklist_executions` e `checklist_execution_items` ja contem todos os dados necessarios. O hook `useOperatorRanking` ja calcula score, badges e metricas — sera expandido para suportar periodos customizados e comparacao com periodo anterior.
 
 ## Arquivos novos
 
-### 1. `src/components/pdv/tasks/settings/SettingsNavAnchors.tsx`
+### 1. `src/components/pdv/checklists/score/ScoreOverview.tsx`
 
-Barra de navegacao fixa no topo com links-ancora para cada secao:
-- Turnos, Setores, Alertas, Relatorios, Execucao, Acesso, Dados
-- Scroll suave ao clicar
+Topo da pagina:
+- Seletor de periodo: Semana Atual, Semana Passada, Mes Atual, Mes Passado, Personalizado (date range picker)
+- 4 cards de destaque: Score medio da equipe (com variacao vs periodo anterior), Taxa de conclusao geral (%), Colaborador com maior score (avatar + nome + pontuacao), Colaborador que mais melhorou (nome + variacao positiva)
 
-### 2. `src/components/pdv/tasks/settings/ShiftsSection.tsx`
+### 2. `src/components/pdv/checklists/score/ScorePodium.tsx`
 
-Secao de turnos melhorada:
-- Campos existentes (nome, inicio, fim)
-- Novo: seletor de cor por turno (circulos coloridos)
-- Novo: checkboxes de dias da semana ativos
-- Validacao de sobreposicao de horarios com erro visual
-- Botao adicionar/remover turno
+Podio visual dos 3 melhores:
+- Layout de podio classico (2o | 1o | 3o) com 1o lugar elevado
+- Cada posicao: avatar colorido por setor, nome, cargo, score, variacao vs periodo anterior
+- Icones de trofeu/medalha diferenciados
+- Estado vazio: podio com silhuetas em cinza e mensagem "Aguardando primeiros dados"
 
-### 3. `src/components/pdv/tasks/settings/SectorsSection.tsx`
+### 3. `src/components/pdv/checklists/score/ScoreRanking.tsx`
 
-Gerenciamento de setores:
-- Lista dos setores do enum `checklist_sector` com nome, icone e cor editaveis
-- Toggle ativo/inativo por setor
-- Botao para adicionar setor personalizado
-- Salva como JSONB em `operational_task_settings` (campo `sectors_config`)
+Ranking completo da equipe:
+- Tabela/lista ordenada por score decrescente
+- Cada linha: posicao, avatar, nome, setor, score, variacao (+/- pts com seta colorida), taxa de conclusao no prazo, total checklists concluidos, badges do periodo
+- Filtro por setor
+- Clicar no colaborador abre `OperatorProfileDrawer` existente
 
-### 4. `src/components/pdv/tasks/settings/AlertsSection.tsx`
+### 4. `src/components/pdv/checklists/score/ScoreEvolutionChart.tsx`
 
-Configuracoes de alertas:
-- Toggle + delay para itens criticos nao concluidos
-- Toggle + delay para checklist inteiro atrasado
-- Resumo diario automatico: toggle + horario + destinatario (gestor/lideres/todos)
-- Canal: toggle notificacao navegador + campo WhatsApp
-- Toggle alerta temperatura fora da faixa
+Grafico de evolucao:
+- Linha do score medio da equipe nas ultimas 4-8 semanas (usa `operator_scores`)
+- Selecao multipla de colaboradores para sobrepor linhas individuais
+- Linha de meta configuravel (input numerico, padrao 80)
+- Usa Recharts (ja instalado)
 
-### 5. `src/components/pdv/tasks/settings/ReportsSection.tsx`
+### 5. `src/components/pdv/checklists/score/BadgesSection.tsx`
 
-Relatorios automaticos:
-- Relatorio diario WhatsApp (migrado da secao atual) com horario
-- Checkboxes do conteudo do relatorio (taxa conclusao, atrasadas, destaque, criticos, turnos)
-- Relatorio semanal: toggle + dia da semana
-- Exportacao manual: botao com date range picker para PDF/CSV
+Secao de badges e conquistas:
+- Lista dos 6 badges do sistema: Semana Perfeita, Destaque do Mes, Sequencia de 7 dias, Zero Atrasos, Veterano, Consistente
+- Cada badge: icone, nome, descricao, quantos conquistaram, ultimos conquistadores
+- Dados calculados a partir de `operator_scores` e `checklist_executions`
 
-### 6. `src/components/pdv/tasks/settings/ExecutionSection.tsx`
+### 6. `src/components/pdv/checklists/score/ScoreFormulaInfo.tsx`
 
-Comportamento de execucao:
-- Geracao automatica (migrado)
-- Permitir conclusao apos prazo: toggle
-- Exigir foto por padrao: toggle
-- Tempo maximo padrao (minutos): campo numerico
-- Permitir observacoes livres: toggle
-- Exibir cronometro regressivo: toggle
-
-### 7. `src/components/pdv/tasks/settings/AccessSection.tsx`
-
-Acesso e seguranca:
-- QR Code publico (migrado) com preview do QR e botao copiar link
-- Bloquear execucao fora do horario: toggle
-- Minimo digitos PIN: campo numerico
-- Timeout de sessao: campo numerico
-- Link direto para pagina de Logs (`onNavigate("logs")`)
-
-### 8. `src/components/pdv/tasks/settings/DataSection.tsx`
-
-Dados e backup:
-- Exportar todos os dados em JSON (checklists, agendamentos, execucoes, colaboradores)
-- Exportar historico em CSV com seletor de periodo
-- Limpar historico com mais de X dias (com confirmacao AlertDialog)
-- Indicadores de uso: contagem de checklists, agendamentos, colaboradores, execucoes
+Bloco informativo:
+- Explicacao visual da formula (Pontualidade 40% + Completude 30% + Qualidade 30%)
+- Barras proporcionais mostrando os pesos
+- Link para pagina de Configuracoes
 
 ## Arquivos editados
 
-### 9. `src/components/pdv/tasks/TaskSettings.tsx`
+### 7. `src/hooks/use-operator-scores.ts`
+
+Expandir o hook:
+- Adicionar tipo de periodo `"last_week" | "last_month" | "custom"` com datas customizaveis
+- Expandir `OperatorRank` com `sector`, `role`, `avatarColor`, `completionRate`
+- Nova funcao `useOperatorRankingComparison` que busca ranking de dois periodos e calcula variacao por operador
+- Expandir `useScoreHistory` para suportar multiplos operadores simultaneamente (para grafico comparativo)
+- Nova funcao `useBadgesSummary` que analisa `operator_scores` para determinar conquistas dos badges avancados
+
+### 8. `src/components/pdv/checklists/TeamScorePanel.tsx`
 
 Reescrita completa:
-- Pagina longa com `SettingsNavAnchors` no topo
-- Importa e renderiza as 7 secoes em sequencia com separadores
-- Cada secao tem titulo em destaque + descricao em cinza
-- Botao "Salvar Configuracoes" fixo no rodape (sticky bottom)
-- Gerencia estado unificado de todas as configuracoes
-- Chama `saveSettings` no submit
+- Importa e orquestra os 5 componentes novos em layout vertical
+- Gerencia estado do periodo selecionado, operadores selecionados para grafico, drawer de perfil
+- Passa `onNavigate` para links de atalho (configuracoes, tarefas do dia, equipe)
+- Estado vazio inteligente com podio em cinza e atalhos
 
-### 10. `src/hooks/use-operational-tasks.ts`
+### 9. `src/pages/pdv/Tasks.tsx`
 
-- Expandir `TaskSettings` interface com novos campos
-- Expandir `ShiftConfig` com `color` e `activeDays`
-- Atualizar `saveSettings` mutation para incluir novas colunas
-- Atualizar query para ler novos campos
+- Passar `onNavigate={setActiveSection}` para `TeamScorePanel`
 
 ## Resumo tecnico
 
-- **1 migration** (~20 colunas novas em `operational_task_settings`)
-- **8 arquivos novos** (7 secoes + 1 navegacao)
-- **2 arquivos editados** (TaskSettings, use-operational-tasks)
-- **0 dependencias novas**
+- **0 migrations** (usa tabelas existentes)
+- **6 arquivos novos** (5 componentes de secao + 1 formula info)
+- **3 arquivos editados** (TeamScorePanel, use-operator-scores, Tasks.tsx)
+- **0 dependencias novas** (Recharts ja instalado)
 
