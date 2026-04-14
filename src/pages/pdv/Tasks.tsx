@@ -78,7 +78,7 @@ export default function Tasks() {
       case "equipe": return <OperatorsManager />;
       case "hoje": return <DailyTasksView onNavigate={setActiveSection} />;
       case "configuracoes": return <TaskSettings onNavigate={setActiveSection} />;
-      case "score": return <TeamScorePanel />;
+      case "score": return <TeamScorePanel onNavigate={setActiveSection} />;
       case "evidencias": return <EvidenceGallery />;
       case "validade": return <ExpiryTrackingPanel />;
       case "logs": return <AccessLogsPanel />;
