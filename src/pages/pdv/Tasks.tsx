@@ -77,7 +77,7 @@ export default function Tasks() {
       case "agendamento": return <SchedulesManager />;
       case "equipe": return <OperatorsManager />;
       case "hoje": return <DailyTasksView onNavigate={setActiveSection} />;
-      case "configuracoes": return <TaskSettings />;
+      case "configuracoes": return <TaskSettings onNavigate={setActiveSection} />;
       case "score": return <TeamScorePanel />;
       case "evidencias": return <EvidenceGallery />;
       case "validade": return <ExpiryTrackingPanel />;
