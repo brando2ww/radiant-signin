@@ -2383,11 +2383,33 @@ export type Database = {
       }
       operational_task_settings: {
         Row: {
+          alert_browser_notifications: boolean | null
+          alert_critical_delay_minutes: number | null
+          alert_critical_enabled: boolean | null
+          alert_daily_summary_enabled: boolean | null
+          alert_daily_summary_target: string | null
+          alert_daily_summary_time: string | null
+          alert_overdue_delay_minutes: number | null
+          alert_overdue_enabled: boolean | null
+          alert_temperature_enabled: boolean | null
+          alert_whatsapp_number: string | null
+          allow_free_notes: boolean | null
+          allow_late_completion: boolean | null
           auto_generate: boolean
+          block_early_execution: boolean | null
           created_at: string
+          default_max_duration_minutes: number | null
           id: string
+          min_pin_digits: number | null
           qr_code_enabled: boolean
+          report_daily_content: Json | null
+          report_weekly_day: number | null
+          report_weekly_enabled: boolean | null
+          require_photo_default: boolean | null
+          sectors_config: Json | null
+          session_timeout_minutes: number | null
           shifts: Json
+          show_countdown_timer: boolean | null
           updated_at: string
           user_id: string
           whatsapp_report_enabled: boolean | null
@@ -2395,11 +2417,33 @@ export type Database = {
           whatsapp_report_time: string | null
         }
         Insert: {
+          alert_browser_notifications?: boolean | null
+          alert_critical_delay_minutes?: number | null
+          alert_critical_enabled?: boolean | null
+          alert_daily_summary_enabled?: boolean | null
+          alert_daily_summary_target?: string | null
+          alert_daily_summary_time?: string | null
+          alert_overdue_delay_minutes?: number | null
+          alert_overdue_enabled?: boolean | null
+          alert_temperature_enabled?: boolean | null
+          alert_whatsapp_number?: string | null
+          allow_free_notes?: boolean | null
+          allow_late_completion?: boolean | null
           auto_generate?: boolean
+          block_early_execution?: boolean | null
           created_at?: string
+          default_max_duration_minutes?: number | null
           id?: string
+          min_pin_digits?: number | null
           qr_code_enabled?: boolean
+          report_daily_content?: Json | null
+          report_weekly_day?: number | null
+          report_weekly_enabled?: boolean | null
+          require_photo_default?: boolean | null
+          sectors_config?: Json | null
+          session_timeout_minutes?: number | null
           shifts?: Json
+          show_countdown_timer?: boolean | null
           updated_at?: string
           user_id: string
           whatsapp_report_enabled?: boolean | null
@@ -2407,11 +2451,33 @@ export type Database = {
           whatsapp_report_time?: string | null
         }
         Update: {
+          alert_browser_notifications?: boolean | null
+          alert_critical_delay_minutes?: number | null
+          alert_critical_enabled?: boolean | null
+          alert_daily_summary_enabled?: boolean | null
+          alert_daily_summary_target?: string | null
+          alert_daily_summary_time?: string | null
+          alert_overdue_delay_minutes?: number | null
+          alert_overdue_enabled?: boolean | null
+          alert_temperature_enabled?: boolean | null
+          alert_whatsapp_number?: string | null
+          allow_free_notes?: boolean | null
+          allow_late_completion?: boolean | null
           auto_generate?: boolean
+          block_early_execution?: boolean | null
           created_at?: string
+          default_max_duration_minutes?: number | null
           id?: string
+          min_pin_digits?: number | null
           qr_code_enabled?: boolean
+          report_daily_content?: Json | null
+          report_weekly_day?: number | null
+          report_weekly_enabled?: boolean | null
+          require_photo_default?: boolean | null
+          sectors_config?: Json | null
+          session_timeout_minutes?: number | null
           shifts?: Json
+          show_countdown_timer?: boolean | null
           updated_at?: string
           user_id?: string
           whatsapp_report_enabled?: boolean | null
