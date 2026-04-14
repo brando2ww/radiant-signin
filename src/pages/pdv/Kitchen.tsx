@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChefHat } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { usePDVKitchen } from "@/hooks/use-pdv-kitchen";
 import { KitchenItemCard } from "@/components/pdv/KitchenItemCard";
 import { KitchenFilters } from "@/components/pdv/KitchenFilters";
@@ -74,6 +76,26 @@ export default function PDVKitchen() {
         onStatusChange={setSelectedStatus}
         counts={counts}
       />
+
+      {/* Station filter */}
+      <div className="flex gap-2 flex-wrap">
+        {["cozinha", "bar", "copa", "confeitaria"].map((station) => {
+          const count = items.filter((i) => (i as any).printer_station === station).length;
+          if (count === 0 && station !== "cozinha") return null;
+          return (
+            <Button
+              key={station}
+              variant={selectedStation === station ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedStation(selectedStation === station ? null : station)}
+              className="capitalize"
+            >
+              {station}
+              <Badge variant="secondary" className="ml-1.5">{count}</Badge>
+            </Button>
+          );
+        })}
+      </div>
 
       {filteredItems.length === 0 ? (
         <Card>
