@@ -29,6 +29,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Image as ImageIcon, Upload, X, Info } from "lucide-react";
 import { ProductRecipeManager } from "./ProductRecipeManager";
 import { PDVProductOptionsManager } from "./PDVProductOptionsManager";
+import { ProductCompositionManager } from "./ProductCompositionManager";
 import { usePDVRecipes } from "@/hooks/use-pdv-recipes";
 import { ImageCropDialog } from "@/components/ui/image-crop-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
