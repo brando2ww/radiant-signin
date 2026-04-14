@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Lock } from "lucide-react";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
 import { usePDVComandas, Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
-import { PDVTable } from "@/hooks/use-pdv-tables";
+import { usePDVTables, PDVTable } from "@/hooks/use-pdv-tables";
 import { OpenCashierDialog } from "@/components/pdv/OpenCashierDialog";
 import { CloseCashierDialog, printCashierReport } from "@/components/pdv/CloseCashierDialog";
 import { CashMovementDialog } from "@/components/pdv/CashMovementDialog";
@@ -312,6 +312,18 @@ export default function PDVCashier() {
         onOpenChange={setChargeDialog}
         onSelectComanda={handleSelectComanda}
         onSelectTable={handleSelectTable}
+        onCancelComanda={(comandaId) => {
+          cancelComanda(comandaId);
+          setChargeDialog(false);
+        }}
+        onCancelTable={(tableId, orderId) => {
+          // Cancel all comandas of the table
+          const tableComandas = comandas.filter(c => c.order_id === orderId && c.status === "aberta");
+          tableComandas.forEach(c => cancelComanda(c.id));
+          // Release table
+          updateTable({ id: tableId, updates: { status: "livre", current_order_id: null } });
+          setChargeDialog(false);
+        }}
       />
 
       <PaymentDialog
