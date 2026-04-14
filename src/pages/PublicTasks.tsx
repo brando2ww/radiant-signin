@@ -37,6 +37,7 @@ export default function PublicTasks() {
   const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null);
 
   const { fetchAssignedSchedules, startExecution, getCurrentShift } = useChecklistExecution(userId || "");
+  const logAccess = useLogAccess();
 
   if (!userId) {
     return (
@@ -61,6 +62,7 @@ export default function PublicTasks() {
   const handleLogin = (op: Operator) => {
     setOperator(op);
     loadSchedules(op);
+    logAccess.mutate({ userId: userId!, operatorId: op.id, action: "login", details: { name: op.name } });
   };
 
   const handleStart = async (item: ScheduleItem) => {
