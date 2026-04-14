@@ -65,15 +65,16 @@ export function OperatorProfileDrawer({ open, onOpenChange, operator, onEdit }: 
   const defaultShift = (op as any).default_shift;
   const notes = (op as any).notes;
 
-  const completedCount = executions.filter((e) => e.status === "completed").length;
+  const completedCount = executions.filter((e) => e.status === "concluido").length;
   const totalCount = executions.length;
   const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-    completed: { label: "Concluído", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" },
-    in_progress: { label: "Em andamento", className: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
-    pending: { label: "Pendente", className: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300" },
-    overdue: { label: "Atrasado", className: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" },
+    concluido: { label: "Concluído", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" },
+    em_andamento: { label: "Em andamento", className: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
+    pendente: { label: "Pendente", className: "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300" },
+    atrasado: { label: "Atrasado", className: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" },
+    nao_iniciado: { label: "Não iniciado", className: "bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300" },
   };
 
   return (
