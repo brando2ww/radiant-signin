@@ -87,26 +87,50 @@ export default function Tasks() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-4">
-      <ResponsivePageHeader
-        title="Checklists Operacionais"
-        description="Gestão completa de checklists, equipe e agendamentos"
-      >
-        <Button variant="outline" size="sm" onClick={() => setQrOpen(true)}>
-          <QrCode className="h-4 w-4 mr-2" /> QR Code
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleSendReport} disabled={sendingReport}>
-          <Send className={`h-4 w-4 mr-2 ${sendingReport ? "animate-pulse" : ""}`} />
-          Relatório
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => generateDailyFn(undefined)} disabled={isGenerating}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? "animate-spin" : ""}`} />
-          Gerar Tarefas
-        </Button>
-      </ResponsivePageHeader>
+    <div className="flex min-h-[calc(100vh-3.5rem)]">
+      {/* Desktop sidebar */}
+      <nav className="hidden md:flex flex-col w-52 shrink-0 border-r border-border bg-card p-3 gap-1">
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeSection === item.key;
+          return (
+            <button
+              key={item.key}
+              onClick={() => setActiveSection(item.key)}
+              className={cn(
+                "flex items-center gap-3 rounded-md px-4 py-3 text-sm font-medium transition-colors text-left",
+                isActive
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-card-foreground hover:bg-muted"
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              {item.label}
+            </button>
+          );
+        })}
+      </nav>
 
-      <div className="flex flex-col md:flex-row gap-4">
-        {/* Mobile: horizontal scroll */}
+      {/* Content area */}
+      <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
+        <ResponsivePageHeader
+          title="Checklists Operacionais"
+          description="Gestão completa de checklists, equipe e agendamentos"
+        >
+          <Button variant="outline" size="sm" onClick={() => setQrOpen(true)}>
+            <QrCode className="h-4 w-4 mr-2" /> QR Code
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleSendReport} disabled={sendingReport}>
+            <Send className={`h-4 w-4 mr-2 ${sendingReport ? "animate-pulse" : ""}`} />
+            Relatório
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => generateDailyFn(undefined)} disabled={isGenerating}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? "animate-spin" : ""}`} />
+            Gerar Tarefas
+          </Button>
+        </ResponsivePageHeader>
+
+        {/* Mobile nav */}
         <nav className="flex md:hidden gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -129,33 +153,7 @@ export default function Tasks() {
           })}
         </nav>
 
-        {/* Desktop: vertical sidebar cards */}
-        <nav className="hidden md:flex flex-col w-52 shrink-0 rounded-lg border bg-card p-2 min-h-[calc(100vh-12rem)]">
-          <div className="flex flex-col gap-1">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeSection === item.key;
-              return (
-                <button
-                  key={item.key}
-                  onClick={() => setActiveSection(item.key)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-md px-4 py-3 text-sm font-medium transition-colors text-left",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-card-foreground hover:bg-muted"
-                  )}
-                >
-                  <Icon className="h-4 w-4 shrink-0" />
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
-        </nav>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0">
           {renderContent()}
         </div>
       </div>
