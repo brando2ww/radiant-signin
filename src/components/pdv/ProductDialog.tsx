@@ -190,6 +190,7 @@ export function ProductDialog({
         is_available: product.is_available,
         is_sold_by_weight: product.is_sold_by_weight,
         available_days: (product as any)?.available_days || [],
+        printer_station: (product as any)?.printer_station || "cozinha",
         ncm: product.ncm || "",
         cest: product.cest || "",
         cfop: product.cfop || "",
