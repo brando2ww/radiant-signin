@@ -1,94 +1,114 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Clock, Calendar } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useChecklistSchedules } from "@/hooks/use-checklist-schedules";
-import { useChecklists, SECTOR_LABELS } from "@/hooks/use-checklists";
+import { useChecklists, SECTOR_LABELS, type ChecklistSector } from "@/hooks/use-checklists";
 import { useChecklistOperators } from "@/hooks/use-checklist-operators";
-import { ScheduleDialog } from "./ScheduleDialog";
+import { ScheduleIndicators } from "./schedules/ScheduleIndicators";
+import { ScheduleFilters } from "./schedules/ScheduleFilters";
+import { ScheduleWeekGrid } from "./schedules/ScheduleWeekGrid";
+import { ScheduleListView } from "./schedules/ScheduleListView";
+import { ScheduleDrawer } from "./schedules/ScheduleDrawer";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const DAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-const SHIFT_LABELS: Record<string, string> = { manha: "Manhã", tarde: "Tarde", noite: "Noite" };
-
 export function SchedulesManager() {
-  const { schedules, isLoading, deleteSchedule } = useChecklistSchedules();
+  const { schedules, isLoading, deleteSchedule, duplicateSchedule, toggleSchedule } = useChecklistSchedules();
   const { checklists } = useChecklists();
   const { operators } = useChecklistOperators();
-  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const [view, setView] = useState<"grid" | "list">("grid");
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [presetDay, setPresetDay] = useState<number | null>(null);
+  const [presetShift, setPresetShift] = useState<string | null>(null);
+
+  const [shiftFilter, setShiftFilter] = useState("all");
+  const [sectorFilter, setSectorFilter] = useState("all");
+  const [operatorFilter, setOperatorFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filtered = schedules.filter((s: any) => {
+    if (shiftFilter !== "all" && s.shift !== shiftFilter) return false;
+    if (sectorFilter !== "all" && s.checklists?.sector !== sectorFilter) return false;
+    if (operatorFilter !== "all" && s.assigned_operator_id !== operatorFilter) return false;
+    if (statusFilter === "active" && !s.is_active) return false;
+    if (statusFilter === "paused" && s.is_active) return false;
+    return true;
+  });
+
+  const handleEdit = (id: string) => {
+    setEditingId(id);
+    setPresetDay(null);
+    setPresetShift(null);
+    setDrawerOpen(true);
+  };
+
+  const handleCreateAt = (day: number, shift: string) => {
+    setEditingId(null);
+    setPresetDay(day);
+    setPresetShift(shift);
+    setDrawerOpen(true);
+  };
+
+  const handleNew = () => {
+    setEditingId(null);
+    setPresetDay(null);
+    setPresetShift(null);
+    setDrawerOpen(true);
+  };
+
+  const activeOperators = operators.filter((o) => o.is_active).map((o) => ({ id: o.id, name: o.name }));
 
   return (
     <div className="space-y-4">
-      <Button size="sm" onClick={() => { setEditingId(null); setDialogOpen(true); }}>
-        <Plus className="h-4 w-4 mr-2" /> Novo Agendamento
-      </Button>
+      <ScheduleIndicators schedules={schedules} />
+
+      <div className="flex items-center gap-2">
+        <ScheduleFilters
+          view={view}
+          onViewChange={setView}
+          shiftFilter={shiftFilter}
+          onShiftFilter={setShiftFilter}
+          sectorFilter={sectorFilter}
+          onSectorFilter={setSectorFilter}
+          operatorFilter={operatorFilter}
+          onOperatorFilter={setOperatorFilter}
+          statusFilter={statusFilter}
+          onStatusFilter={setStatusFilter}
+          operators={activeOperators}
+        />
+        <Button size="sm" onClick={handleNew} className="ml-auto shrink-0">
+          <Plus className="h-4 w-4 mr-1" /> Novo
+        </Button>
+      </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Carregando...</p>
-      ) : schedules.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            Nenhum agendamento. Crie um checklist primeiro e depois agende.
-          </CardContent>
-        </Card>
+        <p className="text-sm text-muted-foreground py-8 text-center">Carregando...</p>
+      ) : view === "grid" ? (
+        <ScheduleWeekGrid schedules={filtered} onEdit={handleEdit} onCreateAt={handleCreateAt} />
       ) : (
-        <div className="space-y-3">
-          {schedules.map((s: any) => {
-            const days = (s.days_of_week as number[]) || [];
-            return (
-              <Card key={s.id}>
-                <CardContent className="py-3 px-4 flex items-center gap-4">
-                  <div className="flex-1 min-w-0 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{s.checklists?.name || "Checklist"}</span>
-                      <Badge variant="secondary">{SHIFT_LABELS[s.shift] || s.shift}</Badge>
-                      {s.checklists?.sector && (
-                        <Badge variant="outline">{SECTOR_LABELS[s.checklists.sector as keyof typeof SECTOR_LABELS]}</Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> {s.start_time?.slice(0, 5)} ({s.max_duration_minutes}min)
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" /> {days.map((d: number) => DAY_LABELS[d]).join(", ")}
-                      </span>
-                    </div>
-                    {s.checklist_operators?.name && (
-                      <p className="text-xs text-muted-foreground">→ {s.checklist_operators.name}</p>
-                    )}
-                    {s.assigned_sector && !s.assigned_operator_id && (
-                      <p className="text-xs text-muted-foreground">→ Setor: {SECTOR_LABELS[s.assigned_sector as keyof typeof SECTOR_LABELS]}</p>
-                    )}
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingId(s.id); setDialogOpen(true); }}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(s.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+        <ScheduleListView
+          schedules={filtered}
+          onEdit={handleEdit}
+          onDuplicate={(id) => duplicateSchedule(id)}
+          onToggle={(id) => toggleSchedule(id)}
+          onDelete={(id) => setDeleteId(id)}
+        />
       )}
 
-      <ScheduleDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
+      <ScheduleDrawer
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
         editingId={editingId}
         schedules={schedules}
         checklists={checklists}
         operators={operators}
+        presetDay={presetDay}
+        presetShift={presetShift}
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
