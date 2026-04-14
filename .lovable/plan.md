@@ -1,118 +1,100 @@
 
 
-# Fases 3 e 4 -- Execucao do Colaborador + Painel do Gestor
+# Fase 5 -- Score, Evidencias, Validade e Log de Acessos
 
-## FASE 3 -- Tela do Colaborador (Execucao)
-
-### 3.1 Reescrever PublicTasks com login por PIN
-
-**Arquivo**: `src/pages/PublicTasks.tsx`
-
-Substituir o conteudo atual por um fluxo de duas etapas:
-1. **Tela de PIN**: InputOTP de 4 digitos. Valida contra `checklist_operators` onde `user_id = :userId` e `pin = :input`. Se invalido, mostra erro. Se valido, armazena operador no state.
-2. **Lista de checklists do turno**: Apos login, busca `checklist_schedules` do dia/turno atual atribuidos ao operador (por `assigned_operator_id` ou `assigned_sector` = setor do operador). Cada card mostra nome, setor, status (pendente/em andamento/concluido) e botao "Iniciar"/"Continuar".
-
-### 3.2 Hook de execucao
-
-**Arquivo novo**: `src/hooks/use-checklist-execution.ts`
-
-- `startExecution(checklistId, scheduleId, operatorId)`: cria registro em `checklist_executions` com status `em_andamento` e `started_at = now()`
-- `loadExecution(executionId)`: busca execution + execution_items + items (join) para montar tela
-- `saveItemValue(executionItemId, value, photoUrl, isCompliant)`: upsert em `checklist_execution_items`
-- `completeExecution(executionId)`: atualiza status para `concluido`, calcula score, salva `completed_at`
-- `createAlert(executionId, itemId, alertType, message)`: insere em `checklist_alerts`
-- Logica de turno: determinar turno atual baseado na hora e nas configuracoes de shifts
-
-### 3.3 Componentes de execucao
-
-**Pasta nova**: `src/components/pdv/checklists/execution/`
-
-1. **ChecklistExecutionPage.tsx** -- Layout mobile-first principal
-   - Header com nome do checklist, cronometro (tempo restante = `max_duration_minutes` - tempo decorrido), barra de progresso
-   - Lista scrollavel de itens
-   - Botao "Concluir" desabilitado ate todos os `is_required` preenchidos
-
-2. **ExecutionItemRenderer.tsx** -- Renderiza item por tipo:
-   - `checkbox`: Switch/toggle simples
-   - `number`: Input numerico
-   - `text`: Textarea
-   - `photo`: Botao camera + upload para bucket `checklist-evidence` via `supabase.storage`
-   - `temperature`: Input numerico + badge verde/vermelho comparando com `min_value`/`max_value`. Se fora da faixa, gera alerta automatico
-   - `stars`: 5 estrelas clicaveis (Star icons)
-
-3. **TrainingStep.tsx** -- Se item tem `training_instruction` ou `training_video_url`, mostra instrucao/iframe antes de permitir preenchimento. Checkbox "Li e entendi" para desbloquear.
-
-4. **ExecutionTimer.tsx** -- Cronometro decrescente, muda de cor quando < 20% do tempo restante
-
-5. **PinLoginScreen.tsx** -- Componente extraido para o login por PIN (InputOTP + validacao)
-
-### 3.4 Upload de fotos
-
-Usar `supabase.storage.from("checklist-evidence").upload()` com path `{userId}/{executionId}/{itemId}.jpg`. Salvar URL publica no campo `photo_url` do `checklist_execution_items`.
+Todas as tabelas necessarias ja existem no banco (`operator_scores`, `checklist_evidence_reviews`, `product_expiry_tracking`, `checklist_access_logs`). Nenhuma migration necessaria.
 
 ---
 
-## FASE 4 -- Painel do Gestor + Alertas + Dashboard Widget
+## 5.1 Hook de Score da Equipe
 
-### 4.1 Nova aba "Painel" na pagina de Tarefas
+**Arquivo novo**: `src/hooks/use-operator-scores.ts`
 
-**Arquivo**: `src/pages/pdv/Tasks.tsx` -- adicionar tab "Painel" como primeira aba
+- `useOperatorRanking()`: para cada operador, calcula score (0-100) baseado em execucoes do periodo:
+  - Prazo (40%): `concluido` no tempo / total
+  - Completude (30%): itens preenchidos / total itens
+  - Qualidade (30%): media das avaliacoes por estrelas
+- Persiste em `operator_scores` com `period_start`/`period_end`
+- Calcula badges automaticos em JSON:
+  - "Semana Perfeita": 100% conclusao na semana
+  - "Destaque do Mês": maior score no mes
+- `useScoreHistory(operatorId, period)`: busca historico de scores por semana/mes para grafico
 
-**Componente novo**: `src/components/pdv/checklists/DashboardPanel.tsx`
+## 5.2 Componente de Score e Ranking
 
-- Cards de resumo: concluidos, atrasados, nao iniciados (query `checklist_executions` do dia)
-- Filtros: data (DatePicker), turno (Select), setor (Select), colaborador (Select)
-- Linha do tempo: lista cronologica de execucoes com badges de cor por status
-- Feed de atividades recentes (ultimas 20 execucoes com operador e hora)
+**Arquivo novo**: `src/components/pdv/checklists/TeamScorePanel.tsx`
 
-### 4.2 Grafico de taxa de conclusao
+- Ranking da equipe: lista ordenada por score com avatar, nome, posicao, score (progress bar), badges
+- Filtro por periodo: semana atual / mes atual
+- Grafico de historico (Recharts LineChart) por operador selecionado
 
-**Componente novo**: `src/components/pdv/checklists/CompletionChart.tsx`
+## 5.3 Hook de Evidencias
 
-- Recharts BarChart mostrando % conclusao por dia da semana (ultimos 7 dias)
-- Usa `ChartContainer` existente
+**Arquivo novo**: `src/hooks/use-checklist-evidence.ts`
 
-### 4.3 Comparativo de turnos
+- `useEvidenceGallery(filters)`: busca `checklist_execution_items` com `photo_url IS NOT NULL`, join com execution/checklist/operator para metadados
+- Filtros: data, setor, colaborador
+- `reviewEvidence(executionItemId, status, comment)`: insere/atualiza `checklist_evidence_reviews`
+- `useEvidenceReviews(executionItemId)`: busca reviews de um item
 
-**Componente novo**: `src/components/pdv/checklists/ShiftComparison.tsx`
+## 5.4 Componente Galeria de Evidencias
 
-- 3 cards lado a lado (manha/tarde/noite) com % conclusao, total, atrasados
-- Query agrupa execucoes do dia por turno do schedule
+**Arquivo novo**: `src/components/pdv/checklists/EvidenceGallery.tsx`
 
-### 4.4 Secao de alertas
+- Grid de fotos com thumbnail, data, setor, operador
+- Ao clicar: modal com foto ampliada + botoes Aprovar/Reprovar/Comentar
+- Filtros por data (DatePicker), setor (Select), colaborador (Select)
+- Botao "Exportar" que baixa as fotos filtradas (zip via JSZip)
 
-**Componente novo**: `src/components/pdv/checklists/AlertsPanel.tsx`
+## 5.5 Hook de Controle de Validade
 
-- Lista de alertas nao reconhecidos no topo (destaque vermelho)
-- Historico filtravel por data/tipo
-- Botao "Reconhecer" por alerta (atualiza `is_acknowledged`, `acknowledged_by`, `acknowledged_at`)
+**Arquivo novo**: `src/hooks/use-product-expiry.ts`
 
-### 4.5 Hook do painel
+- CRUD completo em `product_expiry_tracking`
+- `useExpiryAlerts()`: busca itens com `expiry_date` proxima (3 dias, 1 dia) ou vencida, atualiza status automaticamente
+- `useExpiryHistory(period)`: historico de perdas/descartes
 
-**Arquivo novo**: `src/hooks/use-checklist-dashboard.ts`
+## 5.6 Componente de Validade
 
-- `useDashboardMetrics(filters)`: query execucoes agrupadas por status
-- `useCompletionChart(days)`: taxa de conclusao por dia
-- `useShiftComparison(date)`: metricas por turno
-- `useChecklistAlerts()`: alertas nao reconhecidos + historico
-- `useRecentActivity()`: ultimas execucoes com joins
+**Arquivo novo**: `src/components/pdv/checklists/ExpiryTrackingPanel.tsx`
 
-### 4.6 Widget "Saude da Operacao" no Dashboard PDV
+- CRUD: nome do produto, lote, data de validade, notas
+- Cards de alerta: vermelho (vencido), amarelo (1 dia), laranja (3 dias), verde (valido)
+- Tabela de historico com filtros e status
 
-**Arquivo editado**: `src/pages/pdv/Dashboard.tsx`
+## 5.7 Hook de Log de Acessos
 
-- Adicionar card com semaforo (circulo verde/amarelo/vermelho)
-- Verde: >90% concluidos no prazo; Amarelo: 70-90%; Vermelho: <70%
-- Query simples: `checklist_executions` do dia com status `concluido` vs total
+**Arquivo novo**: `src/hooks/use-checklist-access-logs.ts`
 
-**Componente novo**: `src/components/pdv/checklists/OperationHealthWidget.tsx`
+- `logAccess(operatorId, action, details)`: insere em `checklist_access_logs`
+- `useAccessLogs(filters)`: busca logs com join em `checklist_operators` para nome
+- Integrar chamada de log no PIN login (PublicTasks) e nas acoes de execucao
+
+## 5.8 Componente de Log de Acessos
+
+**Arquivo novo**: `src/components/pdv/checklists/AccessLogsPanel.tsx`
+
+- Tabela cronologica: data/hora, operador, acao, detalhes
+- Filtros: data, operador
+
+## 5.9 Novas abas na pagina Tasks.tsx
+
+Adicionar 4 novas abas ao `TabsList`:
+- **Score** -> `TeamScorePanel`
+- **Evidencias** -> `EvidenceGallery`
+- **Validade** -> `ExpiryTrackingPanel`
+- **Logs** -> `AccessLogsPanel`
+
+## 5.10 Integrar log de acesso no PublicTasks
+
+Editar `src/pages/PublicTasks.tsx` para chamar `logAccess` apos login por PIN e ao concluir checklist.
 
 ---
 
 ## Resumo tecnico
 
-- **0 migrations**: todas as tabelas ja existem (Fase 1 concluida)
-- **~10 arquivos novos**: 5 em `execution/`, 4 no painel, 1 hook de execucao, 1 hook de dashboard
-- **~2 arquivos editados**: `PublicTasks.tsx` (reescrita), `Tasks.tsx` (nova aba), `Dashboard.tsx` (widget)
-- Reutiliza: `InputOTP`, `Recharts`/`ChartContainer`, bucket `checklist-evidence`, tipos do Supabase
+- **0 migrations** (tabelas ja existem)
+- **~8 arquivos novos**: 4 hooks + 4 componentes
+- **~2 arquivos editados**: `Tasks.tsx` (novas abas), `PublicTasks.tsx` (log de acesso)
+- Dependencia extra: `jszip` para exportacao de fotos (instalar via npm)
 
