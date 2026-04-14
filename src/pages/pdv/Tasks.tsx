@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { QrCode, RefreshCw, Send } from "lucide-react";
+import { QrCode, RefreshCw, Send, PanelLeft } from "lucide-react";
 import { ResponsivePageHeader } from "@/components/ui/responsive-page-header";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { ChecklistsSidebar } from "@/components/pdv/checklists/ChecklistsSidebar";
 import { ChecklistsManager } from "@/components/pdv/checklists/ChecklistsManager";
 import { SchedulesManager } from "@/components/pdv/checklists/SchedulesManager";
 import { OperatorsManager } from "@/components/pdv/checklists/OperatorsManager";
@@ -19,17 +21,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 
+function DailyTasksWrapper() {
+  const { instances, settings, loadingInstances } = useOperationalTasks();
+  return <DailyTasksView instances={instances} shifts={settings.shifts} isLoading={loadingInstances} />;
+}
+
 export default function Tasks() {
   const [qrOpen, setQrOpen] = useState(false);
   const [sendingReport, setSendingReport] = useState(false);
   const { user } = useAuth();
-  const {
-    instances,
-    settings,
-    generateDaily: generateDailyFn,
-    isGenerating,
-    loadingInstances,
-  } = useOperationalTasks();
+  const { generateDaily: generateDailyFn, isGenerating } = useOperationalTasks();
 
   const handleSendReport = async () => {
     if (!user?.id) return;
@@ -53,71 +54,52 @@ export default function Tasks() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6">
-      <ResponsivePageHeader
-        title="Checklists Operacionais"
-        description="Gestão completa de checklists, equipe e agendamentos"
-      >
-        <Button variant="outline" size="sm" onClick={() => setQrOpen(true)}>
-          <QrCode className="h-4 w-4 mr-2" /> QR Code
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleSendReport} disabled={sendingReport}>
-          <Send className={`h-4 w-4 mr-2 ${sendingReport ? "animate-pulse" : ""}`} />
-          Relatório
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => generateDailyFn(undefined)} disabled={isGenerating}>
-          <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? "animate-spin" : ""}`} />
-          Gerar Tarefas
-        </Button>
-      </ResponsivePageHeader>
+    <SidebarProvider>
+      <div className="flex min-h-[calc(100vh-3.5rem)] w-full">
+        <ChecklistsSidebar />
+        <div className="flex-1 flex flex-col overflow-auto">
+          <div className="container mx-auto p-4 md:p-6 space-y-6">
+            <ResponsivePageHeader
+              title="Checklists Operacionais"
+              description="Gestão completa de checklists, equipe e agendamentos"
+            >
+              <div className="flex items-center gap-2">
+                <SidebarTrigger>
+                  <Button variant="outline" size="icon" className="h-8 w-8">
+                    <PanelLeft className="h-4 w-4" />
+                  </Button>
+                </SidebarTrigger>
+                <Button variant="outline" size="sm" onClick={() => setQrOpen(true)}>
+                  <QrCode className="h-4 w-4 mr-2" /> QR Code
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleSendReport} disabled={sendingReport}>
+                  <Send className={`h-4 w-4 mr-2 ${sendingReport ? "animate-pulse" : ""}`} />
+                  Relatório
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => generateDailyFn(undefined)} disabled={isGenerating}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? "animate-spin" : ""}`} />
+                  Gerar Tarefas
+                </Button>
+              </div>
+            </ResponsivePageHeader>
 
-      <Tabs defaultValue="painel">
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="painel">Painel</TabsTrigger>
-          <TabsTrigger value="checklists">Checklists</TabsTrigger>
-          <TabsTrigger value="agendamento">Agendamento</TabsTrigger>
-          <TabsTrigger value="equipe">Equipe</TabsTrigger>
-          <TabsTrigger value="hoje">Tarefas do Dia</TabsTrigger>
-          <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
-          <TabsTrigger value="score">Score</TabsTrigger>
-          <TabsTrigger value="evidencias">Evidências</TabsTrigger>
-          <TabsTrigger value="validade">Validade</TabsTrigger>
-          <TabsTrigger value="logs">Logs</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="painel" className="mt-4">
-          <DashboardPanel />
-        </TabsContent>
-        <TabsContent value="checklists" className="mt-4">
-          <ChecklistsManager />
-        </TabsContent>
-        <TabsContent value="agendamento" className="mt-4">
-          <SchedulesManager />
-        </TabsContent>
-        <TabsContent value="equipe" className="mt-4">
-          <OperatorsManager />
-        </TabsContent>
-        <TabsContent value="hoje" className="mt-4">
-          <DailyTasksView instances={instances} shifts={settings.shifts} isLoading={loadingInstances} />
-        </TabsContent>
-        <TabsContent value="configuracoes" className="mt-4">
-          <TaskSettings />
-        </TabsContent>
-        <TabsContent value="score" className="mt-4">
-          <TeamScorePanel />
-        </TabsContent>
-        <TabsContent value="evidencias" className="mt-4">
-          <EvidenceGallery />
-        </TabsContent>
-        <TabsContent value="validade" className="mt-4">
-          <ExpiryTrackingPanel />
-        </TabsContent>
-        <TabsContent value="logs" className="mt-4">
-          <AccessLogsPanel />
-        </TabsContent>
-      </Tabs>
-
+            <Routes>
+              <Route index element={<DashboardPanel />} />
+              <Route path="checklists" element={<ChecklistsManager />} />
+              <Route path="agendamento" element={<SchedulesManager />} />
+              <Route path="equipe" element={<OperatorsManager />} />
+              <Route path="hoje" element={<DailyTasksWrapper />} />
+              <Route path="configuracoes" element={<TaskSettings />} />
+              <Route path="score" element={<TeamScorePanel />} />
+              <Route path="evidencias" element={<EvidenceGallery />} />
+              <Route path="validade" element={<ExpiryTrackingPanel />} />
+              <Route path="logs" element={<AccessLogsPanel />} />
+              <Route path="*" element={<Navigate to="/pdv/tarefas" replace />} />
+            </Routes>
+          </div>
+        </div>
+      </div>
       <TaskQRCodeDialog open={qrOpen} onOpenChange={setQrOpen} />
-    </div>
+    </SidebarProvider>
   );
 }

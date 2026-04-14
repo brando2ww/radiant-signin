@@ -147,7 +147,7 @@ export default function PDV() {
               <Route path="franquia" element={<RoleRoute path="/pdv/franquia" canAccess={canAccess} defaultRoute={defaultRoute}><FranchiseImport /></RoleRoute>} />
               
               {/* Tarefas */}
-              <Route path="tarefas" element={<RoleRoute path="/pdv/tarefas" canAccess={canAccess} defaultRoute={defaultRoute}><Tasks /></RoleRoute>} />
+              <Route path="tarefas/*" element={<RoleRoute path="/pdv/tarefas" canAccess={canAccess} defaultRoute={defaultRoute}><Tasks /></RoleRoute>} />
               
               {/* Clientes */}
               <Route path="clientes" element={<RoleRoute path="/pdv/clientes" canAccess={canAccess} defaultRoute={defaultRoute}><Customers /></RoleRoute>} />
