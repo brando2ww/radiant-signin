@@ -46,6 +46,7 @@ import EvaluationsLayout from "./pdv/EvaluationsLayout";
 import { EvaluationsSubNav } from "@/components/pdv/evaluations/EvaluationsSubNav";
 import FranchiseImport from "./pdv/FranchiseImport";
 import Tasks from "./pdv/Tasks";
+import ChecklistEditor from "./pdv/ChecklistEditor";
 import Customers from "./pdv/Customers";
 import CustomerDetail from "./pdv/CustomerDetail";
 
@@ -148,6 +149,8 @@ export default function PDV() {
               
               {/* Tarefas */}
               <Route path="tarefas" element={<RoleRoute path="/pdv/tarefas" canAccess={canAccess} defaultRoute={defaultRoute}><Tasks /></RoleRoute>} />
+              <Route path="tarefas/checklists/novo" element={<RoleRoute path="/pdv/tarefas" canAccess={canAccess} defaultRoute={defaultRoute}><ChecklistEditor /></RoleRoute>} />
+              <Route path="tarefas/checklists/:id" element={<RoleRoute path="/pdv/tarefas" canAccess={canAccess} defaultRoute={defaultRoute}><ChecklistEditor /></RoleRoute>} />
               
               {/* Clientes */}
               <Route path="clientes" element={<RoleRoute path="/pdv/clientes" canAccess={canAccess} defaultRoute={defaultRoute}><Customers /></RoleRoute>} />

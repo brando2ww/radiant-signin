@@ -648,6 +648,7 @@ export type Database = {
           item_type: Database["public"]["Enums"]["checklist_item_type"]
           max_value: number | null
           min_value: number | null
+          options: Json | null
           requires_photo: boolean
           sort_order: number
           title: string
@@ -663,6 +664,7 @@ export type Database = {
           item_type?: Database["public"]["Enums"]["checklist_item_type"]
           max_value?: number | null
           min_value?: number | null
+          options?: Json | null
           requires_photo?: boolean
           sort_order?: number
           title: string
@@ -678,6 +680,7 @@ export type Database = {
           item_type?: Database["public"]["Enums"]["checklist_item_type"]
           max_value?: number | null
           min_value?: number | null
+          options?: Json | null
           requires_photo?: boolean
           sort_order?: number
           title?: string
@@ -801,7 +804,9 @@ export type Database = {
       }
       checklists: {
         Row: {
+          color: string | null
           created_at: string
+          default_shift: string | null
           description: string | null
           id: string
           is_active: boolean
@@ -812,7 +817,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
+          default_shift?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
@@ -823,7 +830,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          color?: string | null
           created_at?: string
+          default_shift?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
@@ -5948,6 +5957,7 @@ export type Database = {
         | "photo"
         | "temperature"
         | "stars"
+        | "multiple_choice"
       checklist_sector:
         | "cozinha"
         | "salao"
@@ -6133,6 +6143,7 @@ export const Constants = {
         "photo",
         "temperature",
         "stars",
+        "multiple_choice",
       ],
       checklist_sector: [
         "cozinha",

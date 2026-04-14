@@ -1,11 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Copy, Pencil, Trash2, ChevronRight, Library } from "lucide-react";
+import { Plus, Copy, Trash2, ChevronRight, Library } from "lucide-react";
 import { useChecklists, SECTOR_LABELS, type ChecklistSector } from "@/hooks/use-checklists";
-import { ChecklistDialog } from "./ChecklistDialog";
-import { ChecklistItemsEditor } from "./ChecklistItemsEditor";
 import { TemplateLibraryDialog } from "./TemplateLibraryDialog";
 import {
   AlertDialog,
@@ -20,11 +19,9 @@ import {
 
 export function ChecklistsManager() {
   const { checklists, isLoading, deleteChecklist, duplicateChecklist } = useChecklists();
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [templateLibOpen, setTemplateLibOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingItemsId, setEditingItemsId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const sectorColor: Record<ChecklistSector, string> = {
     cozinha: "bg-orange-100 text-orange-800",
@@ -35,25 +32,10 @@ export function ChecklistsManager() {
     gerencia: "bg-red-100 text-red-800",
   };
 
-  if (editingItemsId) {
-    const cl = checklists.find((c) => c.id === editingItemsId);
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setEditingItemsId(null)}>
-            ← Voltar
-          </Button>
-          <h3 className="font-semibold text-lg">{cl?.name} — Itens</h3>
-        </div>
-        <ChecklistItemsEditor checklistId={editingItemsId} />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex gap-2 flex-wrap">
-        <Button size="sm" onClick={() => { setEditingId(null); setDialogOpen(true); }}>
+        <Button size="sm" onClick={() => navigate("/pdv/tarefas/checklists/novo")}>
           <Plus className="h-4 w-4 mr-2" /> Novo Checklist
         </Button>
         <Button variant="outline" size="sm" onClick={() => setTemplateLibOpen(true)}>
@@ -72,19 +54,28 @@ export function ChecklistsManager() {
       ) : (
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {checklists.map((cl) => (
-            <Card key={cl.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={cl.id}
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => navigate(`/pdv/tarefas/checklists/${cl.id}`)}
+            >
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
-                    <CardTitle className="text-base">{cl.name}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      {(cl as any).color && (
+                        <div
+                          className="h-3 w-3 rounded-full shrink-0"
+                          style={{ backgroundColor: (cl as any).color }}
+                        />
+                      )}
+                      <CardTitle className="text-base">{cl.name}</CardTitle>
+                    </div>
                     <Badge className={sectorColor[cl.sector]} variant="secondary">
                       {SECTOR_LABELS[cl.sector]}
                     </Badge>
                   </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingId(cl.id); setDialogOpen(true); }}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
+                  <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => duplicateChecklist(cl.id)}>
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
@@ -96,21 +87,15 @@ export function ChecklistsManager() {
               </CardHeader>
               <CardContent>
                 {cl.description && <p className="text-sm text-muted-foreground mb-3">{cl.description}</p>}
-                <Button variant="outline" size="sm" className="w-full" onClick={() => setEditingItemsId(cl.id)}>
-                  Editar Itens <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <ChevronRight className="h-3.5 w-3.5" />
+                  Clique para editar
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
-
-      <ChecklistDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        editingId={editingId}
-        checklists={checklists}
-      />
 
       <TemplateLibraryDialog open={templateLibOpen} onOpenChange={setTemplateLibOpen} />
 
