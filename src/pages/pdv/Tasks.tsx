@@ -130,26 +130,28 @@ export default function Tasks() {
         </nav>
 
         {/* Desktop: vertical sidebar cards */}
-        <nav className="hidden md:flex flex-col gap-1.5 w-52 shrink-0">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeSection === item.key;
-            return (
-              <button
-                key={item.key}
-                onClick={() => setActiveSection(item.key)}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg border px-4 py-3 text-sm font-medium transition-colors text-left",
-                  isActive
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                    : "bg-card text-card-foreground border-border hover:bg-muted"
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {item.label}
-              </button>
-            );
-          })}
+        <nav className="hidden md:flex flex-col w-52 shrink-0 rounded-lg border bg-card p-2 min-h-[calc(100vh-12rem)]">
+          <div className="flex flex-col gap-1">
+            {NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeSection === item.key;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => setActiveSection(item.key)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-4 py-3 text-sm font-medium transition-colors text-left",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-card-foreground hover:bg-muted"
+                  )}
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
         </nav>
 
         {/* Content */}
