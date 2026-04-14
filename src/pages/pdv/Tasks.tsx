@@ -9,6 +9,7 @@ import { OperatorsManager } from "@/components/pdv/checklists/OperatorsManager";
 import { DailyTasksView } from "@/components/pdv/tasks/DailyTasksView";
 import { TaskSettings } from "@/components/pdv/tasks/TaskSettings";
 import { TaskQRCodeDialog } from "@/components/pdv/tasks/TaskQRCodeDialog";
+import { DashboardPanel } from "@/components/pdv/checklists/DashboardPanel";
 import { useOperationalTasks } from "@/hooks/use-operational-tasks";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -66,8 +67,9 @@ export default function Tasks() {
         </Button>
       </ResponsivePageHeader>
 
-      <Tabs defaultValue="checklists">
+      <Tabs defaultValue="painel">
         <TabsList className="flex-wrap">
+          <TabsTrigger value="painel">Painel</TabsTrigger>
           <TabsTrigger value="checklists">Checklists</TabsTrigger>
           <TabsTrigger value="agendamento">Agendamento</TabsTrigger>
           <TabsTrigger value="equipe">Equipe</TabsTrigger>
@@ -75,6 +77,9 @@ export default function Tasks() {
           <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="painel" className="mt-4">
+          <DashboardPanel />
+        </TabsContent>
         <TabsContent value="checklists" className="mt-4">
           <ChecklistsManager />
         </TabsContent>

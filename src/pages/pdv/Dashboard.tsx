@@ -2,6 +2,7 @@ import { usePDVDashboard } from "@/hooks/use-pdv-dashboard";
 import { DashboardMetricCard } from "@/components/pdv/DashboardMetricCard";
 import { SalesChart } from "@/components/pdv/SalesChart";
 import { TopProductsList } from "@/components/pdv/TopProductsList";
+import { OperationHealthWidget } from "@/components/pdv/checklists/OperationHealthWidget";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   DollarSign,
@@ -89,6 +90,8 @@ export default function PDVDashboard() {
           isLoading={isLoading}
         />
       </div>
+
+      <OperationHealthWidget />
 
       <div className="grid gap-4 md:grid-cols-2">
         <SalesChart data={salesByHour} isLoading={isLoading} />

@@ -1,22 +1,41 @@
 import { useParams } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Circle, Clock, Camera, Loader2 } from "lucide-react";
-import { usePublicTasks } from "@/hooks/use-public-tasks";
-import { format } from "date-fns";
-import { toast } from "@/hooks/use-toast";
+import { Loader2, ClipboardList, Play, CheckCircle2, Clock } from "lucide-react";
+import { PinLoginScreen } from "@/components/pdv/checklists/execution/PinLoginScreen";
+import { ChecklistExecutionPage } from "@/components/pdv/checklists/execution/ChecklistExecutionPage";
+import { useChecklistExecution } from "@/hooks/use-checklist-execution";
 import { Toaster } from "@/components/ui/toaster";
+
+interface Operator {
+  id: string;
+  name: string;
+  sector: string;
+  access_level: string;
+}
+
+interface ScheduleItem {
+  scheduleId: string;
+  checklistId: string;
+  checklistName: string;
+  sector: string;
+  shift: string;
+  startTime: string;
+  maxDuration: number;
+  executionId: string | null;
+  executionStatus: string | null;
+}
 
 export default function PublicTasks() {
   const { userId } = useParams<{ userId: string }>();
-  const { instances, isLoading, settings, completeTask, isCompleting } = usePublicTasks(userId || "");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [completingId, setCompletingId] = useState<string | null>(null);
+  const [operator, setOperator] = useState<Operator | null>(null);
+  const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null);
+
+  const { fetchAssignedSchedules, startExecution, getCurrentShift } = useChecklistExecution(userId || "");
 
   if (!userId) {
     return (
@@ -26,33 +45,82 @@ export default function PublicTasks() {
     );
   }
 
-  const shifts = settings?.shifts || [
-    { name: "Abertura", start: "06:00", end: "11:00" },
-    { name: "Tarde", start: "11:00", end: "17:00" },
-    { name: "Fechamento", start: "17:00", end: "23:00" },
-  ];
+  const loadSchedules = async (op: Operator) => {
+    setLoading(true);
+    try {
+      const data = await fetchAssignedSchedules(op.id, op.sector);
+      setSchedules(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const totalDone = instances.filter((i) => i.status === "done").length;
-  const progress = instances.length > 0 ? Math.round((totalDone / instances.length) * 100) : 0;
+  const handleLogin = (op: Operator) => {
+    setOperator(op);
+    loadSchedules(op);
+  };
 
-  const grouped = shifts.map((s) => ({
-    shift: s,
-    tasks: instances.filter((i) => i.shift === s.name.toLowerCase() || i.shift === s.name),
-  })).filter((g) => g.tasks.length > 0);
+  const handleStart = async (item: ScheduleItem) => {
+    if (item.executionId) {
+      setActiveExecutionId(item.executionId);
+      return;
+    }
+    setLoading(true);
+    try {
+      const execId = await startExecution(item.checklistId, item.scheduleId, operator!.id);
+      setActiveExecutionId(execId);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleComplete = (id: string) => {
-    setCompletingId(id);
-    completeTask(
-      { id, completedBy: name || undefined },
-      {
-        onSuccess: () => {
-          toast({ title: "Tarefa concluída!" });
-          setExpandedId(null);
-          setCompletingId(null);
-        },
-        onError: () => setCompletingId(null),
-      }
+  if (!operator) {
+    return (
+      <>
+        <Toaster />
+        <PinLoginScreen userId={userId} onLogin={handleLogin} />
+      </>
     );
+  }
+
+  if (activeExecutionId) {
+    return (
+      <>
+        <Toaster />
+        <ChecklistExecutionPage
+          executionId={activeExecutionId}
+          userId={userId}
+          onBack={() => {
+            setActiveExecutionId(null);
+            loadSchedules(operator);
+          }}
+          onComplete={() => {
+            setActiveExecutionId(null);
+            loadSchedules(operator);
+          }}
+        />
+      </>
+    );
+  }
+
+  const currentShift = getCurrentShift();
+
+  const statusLabels: Record<string, string> = {
+    concluido: "Concluído",
+    em_andamento: "Em andamento",
+    atrasado: "Atrasado",
+    pendente: "Pendente",
+    nao_iniciado: "Não iniciado",
+  };
+
+  const statusColors: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+    concluido: "default",
+    em_andamento: "secondary",
+    atrasado: "destructive",
   };
 
   return (
@@ -60,110 +128,70 @@ export default function PublicTasks() {
       <Toaster />
       <div className="max-w-lg mx-auto p-4 space-y-4">
         <div className="text-center space-y-1">
-          <h1 className="text-xl font-bold">Tarefas do Dia</h1>
-          <p className="text-sm text-muted-foreground">{format(new Date(), "dd/MM/yyyy")}</p>
+          <h1 className="text-xl font-bold">Checklists do Dia</h1>
+          <p className="text-sm text-muted-foreground">
+            Olá, <strong>{operator.name}</strong> — Turno: {currentShift}
+          </p>
         </div>
 
-        {isLoading ? (
+        {loading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : instances.length === 0 ? (
+        ) : schedules.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground text-sm">
-              Nenhuma tarefa para hoje.
+              <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              Nenhum checklist atribuído para hoje.
             </CardContent>
           </Card>
         ) : (
-          <>
-            <div className="flex items-center justify-between">
-              <span className="text-sm">{totalDone}/{instances.length}</span>
-              <Progress value={progress} className="w-40 h-2" />
-              <Badge variant={progress === 100 ? "default" : "secondary"}>{progress}%</Badge>
-            </div>
-
-            {grouped.map(({ shift, tasks }) => (
-              <Card key={shift.name}>
-                <CardHeader className="py-3 px-4">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    {shift.name}
-                    <span className="text-xs text-muted-foreground font-normal">
-                      ({shift.start} - {shift.end})
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="px-4 pb-3 pt-0 space-y-2">
-                  {tasks.map((task) => {
-                    const isDone = task.status === "done";
-                    const isExpanded = expandedId === task.id;
-
-                    return (
-                      <div key={task.id} className={`rounded-md border p-3 ${isDone ? "bg-primary/5 border-primary/20" : ""}`}>
-                        <div
-                          className="flex items-center gap-3 cursor-pointer"
-                          onClick={() => !isDone && setExpandedId(isExpanded ? null : task.id)}
-                        >
-                          {isDone ? (
-                            <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
-                          ) : (
-                            <Circle className="h-5 w-5 text-muted-foreground shrink-0" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm font-medium ${isDone ? "line-through text-muted-foreground" : ""}`}>
-                              {task.title}
-                            </p>
-                            {task.assignedTo && (
-                              <p className="text-xs text-muted-foreground">Resp: {task.assignedTo}</p>
-                            )}
-                          </div>
-                          {isDone && task.completedAt && (
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(task.completedAt), "HH:mm")}
-                            </span>
-                          )}
-                          {isDone && task.completedBy && (
-                            <Badge variant="outline" className="text-xs">{task.completedBy}</Badge>
-                          )}
-                        </div>
-
-                        {isExpanded && !isDone && (
-                          <div className="mt-3 space-y-2 pl-8">
-                            <Input
-                              placeholder="Seu nome (opcional)"
-                              value={name}
-                              onChange={(e) => setName(e.target.value)}
-                              className="text-sm"
-                            />
-                            {task.requiresPhoto && (
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Camera className="h-4 w-4" />
-                                <span>Foto obrigatória (em breve)</span>
-                              </div>
-                            )}
-                            <Button
-                              size="sm"
-                              className="w-full"
-                              onClick={() => handleComplete(task.id)}
-                              disabled={completingId === task.id}
-                            >
-                              {completingId === task.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              ) : (
-                                <CheckCircle2 className="h-4 w-4 mr-2" />
-                              )}
-                              Marcar como Feito
-                            </Button>
-                          </div>
-                        )}
+          <div className="space-y-3">
+            {schedules.map((item) => {
+              const isDone = item.executionStatus === "concluido";
+              return (
+                <Card key={item.scheduleId} className={isDone ? "opacity-60" : ""}>
+                  <CardContent className="py-4 flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{item.checklistName}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-[10px]">{item.sector}</Badge>
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" /> {item.shift} — {item.startTime}
+                        </span>
                       </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            ))}
-          </>
+                    </div>
+                    {item.executionStatus && (
+                      <Badge variant={statusColors[item.executionStatus] || "outline"} className="text-[10px] shrink-0">
+                        {statusLabels[item.executionStatus] || item.executionStatus}
+                      </Badge>
+                    )}
+                    {!isDone && (
+                      <Button size="sm" onClick={() => handleStart(item)} disabled={loading}>
+                        {item.executionId ? (
+                          <>
+                            <Play className="h-3.5 w-3.5 mr-1" /> Continuar
+                          </>
+                        ) : (
+                          <>
+                            <Play className="h-3.5 w-3.5 mr-1" /> Iniciar
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {isDone && <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         )}
+
+        <div className="text-center pt-4">
+          <Button variant="ghost" size="sm" onClick={() => setOperator(null)}>
+            Trocar operador
+          </Button>
+        </div>
       </div>
     </div>
   );
