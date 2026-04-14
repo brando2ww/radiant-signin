@@ -342,6 +342,11 @@ export default function PDVCashier() {
         tableItems={selectedTableItems}
         onSuccess={handlePaymentSuccess}
       />
+
+      <EmployeeConsumptionDialog
+        open={employeeDialog}
+        onOpenChange={setEmployeeDialog}
+      />
     </div>
   );
 }
