@@ -9,13 +9,26 @@ import type { PDVProductOption } from "@/hooks/use-pdv-product-options";
 export interface SelectedOption {
   optionId: string;
   optionName: string;
-  items: { itemId: string; itemName: string; priceAdjustment: number }[];
+  items: {
+    itemId: string;
+    itemName: string;
+    priceAdjustment: number;
+    linkedProductId?: string | null;
+    printerStation?: string | null;
+  }[];
 }
 
 interface Props {
   options: PDVProductOption[];
   onConfirm: (selections: SelectedOption[]) => void;
   onBack: () => void;
+}
+
+function getItemPrice(item: any): number {
+  if (item.linked_product) {
+    return Number(item.linked_product.price_salon) || 0;
+  }
+  return Number(item.price_adjustment) || 0;
 }
 
 export function ProductOptionSelector({ options, onConfirm, onBack }: Props) {
@@ -56,7 +69,9 @@ export function ProductOptionSelector({ options, onConfirm, onBack }: Props) {
           return {
             itemId: item.id,
             itemName: item.name,
-            priceAdjustment: Number(item.price_adjustment),
+            priceAdjustment: getItemPrice(item),
+            linkedProductId: item.linked_product_id || null,
+            printerStation: (item.linked_product as any)?.printer_station || null,
           };
         }),
       }));
@@ -68,7 +83,7 @@ export function ProductOptionSelector({ options, onConfirm, onBack }: Props) {
     if (!option) return total;
     return total + itemIds.reduce((sum, itemId) => {
       const item = option.items.find((i) => i.id === itemId);
-      return sum + (item ? Number(item.price_adjustment) : 0);
+      return sum + (item ? getItemPrice(item) : 0);
     }, 0);
   }, 0);
 
@@ -93,24 +108,31 @@ export function ProductOptionSelector({ options, onConfirm, onBack }: Props) {
               value={selections[option.id]?.[0] || ""}
               onValueChange={(v) => handleSingleSelect(option.id, v)}
             >
-              {option.items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-2 rounded border">
-                  <div className="flex items-center gap-2">
-                    <RadioGroupItem value={item.id} id={item.id} />
-                    <Label htmlFor={item.id} className="cursor-pointer">{item.name}</Label>
+              {option.items.map((item) => {
+                const price = getItemPrice(item);
+                return (
+                  <div key={item.id} className="flex items-center justify-between p-2 rounded border">
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value={item.id} id={item.id} />
+                      <Label htmlFor={item.id} className="cursor-pointer">{item.name}</Label>
+                      {item.linked_product && (
+                        <Badge variant="outline" className="text-[9px]">Produto</Badge>
+                      )}
+                    </div>
+                    {price > 0 && (
+                      <span className="text-sm text-muted-foreground">
+                        +R$ {price.toFixed(2)}
+                      </span>
+                    )}
                   </div>
-                  {Number(item.price_adjustment) > 0 && (
-                    <span className="text-sm text-muted-foreground">
-                      +R$ {Number(item.price_adjustment).toFixed(2)}
-                    </span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </RadioGroup>
           ) : (
             <div className="space-y-1">
               {option.items.map((item) => {
                 const checked = (selections[option.id] || []).includes(item.id);
+                const price = getItemPrice(item);
                 return (
                   <div key={item.id} className="flex items-center justify-between p-2 rounded border">
                     <div className="flex items-center gap-2">
@@ -120,10 +142,13 @@ export function ProductOptionSelector({ options, onConfirm, onBack }: Props) {
                         onCheckedChange={() => handleMultipleToggle(option.id, item.id)}
                       />
                       <Label htmlFor={item.id} className="cursor-pointer">{item.name}</Label>
+                      {item.linked_product && (
+                        <Badge variant="outline" className="text-[9px]">Produto</Badge>
+                      )}
                     </div>
-                    {Number(item.price_adjustment) > 0 && (
+                    {price > 0 && (
                       <span className="text-sm text-muted-foreground">
-                        +R$ {Number(item.price_adjustment).toFixed(2)}
+                        +R$ {price.toFixed(2)}
                       </span>
                     )}
                   </div>

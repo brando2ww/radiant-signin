@@ -1,6 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import type { PDVProduct } from "@/hooks/use-pdv-products";
+
+export interface PDVProductOptionItem {
+  id: string;
+  option_id: string;
+  name: string;
+  price_adjustment: number;
+  is_available: boolean;
+  order_position: number;
+  linked_product_id?: string | null;
+  linked_product?: PDVProduct | null;
+}
 
 export interface PDVProductOption {
   id: string;
@@ -12,15 +24,6 @@ export interface PDVProductOption {
   max_selections: number;
   order_position: number;
   items: PDVProductOptionItem[];
-}
-
-export interface PDVProductOptionItem {
-  id: string;
-  option_id: string;
-  name: string;
-  price_adjustment: number;
-  is_available: boolean;
-  order_position: number;
 }
 
 export function usePDVProductOptions(productId?: string) {
@@ -43,7 +46,7 @@ export function usePDVProductOptions(productId?: string) {
 
       const { data: items, error: itemsError } = await supabase
         .from("pdv_product_option_items")
-        .select("*")
+        .select("*, linked_product:pdv_products(*)")
         .in("option_id", optionIds)
         .order("order_position");
 
@@ -103,7 +106,7 @@ export function usePDVProductOptions(productId?: string) {
   });
 
   const createItem = useMutation({
-    mutationFn: async (data: { option_id: string; name: string; price_adjustment?: number }) => {
+    mutationFn: async (data: { option_id: string; name: string; price_adjustment?: number; linked_product_id?: string | null }) => {
       const { data: result, error } = await supabase
         .from("pdv_product_option_items")
         .insert(data)
@@ -119,7 +122,7 @@ export function usePDVProductOptions(productId?: string) {
   });
 
   const updateItem = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; name?: string; price_adjustment?: number; is_available?: boolean }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; name?: string; price_adjustment?: number; is_available?: boolean; linked_product_id?: string | null }) => {
       const { error } = await supabase
         .from("pdv_product_option_items")
         .update(updates)
@@ -177,7 +180,7 @@ export function usePDVProductOptionsForOrder(productId?: string) {
 
       const { data: items, error: itemsError } = await supabase
         .from("pdv_product_option_items")
-        .select("*")
+        .select("*, linked_product:pdv_products(*)")
         .in("option_id", optionIds)
         .eq("is_available", true)
         .order("order_position");
