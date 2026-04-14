@@ -4074,6 +4074,48 @@ export type Database = {
           },
         ]
       }
+      pdv_product_compositions: {
+        Row: {
+          child_product_id: string
+          created_at: string | null
+          id: string
+          order_position: number
+          parent_product_id: string
+          quantity: number
+        }
+        Insert: {
+          child_product_id: string
+          created_at?: string | null
+          id?: string
+          order_position?: number
+          parent_product_id: string
+          quantity?: number
+        }
+        Update: {
+          child_product_id?: string
+          created_at?: string | null
+          id?: string
+          order_position?: number
+          parent_product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_product_compositions_child_product_id_fkey"
+            columns: ["child_product_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_product_compositions_parent_product_id_fkey"
+            columns: ["parent_product_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_product_modifiers: {
         Row: {
           affects_recipe: boolean | null
@@ -4267,6 +4309,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_available: boolean | null
+          is_composite: boolean | null
           is_sold_by_weight: boolean | null
           name: string
           ncm: string | null
@@ -4279,6 +4322,7 @@ export type Database = {
           price_salon: number
           printer_station: string
           serves: number | null
+          stock_deduction_mode: string | null
           tax_unit: string | null
           updated_at: string | null
           user_id: string
@@ -4300,6 +4344,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_available?: boolean | null
+          is_composite?: boolean | null
           is_sold_by_weight?: boolean | null
           name: string
           ncm?: string | null
@@ -4312,6 +4357,7 @@ export type Database = {
           price_salon: number
           printer_station?: string
           serves?: number | null
+          stock_deduction_mode?: string | null
           tax_unit?: string | null
           updated_at?: string | null
           user_id: string
@@ -4333,6 +4379,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_available?: boolean | null
+          is_composite?: boolean | null
           is_sold_by_weight?: boolean | null
           name?: string
           ncm?: string | null
@@ -4345,6 +4392,7 @@ export type Database = {
           price_salon?: number
           printer_station?: string
           serves?: number | null
+          stock_deduction_mode?: string | null
           tax_unit?: string | null
           updated_at?: string | null
           user_id?: string
