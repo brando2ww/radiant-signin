@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function PDVKitchen() {
   const { items, isLoading, updateItemStatus } = usePDVKitchen();
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [selectedStation, setSelectedStation] = useState<string | null>(null);
 
   const handleUpdateStatus = (itemId: string, status: "preparando" | "pronto" | "entregue") => {
     updateItemStatus({ itemId, status });
@@ -16,9 +17,11 @@ export default function PDVKitchen() {
 
   // Filtrar itens
   const filteredItems = useMemo(() => {
-    if (!selectedStatus) return items;
-    return items.filter((item) => item.kitchen_status === selectedStatus);
-  }, [items, selectedStatus]);
+    let result = items;
+    if (selectedStatus) result = result.filter((item) => item.kitchen_status === selectedStatus);
+    if (selectedStation) result = result.filter((item) => (item as any).printer_station === selectedStation);
+    return result;
+  }, [items, selectedStatus, selectedStation]);
 
   // Contar por status
   const counts = useMemo(() => {
