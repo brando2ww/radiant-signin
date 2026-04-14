@@ -32,6 +32,8 @@ export interface PDVProduct {
   cofins_rate: number | null;
   tax_unit: string | null;
   ean: string | null;
+  is_composite: boolean;
+  stock_deduction_mode: string;
   created_at: string;
   updated_at: string;
 }

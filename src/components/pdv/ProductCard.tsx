@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Copy, Edit, MoreVertical, Package, Send, Trash2 } from "lucide-react";
+import { Copy, Edit, Layers, MoreVertical, Package, Send, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,6 +83,12 @@ export function ProductCard({ product, onEdit, onDelete, onDuplicate, isSharedTo
           <Badge variant={product.is_available ? "default" : "secondary"}>
             {product.is_available ? "Disponível" : "Indisponível"}
           </Badge>
+          {(product as any)?.is_composite && (
+            <Badge variant="outline" className="bg-background/80 gap-1">
+              <Layers className="h-3 w-3" />
+              Composto
+            </Badge>
+          )}
           {isSharedToDelivery && (
             <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">
               Delivery

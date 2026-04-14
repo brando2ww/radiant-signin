@@ -29,6 +29,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Image as ImageIcon, Upload, X, Info } from "lucide-react";
 import { ProductRecipeManager } from "./ProductRecipeManager";
 import { PDVProductOptionsManager } from "./PDVProductOptionsManager";
+import { ProductCompositionManager } from "./ProductCompositionManager";
 import { usePDVRecipes } from "@/hooks/use-pdv-recipes";
 import { ImageCropDialog } from "@/components/ui/image-crop-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -264,7 +265,7 @@ export function ProductDialog({
         <Form {...form}>
           <form onSubmit={handleSubmit} className="space-y-6">
              <Tabs defaultValue="basic">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="basic">Básico</TabsTrigger>
                 <TabsTrigger value="pricing">Preços</TabsTrigger>
                 <TooltipProvider>
@@ -291,6 +292,20 @@ export function ProductDialog({
                     {!product && (
                       <TooltipContent>
                         <p>Salve o produto primeiro para configurar a receita</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <TabsTrigger value="composition" disabled={!product}>
+                        Composição
+                      </TabsTrigger>
+                    </TooltipTrigger>
+                    {!product && (
+                      <TooltipContent>
+                        <p>Salve o produto primeiro para configurar composição</p>
                       </TooltipContent>
                     )}
                   </Tooltip>
@@ -631,6 +646,23 @@ export function ProductDialog({
                   </div>
                 )}
               </TabsContent>
+
+              {product && (
+                <TabsContent value="composition" className="mt-4">
+                  <ProductCompositionManager
+                    productId={product.id}
+                    productPrice={currentPrice}
+                    isComposite={(product as any)?.is_composite || false}
+                    stockDeductionMode={(product as any)?.stock_deduction_mode || "main"}
+                    onCompositeChange={(value) => {
+                      onSubmit({ ...form.getValues(), is_composite: value });
+                    }}
+                    onStockDeductionModeChange={(value) => {
+                      onSubmit({ ...form.getValues(), stock_deduction_mode: value });
+                    }}
+                  />
+                </TabsContent>
+              )}
 
               <TabsContent value="fiscal" className="space-y-6 mt-4">
                 <div className="space-y-4">
