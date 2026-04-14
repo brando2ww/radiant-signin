@@ -1,151 +1,118 @@
 
 
-# Módulo de Checklists Operacionais -- Plano de Implementação
+# Fases 3 e 4 -- Execucao do Colaborador + Painel do Gestor
 
-O sistema atual de "Tarefas Operacionais" é muito simples (título + turno + foto). O pedido requer uma reescrita completa com ~15 tabelas novas, acesso por PIN, tipos de item ricos, scoring, alertas, galeria de evidências, etc. Devido ao tamanho, divido em **5 fases** para implementar incrementalmente.
+## FASE 3 -- Tela do Colaborador (Execucao)
 
----
+### 3.1 Reescrever PublicTasks com login por PIN
 
-## FASE 1 -- Banco de dados e estrutura core
+**Arquivo**: `src/pages/PublicTasks.tsx`
 
-Migration SQL criando todas as tabelas necessárias:
+Substituir o conteudo atual por um fluxo de duas etapas:
+1. **Tela de PIN**: InputOTP de 4 digitos. Valida contra `checklist_operators` onde `user_id = :userId` e `pin = :input`. Se invalido, mostra erro. Se valido, armazena operador no state.
+2. **Lista de checklists do turno**: Apos login, busca `checklist_schedules` do dia/turno atual atribuidos ao operador (por `assigned_operator_id` ou `assigned_sector` = setor do operador). Cada card mostra nome, setor, status (pendente/em andamento/concluido) e botao "Iniciar"/"Continuar".
 
-**Tabelas principais:**
-- `checklist_operators` -- colaboradores com nome, cargo, setor, PIN (4 dígitos), nível de acesso (operador/líder/gestor), establishment_owner_id
-- `checklists` -- nome, setor (enum: cozinha/salão/caixa/bar/estoque/gerência), descrição, is_template, user_id
-- `checklist_items` -- checklist_id, título, tipo (enum: checkbox/number/text/photo/temperature/stars), is_critical, is_required, requires_photo, sort_order, min_value, max_value, training_instruction, training_video_url
-- `checklist_schedules` -- checklist_id, dias da semana (jsonb), turno, hora início, prazo máximo (minutos), assigned_operator_id, assigned_sector
-- `checklist_executions` -- checklist_id, schedule_id, operator_id, status (pendente/em_andamento/concluído/atrasado/não_iniciado), started_at, completed_at, score
-- `checklist_execution_items` -- execution_id, item_id, value (jsonb), photo_url, is_compliant, completed_at
-- `checklist_alerts` -- execution_id, item_id, type (prazo_expirado/temperatura_fora/item_critico), message, acknowledged_by, acknowledged_at
-- `operator_scores` -- operator_id, period_start, period_end, score, badges (jsonb)
-- `product_expiry_tracking` -- product_name, batch_id, expiry_date, registered_by, status (válido/próximo_vencimento/vencido/descartado)
-- `checklist_evidence_reviews` -- execution_item_id, reviewer_id, status (pendente/aprovado/reprovado), comment
+### 3.2 Hook de execucao
 
-**Biblioteca de templates prontos** inserida via SQL (abertura cozinha, fechamento cozinha, abertura salão, etc.) com itens pré-configurados.
+**Arquivo novo**: `src/hooks/use-checklist-execution.ts`
 
-**RLS**: Todas as tabelas usam `is_establishment_member(user_id)` para acesso multi-tenant.
+- `startExecution(checklistId, scheduleId, operatorId)`: cria registro em `checklist_executions` com status `em_andamento` e `started_at = now()`
+- `loadExecution(executionId)`: busca execution + execution_items + items (join) para montar tela
+- `saveItemValue(executionItemId, value, photoUrl, isCompliant)`: upsert em `checklist_execution_items`
+- `completeExecution(executionId)`: atualiza status para `concluido`, calcula score, salva `completed_at`
+- `createAlert(executionId, itemId, alertType, message)`: insere em `checklist_alerts`
+- Logica de turno: determinar turno atual baseado na hora e nas configuracoes de shifts
 
-**Storage**: Bucket `checklist-evidence` (público) para fotos de evidência.
+### 3.3 Componentes de execucao
 
----
+**Pasta nova**: `src/components/pdv/checklists/execution/`
 
-## FASE 2 -- Gestão de checklists e itens (tela do gestor)
+1. **ChecklistExecutionPage.tsx** -- Layout mobile-first principal
+   - Header com nome do checklist, cronometro (tempo restante = `max_duration_minutes` - tempo decorrido), barra de progresso
+   - Lista scrollavel de itens
+   - Botao "Concluir" desabilitado ate todos os `is_required` preenchidos
 
-Reescrever a página `/pdv/tarefas` com novas abas:
+2. **ExecutionItemRenderer.tsx** -- Renderiza item por tipo:
+   - `checkbox`: Switch/toggle simples
+   - `number`: Input numerico
+   - `text`: Textarea
+   - `photo`: Botao camera + upload para bucket `checklist-evidence` via `supabase.storage`
+   - `temperature`: Input numerico + badge verde/vermelho comparando com `min_value`/`max_value`. Se fora da faixa, gera alerta automatico
+   - `stars`: 5 estrelas clicaveis (Star icons)
 
-**Aba "Checklists":**
-- CRUD de checklists com nome, setor (select), descrição
-- Cada checklist abre editor de itens com drag-and-drop para reordenar
-- Cada item: título, tipo (select com 6 opções), crítico (switch), obrigatório (switch), foto obrigatória (switch)
-- Para tipo "temperatura": campos min/max
-- Para tipo "stars": escala 1-5
-- Botão duplicar checklist
-- Biblioteca de templates prontos com botão "Usar template"
-- Modo treinamento: campo de instrução e URL de vídeo por item
+3. **TrainingStep.tsx** -- Se item tem `training_instruction` ou `training_video_url`, mostra instrucao/iframe antes de permitir preenchimento. Checkbox "Li e entendi" para desbloquear.
 
-**Aba "Agendamento":**
-- Vincular checklist a dias da semana, turno, horário de início, prazo máximo
-- Atribuir a operador específico ou setor inteiro
+4. **ExecutionTimer.tsx** -- Cronometro decrescente, muda de cor quando < 20% do tempo restante
 
-**Aba "Equipe":**
-- CRUD de operadores: nome, cargo, setor, PIN (4 dígitos), nível de acesso
-- Lista com busca e filtros
+5. **PinLoginScreen.tsx** -- Componente extraido para o login por PIN (InputOTP + validacao)
 
-**Aba "Configurações":**
-- Manter configurações existentes (turnos, WhatsApp, QR code)
+### 3.4 Upload de fotos
 
-**Arquivos novos:** ~8 componentes em `src/components/pdv/checklists/`
-**Hook:** `src/hooks/use-checklists.ts` (CRUD completo)
+Usar `supabase.storage.from("checklist-evidence").upload()` com path `{userId}/{executionId}/{itemId}.jpg`. Salvar URL publica no campo `photo_url` do `checklist_execution_items`.
 
 ---
 
-## FASE 3 -- Execução e tela do colaborador
+## FASE 4 -- Painel do Gestor + Alertas + Dashboard Widget
 
-**Tela de login por PIN** (`/tarefas/:userId` já existe como rota pública):
-- Input de 4 dígitos (OTP style, já existe `InputOTP`)
-- Valida PIN contra `checklist_operators`
-- Ao entrar, mostra apenas checklists do turno atual atribuídos ao operador
+### 4.1 Nova aba "Painel" na pagina de Tarefas
 
-**Tela de execução:**
-- Layout mobile-first, um item por vez ou lista scrollável
-- Cada tipo de item renderiza componente adequado:
-  - Checkbox: toggle simples
-  - Número: input numérico
-  - Texto: textarea
-  - Foto: botão câmera com upload direto
-  - Temperatura: input numérico + indicador visual verde/vermelho baseado em min/max
-  - Estrelas: componente de 5 estrelas clicável
-- Cronômetro visível com tempo restante
-- Modo treinamento: instrução/vídeo aparece antes de poder marcar o item
-- Botão "Concluir" bloqueado até todos os itens obrigatórios preenchidos
-- Alertas automáticos para temperatura fora da faixa ao preencher
+**Arquivo**: `src/pages/pdv/Tasks.tsx` -- adicionar tab "Painel" como primeira aba
 
-**Arquivos novos:** ~5 componentes em `src/components/pdv/checklists/execution/`
+**Componente novo**: `src/components/pdv/checklists/DashboardPanel.tsx`
 
----
+- Cards de resumo: concluidos, atrasados, nao iniciados (query `checklist_executions` do dia)
+- Filtros: data (DatePicker), turno (Select), setor (Select), colaborador (Select)
+- Linha do tempo: lista cronologica de execucoes com badges de cor por status
+- Feed de atividades recentes (ultimas 20 execucoes com operador e hora)
 
-## FASE 4 -- Painel do gestor, alertas e dashboard
+### 4.2 Grafico de taxa de conclusao
 
-**Aba "Painel" (nova, principal):**
-- Cards de resumo: concluídos, atrasados, não iniciados
-- Filtros: data, turno, setor, colaborador
-- Linha do tempo cronológica com status visual (cores)
-- Gráfico de taxa de conclusão por semana (Recharts)
-- Itens mais ignorados/problemáticos
-- Feed de atividades recentes
+**Componente novo**: `src/components/pdv/checklists/CompletionChart.tsx`
 
-**Alertas:**
-- Seção de alertas no painel com histórico filtrável
-- Badge de notificação no menu quando há alertas não reconhecidos
-- Alerta automático quando: checklist crítico não concluído no prazo, temperatura fora da faixa
+- Recharts BarChart mostrando % conclusao por dia da semana (ultimos 7 dias)
+- Usa `ChartContainer` existente
 
-**Widget "Saúde da Operação":**
-- Semáforo (verde/amarelo/vermelho) integrado ao Dashboard principal do PDV (`/pdv/dashboard`)
-- Verde: >90% concluídos no prazo; Amarelo: 70-90%; Vermelho: <70%
+### 4.3 Comparativo de turnos
 
-**Comparativo de turnos:**
-- Card mostrando desempenho de cada turno do dia lado a lado
+**Componente novo**: `src/components/pdv/checklists/ShiftComparison.tsx`
 
-**Arquivos:** ~6 componentes novos, edição do `Dashboard.tsx`
+- 3 cards lado a lado (manha/tarde/noite) com % conclusao, total, atrasados
+- Query agrupa execucoes do dia por turno do schedule
 
----
+### 4.4 Secao de alertas
 
-## FASE 5 -- Score, evidências e validade
+**Componente novo**: `src/components/pdv/checklists/AlertsPanel.tsx`
 
-**Score da equipe:**
-- Cálculo automático (0-100): prazo (40%), completude (30%), qualidade estrelas (30%)
-- Ranking da equipe com avatar/posição
-- Histórico por semana/mês com gráfico
-- Badges automáticos: "Semana Perfeita", "Destaque do Mês" (lógica no hook)
+- Lista de alertas nao reconhecidos no topo (destaque vermelho)
+- Historico filtravel por data/tipo
+- Botao "Reconhecer" por alerta (atualiza `is_acknowledged`, `acknowledged_by`, `acknowledged_at`)
 
-**Galeria de evidências:**
-- Grid de fotos organizado por data/setor/colaborador
-- Cada foto com botões aprovar/reprovar/comentar
-- Filtros e exportação (download zip)
+### 4.5 Hook do painel
 
-**Controle de validade:**
-- CRUD de produtos com data de validade
-- Alertas automáticos: 3 dias antes, 1 dia antes, vencido
-- Histórico de perdas/descartes
+**Arquivo novo**: `src/hooks/use-checklist-dashboard.ts`
 
-**Log de acessos:**
-- Registro automático de login por PIN e ações realizadas
-- Visualização para o gestor
+- `useDashboardMetrics(filters)`: query execucoes agrupadas por status
+- `useCompletionChart(days)`: taxa de conclusao por dia
+- `useShiftComparison(date)`: metricas por turno
+- `useChecklistAlerts()`: alertas nao reconhecidos + historico
+- `useRecentActivity()`: ultimas execucoes com joins
+
+### 4.6 Widget "Saude da Operacao" no Dashboard PDV
+
+**Arquivo editado**: `src/pages/pdv/Dashboard.tsx`
+
+- Adicionar card com semaforo (circulo verde/amarelo/vermelho)
+- Verde: >90% concluidos no prazo; Amarelo: 70-90%; Vermelho: <70%
+- Query simples: `checklist_executions` do dia com status `concluido` vs total
+
+**Componente novo**: `src/components/pdv/checklists/OperationHealthWidget.tsx`
 
 ---
 
-## Detalhes técnicos
+## Resumo tecnico
 
-- **~10 tabelas novas** + 1 storage bucket
-- **~30 componentes novos** organizados em `src/components/pdv/checklists/`
-- **~5 hooks novos** para CRUD, execução, scores, alertas, evidências
-- **Reutiliza**: `InputOTP`, `Recharts`, `is_establishment_member()`, bucket de storage, sistema de turnos existente
-- **As tabelas antigas** (`operational_task_*`) podem coexistir inicialmente; migração de dados opcional depois
-
-## Ordem recomendada
-
-Fase 1 (banco) -> Fase 2 (gestão) -> Fase 3 (execução) -> Fase 4 (painel) -> Fase 5 (score/evidências)
-
-Cada fase é funcional por si só. Posso começar pela **Fase 1** (migration SQL com todas as tabelas)?
+- **0 migrations**: todas as tabelas ja existem (Fase 1 concluida)
+- **~10 arquivos novos**: 5 em `execution/`, 4 no painel, 1 hook de execucao, 1 hook de dashboard
+- **~2 arquivos editados**: `PublicTasks.tsx` (reescrita), `Tasks.tsx` (nova aba), `Dashboard.tsx` (widget)
+- Reutiliza: `InputOTP`, `Recharts`/`ChartContainer`, bucket `checklist-evidence`, tipos do Supabase
 
