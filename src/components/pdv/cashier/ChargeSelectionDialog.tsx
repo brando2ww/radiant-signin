@@ -302,10 +302,24 @@ export function ChargeSelectionDialog({
                                     })}
                                   </div>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right space-y-1">
                                   <span className="text-lg font-bold text-primary group-hover:scale-105 transition-transform inline-block">
                                     {formatCurrency(comanda.subtotal)}
                                   </span>
+                                  {onCancelComanda && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCancelTarget({ type: "comanda", id: comanda.id, label: `#${comanda.comanda_number}` });
+                                      }}
+                                    >
+                                      <XCircle className="h-3 w-3 mr-1" />
+                                      Cancelar
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </CardContent>
@@ -397,10 +411,24 @@ export function ChargeSelectionDialog({
                                     })}
                                   </div>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right space-y-1">
                                   <span className="text-lg font-bold text-primary group-hover:scale-105 transition-transform inline-block">
                                     {formatCurrency(total)}
                                   </span>
+                                  {onCancelTable && table.current_order_id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCancelTarget({ type: "table", id: table.id, orderId: table.current_order_id!, label: `Mesa ${table.table_number}` });
+                                      }}
+                                    >
+                                      <XCircle className="h-3 w-3 mr-1" />
+                                      Cancelar
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </CardContent>
@@ -442,5 +470,29 @@ export function ChargeSelectionDialog({
         </Tabs>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={!!cancelTarget} onOpenChange={(open) => { if (!open) { setCancelTarget(null); setCancelReason(""); } }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancelar {cancelTarget?.label}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Esta ação não pode ser desfeita. Todos os itens serão cancelados.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <Textarea
+          placeholder="Motivo do cancelamento (opcional)..."
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+          className="mt-2"
+        />
+        <AlertDialogFooter>
+          <AlertDialogCancel>Voltar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmCancel} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Confirmar Cancelamento
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
