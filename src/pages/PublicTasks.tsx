@@ -7,6 +7,7 @@ import { Loader2, ClipboardList, Play, CheckCircle2, Clock } from "lucide-react"
 import { PinLoginScreen } from "@/components/pdv/checklists/execution/PinLoginScreen";
 import { ChecklistExecutionPage } from "@/components/pdv/checklists/execution/ChecklistExecutionPage";
 import { useChecklistExecution } from "@/hooks/use-checklist-execution";
+import { useLogAccess } from "@/hooks/use-checklist-access-logs";
 import { Toaster } from "@/components/ui/toaster";
 
 interface Operator {
