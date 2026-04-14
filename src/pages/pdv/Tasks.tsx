@@ -72,7 +72,7 @@ export default function Tasks() {
 
   const renderContent = () => {
     switch (activeSection) {
-      case "painel": return <DashboardPanel />;
+      case "painel": return <DashboardPanel onNavigate={setActiveSection} />;
       case "checklists": return <ChecklistsManager />;
       case "agendamento": return <SchedulesManager />;
       case "equipe": return <OperatorsManager />;
