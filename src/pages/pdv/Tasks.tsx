@@ -10,6 +10,10 @@ import { DailyTasksView } from "@/components/pdv/tasks/DailyTasksView";
 import { TaskSettings } from "@/components/pdv/tasks/TaskSettings";
 import { TaskQRCodeDialog } from "@/components/pdv/tasks/TaskQRCodeDialog";
 import { DashboardPanel } from "@/components/pdv/checklists/DashboardPanel";
+import { TeamScorePanel } from "@/components/pdv/checklists/TeamScorePanel";
+import { EvidenceGallery } from "@/components/pdv/checklists/EvidenceGallery";
+import { ExpiryTrackingPanel } from "@/components/pdv/checklists/ExpiryTrackingPanel";
+import { AccessLogsPanel } from "@/components/pdv/checklists/AccessLogsPanel";
 import { useOperationalTasks } from "@/hooks/use-operational-tasks";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -75,6 +79,10 @@ export default function Tasks() {
           <TabsTrigger value="equipe">Equipe</TabsTrigger>
           <TabsTrigger value="hoje">Tarefas do Dia</TabsTrigger>
           <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
+          <TabsTrigger value="score">Score</TabsTrigger>
+          <TabsTrigger value="evidencias">Evidências</TabsTrigger>
+          <TabsTrigger value="validade">Validade</TabsTrigger>
+          <TabsTrigger value="logs">Logs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="painel" className="mt-4">
@@ -94,6 +102,18 @@ export default function Tasks() {
         </TabsContent>
         <TabsContent value="configuracoes" className="mt-4">
           <TaskSettings />
+        </TabsContent>
+        <TabsContent value="score" className="mt-4">
+          <TeamScorePanel />
+        </TabsContent>
+        <TabsContent value="evidencias" className="mt-4">
+          <EvidenceGallery />
+        </TabsContent>
+        <TabsContent value="validade" className="mt-4">
+          <ExpiryTrackingPanel />
+        </TabsContent>
+        <TabsContent value="logs" className="mt-4">
+          <AccessLogsPanel />
         </TabsContent>
       </Tabs>
 
