@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 
 interface CompletionChartProps {
   data: { label: string; pct: number; total: number; completed: number }[];
@@ -36,6 +36,7 @@ export function CompletionChart({ data }: CompletionChartProps) {
               }}
               formatter={(value: number) => [`${value}%`, "Conclusão"]}
             />
+            <ReferenceLine y={90} stroke="hsl(var(--destructive))" strokeDasharray="6 3" label={{ value: "Meta 90%", position: "right", fill: "hsl(var(--destructive))", fontSize: 11 }} />
             <Bar dataKey="pct" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
