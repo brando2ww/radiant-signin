@@ -7,6 +7,7 @@ import { toast } from "sonner";
 interface KitchenItem {
   id: string;
   order_id: string;
+  product_id: string;
   product_name: string;
   quantity: number;
   notes: string | null;
@@ -14,6 +15,7 @@ interface KitchenItem {
   added_at: string;
   sent_to_kitchen_at: string | null;
   ready_at: string | null;
+  printer_station?: string;
   order: {
     order_number: string;
     source: string;
@@ -43,14 +45,21 @@ export function usePDVKitchen() {
             table_id,
             customer_name,
             user_id
-          )
+          ),
+          product:pdv_products(printer_station)
         `)
         .eq("order.user_id", visibleUserId)
         .in("kitchen_status", ["pendente", "preparando", "pronto"])
         .order("added_at", { ascending: true });
 
       if (error) throw error;
-      return data as unknown as KitchenItem[];
+      
+      // Flatten printer_station from product join
+      return (data as any[]).map((item) => ({
+        ...item,
+        printer_station: item.product?.printer_station || "cozinha",
+        product: undefined,
+      })) as KitchenItem[];
     },
     enabled: !!visibleUserId,
     refetchInterval: 10000,
