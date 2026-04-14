@@ -15,6 +15,7 @@ import { CashierSummaryFooter } from "@/components/pdv/cashier/CashierSummaryFoo
 import { KeyboardShortcutsDialog } from "@/components/pdv/cashier/KeyboardShortcutsDialog";
 import { ChargeSelectionDialog } from "@/components/pdv/cashier/ChargeSelectionDialog";
 import { PaymentDialog } from "@/components/pdv/cashier/PaymentDialog";
+import { EmployeeConsumptionDialog } from "@/components/pdv/cashier/EmployeeConsumptionDialog";
 
 export default function PDVCashier() {
   const {
