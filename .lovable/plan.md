@@ -1,94 +1,95 @@
 
 
-# Reformular Pagina de Equipe (Colaboradores)
+# Reformular Pagina Tarefas do Dia
 
-Transformar o `OperatorsManager` de lista simples + modal em uma pagina rica com cards visuais, indicadores, filtros, drawer lateral para criar/editar, e perfil com abas de desempenho e historico.
+Reescrever o `DailyTasksView` como uma central de comando operacional baseada em `checklist_executions` e `checklist_schedules` (dados reais do sistema de checklists), em vez do antigo sistema de `operational_task_instances`.
 
-## Mudancas no banco de dados
+## Abordagem
 
-### Migration: Novas colunas em `checklist_operators`
+A pagina atual usa `operational_task_instances` (tarefas simples geradas de templates). O sistema real de checklists ja tem `checklist_schedules`, `checklist_executions`, `checklist_operators` com dados muito mais ricos. A nova pagina vai integrar ambos: mostra execucoes de checklists agendados para hoje como as "tarefas do dia", e mantem o botao de gerar tarefas do sistema antigo como fallback.
 
-```sql
-ALTER TABLE checklist_operators ADD COLUMN IF NOT EXISTS avatar_color text DEFAULT '#6366f1';
-ALTER TABLE checklist_operators ADD COLUMN IF NOT EXISTS default_shift text DEFAULT 'variavel';
-ALTER TABLE checklist_operators ADD COLUMN IF NOT EXISTS hired_at date DEFAULT NULL;
-ALTER TABLE checklist_operators ADD COLUMN IF NOT EXISTS notes text DEFAULT NULL;
-ALTER TABLE checklist_operators ADD COLUMN IF NOT EXISTS last_access_at timestamptz DEFAULT NULL;
-```
+## Sem mudancas no banco de dados
 
-Campos: cor do avatar, turno padrao, data de entrada, observacao interna, ultimo acesso.
+Todos os dados necessarios ja existem nas tabelas `checklist_schedules`, `checklist_executions`, `checklist_operators` e `checklists`. Nenhuma migration necessaria.
 
 ## Arquivos novos
 
-### 1. `src/components/pdv/checklists/team/TeamIndicators.tsx`
+### 1. `src/components/pdv/tasks/DailyOverview.tsx`
 
-4 mini-cards no topo:
-- Total de colaboradores ativos
-- Melhor score da semana (nome + pontuacao)
-- Menor score da semana (nome + pontuacao)
-- Quantos acessaram hoje (baseado em `last_access_at`)
+Topo da pagina:
+- Data de hoje com dia da semana
+- Turno atual destacado (usa `getCurrentShift`)
+- 4 mini-cards: Total, Concluidas, Em andamento, Atrasadas (calculados das execucoes do dia)
+- Barra de progresso geral
+- Botao "Gerar Tarefas" contextual (some se ja tem tarefas, vira "Regerar" se existem)
 
-Usa dados de `useChecklistOperators` + `useOperatorRanking`.
-
-### 2. `src/components/pdv/checklists/team/TeamFilters.tsx`
+### 2. `src/components/pdv/tasks/DailyTaskFilters.tsx`
 
 Barra de filtros:
-- Busca por nome (input)
+- Filtro turno (3 botoes)
 - Filtro setor (select)
-- Filtro nivel de acesso (select)
-- Filtro status (ativo/inativo)
-- Ordenar por: nome, score, ultimo acesso, setor
+- Filtro responsavel (select com operadores)
+- Filtro status (todas/pendentes/atrasadas/concluidas)
+- Toggle lista/kanban
 
-### 3. `src/components/pdv/checklists/team/OperatorCard.tsx`
+### 3. `src/components/pdv/tasks/DailyTaskCard.tsx`
 
-Card visual por colaborador:
-- Avatar circular com iniciais + cor por setor
-- Nome, cargo, setor com icone, badge de nivel de acesso
-- Score da semana em destaque (numero grande)
-- Status ativo/inativo, ultimo acesso
-- Card esmaecido se inativo
-- `onClick` abre perfil drawer
+Card de tarefa individual:
+- Cor do setor na borda lateral
+- Nome do checklist, horario previsto, prazo
+- Avatar do responsavel com iniciais
+- Status visual com cores (cinza/azul/verde/vermelho/amarelo)
+- Icone de alerta se ha itens criticos
+- Tempo restante ou tempo de atraso
+- Acoes: Iniciar execucao, Ver detalhes (drawer), Reatribuir, Ignorar (com justificativa)
 
-### 4. `src/components/pdv/checklists/team/OperatorDrawer.tsx`
+### 4. `src/components/pdv/tasks/DailyTaskKanban.tsx`
 
-Substitui `OperatorDialog`. Sheet lateral (side="right") com:
-- Campos existentes melhorados: nome, cargo, setor (botoes visuais), PIN (com gerar aleatorio e revelar/ocultar), nivel de acesso (3 cards visuais com descricao), status toggle
-- Campos novos: cor do avatar (circulos coloridos), turno padrao (4 botoes), data de entrada (date picker), observacao interna (textarea)
-- Rodape fixo: Cancelar + Salvar
+Visualizacao kanban alternativa:
+- 4 colunas: Nao iniciada, Em andamento, Concluida, Atrasada
+- Cada coluna usa `DailyTaskCard` compacto
+- Contagem por coluna no cabecalho
 
-### 5. `src/components/pdv/checklists/team/OperatorProfileDrawer.tsx`
+### 5. `src/components/pdv/tasks/TaskDetailDrawer.tsx`
 
-Drawer de perfil ao clicar no card. 3 abas:
+Drawer lateral ao clicar "Ver detalhes":
+- Nome do checklist, setor, responsavel
+- Lista de itens com status de cada um (preenchido/pendente)
+- Opcao de reatribuir responsavel
+- Botao de iniciar execucao
 
-**Aba Perfil**: dados cadastrados + botao editar (abre OperatorDrawer)
+### 6. `src/hooks/use-daily-tasks.ts`
 
-**Aba Desempenho**: score atual (numero grande), taxa conclusao no prazo, total checklists mes, badges. Reutiliza dados de `useOperatorRanking` + `useScoreHistory`.
-
-**Aba Historico**: lista das ultimas execucoes (nome checklist, data, status). Query paginada em `checklist_executions` filtrada por `operator_id`, limit 30.
+Hook dedicado que:
+- Busca `checklist_schedules` ativos para o dia da semana atual (com join em `checklists` e `checklist_operators`)
+- Busca `checklist_executions` do dia com joins
+- Combina schedules + execucoes para montar lista de "tarefas do dia" com status derivado
+- Calcula metricas (total, concluidas, em andamento, atrasadas baseado em `start_time` + `max_duration_minutes`)
+- Polling a cada 30s para atualizar status de atraso
+- Mutation para reatribuir operador
+- Mutation para marcar como ignorada (atualiza status da execution)
 
 ## Arquivos editados
 
-### 6. `src/components/pdv/checklists/OperatorsManager.tsx`
+### 7. `src/components/pdv/tasks/DailyTasksView.tsx`
 
 Reescrita completa:
-- Importa `TeamIndicators`, `TeamFilters`, grid de `OperatorCard`, drawers
-- Gerencia estados de filtro, busca, ordenacao, drawers abertos
-- Estado vazio: ilustracao + texto convidativo + botao cadastrar no centro
-- Mantem `AlertDialog` de exclusao
+- Importa `DailyOverview`, `DailyTaskFilters`, `DailyTaskCard`, `DailyTaskKanban`, `TaskDetailDrawer`
+- Gerencia estados de filtro, modo de visualizacao, drawer aberto, execucao ativa
+- Se clica em "Iniciar", renderiza `ChecklistExecutionPage` existente em vez da lista
+- Estado vazio inteligente: botao centralizado + atalho para agendamento se nao ha schedules
+- Polling com `refetchInterval: 30000` para alertas em tempo real
+- Toast automatico quando tarefa entra em atraso
 
-### 7. `src/hooks/use-checklist-operators.ts`
+### 8. `src/pages/pdv/Tasks.tsx`
 
-- Incluir novas colunas nas mutations de create/update (`avatar_color`, `default_shift`, `hired_at`, `notes`)
-
-### 8. `src/components/pdv/checklists/OperatorDialog.tsx`
-
-Removido (substituido por `OperatorDrawer`).
+- Passar `onNavigate` para `DailyTasksView` para permitir navegacao para agendamento
+- Passar `user` e `operators` necessarios
 
 ## Resumo tecnico
 
-- **1 migration** (5 colunas novas em `checklist_operators`)
-- **5 arquivos novos** (TeamIndicators, TeamFilters, OperatorCard, OperatorDrawer, OperatorProfileDrawer)
-- **2 arquivos editados** (OperatorsManager, use-checklist-operators)
-- **1 arquivo removido** (OperatorDialog)
-- **0 dependencias novas** (Sheet/Tabs/Calendar ja existem)
+- **0 migrations** (usa tabelas existentes)
+- **6 arquivos novos** (5 componentes + 1 hook)
+- **2 arquivos editados** (DailyTasksView, Tasks.tsx)
+- **0 dependencias novas**
 
