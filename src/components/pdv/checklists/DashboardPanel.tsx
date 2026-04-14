@@ -18,9 +18,14 @@ import { cn } from "@/lib/utils";
 
 interface DashboardPanelProps {
   onNavigate?: (section: string) => void;
+  onQrOpen?: () => void;
+  onSendReport?: () => void;
+  onGenerateDaily?: () => void;
+  sendingReport?: boolean;
+  isGenerating?: boolean;
 }
 
-export function DashboardPanel({ onNavigate }: DashboardPanelProps) {
+export function DashboardPanel({ onNavigate, onQrOpen, onSendReport, onGenerateDaily, sendingReport, isGenerating }: DashboardPanelProps) {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const {
     metrics, completionChart, shiftComparison, alerts, unacknowledgedAlerts,
