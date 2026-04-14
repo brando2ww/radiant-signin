@@ -1,66 +1,97 @@
 
 
-# Vincular Sub-Produtos ao Estoque via Produtos Completos
+# Composicao de Produtos (Sub-Produtos) no Velara PDV
 
-## Conceito
-
-Hoje os "option items" (sub-produtos) sao registros simples com `name` e `price_adjustment` na tabela `pdv_product_option_items`. A proposta e transformar cada sub-produto em um **produto completo** (`pdv_products`), que ja tem dados fiscais (NCM, CFOP, ICMS, etc.), impressora (`printer_station`), ficha tecnica (recipes/ingredientes), e preco proprio.
-
-A tabela `pdv_product_option_items` ganha uma coluna `linked_product_id` que referencia `pdv_products`. Quando preenchida, o sistema usa os dados do produto vinculado (fiscal, impressora, preco) em vez dos campos locais.
+Adicionar sistema de composicao onde um produto pode ser montado a partir de outros produtos ja cadastrados, com controle de quantidade, custo, margem e opcao de baixa de estoque.
 
 ## Mudancas no banco de dados
 
-### Migration: Nova coluna em `pdv_product_option_items`
+### Migration 1: Tabela `pdv_product_compositions`
 
 ```sql
-ALTER TABLE public.pdv_product_option_items
-  ADD COLUMN IF NOT EXISTS linked_product_id uuid REFERENCES pdv_products(id) ON DELETE SET NULL;
+CREATE TABLE public.pdv_product_compositions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  parent_product_id uuid NOT NULL REFERENCES public.pdv_products(id) ON DELETE CASCADE,
+  child_product_id uuid NOT NULL REFERENCES public.pdv_products(id) ON DELETE CASCADE,
+  quantity numeric NOT NULL DEFAULT 1,
+  order_position integer NOT NULL DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  CONSTRAINT no_self_reference CHECK (parent_product_id != child_product_id),
+  UNIQUE (parent_product_id, child_product_id)
+);
+
+ALTER TABLE public.pdv_product_compositions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage own compositions"
+  ON public.pdv_product_compositions FOR ALL TO authenticated
+  USING (
+    parent_product_id IN (SELECT id FROM public.pdv_products WHERE user_id = auth.uid())
+    OR parent_product_id IN (SELECT id FROM public.pdv_products WHERE user_id IN (SELECT establishment_owner_id FROM public.establishment_users WHERE user_id = auth.uid() AND is_active = true))
+  )
+  WITH CHECK (
+    parent_product_id IN (SELECT id FROM public.pdv_products WHERE user_id = auth.uid())
+    OR parent_product_id IN (SELECT id FROM public.pdv_products WHERE user_id IN (SELECT establishment_owner_id FROM public.establishment_users WHERE user_id = auth.uid() AND is_active = true))
+  );
 ```
 
-Uma unica coluna opcional. Quando `linked_product_id` esta preenchido:
-- O `price_adjustment` pode ser ignorado (usa o preco do produto vinculado)
-- O fiscal e impressora vem do produto vinculado
-- O estoque e gerido via a ficha tecnica do produto vinculado
+### Migration 2: Colunas de controle no `pdv_products`
+
+```sql
+ALTER TABLE public.pdv_products
+  ADD COLUMN IF NOT EXISTS is_composite boolean DEFAULT false,
+  ADD COLUMN IF NOT EXISTS stock_deduction_mode text DEFAULT 'main';
+```
+
+- `is_composite`: flag para identificar produtos compostos
+- `stock_deduction_mode`: `'main'` (baixa do produto principal) ou `'components'` (baixa dos sub-produtos)
+
+## Arquivos novos
+
+### 1. `src/hooks/use-pdv-compositions.ts`
+
+Hook de CRUD para composicoes:
+- `useProductCompositions(productId)`: fetch com join em `pdv_products` para dados do child
+- `useAddComposition()`: insert com validacao anti-circular
+- `useUpdateCompositionQuantity()`: update quantidade
+- `useRemoveComposition()`: delete
+- `useReorderCompositions()`: update order_position em batch
+- `calculateCompositionCost(compositions)`: soma de quantity * price_salon de cada child
+
+### 2. `src/components/pdv/ProductCompositionManager.tsx`
+
+Componente principal da aba "Composicao" no ProductDialog:
+- Toggle "Este produto e composto por outros produtos"
+- Campo de busca com Command/Popover para selecionar produtos existentes
+- Lista de sub-produtos com: nome, SKU/EAN, quantidade editavel, unidade, preco unitario (readonly), custo parcial
+- Botao remover por item
+- Icone de aviso em sub-produtos que tambem sao compostos (cascata)
+- Validacao: impedir auto-referencia
+- Totalizador: custo total da composicao, preco de venda, margem estimada
+- Toggle de modo de baixa de estoque: "produto principal" ou "sub-produtos"
+- Aviso fiscal informativo
 
 ## Arquivos editados
 
-### 1. `src/hooks/use-pdv-product-options.ts`
+### 3. `src/hooks/use-pdv-products.ts`
 
-- Expandir `PDVProductOptionItem` com `linked_product_id?: string` e `linked_product?: PDVProduct`
-- No fetch, fazer join: `.select("*, linked_product:pdv_products(*)")` para trazer dados do produto vinculado
-- Expandir `createItem` e `updateItem` para aceitar `linked_product_id`
+- Adicionar `is_composite` e `stock_deduction_mode` ao interface `PDVProduct`
 
-### 2. `src/components/pdv/PDVProductOptionsManager.tsx`
+### 4. `src/components/pdv/ProductDialog.tsx`
 
-- Adicionar busca de produtos do usuario (`usePDVProducts`)
-- Em cada item de opcao, mostrar botao "Vincular Produto" que abre um Popover/Command com busca nos produtos existentes
-- Quando vinculado, exibir: nome do produto, impressora, dados fiscais resumidos (NCM, CFOP)
-- Botao "Desvincular" para remover a referencia
-- Manter opcao de item sem vinculo (comportamento atual como fallback)
-- Ao criar novo item, opcao de "Criar produto e vincular" que abre o ProductDialog
+- Adicionar aba "Composicao" no TabsList (6 abas total)
+- Desabilitada ate o produto ser salvo (mesmo padrao de Opcoes/Receita)
+- Renderiza `<ProductCompositionManager productId={product.id} productPrice={currentPrice} />`
+- Incluir `is_composite` e `stock_deduction_mode` no form defaults e reset
 
-### 3. `src/components/pdv/ProductOptionSelector.tsx`
+### 5. `src/components/pdv/ProductCard.tsx`
 
-- Quando um item tem `linked_product`, exibir informacoes adicionais (impressora, preco proprio)
-- O `price_adjustment` passa a ser o preco do produto vinculado quando disponivel
-
-### 4. `src/components/pdv/AddItemDialog.tsx` e `src/components/pdv/ComandaAddItemDialog.tsx`
-
-- Ao montar o item do pedido, se o option item tem `linked_product`, incluir o `printer_station` do produto vinculado nos dados enviados para a cozinha
-- Garantir que o preco correto (do produto vinculado) seja usado no calculo
-
-## Fluxo do usuario
-
-1. Gestor cria produto "Hamburguer" com opcao "Adicionais"
-2. Nos itens da opcao, clica "Vincular Produto"
-3. Busca e seleciona "Bacon Extra" (que ja e um produto com NCM, impressora "Cozinha", ficha tecnica com ingredientes)
-4. O "Bacon Extra" aparece como sub-produto vinculado — com estoque, fiscal e roteamento de impressora proprios
-5. Na venda, ao selecionar "Bacon Extra" como adicional do Hamburguer, o sistema sabe qual impressora enviar e desconta do estoque
+- Se `product.is_composite`, exibir badge "Composto" com icone
+- Tooltip no hover com lista resumida dos sub-produtos (usa `useProductCompositions`)
 
 ## Resumo tecnico
 
-- **1 migration** (1 coluna nova em `pdv_product_option_items`)
-- **0 arquivos novos**
-- **4-5 arquivos editados** (hook de options, manager, selector, dialogs de adicionar item)
+- **1 migration** (1 tabela nova + 2 colunas em pdv_products)
+- **2 arquivos novos** (hook + componente de composicao)
+- **3 arquivos editados** (ProductDialog, ProductCard, use-pdv-products)
 - **0 dependencias novas**
 
