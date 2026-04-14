@@ -31,6 +31,9 @@ export default function PDVCashier() {
     lastClosedMovements,
   } = usePDVCashier();
 
+  const { comandas, cancelComanda } = usePDVComandas();
+  const { updateTable } = usePDVTables();
+
   const [openDialog, setOpenDialog] = useState(false);
   const [closeDialog, setCloseDialog] = useState(false);
   const [movementDialog, setMovementDialog] = useState(false);
