@@ -2,6 +2,7 @@ import { usePDVDashboard } from "@/hooks/use-pdv-dashboard";
 import { DashboardMetricCard } from "@/components/pdv/DashboardMetricCard";
 import { SalesChart } from "@/components/pdv/SalesChart";
 import { TopProductsList } from "@/components/pdv/TopProductsList";
+import { OperationHealthWidget } from "@/components/pdv/checklists/OperationHealthWidget";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   DollarSign,
