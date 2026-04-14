@@ -265,7 +265,7 @@ export function ProductDialog({
         <Form {...form}>
           <form onSubmit={handleSubmit} className="space-y-6">
              <Tabs defaultValue="basic">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="basic">Básico</TabsTrigger>
                 <TabsTrigger value="pricing">Preços</TabsTrigger>
                 <TooltipProvider>
@@ -292,6 +292,20 @@ export function ProductDialog({
                     {!product && (
                       <TooltipContent>
                         <p>Salve o produto primeiro para configurar a receita</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <TabsTrigger value="composition" disabled={!product}>
+                        Composição
+                      </TabsTrigger>
+                    </TooltipTrigger>
+                    {!product && (
+                      <TooltipContent>
+                        <p>Salve o produto primeiro para configurar composição</p>
                       </TooltipContent>
                     )}
                   </Tooltip>
