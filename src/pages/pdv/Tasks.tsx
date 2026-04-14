@@ -76,7 +76,7 @@ export default function Tasks() {
       case "checklists": return <ChecklistsManager />;
       case "agendamento": return <SchedulesManager />;
       case "equipe": return <OperatorsManager />;
-      case "hoje": return <DailyTasksView instances={instances} shifts={settings.shifts} isLoading={loadingInstances} />;
+      case "hoje": return <DailyTasksView onNavigate={setActiveSection} />;
       case "configuracoes": return <TaskSettings />;
       case "score": return <TeamScorePanel />;
       case "evidencias": return <EvidenceGallery />;
