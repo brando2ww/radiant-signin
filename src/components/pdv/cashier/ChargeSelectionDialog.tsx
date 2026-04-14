@@ -6,11 +6,22 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -23,6 +34,7 @@ import {
   Receipt,
   UtensilsCrossed,
   Clock,
+  XCircle,
   User,
   Search,
   ArrowUpDown,
@@ -44,6 +56,8 @@ interface ChargeSelectionDialogProps {
   onOpenChange: (open: boolean) => void;
   onSelectComanda: (comanda: Comanda, items: ComandaItem[]) => void;
   onSelectTable: (table: PDVTable, comandas: Comanda[], items: ComandaItem[]) => void;
+  onCancelComanda?: (comandaId: string) => void;
+  onCancelTable?: (tableId: string, orderId: string) => void;
 }
 
 type SortOption = "time" | "value" | "number";
@@ -53,10 +67,14 @@ export function ChargeSelectionDialog({
   onOpenChange,
   onSelectComanda,
   onSelectTable,
+  onCancelComanda,
+  onCancelTable,
 }: ChargeSelectionDialogProps) {
   const [tab, setTab] = useState<"comandas" | "mesas">("comandas");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("time");
+  const [cancelTarget, setCancelTarget] = useState<{ type: "comanda" | "table"; id: string; orderId?: string; label: string } | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
   
   const { comandas, getItemsByComanda, getStandaloneComandas } = usePDVComandas();
   const { tables } = usePDVTables();
@@ -159,6 +177,17 @@ export function ChargeSelectionDialog({
     const tableComandas = getComandasForTable(table);
     const allItems = tableComandas.flatMap((c) => getItemsByComanda(c.id));
     onSelectTable(table, tableComandas, allItems);
+  };
+
+  const handleConfirmCancel = () => {
+    if (!cancelTarget) return;
+    if (cancelTarget.type === "comanda" && onCancelComanda) {
+      onCancelComanda(cancelTarget.id);
+    } else if (cancelTarget.type === "table" && onCancelTable && cancelTarget.orderId) {
+      onCancelTable(cancelTarget.id, cancelTarget.orderId);
+    }
+    setCancelTarget(null);
+    setCancelReason("");
   };
 
   return (

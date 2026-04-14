@@ -89,7 +89,7 @@ export default function PDVBalcao() {
   };
 
   const handleAddItem = (item: any) => {
-    addItem(item);
+    addItem({ ...item, kitchen_status: "entregue" });
   };
 
   const handleCloseOrder = (id: string) => {
