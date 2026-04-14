@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { QrCode, RefreshCw, Send } from "lucide-react";
+import {
+  QrCode, RefreshCw, Send, LayoutDashboard, ClipboardCheck,
+  Calendar, Users, ListChecks, Settings, Trophy, Camera,
+  ShieldAlert, FileText,
+} from "lucide-react";
 import { ResponsivePageHeader } from "@/components/ui/responsive-page-header";
 import { ChecklistsManager } from "@/components/pdv/checklists/ChecklistsManager";
 import { SchedulesManager } from "@/components/pdv/checklists/SchedulesManager";
@@ -18,8 +21,23 @@ import { useOperationalTasks } from "@/hooks/use-operational-tasks";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+
+const NAV_ITEMS = [
+  { key: "painel", label: "Painel", icon: LayoutDashboard },
+  { key: "checklists", label: "Checklists", icon: ClipboardCheck },
+  { key: "agendamento", label: "Agendamento", icon: Calendar },
+  { key: "equipe", label: "Equipe", icon: Users },
+  { key: "hoje", label: "Tarefas do Dia", icon: ListChecks },
+  { key: "configuracoes", label: "Configurações", icon: Settings },
+  { key: "score", label: "Score", icon: Trophy },
+  { key: "evidencias", label: "Evidências", icon: Camera },
+  { key: "validade", label: "Validade", icon: ShieldAlert },
+  { key: "logs", label: "Logs", icon: FileText },
+] as const;
 
 export default function Tasks() {
+  const [activeSection, setActiveSection] = useState<string>("painel");
   const [qrOpen, setQrOpen] = useState(false);
   const [sendingReport, setSendingReport] = useState(false);
   const { user } = useAuth();
@@ -52,8 +70,24 @@ export default function Tasks() {
     }
   };
 
+  const renderContent = () => {
+    switch (activeSection) {
+      case "painel": return <DashboardPanel />;
+      case "checklists": return <ChecklistsManager />;
+      case "agendamento": return <SchedulesManager />;
+      case "equipe": return <OperatorsManager />;
+      case "hoje": return <DailyTasksView instances={instances} shifts={settings.shifts} isLoading={loadingInstances} />;
+      case "configuracoes": return <TaskSettings />;
+      case "score": return <TeamScorePanel />;
+      case "evidencias": return <EvidenceGallery />;
+      case "validade": return <ExpiryTrackingPanel />;
+      case "logs": return <AccessLogsPanel />;
+      default: return <DashboardPanel />;
+    }
+  };
+
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6">
+    <div className="container mx-auto p-4 md:p-6 space-y-4">
       <ResponsivePageHeader
         title="Checklists Operacionais"
         description="Gestão completa de checklists, equipe e agendamentos"
@@ -71,51 +105,58 @@ export default function Tasks() {
         </Button>
       </ResponsivePageHeader>
 
-      <Tabs defaultValue="painel">
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="painel">Painel</TabsTrigger>
-          <TabsTrigger value="checklists">Checklists</TabsTrigger>
-          <TabsTrigger value="agendamento">Agendamento</TabsTrigger>
-          <TabsTrigger value="equipe">Equipe</TabsTrigger>
-          <TabsTrigger value="hoje">Tarefas do Dia</TabsTrigger>
-          <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
-          <TabsTrigger value="score">Score</TabsTrigger>
-          <TabsTrigger value="evidencias">Evidências</TabsTrigger>
-          <TabsTrigger value="validade">Validade</TabsTrigger>
-          <TabsTrigger value="logs">Logs</TabsTrigger>
-        </TabsList>
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* Mobile: horizontal scroll */}
+        <nav className="flex md:hidden gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeSection === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => setActiveSection(item.key)}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors shrink-0",
+                  isActive
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-card text-card-foreground border-border hover:bg-muted"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
 
-        <TabsContent value="painel" className="mt-4">
-          <DashboardPanel />
-        </TabsContent>
-        <TabsContent value="checklists" className="mt-4">
-          <ChecklistsManager />
-        </TabsContent>
-        <TabsContent value="agendamento" className="mt-4">
-          <SchedulesManager />
-        </TabsContent>
-        <TabsContent value="equipe" className="mt-4">
-          <OperatorsManager />
-        </TabsContent>
-        <TabsContent value="hoje" className="mt-4">
-          <DailyTasksView instances={instances} shifts={settings.shifts} isLoading={loadingInstances} />
-        </TabsContent>
-        <TabsContent value="configuracoes" className="mt-4">
-          <TaskSettings />
-        </TabsContent>
-        <TabsContent value="score" className="mt-4">
-          <TeamScorePanel />
-        </TabsContent>
-        <TabsContent value="evidencias" className="mt-4">
-          <EvidenceGallery />
-        </TabsContent>
-        <TabsContent value="validade" className="mt-4">
-          <ExpiryTrackingPanel />
-        </TabsContent>
-        <TabsContent value="logs" className="mt-4">
-          <AccessLogsPanel />
-        </TabsContent>
-      </Tabs>
+        {/* Desktop: vertical sidebar cards */}
+        <nav className="hidden md:flex flex-col gap-1.5 w-52 shrink-0">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeSection === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => setActiveSection(item.key)}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg border px-4 py-3 text-sm font-medium transition-colors text-left",
+                  isActive
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-card text-card-foreground border-border hover:bg-muted"
+                )}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {renderContent()}
+        </div>
+      </div>
 
       <TaskQRCodeDialog open={qrOpen} onOpenChange={setQrOpen} />
     </div>
