@@ -7,6 +7,8 @@ export interface ShiftConfig {
   name: string;
   start: string;
   end: string;
+  color?: string;
+  activeDays?: string[];
 }
 
 export interface TaskTemplate {
@@ -49,6 +51,28 @@ export interface TaskSettings {
   whatsappReportEnabled: boolean;
   whatsappReportPhone: string;
   whatsappReportTime: string;
+  alertCriticalEnabled: boolean;
+  alertCriticalDelayMinutes: number;
+  alertOverdueEnabled: boolean;
+  alertOverdueDelayMinutes: number;
+  alertDailySummaryEnabled: boolean;
+  alertDailySummaryTime: string;
+  alertDailySummaryTarget: string;
+  alertTemperatureEnabled: boolean;
+  alertBrowserNotifications: boolean;
+  alertWhatsappNumber: string;
+  reportDailyContent: string[];
+  reportWeeklyEnabled: boolean;
+  reportWeeklyDay: number;
+  allowLateCompletion: boolean;
+  requirePhotoDefault: boolean;
+  defaultMaxDurationMinutes: number;
+  allowFreeNotes: boolean;
+  showCountdownTimer: boolean;
+  blockEarlyExecution: boolean;
+  minPinDigits: number;
+  sessionTimeoutMinutes: number;
+  sectorsConfig: any[];
 }
 
 const DEFAULT_SHIFTS: ShiftConfig[] = [
