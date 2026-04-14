@@ -5164,37 +5164,67 @@ export type Database = {
       product_expiry_tracking: {
         Row: {
           batch_id: string | null
+          category: string | null
           created_at: string
+          discard_reason: string | null
+          discarded_at: string | null
+          discarded_quantity: number | null
           expiry_date: string
           id: string
           notes: string | null
+          origin: string | null
           product_name: string
+          quantity: number | null
           registered_by: string | null
           status: Database["public"]["Enums"]["expiry_status"]
+          storage_location: string | null
+          temperature: number | null
+          unit: string | null
+          unit_cost: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
           batch_id?: string | null
+          category?: string | null
           created_at?: string
+          discard_reason?: string | null
+          discarded_at?: string | null
+          discarded_quantity?: number | null
           expiry_date: string
           id?: string
           notes?: string | null
+          origin?: string | null
           product_name: string
+          quantity?: number | null
           registered_by?: string | null
           status?: Database["public"]["Enums"]["expiry_status"]
+          storage_location?: string | null
+          temperature?: number | null
+          unit?: string | null
+          unit_cost?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
           batch_id?: string | null
+          category?: string | null
           created_at?: string
+          discard_reason?: string | null
+          discarded_at?: string | null
+          discarded_quantity?: number | null
           expiry_date?: string
           id?: string
           notes?: string | null
+          origin?: string | null
           product_name?: string
+          quantity?: number | null
           registered_by?: string | null
           status?: Database["public"]["Enums"]["expiry_status"]
+          storage_location?: string | null
+          temperature?: number | null
+          unit?: string | null
+          unit_cost?: number | null
           updated_at?: string
           user_id?: string
         }
