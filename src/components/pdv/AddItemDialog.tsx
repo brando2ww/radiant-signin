@@ -89,6 +89,12 @@ export function AddItemDialog({
 
     const fullNotes = [optionsNotes, notes.trim()].filter(Boolean).join(" | ");
 
+    // Collect printer stations from linked sub-products
+    const linkedPrinterStations = selectedOptions
+      .flatMap((opt) => opt.items)
+      .filter((i) => i.printerStation)
+      .map((i) => i.printerStation);
+
     onAddItem({
       order_id: orderId,
       product_id: selectedProduct.id,
@@ -96,6 +102,7 @@ export function AddItemDialog({
       quantity,
       unit_price: getPrice(selectedProduct) + optionsExtra,
       notes: fullNotes || undefined,
+      linked_printer_stations: linkedPrinterStations.length > 0 ? linkedPrinterStations : undefined,
     });
 
     // Reset

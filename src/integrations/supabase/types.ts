@@ -4117,6 +4117,7 @@ export type Database = {
           created_at: string
           id: string
           is_available: boolean | null
+          linked_product_id: string | null
           name: string
           option_id: string
           order_position: number | null
@@ -4126,6 +4127,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_available?: boolean | null
+          linked_product_id?: string | null
           name: string
           option_id: string
           order_position?: number | null
@@ -4135,12 +4137,20 @@ export type Database = {
           created_at?: string
           id?: string
           is_available?: boolean | null
+          linked_product_id?: string | null
           name?: string
           option_id?: string
           order_position?: number | null
           price_adjustment?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "pdv_product_option_items_linked_product_id_fkey"
+            columns: ["linked_product_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pdv_product_option_items_option_id_fkey"
             columns: ["option_id"]

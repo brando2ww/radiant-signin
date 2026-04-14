@@ -24,6 +24,7 @@ interface ComandaAddItemDialogProps {
     quantity: number;
     unitPrice: number;
     notes?: string;
+    linkedPrinterStations?: (string | null)[];
   }) => Promise<void>;
   isLoading?: boolean;
 }
@@ -83,12 +84,18 @@ export function ComandaAddItemDialog({
       .join("; ");
     const fullNotes = [optionsNotes, notes.trim()].filter(Boolean).join(" | ");
 
+    const linkedPrinterStations = selectedOptions
+      .flatMap((opt) => opt.items)
+      .filter((i) => i.printerStation)
+      .map((i) => i.printerStation);
+
     await onAddItem({
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       quantity,
       unitPrice: getProductPrice(selectedProduct) + optionsExtra,
       notes: fullNotes || undefined,
+      linkedPrinterStations: linkedPrinterStations.length > 0 ? linkedPrinterStations : undefined,
     });
 
     // Reset and close
