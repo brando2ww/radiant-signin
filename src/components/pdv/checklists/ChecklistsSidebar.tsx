@@ -61,7 +61,7 @@ export function ChecklistsSidebar() {
     ));
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
+    <Sidebar collapsible="icon" className="border-r [&>div:first-child]:h-[calc(100svh-3.5rem)] [&>div:nth-child(2)]:top-14 [&>div:nth-child(2)]:h-[calc(100svh-3.5rem)]">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Operacional</SidebarGroupLabel>
