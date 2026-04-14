@@ -1,103 +1,94 @@
 
 
-# Reformular Pagina de Agendamentos
+# Reformular Pagina de Equipe (Colaboradores)
 
-Reescrever completamente o `SchedulesManager.tsx` e substituir o `ScheduleDialog.tsx` por um drawer lateral. Adicionar grade semanal visual, indicadores, filtros e formulario melhorado.
+Transformar o `OperatorsManager` de lista simples + modal em uma pagina rica com cards visuais, indicadores, filtros, drawer lateral para criar/editar, e perfil com abas de desempenho e historico.
 
 ## Mudancas no banco de dados
 
-### Migration: Colunas de configuracao avancada
+### Migration: Novas colunas em `checklist_operators`
 
 ```sql
-ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS notify_on_overdue boolean DEFAULT true;
-ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS allow_late_completion boolean DEFAULT true;
-ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS require_photo boolean DEFAULT false;
-ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS notes text DEFAULT NULL;
-ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS recurrence_type text DEFAULT 'weekly';
-ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS recurrence_date date DEFAULT NULL;
-ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS recurrence_day_of_month integer DEFAULT NULL;
+ALTER TABLE checklist_operators ADD COLUMN IF NOT EXISTS avatar_color text DEFAULT '#6366f1';
+ALTER TABLE checklist_operators ADD COLUMN IF NOT EXISTS default_shift text DEFAULT 'variavel';
+ALTER TABLE checklist_operators ADD COLUMN IF NOT EXISTS hired_at date DEFAULT NULL;
+ALTER TABLE checklist_operators ADD COLUMN IF NOT EXISTS notes text DEFAULT NULL;
+ALTER TABLE checklist_operators ADD COLUMN IF NOT EXISTS last_access_at timestamptz DEFAULT NULL;
 ```
 
-`recurrence_type`: `weekly` (padrao atual), `daily`, `monthly`, `once`.
+Campos: cor do avatar, turno padrao, data de entrada, observacao interna, ultimo acesso.
 
 ## Arquivos novos
 
-### 1. `src/components/pdv/checklists/schedules/ScheduleWeekGrid.tsx`
-
-Grade semanal visual:
-- 7 colunas (Dom-Sab) x 3 linhas (Manha/Tarde/Noite)
-- Cada celula renderiza cards coloridos dos agendamentos ativos naquele dia/turno
-- Card mostra: barra lateral com cor do checklist, nome, horario, responsavel
-- Clicar no card abre drawer de edicao
-- Clicar em celula vazia abre drawer com dia/turno pre-selecionados
-- Props: `schedules`, `onEdit(id)`, `onCreateAt(day, shift)`, filtros aplicados
-
-### 2. `src/components/pdv/checklists/schedules/ScheduleListView.tsx`
-
-Lista cronologica alternativa:
-- Tabela/lista ordenada por horario
-- Colunas: cor, nome, setor, turno, dias ativos (badges), responsavel, horario, prazo, status
-- Acoes rapidas: editar, duplicar, pausar/ativar (toggle `is_active`), excluir
-- Props: `schedules`, `onEdit`, `onDuplicate`, `onToggle`, `onDelete`
-
-### 3. `src/components/pdv/checklists/schedules/ScheduleDrawer.tsx`
-
-Drawer lateral (substitui `ScheduleDialog`):
-- Usa componente `Sheet` (side="right") do shadcn
-- Campos melhorados:
-  - Checklist: select com busca, mostra cor + setor do selecionado
-  - Turno: 3 botoes visuais (Manha/Tarde/Noite)
-  - Horario: input time
-  - Prazo: slider + campo numerico, label legivel ("1h 30min")
-  - Dias: 7 botoes toggle grandes
-  - Recorrencia: radio (Diario/Semanal/Mensal/Avulso) — Avulso mostra date picker, Mensal mostra campo dia
-  - Atribuicao: 3 opcoes (Colaborador/Setor/Qualquer um do turno), com seletor visual
-  - Secao expansivel "Configuracoes avancadas": toggles notificar, permitir atraso, exigir foto, nota interna
-- Rodape fixo: Cancelar + Salvar
-
-### 4. `src/components/pdv/checklists/schedules/ScheduleIndicators.tsx`
+### 1. `src/components/pdv/checklists/team/TeamIndicators.tsx`
 
 4 mini-cards no topo:
-- Total de agendamentos ativos
-- Quantos rodam hoje (baseado no dia da semana atual)
-- Turno com mais agendamentos
-- Proximo agendamento do dia (com horario)
+- Total de colaboradores ativos
+- Melhor score da semana (nome + pontuacao)
+- Menor score da semana (nome + pontuacao)
+- Quantos acessaram hoje (baseado em `last_access_at`)
 
-### 5. `src/components/pdv/checklists/schedules/ScheduleFilters.tsx`
+Usa dados de `useChecklistOperators` + `useOperatorRanking`.
 
-Barra de filtros + toggle grade/lista:
-- Filtro turno (botoes Manha/Tarde/Noite)
+### 2. `src/components/pdv/checklists/team/TeamFilters.tsx`
+
+Barra de filtros:
+- Busca por nome (input)
 - Filtro setor (select)
-- Filtro colaborador (select)
-- Filtro status (ativo/pausado)
-- Toggle visualizacao: icone grid vs icone lista
+- Filtro nivel de acesso (select)
+- Filtro status (ativo/inativo)
+- Ordenar por: nome, score, ultimo acesso, setor
+
+### 3. `src/components/pdv/checklists/team/OperatorCard.tsx`
+
+Card visual por colaborador:
+- Avatar circular com iniciais + cor por setor
+- Nome, cargo, setor com icone, badge de nivel de acesso
+- Score da semana em destaque (numero grande)
+- Status ativo/inativo, ultimo acesso
+- Card esmaecido se inativo
+- `onClick` abre perfil drawer
+
+### 4. `src/components/pdv/checklists/team/OperatorDrawer.tsx`
+
+Substitui `OperatorDialog`. Sheet lateral (side="right") com:
+- Campos existentes melhorados: nome, cargo, setor (botoes visuais), PIN (com gerar aleatorio e revelar/ocultar), nivel de acesso (3 cards visuais com descricao), status toggle
+- Campos novos: cor do avatar (circulos coloridos), turno padrao (4 botoes), data de entrada (date picker), observacao interna (textarea)
+- Rodape fixo: Cancelar + Salvar
+
+### 5. `src/components/pdv/checklists/team/OperatorProfileDrawer.tsx`
+
+Drawer de perfil ao clicar no card. 3 abas:
+
+**Aba Perfil**: dados cadastrados + botao editar (abre OperatorDrawer)
+
+**Aba Desempenho**: score atual (numero grande), taxa conclusao no prazo, total checklists mes, badges. Reutiliza dados de `useOperatorRanking` + `useScoreHistory`.
+
+**Aba Historico**: lista das ultimas execucoes (nome checklist, data, status). Query paginada em `checklist_executions` filtrada por `operator_id`, limit 30.
 
 ## Arquivos editados
 
-### 6. `src/components/pdv/checklists/SchedulesManager.tsx`
+### 6. `src/components/pdv/checklists/OperatorsManager.tsx`
 
 Reescrita completa:
-- Importa os 5 componentes acima
-- Gerencia estado de filtros, modo de visualizacao (grid/list), drawer aberto/editando
-- Passa callbacks de criar/editar/duplicar/pausar/excluir
-- Estado vazio: grade semanal vazia com placeholders + mensagem convidativa + atalhos para templates
+- Importa `TeamIndicators`, `TeamFilters`, grid de `OperatorCard`, drawers
+- Gerencia estados de filtro, busca, ordenacao, drawers abertos
+- Estado vazio: ilustracao + texto convidativo + botao cadastrar no centro
+- Mantem `AlertDialog` de exclusao
 
-### 7. `src/hooks/use-checklist-schedules.ts`
+### 7. `src/hooks/use-checklist-operators.ts`
 
-- Expandir select para incluir `checklists(name, sector, color)`
-- Adicionar mutation `duplicateSchedule` (copia com novo id)
-- Adicionar mutation `toggleSchedule` (atualiza `is_active`)
-- Incluir novas colunas nas mutations de create/update
+- Incluir novas colunas nas mutations de create/update (`avatar_color`, `default_shift`, `hired_at`, `notes`)
 
-### 8. `src/components/pdv/checklists/ScheduleDialog.tsx`
+### 8. `src/components/pdv/checklists/OperatorDialog.tsx`
 
-Removido (substituido pelo `ScheduleDrawer`)
+Removido (substituido por `OperatorDrawer`).
 
 ## Resumo tecnico
 
-- **1 migration** (7 colunas novas em `checklist_schedules`)
-- **5 arquivos novos** (4 componentes de UI + 1 filtros)
-- **2 arquivos editados** (SchedulesManager, use-checklist-schedules)
-- **1 arquivo removido** (ScheduleDialog)
-- **0 dependencias novas** (Sheet/Slider/Calendar ja existem)
+- **1 migration** (5 colunas novas em `checklist_operators`)
+- **5 arquivos novos** (TeamIndicators, TeamFilters, OperatorCard, OperatorDrawer, OperatorProfileDrawer)
+- **2 arquivos editados** (OperatorsManager, use-checklist-operators)
+- **1 arquivo removido** (OperatorDialog)
+- **0 dependencias novas** (Sheet/Tabs/Calendar ja existem)
 
