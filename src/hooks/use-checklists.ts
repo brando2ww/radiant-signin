@@ -28,6 +28,7 @@ export const ITEM_TYPE_LABELS: Record<ChecklistItemType, string> = {
   photo: "Foto",
   temperature: "Temperatura",
   stars: "Avaliação (estrelas)",
+  multiple_choice: "Múltipla escolha",
 };
 
 export function useChecklists() {
