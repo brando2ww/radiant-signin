@@ -104,6 +104,9 @@ export default function PublicTasks() {
           onComplete={() => {
             setActiveExecutionId(null);
             loadSchedules(operator);
+            if (operator) {
+              logAccess.mutate({ userId: userId!, operatorId: operator.id, action: "checklist_complete", details: { executionId: activeExecutionId } });
+            }
           }}
         />
       </>
