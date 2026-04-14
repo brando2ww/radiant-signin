@@ -738,6 +738,7 @@ export type Database = {
       }
       checklist_schedules: {
         Row: {
+          allow_late_completion: boolean | null
           assigned_operator_id: string | null
           assigned_sector:
             | Database["public"]["Enums"]["checklist_sector"]
@@ -748,12 +749,19 @@ export type Database = {
           id: string
           is_active: boolean
           max_duration_minutes: number
+          notes: string | null
+          notify_on_overdue: boolean | null
+          recurrence_date: string | null
+          recurrence_day_of_month: number | null
+          recurrence_type: string | null
+          require_photo: boolean | null
           shift: string
           start_time: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          allow_late_completion?: boolean | null
           assigned_operator_id?: string | null
           assigned_sector?:
             | Database["public"]["Enums"]["checklist_sector"]
@@ -764,12 +772,19 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_duration_minutes?: number
+          notes?: string | null
+          notify_on_overdue?: boolean | null
+          recurrence_date?: string | null
+          recurrence_day_of_month?: number | null
+          recurrence_type?: string | null
+          require_photo?: boolean | null
           shift?: string
           start_time?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          allow_late_completion?: boolean | null
           assigned_operator_id?: string | null
           assigned_sector?:
             | Database["public"]["Enums"]["checklist_sector"]
@@ -780,6 +795,12 @@ export type Database = {
           id?: string
           is_active?: boolean
           max_duration_minutes?: number
+          notes?: string | null
+          notify_on_overdue?: boolean | null
+          recurrence_date?: string | null
+          recurrence_day_of_month?: number | null
+          recurrence_type?: string | null
+          require_photo?: boolean | null
           shift?: string
           start_time?: string
           updated_at?: string
