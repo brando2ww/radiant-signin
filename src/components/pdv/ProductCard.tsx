@@ -83,6 +83,12 @@ export function ProductCard({ product, onEdit, onDelete, onDuplicate, isSharedTo
           <Badge variant={product.is_available ? "default" : "secondary"}>
             {product.is_available ? "Disponível" : "Indisponível"}
           </Badge>
+          {(product as any)?.is_composite && (
+            <Badge variant="outline" className="bg-background/80 gap-1">
+              <Layers className="h-3 w-3" />
+              Composto
+            </Badge>
+          )}
           {isSharedToDelivery && (
             <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white">
               Delivery

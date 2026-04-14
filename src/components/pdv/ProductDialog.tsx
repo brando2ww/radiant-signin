@@ -647,6 +647,23 @@ export function ProductDialog({
                 )}
               </TabsContent>
 
+              {product && (
+                <TabsContent value="composition" className="mt-4">
+                  <ProductCompositionManager
+                    productId={product.id}
+                    productPrice={currentPrice}
+                    isComposite={(product as any)?.is_composite || false}
+                    stockDeductionMode={(product as any)?.stock_deduction_mode || "main"}
+                    onCompositeChange={(value) => {
+                      onSubmit({ ...form.getValues(), is_composite: value });
+                    }}
+                    onStockDeductionModeChange={(value) => {
+                      onSubmit({ ...form.getValues(), stock_deduction_mode: value });
+                    }}
+                  />
+                </TabsContent>
+              )}
+
               <TabsContent value="fiscal" className="space-y-6 mt-4">
                 <div className="space-y-4">
                   <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Identificação</h4>
