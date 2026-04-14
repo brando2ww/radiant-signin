@@ -24,6 +24,7 @@ interface ComandaAddItemDialogProps {
     quantity: number;
     unitPrice: number;
     notes?: string;
+    linkedPrinterStations?: (string | null)[];
   }) => Promise<void>;
   isLoading?: boolean;
 }
