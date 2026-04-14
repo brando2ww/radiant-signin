@@ -91,6 +91,8 @@ export default function PDVDashboard() {
         />
       </div>
 
+      <OperationHealthWidget />
+
       <div className="grid gap-4 md:grid-cols-2">
         <SalesChart data={salesByHour} isLoading={isLoading} />
         <TopProductsList products={topProducts} isLoading={isLoading} />
