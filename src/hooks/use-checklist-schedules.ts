@@ -17,7 +17,7 @@ export function useChecklistSchedules() {
       if (!visibleUserId) return [];
       const { data, error } = await supabase
         .from("checklist_schedules")
-        .select("*, checklists(name, sector), checklist_operators(name)")
+        .select("*, checklists(name, sector, color), checklist_operators(name)")
         .eq("user_id", visibleUserId)
         .order("start_time");
       if (error) throw error;
@@ -65,11 +65,47 @@ export function useChecklistSchedules() {
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
 
+  const duplicateSchedule = useMutation({
+    mutationFn: async (id: string) => {
+      const original = schedules.find((s: any) => s.id === id);
+      if (!original || !visibleUserId) throw new Error("Não encontrado");
+      const { checklists, checklist_operators, id: _id, created_at, updated_at, ...rest } = original as any;
+      const { error } = await supabase
+        .from("checklist_schedules")
+        .insert({ ...rest, user_id: visibleUserId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["checklist-schedules"] });
+      toast({ title: "Agendamento duplicado" });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
+  const toggleSchedule = useMutation({
+    mutationFn: async (id: string) => {
+      const schedule = schedules.find((s: any) => s.id === id);
+      if (!schedule) throw new Error("Não encontrado");
+      const { error } = await supabase
+        .from("checklist_schedules")
+        .update({ is_active: !schedule.is_active })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["checklist-schedules"] });
+      toast({ title: "Status atualizado" });
+    },
+    onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
+  });
+
   return {
     schedules,
     isLoading,
     createSchedule: createSchedule.mutateAsync,
     updateSchedule: updateSchedule.mutate,
     deleteSchedule: deleteSchedule.mutate,
+    duplicateSchedule: duplicateSchedule.mutate,
+    toggleSchedule: toggleSchedule.mutate,
   };
 }
