@@ -159,6 +159,7 @@ export function usePDVOrders() {
       unit_price: number;
       notes?: string;
       modifiers?: any;
+      kitchen_status?: string;
     }) => {
       if (!user) throw new Error("Usuário não autenticado");
 
@@ -175,7 +176,7 @@ export function usePDVOrders() {
           subtotal,
           notes: item.notes || null,
           modifiers: item.modifiers || null,
-          kitchen_status: "pendente",
+          kitchen_status: item.kitchen_status || "pendente",
           added_by: user.id,
         })
         .select()

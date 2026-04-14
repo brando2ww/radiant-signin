@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChefHat } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { usePDVKitchen } from "@/hooks/use-pdv-kitchen";
 import { KitchenItemCard } from "@/components/pdv/KitchenItemCard";
 import { KitchenFilters } from "@/components/pdv/KitchenFilters";
@@ -9,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function PDVKitchen() {
   const { items, isLoading, updateItemStatus } = usePDVKitchen();
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [selectedStation, setSelectedStation] = useState<string | null>(null);
 
   const handleUpdateStatus = (itemId: string, status: "preparando" | "pronto" | "entregue") => {
     updateItemStatus({ itemId, status });
@@ -16,9 +19,11 @@ export default function PDVKitchen() {
 
   // Filtrar itens
   const filteredItems = useMemo(() => {
-    if (!selectedStatus) return items;
-    return items.filter((item) => item.kitchen_status === selectedStatus);
-  }, [items, selectedStatus]);
+    let result = items;
+    if (selectedStatus) result = result.filter((item) => item.kitchen_status === selectedStatus);
+    if (selectedStation) result = result.filter((item) => (item as any).printer_station === selectedStation);
+    return result;
+  }, [items, selectedStatus, selectedStation]);
 
   // Contar por status
   const counts = useMemo(() => {
@@ -71,6 +76,26 @@ export default function PDVKitchen() {
         onStatusChange={setSelectedStatus}
         counts={counts}
       />
+
+      {/* Station filter */}
+      <div className="flex gap-2 flex-wrap">
+        {["cozinha", "bar", "copa", "confeitaria"].map((station) => {
+          const count = items.filter((i) => (i as any).printer_station === station).length;
+          if (count === 0 && station !== "cozinha") return null;
+          return (
+            <Button
+              key={station}
+              variant={selectedStation === station ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedStation(selectedStation === station ? null : station)}
+              className="capitalize"
+            >
+              {station}
+              <Badge variant="secondary" className="ml-1.5">{count}</Badge>
+            </Button>
+          );
+        })}
+      </div>
 
       {filteredItems.length === 0 ? (
         <Card>

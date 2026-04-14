@@ -6,11 +6,22 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -23,6 +34,7 @@ import {
   Receipt,
   UtensilsCrossed,
   Clock,
+  XCircle,
   User,
   Search,
   ArrowUpDown,
@@ -44,6 +56,8 @@ interface ChargeSelectionDialogProps {
   onOpenChange: (open: boolean) => void;
   onSelectComanda: (comanda: Comanda, items: ComandaItem[]) => void;
   onSelectTable: (table: PDVTable, comandas: Comanda[], items: ComandaItem[]) => void;
+  onCancelComanda?: (comandaId: string) => void;
+  onCancelTable?: (tableId: string, orderId: string) => void;
 }
 
 type SortOption = "time" | "value" | "number";
@@ -53,10 +67,14 @@ export function ChargeSelectionDialog({
   onOpenChange,
   onSelectComanda,
   onSelectTable,
+  onCancelComanda,
+  onCancelTable,
 }: ChargeSelectionDialogProps) {
   const [tab, setTab] = useState<"comandas" | "mesas">("comandas");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("time");
+  const [cancelTarget, setCancelTarget] = useState<{ type: "comanda" | "table"; id: string; orderId?: string; label: string } | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
   
   const { comandas, getItemsByComanda, getStandaloneComandas } = usePDVComandas();
   const { tables } = usePDVTables();
@@ -161,7 +179,19 @@ export function ChargeSelectionDialog({
     onSelectTable(table, tableComandas, allItems);
   };
 
+  const handleConfirmCancel = () => {
+    if (!cancelTarget) return;
+    if (cancelTarget.type === "comanda" && onCancelComanda) {
+      onCancelComanda(cancelTarget.id);
+    } else if (cancelTarget.type === "table" && onCancelTable && cancelTarget.orderId) {
+      onCancelTable(cancelTarget.id, cancelTarget.orderId);
+    }
+    setCancelTarget(null);
+    setCancelReason("");
+  };
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
@@ -273,10 +303,24 @@ export function ChargeSelectionDialog({
                                     })}
                                   </div>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right space-y-1">
                                   <span className="text-lg font-bold text-primary group-hover:scale-105 transition-transform inline-block">
                                     {formatCurrency(comanda.subtotal)}
                                   </span>
+                                  {onCancelComanda && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCancelTarget({ type: "comanda", id: comanda.id, label: `#${comanda.comanda_number}` });
+                                      }}
+                                    >
+                                      <XCircle className="h-3 w-3 mr-1" />
+                                      Cancelar
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </CardContent>
@@ -368,10 +412,24 @@ export function ChargeSelectionDialog({
                                     })}
                                   </div>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-right space-y-1">
                                   <span className="text-lg font-bold text-primary group-hover:scale-105 transition-transform inline-block">
                                     {formatCurrency(total)}
                                   </span>
+                                  {onCancelTable && table.current_order_id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setCancelTarget({ type: "table", id: table.id, orderId: table.current_order_id!, label: `Mesa ${table.table_number}` });
+                                      }}
+                                    >
+                                      <XCircle className="h-3 w-3 mr-1" />
+                                      Cancelar
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </CardContent>
@@ -413,5 +471,29 @@ export function ChargeSelectionDialog({
         </Tabs>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={!!cancelTarget} onOpenChange={(open) => { if (!open) { setCancelTarget(null); setCancelReason(""); } }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cancelar {cancelTarget?.label}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Esta ação não pode ser desfeita. Todos os itens serão cancelados.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <Textarea
+          placeholder="Motivo do cancelamento (opcional)..."
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+          className="mt-2"
+        />
+        <AlertDialogFooter>
+          <AlertDialogCancel>Voltar</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmCancel} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Confirmar Cancelamento
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

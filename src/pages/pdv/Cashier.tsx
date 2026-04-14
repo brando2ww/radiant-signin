@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Lock } from "lucide-react";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
 import { usePDVComandas, Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
-import { PDVTable } from "@/hooks/use-pdv-tables";
+import { usePDVTables, PDVTable } from "@/hooks/use-pdv-tables";
 import { OpenCashierDialog } from "@/components/pdv/OpenCashierDialog";
 import { CloseCashierDialog, printCashierReport } from "@/components/pdv/CloseCashierDialog";
 import { CashMovementDialog } from "@/components/pdv/CashMovementDialog";
@@ -15,6 +15,7 @@ import { CashierSummaryFooter } from "@/components/pdv/cashier/CashierSummaryFoo
 import { KeyboardShortcutsDialog } from "@/components/pdv/cashier/KeyboardShortcutsDialog";
 import { ChargeSelectionDialog } from "@/components/pdv/cashier/ChargeSelectionDialog";
 import { PaymentDialog } from "@/components/pdv/cashier/PaymentDialog";
+import { EmployeeConsumptionDialog } from "@/components/pdv/cashier/EmployeeConsumptionDialog";
 
 export default function PDVCashier() {
   const {
@@ -31,6 +32,9 @@ export default function PDVCashier() {
     lastClosedMovements,
   } = usePDVCashier();
 
+  const { comandas, cancelComanda } = usePDVComandas();
+  const { updateTable } = usePDVTables();
+
   const [openDialog, setOpenDialog] = useState(false);
   const [closeDialog, setCloseDialog] = useState(false);
   const [movementDialog, setMovementDialog] = useState(false);
@@ -38,6 +42,7 @@ export default function PDVCashier() {
   const [shortcutsDialog, setShortcutsDialog] = useState(false);
   const [chargeDialog, setChargeDialog] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState(false);
+  const [employeeDialog, setEmployeeDialog] = useState(false);
 
   // Payment state
   const [selectedComanda, setSelectedComanda] = useState<Comanda | null>(null);
@@ -259,6 +264,7 @@ export default function PDVCashier() {
               onCharge={() => setChargeDialog(true)}
               onShowHelp={() => setShortcutsDialog(true)}
               onReprintLast={lastClosedSession ? handleReprintLastCashier : undefined}
+              onEmployeeConsumption={() => setEmployeeDialog(true)}
             />
           </CardContent>
         </Card>
@@ -312,6 +318,18 @@ export default function PDVCashier() {
         onOpenChange={setChargeDialog}
         onSelectComanda={handleSelectComanda}
         onSelectTable={handleSelectTable}
+        onCancelComanda={(comandaId) => {
+          cancelComanda(comandaId);
+          setChargeDialog(false);
+        }}
+        onCancelTable={(tableId, orderId) => {
+          // Cancel all comandas of the table
+          const tableComandas = comandas.filter(c => c.order_id === orderId && c.status === "aberta");
+          tableComandas.forEach(c => cancelComanda(c.id));
+          // Release table
+          updateTable({ id: tableId, updates: { status: "livre", current_order_id: null } });
+          setChargeDialog(false);
+        }}
       />
 
       <PaymentDialog
@@ -323,6 +341,11 @@ export default function PDVCashier() {
         tableComandas={selectedTableComandas}
         tableItems={selectedTableItems}
         onSuccess={handlePaymentSuccess}
+      />
+
+      <EmployeeConsumptionDialog
+        open={employeeDialog}
+        onOpenChange={setEmployeeDialog}
       />
     </div>
   );

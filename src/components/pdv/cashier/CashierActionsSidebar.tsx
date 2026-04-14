@@ -1,4 +1,4 @@
-import { Unlock, Lock, TrendingUp, TrendingDown, HelpCircle, Receipt, Printer } from "lucide-react";
+import { Unlock, Lock, TrendingUp, TrendingDown, HelpCircle, Receipt, Printer, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface CashierActionsSidebarProps {
@@ -11,6 +11,7 @@ interface CashierActionsSidebarProps {
   onCharge: () => void;
   onShowHelp: () => void;
   onReprintLast?: () => void;
+  onEmployeeConsumption?: () => void;
 }
 
 export function CashierActionsSidebar({
@@ -23,6 +24,7 @@ export function CashierActionsSidebar({
   onCharge,
   onShowHelp,
   onReprintLast,
+  onEmployeeConsumption,
 }: CashierActionsSidebarProps) {
   return (
     <div className="flex flex-col gap-3 h-full">
@@ -87,6 +89,18 @@ export function CashierActionsSidebar({
             <span className="text-sm font-medium">Cobrar</span>
             <kbd className="text-[10px] opacity-50 bg-muted px-1.5 py-0.5 rounded">F5</kbd>
           </Button>
+
+          {onEmployeeConsumption && (
+            <Button
+              onClick={onEmployeeConsumption}
+              disabled={isLoading}
+              variant="outline"
+              className="h-16 flex-col gap-1 border-muted-foreground/30 hover:bg-muted"
+            >
+              <Users className="h-5 w-5 text-muted-foreground" />
+              <span className="text-xs font-medium">Consumo Func.</span>
+            </Button>
+          )}
 
           <div className="flex-1" />
 

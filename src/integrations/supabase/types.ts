@@ -2545,6 +2545,50 @@ export type Database = {
         }
         Relationships: []
       }
+      pdv_employee_consumption: {
+        Row: {
+          closed_at: string | null
+          comanda_id: string | null
+          created_at: string
+          employee_name: string
+          id: string
+          notes: string | null
+          status: string
+          total: number
+          user_id: string
+        }
+        Insert: {
+          closed_at?: string | null
+          comanda_id?: string | null
+          created_at?: string
+          employee_name: string
+          id?: string
+          notes?: string | null
+          status?: string
+          total?: number
+          user_id: string
+        }
+        Update: {
+          closed_at?: string | null
+          comanda_id?: string | null
+          created_at?: string
+          employee_name?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          total?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_employee_consumption_comanda_id_fkey"
+            columns: ["comanda_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_comandas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_financial_transactions: {
         Row: {
           amount: number
@@ -3618,6 +3662,7 @@ export type Database = {
           price_balcao: number | null
           price_delivery: number | null
           price_salon: number
+          printer_station: string
           serves: number | null
           tax_unit: string | null
           updated_at: string | null
@@ -3650,6 +3695,7 @@ export type Database = {
           price_balcao?: number | null
           price_delivery?: number | null
           price_salon: number
+          printer_station?: string
           serves?: number | null
           tax_unit?: string | null
           updated_at?: string | null
@@ -3682,6 +3728,7 @@ export type Database = {
           price_balcao?: number | null
           price_delivery?: number | null
           price_salon?: number
+          printer_station?: string
           serves?: number | null
           tax_unit?: string | null
           updated_at?: string | null

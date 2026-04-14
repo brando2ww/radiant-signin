@@ -155,6 +155,7 @@ export function ProductDialog({
       is_available: product?.is_available ?? true,
       is_sold_by_weight: product?.is_sold_by_weight ?? false,
       available_days: (product as any)?.available_days || [],
+      printer_station: (product as any)?.printer_station || "cozinha",
       ncm: product?.ncm || "",
       cest: product?.cest || "",
       cfop: product?.cfop || "",
@@ -189,6 +190,7 @@ export function ProductDialog({
         is_available: product.is_available,
         is_sold_by_weight: product.is_sold_by_weight,
         available_days: (product as any)?.available_days || [],
+        printer_station: (product as any)?.printer_station || "cozinha",
         ncm: product.ncm || "",
         cest: product.cest || "",
         cfop: product.cfop || "",
@@ -403,6 +405,33 @@ export function ProductDialog({
                       <FormControl>
                         <Input placeholder="Ex: Pizzas, Bebidas..." {...field} />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="printer_station"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estação de Impressão</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a estação" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="cozinha">Cozinha</SelectItem>
+                          <SelectItem value="bar">Bar</SelectItem>
+                          <SelectItem value="copa">Copa</SelectItem>
+                          <SelectItem value="confeitaria">Confeitaria</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Define para qual terminal o item será enviado
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
