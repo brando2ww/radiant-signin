@@ -42,6 +42,7 @@ export default function PDVCashier() {
   const [shortcutsDialog, setShortcutsDialog] = useState(false);
   const [chargeDialog, setChargeDialog] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState(false);
+  const [employeeDialog, setEmployeeDialog] = useState(false);
 
   // Payment state
   const [selectedComanda, setSelectedComanda] = useState<Comanda | null>(null);
