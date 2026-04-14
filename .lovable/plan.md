@@ -1,104 +1,103 @@
 
 
-# Reformular Editor de Checklists — Pagina Dedicada
+# Reformular Pagina de Agendamentos
 
-Transformar o modal simples de criacao/edicao em uma pagina completa com editor profissional de itens, preview mobile em tempo real e templates melhorados.
+Reescrever completamente o `SchedulesManager.tsx` e substituir o `ScheduleDialog.tsx` por um drawer lateral. Adicionar grade semanal visual, indicadores, filtros e formulario melhorado.
 
 ## Mudancas no banco de dados
 
-### Migration 1: Novas colunas e tipo
+### Migration: Colunas de configuracao avancada
 
 ```sql
--- Cor do checklist
-ALTER TABLE checklists ADD COLUMN color text DEFAULT '#6366f1';
-
--- Turno padrao
-ALTER TABLE checklists ADD COLUMN default_shift text DEFAULT 'todos';
-
--- Novo tipo "multipla escolha"
-ALTER TYPE checklist_item_type ADD VALUE 'multiple_choice';
-
--- Opcoes para multipla escolha (jsonb array de strings)
-ALTER TABLE checklist_items ADD COLUMN options jsonb DEFAULT NULL;
+ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS notify_on_overdue boolean DEFAULT true;
+ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS allow_late_completion boolean DEFAULT true;
+ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS require_photo boolean DEFAULT false;
+ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS notes text DEFAULT NULL;
+ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS recurrence_type text DEFAULT 'weekly';
+ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS recurrence_date date DEFAULT NULL;
+ALTER TABLE checklist_schedules ADD COLUMN IF NOT EXISTS recurrence_day_of_month integer DEFAULT NULL;
 ```
 
-A coluna `is_active` ja existe e sera usada como status (ativo vs rascunho).
+`recurrence_type`: `weekly` (padrao atual), `daily`, `monthly`, `once`.
 
 ## Arquivos novos
 
-### 1. `src/pages/pdv/ChecklistEditor.tsx`
+### 1. `src/components/pdv/checklists/schedules/ScheduleWeekGrid.tsx`
 
-Pagina dedicada de edicao. Recebe `checklistId` via URL param (ou "novo").
+Grade semanal visual:
+- 7 colunas (Dom-Sab) x 3 linhas (Manha/Tarde/Noite)
+- Cada celula renderiza cards coloridos dos agendamentos ativos naquele dia/turno
+- Card mostra: barra lateral com cor do checklist, nome, horario, responsavel
+- Clicar no card abre drawer de edicao
+- Clicar em celula vazia abre drawer com dia/turno pre-selecionados
+- Props: `schedules`, `onEdit(id)`, `onCreateAt(day, shift)`, filtros aplicados
 
-- Layout duas colunas: esquerda (config, ~40%), direita (itens + preview, ~60%)
-- Header fixo com botao "Voltar" e "Salvar"
-- Se `id === "novo"`, cria checklist ao salvar pela primeira vez
-- Se editando, carrega dados existentes
+### 2. `src/components/pdv/checklists/schedules/ScheduleListView.tsx`
 
-### 2. `src/components/pdv/checklists/editor/ChecklistConfigPanel.tsx`
+Lista cronologica alternativa:
+- Tabela/lista ordenada por horario
+- Colunas: cor, nome, setor, turno, dias ativos (badges), responsavel, horario, prazo, status
+- Acoes rapidas: editar, duplicar, pausar/ativar (toggle `is_active`), excluir
+- Props: `schedules`, `onEdit`, `onDuplicate`, `onToggle`, `onDelete`
 
-Coluna esquerda:
-- Nome (input obrigatorio)
-- Setor: grid de botoes com icones (UtensilsCrossed, Armchair, Calculator, Wine, Package, Briefcase), nao dropdown
-- Descricao (textarea)
-- Cor: seletor visual com circulos coloridos (reutilizar `SECTOR_COLORS`)
-- Turno padrao: botoes Manha/Tarde/Noite/Todos
-- Status: switch Ativo/Rascunho
+### 3. `src/components/pdv/checklists/schedules/ScheduleDrawer.tsx`
 
-### 3. `src/components/pdv/checklists/editor/ChecklistItemsList.tsx`
+Drawer lateral (substitui `ScheduleDialog`):
+- Usa componente `Sheet` (side="right") do shadcn
+- Campos melhorados:
+  - Checklist: select com busca, mostra cor + setor do selecionado
+  - Turno: 3 botoes visuais (Manha/Tarde/Noite)
+  - Horario: input time
+  - Prazo: slider + campo numerico, label legivel ("1h 30min")
+  - Dias: 7 botoes toggle grandes
+  - Recorrencia: radio (Diario/Semanal/Mensal/Avulso) — Avulso mostra date picker, Mensal mostra campo dia
+  - Atribuicao: 3 opcoes (Colaborador/Setor/Qualquer um do turno), com seletor visual
+  - Secao expansivel "Configuracoes avancadas": toggles notificar, permitir atraso, exigir foto, nota interna
+- Rodape fixo: Cancelar + Salvar
 
-Coluna direita — editor de itens:
-- Contador no topo: "X itens — Y obrigatorios — Z criticos"
-- Lista ordenada com drag-and-drop (usar estado local + `reorderItems`)
-- Cada item mostra: titulo, tipo (icone), badges (critico/obrigatorio), controles hover (editar, duplicar, excluir, arrastar)
-- Barra de adicao no final: botoes rapidos por tipo (Checkbox, Numero, Temperatura, Foto, Texto, Estrelas, Multipla escolha) — um clique adiciona e abre nome para digitar
-- Para tipo `multiple_choice`: campo para adicionar/remover opcoes (chips)
-- Para tipo `temperature`: campos min/max
+### 4. `src/components/pdv/checklists/schedules/ScheduleIndicators.tsx`
 
-### 4. `src/components/pdv/checklists/editor/ChecklistMobilePreview.tsx`
+4 mini-cards no topo:
+- Total de agendamentos ativos
+- Quantos rodam hoje (baseado no dia da semana atual)
+- Turno com mais agendamentos
+- Proximo agendamento do dia (com horario)
 
-Preview mobile em tempo real:
-- Container com borda arredondada simulando tela de celular (max-w-xs, aspect ratio mobile)
-- Renderiza os itens como o colaborador veria: checkbox, input numerico, captura foto, stars, campo texto, radio buttons (multipla escolha)
-- Atualiza automaticamente conforme itens sao editados
+### 5. `src/components/pdv/checklists/schedules/ScheduleFilters.tsx`
+
+Barra de filtros + toggle grade/lista:
+- Filtro turno (botoes Manha/Tarde/Noite)
+- Filtro setor (select)
+- Filtro colaborador (select)
+- Filtro status (ativo/pausado)
+- Toggle visualizacao: icone grid vs icone lista
 
 ## Arquivos editados
 
-### 5. `src/App.tsx`
+### 6. `src/components/pdv/checklists/SchedulesManager.tsx`
 
-Adicionar rota dentro de `/pdv/*`:
-- `/pdv/tarefas/checklists/novo` → `ChecklistEditor`
-- `/pdv/tarefas/checklists/:id` → `ChecklistEditor`
+Reescrita completa:
+- Importa os 5 componentes acima
+- Gerencia estado de filtros, modo de visualizacao (grid/list), drawer aberto/editando
+- Passa callbacks de criar/editar/duplicar/pausar/excluir
+- Estado vazio: grade semanal vazia com placeholders + mensagem convidativa + atalhos para templates
 
-### 6. `src/pages/pdv/Tasks.tsx`
+### 7. `src/hooks/use-checklist-schedules.ts`
 
-No `renderContent` para `case "checklists"`, passar callback para `ChecklistsManager` navegar para a nova pagina via `useNavigate`.
+- Expandir select para incluir `checklists(name, sector, color)`
+- Adicionar mutation `duplicateSchedule` (copia com novo id)
+- Adicionar mutation `toggleSchedule` (atualiza `is_active`)
+- Incluir novas colunas nas mutations de create/update
 
-### 7. `src/components/pdv/checklists/ChecklistsManager.tsx`
+### 8. `src/components/pdv/checklists/ScheduleDialog.tsx`
 
-- Remover `ChecklistDialog` e `editingItemsId` inline
-- "Novo Checklist" navega para `/pdv/tarefas/checklists/novo`
-- Clicar em checklist navega para `/pdv/tarefas/checklists/:id`
-- Manter duplicar e excluir na lista
+Removido (substituido pelo `ScheduleDrawer`)
 
-### 8. `src/components/pdv/checklists/TemplateLibraryDialog.tsx`
+## Resumo tecnico
 
-Melhorar:
-- Mostrar icones dos tipos de item presentes, preview dos primeiros 3 itens
-- Filtro por setor
-- Adicionar 6 novos templates (Fechamento Salao, Fechamento Caixa, Fechamento Bar, Controle de Validade, Higienizacao, Onboarding Colaborador)
-- "Usar Template" carrega itens no editor (via callback) em vez de criar checklist separado
-
-### 9. `src/hooks/use-checklists.ts`
-
-- Adicionar `color` e `default_shift` nos tipos e mutations
-- Adicionar `"multiple_choice"` ao `ITEM_TYPE_LABELS`
-- Adicionar `options` no `upsertItem`
-
-## Resumo
-
-- **1 migration** (colunas + enum)
-- **4 arquivos novos** (pagina + 3 componentes do editor)
-- **5 arquivos editados** (App.tsx, Tasks.tsx, ChecklistsManager, TemplateLibraryDialog, use-checklists)
-- **0 dependencias novas** (drag-and-drop com estado local via botoes mover cima/baixo; sem lib extra)
+- **1 migration** (7 colunas novas em `checklist_schedules`)
+- **5 arquivos novos** (4 componentes de UI + 1 filtros)
+- **2 arquivos editados** (SchedulesManager, use-checklist-schedules)
+- **1 arquivo removido** (ScheduleDialog)
+- **0 dependencias novas** (Sheet/Slider/Calendar ja existem)
 
