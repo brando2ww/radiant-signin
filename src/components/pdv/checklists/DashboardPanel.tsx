@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   CheckCircle2, Clock, AlertTriangle, XCircle, Activity,
   Plus, UserPlus, ListChecks, Trophy, TrendingDown, AlertOctagon,
+  QrCode, Send, RefreshCw,
 } from "lucide-react";
 import { useChecklistDashboard } from "@/hooks/use-checklist-dashboard";
 import { CompletionChart } from "./CompletionChart";
@@ -18,9 +19,14 @@ import { cn } from "@/lib/utils";
 
 interface DashboardPanelProps {
   onNavigate?: (section: string) => void;
+  onQrOpen?: () => void;
+  onSendReport?: () => void;
+  onGenerateDaily?: () => void;
+  sendingReport?: boolean;
+  isGenerating?: boolean;
 }
 
-export function DashboardPanel({ onNavigate }: DashboardPanelProps) {
+export function DashboardPanel({ onNavigate, onQrOpen, onSendReport, onGenerateDaily, sendingReport, isGenerating }: DashboardPanelProps) {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const {
     metrics, completionChart, shiftComparison, alerts, unacknowledgedAlerts,
@@ -39,7 +45,16 @@ export function DashboardPanel({ onNavigate }: DashboardPanelProps) {
         {unacknowledgedAlerts.length > 0 && (
           <Badge variant="destructive">{unacknowledgedAlerts.length} alerta(s)</Badge>
         )}
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={onQrOpen}>
+            <QrCode className="h-4 w-4 mr-1" /> QR Code
+          </Button>
+          <Button variant="outline" size="sm" onClick={onSendReport} disabled={sendingReport}>
+            <Send className={`h-4 w-4 mr-1 ${sendingReport ? "animate-pulse" : ""}`} /> Relatório
+          </Button>
+          <Button variant="outline" size="sm" onClick={onGenerateDaily} disabled={isGenerating}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${isGenerating ? "animate-spin" : ""}`} /> Gerar Tarefas
+          </Button>
           <Button variant="outline" size="sm" onClick={() => onNavigate?.("checklists")}>
             <Plus className="h-4 w-4 mr-1" /> Novo Checklist
           </Button>

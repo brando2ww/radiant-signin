@@ -72,7 +72,7 @@ export default function Tasks() {
 
   const renderContent = () => {
     switch (activeSection) {
-      case "painel": return <DashboardPanel onNavigate={setActiveSection} />;
+      case "painel": return <DashboardPanel onNavigate={setActiveSection} onQrOpen={() => setQrOpen(true)} onSendReport={handleSendReport} onGenerateDaily={() => generateDailyFn(undefined)} sendingReport={sendingReport} isGenerating={isGenerating} />;
       case "checklists": return <ChecklistsManager />;
       case "agendamento": return <SchedulesManager />;
       case "equipe": return <OperatorsManager />;
@@ -116,19 +116,7 @@ export default function Tasks() {
         <ResponsivePageHeader
           title="Checklists Operacionais"
           description="Gestão completa de checklists, equipe e agendamentos"
-        >
-          <Button variant="outline" size="sm" onClick={() => setQrOpen(true)}>
-            <QrCode className="h-4 w-4 mr-2" /> QR Code
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleSendReport} disabled={sendingReport}>
-            <Send className={`h-4 w-4 mr-2 ${sendingReport ? "animate-pulse" : ""}`} />
-            Relatório
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => generateDailyFn(undefined)} disabled={isGenerating}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${isGenerating ? "animate-spin" : ""}`} />
-            Gerar Tarefas
-          </Button>
-        </ResponsivePageHeader>
+        />
 
         {/* Mobile nav */}
         <nav className="flex md:hidden gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
