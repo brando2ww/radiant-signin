@@ -76,10 +76,24 @@ export interface TaskSettings {
 }
 
 const DEFAULT_SHIFTS: ShiftConfig[] = [
-  { name: "Abertura", start: "06:00", end: "11:00" },
-  { name: "Tarde", start: "11:00", end: "17:00" },
-  { name: "Fechamento", start: "17:00", end: "23:00" },
+  { name: "Abertura", start: "06:00", end: "11:00", color: "#22c55e" },
+  { name: "Tarde", start: "11:00", end: "17:00", color: "#3b82f6" },
+  { name: "Fechamento", start: "17:00", end: "23:00", color: "#a855f7" },
 ];
+
+const DEFAULT_SETTINGS = (userId: string): TaskSettings => ({
+  id: "", userId, shifts: DEFAULT_SHIFTS, autoGenerate: true, qrCodeEnabled: true,
+  whatsappReportEnabled: false, whatsappReportPhone: "", whatsappReportTime: "23:00",
+  alertCriticalEnabled: true, alertCriticalDelayMinutes: 15,
+  alertOverdueEnabled: true, alertOverdueDelayMinutes: 10,
+  alertDailySummaryEnabled: false, alertDailySummaryTime: "22:00", alertDailySummaryTarget: "gestor",
+  alertTemperatureEnabled: true, alertBrowserNotifications: false, alertWhatsappNumber: "",
+  reportDailyContent: ["taxa_conclusao","atrasadas","destaque","criticos","turnos"],
+  reportWeeklyEnabled: false, reportWeeklyDay: 1,
+  allowLateCompletion: true, requirePhotoDefault: false, defaultMaxDurationMinutes: 60,
+  allowFreeNotes: true, showCountdownTimer: true, blockEarlyExecution: false,
+  minPinDigits: 4, sessionTimeoutMinutes: 30, sectorsConfig: [],
+});
 
 export function useOperationalTasks(selectedDate?: string) {
   const { user } = useAuth();
