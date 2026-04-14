@@ -1,92 +1,122 @@
 
 
-# Reformular Galeria de Evidencias
+# Reformular Controle de Validade
 
-Reescrever `EvidenceGallery` como uma central de auditoria visual com indicadores, filtros expandidos, lightbox profissional, visualizacao em lista, secao de atencao, e exportacao expandida.
+Reescrever `ExpiryTrackingPanel` como central de gestao de validades com alertas visuais, historico de perdas, formulario em drawer lateral, cadastro rapido e filtros avancados.
 
-## Sem mudancas no banco de dados
+## Mudancas no banco de dados
 
-As tabelas `checklist_execution_items`, `checklist_evidence_reviews`, `checklist_executions`, `checklist_items`, `checklist_operators` e `checklists` ja contem todos os dados necessarios (photo_url, item_type, is_critical, is_compliant, sector, operator, review status/comment). Nenhuma migration necessaria.
+### Migration: Novas colunas em `product_expiry_tracking`
+
+```sql
+ALTER TABLE public.product_expiry_tracking
+  ADD COLUMN IF NOT EXISTS category text DEFAULT 'outros',
+  ADD COLUMN IF NOT EXISTS storage_location text,
+  ADD COLUMN IF NOT EXISTS quantity numeric DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS unit text DEFAULT 'unidades',
+  ADD COLUMN IF NOT EXISTS unit_cost numeric DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS temperature numeric,
+  ADD COLUMN IF NOT EXISTS discard_reason text,
+  ADD COLUMN IF NOT EXISTS discarded_quantity numeric,
+  ADD COLUMN IF NOT EXISTS discarded_at timestamptz,
+  ADD COLUMN IF NOT EXISTS origin text DEFAULT 'manual';
+```
+
+Campos cobrem: categoria, local de armazenamento, quantidade/unidade, custo unitario (para calculo de perdas), temperatura, motivo de descarte, quantidade descartada, data do descarte e origem (manual ou checklist).
 
 ## Arquivos novos
 
-### 1. `src/components/pdv/checklists/evidence/EvidenceOverview.tsx`
+### 1. `src/components/pdv/checklists/expiry/ExpiryAlertBlock.tsx`
 
-4 cards de indicadores no topo:
-- Total de evidencias no periodo
-- Pendentes de revisao (sem review ou status pendente)
-- Aprovadas
-- Reprovadas
-- Dados calculados a partir da lista de evidencias filtrada
+Bloco de atencao imediata no topo:
+- 3 grupos: vencidos (fundo vermelho), vence em 1 dia (laranja), vence em 3 dias (amarelo)
+- Cada item: nome, lote, validade, local de armazenamento
+- Botoes de acao rapida: Descartar, Usar hoje, Adiar
 
-### 2. `src/components/pdv/checklists/evidence/EvidenceFilters.tsx`
+### 2. `src/components/pdv/checklists/expiry/ExpiryOverview.tsx`
 
-Barra de filtros expandida:
-- Data (mantido), Setor (mantido)
-- Novo: Colaborador (select com operadores do usuario)
-- Novo: Checklist (select com checklists do usuario)
-- Novo: Status (Todas, Pendente, Aprovada, Reprovada)
-- Novo: Tipo de item (checkbox, photo, temperature, etc. — do enum `checklist_item_type`)
-- Toggle grade/lista
-- Botao exportar com dropdown (ZIP, CSV)
+4 cards de indicadores:
+- Total de produtos ativos
+- Produtos em alerta (<=3 dias)
+- Vencidos nao descartados
+- Perdas do mes (quantidade + valor estimado)
 
-### 3. `src/components/pdv/checklists/evidence/EvidenceGridCard.tsx`
+### 3. `src/components/pdv/checklists/expiry/ExpiryFilters.tsx`
 
-Card individual na grade:
-- Miniatura quadrada com badge de status colorido (verde/vermelho/amarelo)
-- Rodape: colaborador, checklist, setor com cor, data/hora
-- Hover: overlay com botoes rapidos (ver, aprovar, reprovar)
-- Borda vermelha se item critico ou temperatura fora da faixa
+Filtros expandidos:
+- Busca por nome/lote
+- Categoria (Carnes, Lacticinios, Hortifruti, Bebidas, Secos, Congelados)
+- Local de armazenamento (Camara fria, Freezer, Prateleira, Geladeira)
+- Status (Todos, OK, Atencao, Critico, Vencido, Descartado)
+- Toggle tabela/cards
 
-### 4. `src/components/pdv/checklists/evidence/EvidenceLightbox.tsx`
+### 4. `src/components/pdv/checklists/expiry/ExpiryTable.tsx`
 
-Lightbox em tela cheia (Dialog fullscreen):
-- Foto grande ocupando lado esquerdo
-- Painel lateral direito: colaborador (avatar + nome), checklist, item, setor, turno, data/hora, status atual
-- Botoes: Aprovar, Reprovar, campo de comentario
-- Navegacao entre evidencias (setas + teclado)
-- Historico de review (quem aprovou/reprovou e quando)
+Tabela melhorada:
+- Colunas: Produto, Categoria (icone+cor), Lote, Local, Quantidade+unidade, Validade, Status, Dias (badge colorido), Quem registrou, Acoes (editar, descartar, duplicar)
+- Linhas vencidas com fundo vermelho
+- Ordenacao clicavel
 
-### 5. `src/components/pdv/checklists/evidence/EvidenceListView.tsx`
+### 5. `src/components/pdv/checklists/expiry/ExpiryDrawer.tsx`
 
-Visualizacao em lista:
-- Tabela: miniatura, colaborador, checklist, item, setor, data/hora, status, comentario
-- Acoes inline: aprovar, reprovar
-- Checkbox para selecao multipla
-- Barra de acoes em lote (aprovar/reprovar selecionados)
+Drawer lateral para registro/edicao:
+- Nome com autocomplete de produtos ja cadastrados
+- Categoria com icones visuais
+- Lote, data de validade, quantidade + unidade
+- Local de armazenamento
+- Valor unitario estimado (opcional)
+- Temperatura (opcional)
+- Observacao
+- Colaborador registrante (automatico)
 
-### 6. `src/components/pdv/checklists/evidence/EvidenceAttentionSection.tsx`
+### 6. `src/components/pdv/checklists/expiry/DiscardDialog.tsx`
 
-Bloco colapsavel no topo:
-- Evidencias reprovadas ou de itens criticos
-- Evidencias com temperatura fora da faixa (is_compliant === false)
-- Destaque visual com borda vermelha/amarela
+Mini formulario de descarte:
+- Motivo (Vencido, Avariado, Contaminado, Outro)
+- Quantidade descartada
+- Observacao
+- Salva com status "descartado" e preenche campos de descarte
+
+### 7. `src/components/pdv/checklists/expiry/ExpiryLossHistory.tsx`
+
+Historico de perdas:
+- Lista de descartados: nome, lote, validade, data descarte, motivo, responsavel, valor perda
+- Totalizador: itens + valor total
+- Filtro por periodo
+- Exportar CSV
+
+### 8. `src/components/pdv/checklists/expiry/FrequentProducts.tsx`
+
+Produtos frequentes:
+- Lista dos mais cadastrados (agrupado por product_name, contagem)
+- Um clique pre-preenche drawer com nome e categoria
+- Reduz tempo de registro
 
 ## Arquivos editados
 
-### 7. `src/hooks/use-checklist-evidence.ts`
+### 9. `src/hooks/use-product-expiry.ts`
 
 Expandir:
-- Adicionar filtros: `checklistId`, `status`, `itemType` ao `EvidenceFilters`
-- Expandir `EvidenceItem` com: `itemType`, `isCritical`, `isCompliant`, `checklistId`, `completedAt`, `reviewerId`, `reviewedAt`
-- Incluir `item_type`, `is_critical` no join com `checklist_items`
-- Incluir `completed_at` do execution item
-- Novo hook `useEvidenceOperators`: busca operadores distintos que tem evidencias
-- Novo hook `useEvidenceChecklists`: busca checklists distintos que tem evidencias
-- Expandir `useReviewEvidence` para suportar lote (array de IDs)
+- `ExpiryItem` com novos campos (category, storage_location, quantity, unit, unit_cost, temperature, origin, discard_reason, discarded_quantity, discarded_at)
+- `useCreateExpiry` aceita todos os novos campos
+- Nova mutacao `useDiscardExpiry` que atualiza status + discard_reason + discarded_quantity + discarded_at
+- `useExpiryHistory` retorna campos de descarte
+- Novo hook `useExpiryLossSummary` que calcula perdas do mes (soma de unit_cost * discarded_quantity)
+- Novo hook `useFrequentProducts` que busca produtos mais cadastrados (group by product_name, count)
+- `useUpdateExpiry` para edicao completa de produto
 
-### 8. `src/components/pdv/checklists/EvidenceGallery.tsx`
+### 10. `src/components/pdv/checklists/ExpiryTrackingPanel.tsx`
 
 Reescrita completa:
-- Importa e orquestra os 6 componentes novos
-- Gerencia estados: filtros, modo visualizacao (grade/lista), lightbox aberto, indice atual, selecao multipla
-- Estado vazio inteligente com mensagens contextuais e atalhos
-- Exportacao CSV de metadados alem do ZIP existente
+- Orquestra os 8 componentes novos
+- Gerencia estados: filtros, drawer aberto, dialog descarte, modo visualizacao
+- Tabs ou scroll: Produtos Ativos | Historico de Perdas
+- Estado vazio inteligente com atalhos
 
 ## Resumo tecnico
 
-- **0 migrations**
-- **6 arquivos novos** (6 componentes de secao)
-- **2 arquivos editados** (EvidenceGallery, use-checklist-evidence)
-- **0 dependencias novas** (JSZip/file-saver ja instalados)
+- **1 migration** (10 colunas novas em `product_expiry_tracking`)
+- **8 arquivos novos** (7 componentes + 1 dialog)
+- **2 arquivos editados** (ExpiryTrackingPanel, use-product-expiry)
+- **0 dependencias novas**
 
