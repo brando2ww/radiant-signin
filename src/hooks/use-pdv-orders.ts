@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEstablishmentId } from "@/hooks/use-establishment-id";
+import { resolveProductionCenterId } from "@/utils/resolveProductionCenter";
 import { toast } from "sonner";
 
 export interface PDVOrderItem {
@@ -164,6 +165,8 @@ export function usePDVOrders() {
       if (!user) throw new Error("Usuário não autenticado");
 
       const subtotal = item.quantity * item.unit_price;
+      const ownerId = visibleUserId || user.id;
+      const production_center_id = await resolveProductionCenterId(item.product_id, ownerId);
 
       const { data, error } = await supabase
         .from("pdv_order_items")
@@ -178,6 +181,7 @@ export function usePDVOrders() {
           modifiers: item.modifiers || null,
           kitchen_status: item.kitchen_status || "pendente",
           added_by: user.id,
+          production_center_id,
         })
         .select()
         .single();

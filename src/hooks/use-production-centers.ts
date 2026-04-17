@@ -12,6 +12,8 @@ export interface ProductionCenter {
   color: string;
   icon: string;
   printer_name: string | null;
+  printer_ip: string | null;
+  printer_port: number | null;
   is_active: boolean;
   display_order: number;
   created_at: string;
@@ -24,6 +26,8 @@ export interface ProductionCenterInput {
   color?: string;
   icon?: string;
   printer_name?: string | null;
+  printer_ip?: string | null;
+  printer_port?: number | null;
   display_order?: number;
 }
 
@@ -78,6 +82,8 @@ export function useProductionCenters() {
           color: input.color || "#3b82f6",
           icon: input.icon || "ChefHat",
           printer_name: input.printer_name || null,
+          printer_ip: input.printer_ip || null,
+          printer_port: input.printer_port ?? 9100,
           display_order: input.display_order ?? maxOrder + 1,
         })
         .select()
