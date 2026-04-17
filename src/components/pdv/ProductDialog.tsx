@@ -430,22 +430,35 @@ export function ProductDialog({
                   name="printer_station"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Estação de Impressão</FormLabel>
+                      <FormLabel>Centro de Produção</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione a estação" />
+                            <SelectValue placeholder="Selecione o centro" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="cozinha">Cozinha</SelectItem>
-                          <SelectItem value="bar">Bar</SelectItem>
-                          <SelectItem value="copa">Copa</SelectItem>
-                          <SelectItem value="confeitaria">Confeitaria</SelectItem>
+                          {productionCenters.length === 0 ? (
+                            <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                              Nenhum centro cadastrado. Crie em Configurações → Produção.
+                            </div>
+                          ) : (
+                            productionCenters.map((center) => (
+                              <SelectItem key={center.id} value={center.slug}>
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    className="h-2.5 w-2.5 rounded-full"
+                                    style={{ backgroundColor: center.color }}
+                                  />
+                                  {center.name}
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
                         </SelectContent>
                       </Select>
                       <FormDescription>
-                        Define para qual terminal o item será enviado
+                        Define para qual bancada o item será enviado
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
