@@ -31,6 +31,7 @@ import { ProductRecipeManager } from "./ProductRecipeManager";
 import { PDVProductOptionsManager } from "./PDVProductOptionsManager";
 import { ProductCompositionManager } from "./ProductCompositionManager";
 import { usePDVRecipes } from "@/hooks/use-pdv-recipes";
+import { useProductionCenters } from "@/hooks/use-production-centers";
 import { ImageCropDialog } from "@/components/ui/image-crop-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -136,6 +137,7 @@ export function ProductDialog({
   isSubmitting,
 }: ProductDialogProps) {
   const { uploadImage, isUploading } = useProductImageUpload();
+  const { centers: productionCenters } = useProductionCenters();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const { calculateCMV, recipes } = usePDVRecipes(product?.id);
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
