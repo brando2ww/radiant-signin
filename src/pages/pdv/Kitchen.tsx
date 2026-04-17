@@ -4,12 +4,14 @@ import { ChefHat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePDVKitchen } from "@/hooks/use-pdv-kitchen";
+import { useProductionCenters } from "@/hooks/use-production-centers";
 import { KitchenItemCard } from "@/components/pdv/KitchenItemCard";
 import { KitchenFilters } from "@/components/pdv/KitchenFilters";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PDVKitchen() {
   const { items, isLoading, updateItemStatus } = usePDVKitchen();
+  const { centers } = useProductionCenters();
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
 
@@ -78,24 +80,30 @@ export default function PDVKitchen() {
       />
 
       {/* Station filter */}
-      <div className="flex gap-2 flex-wrap">
-        {["cozinha", "bar", "copa", "confeitaria"].map((station) => {
-          const count = items.filter((i) => (i as any).printer_station === station).length;
-          if (count === 0 && station !== "cozinha") return null;
-          return (
-            <Button
-              key={station}
-              variant={selectedStation === station ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedStation(selectedStation === station ? null : station)}
-              className="capitalize"
-            >
-              {station}
-              <Badge variant="secondary" className="ml-1.5">{count}</Badge>
-            </Button>
-          );
-        })}
-      </div>
+      {centers.length > 0 && (
+        <div className="flex gap-2 flex-wrap">
+          {centers.map((center) => {
+            const count = items.filter((i) => (i as any).printer_station === center.slug).length;
+            const isSelected = selectedStation === center.slug;
+            return (
+              <Button
+                key={center.id}
+                variant={isSelected ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedStation(isSelected ? null : center.slug)}
+                style={isSelected ? { backgroundColor: center.color, borderColor: center.color } : { borderColor: `${center.color}60` }}
+              >
+                <span
+                  className="h-2 w-2 rounded-full mr-1.5"
+                  style={{ backgroundColor: isSelected ? "white" : center.color }}
+                />
+                {center.name}
+                <Badge variant="secondary" className="ml-1.5">{count}</Badge>
+              </Button>
+            );
+          })}
+        </div>
+      )}
 
       {filteredItems.length === 0 ? (
         <Card>

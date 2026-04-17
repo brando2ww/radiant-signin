@@ -4291,6 +4291,48 @@ export type Database = {
           },
         ]
       }
+      pdv_production_centers: {
+        Row: {
+          color: string
+          created_at: string
+          display_order: number
+          icon: string
+          id: string
+          is_active: boolean
+          name: string
+          printer_name: string | null
+          slug: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          display_order?: number
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          printer_name?: string | null
+          slug: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          display_order?: number
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          printer_name?: string | null
+          slug?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pdv_products: {
         Row: {
           available_days: Json | null
