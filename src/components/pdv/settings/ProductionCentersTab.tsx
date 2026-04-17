@@ -3,11 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useProductionCenters, ProductionCenter } from "@/hooks/use-production-centers";
-import { Plus, Edit, Trash2, Printer, Info, ChefHat, Wine, Coffee, Cake, Pizza, Soup, Sandwich, IceCream, Beer, Utensils } from "lucide-react";
+import { Plus, Edit, Trash2, Printer, Info, ChefHat, Wine, Coffee, Cake, Pizza, Soup, Sandwich, IceCream, Beer, Utensils, MoreVertical, Settings } from "lucide-react";
 import { ProductionCenterDialog } from "./ProductionCenterDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const ICON_MAP: Record<string, any> = {
   ChefHat, Wine, Coffee, Cake, Pizza, Soup, Sandwich, IceCream, Beer, Utensils,
@@ -42,102 +43,108 @@ export function ProductionCentersTab() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="pt-6 space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-48 w-full" />
+        ))}
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ChefHat className="h-5 w-5" />
-            Centros de Produção
-          </CardTitle>
-          <CardDescription>
-            Configure as bancadas/estações de preparo do seu estabelecimento
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Cada produto é roteado para um centro específico. Quando o garçom lança a comanda,
-              os itens são impressos automaticamente na bancada correspondente
-              (ex: sashimi vai pro Sushi Bar, drinks vão pro Bar).
-            </AlertDescription>
-          </Alert>
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          Cada produto é roteado para um centro específico. Quando o garçom lança a comanda,
+          os itens são impressos automaticamente na bancada correspondente
+          (ex: sashimi vai pro Sushi Bar, drinks vão pro Bar).
+        </AlertDescription>
+      </Alert>
 
-          <div className="flex justify-end">
-            <Button onClick={handleNew}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Centro
-            </Button>
-          </div>
+      <div className="flex justify-end">
+        <Button onClick={handleNew}>
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Centro
+        </Button>
+      </div>
 
-          {centers.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <ChefHat className="h-12 w-12 mx-auto mb-3 opacity-30" />
-              <p>Nenhum centro de produção cadastrado</p>
-              <p className="text-sm">Clique em "Novo Centro" para começar</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {centers.map((center) => (
+      {centers.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12 text-muted-foreground">
+            <ChefHat className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p>Nenhum centro de produção cadastrado</p>
+            <p className="text-sm">Clique em "Novo Centro" para começar</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {centers.map((center) => (
+            <Card key={center.id} className="flex flex-col">
+              <CardHeader className="flex-row items-start justify-between space-y-0 pb-3">
                 <div
-                  key={center.id}
-                  className="flex items-center gap-3 p-3 border rounded-lg hover:bg-accent/50 transition-colors"
+                  className="h-12 w-12 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: `${center.color}20` }}
                 >
-                  <div
-                    className="h-10 w-10 rounded-md flex items-center justify-center shrink-0"
-                    style={{ backgroundColor: `${center.color}20` }}
-                  >
-                    <CenterIcon name={center.icon} color={center.color} className="h-5 w-5" />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium truncate">{center.name}</p>
-                      <Badge variant="outline" className="text-xs font-mono">
-                        {center.slug}
-                      </Badge>
-                    </div>
-                    {center.printer_name && (
-                      <p className="text-sm text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <Printer className="h-3 w-3" />
-                        {center.printer_name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(center)}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeletingCenter(center)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </div>
+                  <CenterIcon name={center.icon} color={center.color} className="h-6 w-6" />
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="-mr-2 -mt-2">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleEdit(center)}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => setDeletingCenter(center)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remover
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardHeader>
+
+              <CardContent className="flex-1 space-y-2 pb-4">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <CardTitle className="text-lg">{center.name}</CardTitle>
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {center.slug}
+                  </Badge>
+                </div>
+                {center.printer_name ? (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Printer className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">{center.printer_name}</span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground italic flex items-center gap-1.5">
+                    <Printer className="h-3.5 w-3.5 shrink-0 opacity-50" />
+                    Sem impressora configurada
+                  </p>
+                )}
+              </CardContent>
+
+              <div className="border-t">
+                <button
+                  onClick={() => handleEdit(center)}
+                  className="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-foreground hover:bg-accent transition-colors rounded-b-lg"
+                >
+                  <Settings className="h-4 w-4" />
+                  Configurar impressora
+                </button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <ProductionCenterDialog
         open={dialogOpen}
