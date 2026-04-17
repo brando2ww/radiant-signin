@@ -22,6 +22,7 @@ const roleRouteAccess: Record<AppRole, string[]> = {
     "/pdv/cozinha",
     "/pdv/comandas",
     "/pdv/produtos",
+    "/pdv/centros-producao",
     "/pdv/estoque",
     "/pdv/fornecedores",
     "/pdv/notas-fiscais",
