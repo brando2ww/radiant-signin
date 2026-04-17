@@ -1552,6 +1552,7 @@ export type Database = {
           order_id: string
           product_id: string
           product_name: string
+          production_center_id: string | null
           quantity: number
           subtotal: number
           unit_price: number
@@ -1562,6 +1563,7 @@ export type Database = {
           order_id: string
           product_id: string
           product_name: string
+          production_center_id?: string | null
           quantity?: number
           subtotal: number
           unit_price: number
@@ -1572,6 +1574,7 @@ export type Database = {
           order_id?: string
           product_id?: string
           product_name?: string
+          production_center_id?: string | null
           quantity?: number
           subtotal?: number
           unit_price?: number
@@ -1589,6 +1592,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "delivery_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_order_items_production_center_id_fkey"
+            columns: ["production_center_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_production_centers"
             referencedColumns: ["id"]
           },
         ]
@@ -2955,6 +2965,7 @@ export type Database = {
           notes: string | null
           product_id: string
           product_name: string
+          production_center_id: string | null
           quantity: number
           ready_at: string | null
           sent_to_kitchen_at: string | null
@@ -2970,6 +2981,7 @@ export type Database = {
           notes?: string | null
           product_id: string
           product_name: string
+          production_center_id?: string | null
           quantity?: number
           ready_at?: string | null
           sent_to_kitchen_at?: string | null
@@ -2985,6 +2997,7 @@ export type Database = {
           notes?: string | null
           product_id?: string
           product_name?: string
+          production_center_id?: string | null
           quantity?: number
           ready_at?: string | null
           sent_to_kitchen_at?: string | null
@@ -2997,6 +3010,13 @@ export type Database = {
             columns: ["comanda_id"]
             isOneToOne: false
             referencedRelation: "pdv_comandas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_comanda_items_production_center_id_fkey"
+            columns: ["production_center_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_production_centers"
             referencedColumns: ["id"]
           },
         ]
@@ -3862,6 +3882,7 @@ export type Database = {
           order_id: string
           product_id: string
           product_name: string
+          production_center_id: string | null
           quantity: number
           ready_at: string | null
           sent_to_kitchen_at: string | null
@@ -3881,6 +3902,7 @@ export type Database = {
           order_id: string
           product_id: string
           product_name: string
+          production_center_id?: string | null
           quantity?: number
           ready_at?: string | null
           sent_to_kitchen_at?: string | null
@@ -3900,6 +3922,7 @@ export type Database = {
           order_id?: string
           product_id?: string
           product_name?: string
+          production_center_id?: string | null
           quantity?: number
           ready_at?: string | null
           sent_to_kitchen_at?: string | null
@@ -3920,6 +3943,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "pdv_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_order_items_production_center_id_fkey"
+            columns: ["production_center_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_production_centers"
             referencedColumns: ["id"]
           },
         ]
@@ -4300,7 +4330,9 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          printer_ip: string | null
           printer_name: string | null
+          printer_port: number | null
           slug: string
           updated_at: string
           user_id: string
@@ -4313,7 +4345,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          printer_ip?: string | null
           printer_name?: string | null
+          printer_port?: number | null
           slug: string
           updated_at?: string
           user_id: string
@@ -4326,7 +4360,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          printer_ip?: string | null
           printer_name?: string | null
+          printer_port?: number | null
           slug?: string
           updated_at?: string
           user_id?: string
@@ -5044,6 +5080,13 @@ export type Database = {
             columns: ["order_item_id"]
             isOneToOne: false
             referencedRelation: "pdv_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_stock_movements_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "vw_print_bridge_order_items"
             referencedColumns: ["id"]
           },
         ]
@@ -6129,7 +6172,86 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_print_bridge_comanda_items: {
+        Row: {
+          center_name: string | null
+          comanda_id: string | null
+          comanda_number: string | null
+          customer_name: string | null
+          id: string | null
+          kitchen_status: string | null
+          modifiers: Json | null
+          notes: string | null
+          printer_ip: string | null
+          printer_port: number | null
+          product_name: string | null
+          production_center_id: string | null
+          quantity: number | null
+          sent_to_kitchen_at: string | null
+          tenant_user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_comanda_items_comanda_id_fkey"
+            columns: ["comanda_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_comandas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_comanda_items_production_center_id_fkey"
+            columns: ["production_center_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_production_centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_print_bridge_order_items: {
+        Row: {
+          center_name: string | null
+          customer_name: string | null
+          id: string | null
+          kitchen_status: string | null
+          modifiers: Json | null
+          notes: string | null
+          order_id: string | null
+          order_number: string | null
+          printer_ip: string | null
+          printer_port: number | null
+          product_name: string | null
+          production_center_id: string | null
+          quantity: number | null
+          sent_to_kitchen_at: string | null
+          source: string | null
+          table_id: string | null
+          table_number: string | null
+          tenant_user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_order_items_production_center_id_fkey"
+            columns: ["production_center_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_production_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_orders_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       activate_device_token: {
