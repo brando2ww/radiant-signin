@@ -42,6 +42,7 @@ import {
   Star,
   GitBranch,
   ClipboardCheck,
+  Factory,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useUserRole } from "@/hooks/use-user-role";
@@ -105,6 +106,7 @@ const sectionItems: Section[] = [
     items: [
       { title: "Dashboard", url: "/pdv/dashboard", icon: LayoutDashboard },
       { title: "Produtos", url: "/pdv/produtos", icon: Package },
+      { title: "Centros de Produção", url: "/pdv/centros-producao", icon: Factory },
       { title: "Estoque", url: "/pdv/estoque", icon: Warehouse },
       { title: "Fornecedores", url: "/pdv/fornecedores", icon: Truck },
       { title: "Cotações", url: "/pdv/compras/cotacoes", icon: FileText },
