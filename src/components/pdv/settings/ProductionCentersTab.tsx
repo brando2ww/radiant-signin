@@ -1,22 +1,55 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useProductionCenters, ProductionCenter } from "@/hooks/use-production-centers";
-import { Plus, Edit, Trash2, Printer, Info, ChefHat, Wine, Coffee, Cake, Pizza, Soup, Sandwich, IceCream, Beer, Utensils, MoreVertical, Settings } from "lucide-react";
+import {
+  Plus, Edit, Trash2, Printer, Info, ChefHat, Wine, Coffee, Cake, Pizza, Soup,
+  Sandwich, IceCream, Beer, Utensils, MoreVertical, Settings, Wifi,
+} from "lucide-react";
 import { ProductionCenterDialog } from "./ProductionCenterDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const ICON_MAP: Record<string, any> = {
   ChefHat, Wine, Coffee, Cake, Pizza, Soup, Sandwich, IceCream, Beer, Utensils,
 };
 
+const BRIDGE_URL = "http://localhost:7777";
+
+type PrinterStatus = { ok: boolean; at: number; error?: string } | null;
+
+function readStatus(id: string): PrinterStatus {
+  try {
+    const raw = localStorage.getItem(`printer-status-${id}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeStatus(id: string, status: PrinterStatus) {
+  if (status) localStorage.setItem(`printer-status-${id}`, JSON.stringify(status));
+  else localStorage.removeItem(`printer-status-${id}`);
+}
+
 function CenterIcon({ name, color, className }: { name: string; color: string; className?: string }) {
   const Icon = ICON_MAP[name] || ChefHat;
   return <Icon className={className} style={{ color }} />;
+}
+
+function StatusDot({ status }: { status: PrinterStatus }) {
+  const color = !status ? "bg-muted-foreground/40" : status.ok ? "bg-emerald-500" : "bg-destructive";
+  const title = !status
+    ? "Nunca testada"
+    : status.ok
+      ? `Online — teste em ${new Date(status.at).toLocaleString("pt-BR")}`
+      : `Falhou — ${status.error ?? ""}`;
+  return <span className={cn("h-2 w-2 rounded-full shrink-0", color)} title={title} />;
 }
 
 export function ProductionCentersTab() {
@@ -24,6 +57,14 @@ export function ProductionCentersTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCenter, setEditingCenter] = useState<ProductionCenter | null>(null);
   const [deletingCenter, setDeletingCenter] = useState<ProductionCenter | null>(null);
+  const [statuses, setStatuses] = useState<Record<string, PrinterStatus>>({});
+  const [testingId, setTestingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const map: Record<string, PrinterStatus> = {};
+    centers.forEach((c) => { map[c.id] = readStatus(c.id); });
+    setStatuses(map);
+  }, [centers]);
 
   const handleEdit = (center: ProductionCenter) => {
     setEditingCenter(center);
@@ -39,6 +80,45 @@ export function ProductionCentersTab() {
     if (!deletingCenter) return;
     await deleteCenter(deletingCenter.id);
     setDeletingCenter(null);
+  };
+
+  const handleTestPrinter = async (center: ProductionCenter) => {
+    if (!center.printer_ip) {
+      toast.error("Configure o IP da impressora primeiro");
+      return;
+    }
+    setTestingId(center.id);
+    try {
+      const res = await fetch(`${BRIDGE_URL}/test-print`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ip: center.printer_ip,
+          port: center.printer_port ?? 9100,
+          centerName: center.name,
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && body.ok) {
+        const status = { ok: true, at: Date.now() };
+        writeStatus(center.id, status);
+        setStatuses((s) => ({ ...s, [center.id]: status }));
+        toast.success(`Impressora ${center.printer_ip} respondeu`);
+      } else {
+        const error = body.error || `HTTP ${res.status}`;
+        const status = { ok: false, at: Date.now(), error };
+        writeStatus(center.id, status);
+        setStatuses((s) => ({ ...s, [center.id]: status }));
+        toast.error(`Falha ao imprimir: ${error}`);
+      }
+    } catch (e: any) {
+      const status = { ok: false, at: Date.now(), error: "Bridge offline" };
+      writeStatus(center.id, status);
+      setStatuses((s) => ({ ...s, [center.id]: status }));
+      toast.error("Print Bridge offline — inicie o serviço no PC do caixa");
+    } finally {
+      setTestingId(null);
+    }
   };
 
   if (isLoading) {
@@ -57,8 +137,8 @@ export function ProductionCentersTab() {
         <Info className="h-4 w-4" />
         <AlertDescription>
           Cada produto é roteado para um centro específico. Quando o garçom lança a comanda,
-          os itens são impressos automaticamente na bancada correspondente
-          (ex: sashimi vai pro Sushi Bar, drinks vão pro Bar).
+          os itens são impressos automaticamente na bancada correspondente via Print Bridge
+          (TCP porta 9100).
         </AlertDescription>
       </Alert>
 
@@ -79,70 +159,97 @@ export function ProductionCentersTab() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {centers.map((center) => (
-            <Card key={center.id} className="flex flex-col">
-              <CardHeader className="flex-row items-start justify-between space-y-0 pb-3">
-                <div
-                  className="h-12 w-12 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${center.color}20` }}
-                >
-                  <CenterIcon name={center.icon} color={center.color} className="h-6 w-6" />
+          {centers.map((center) => {
+            const status = statuses[center.id];
+            const hasPrinter = !!center.printer_ip;
+            return (
+              <Card key={center.id} className="flex flex-col">
+                <CardHeader className="flex-row items-start justify-between space-y-0 pb-3">
+                  <div
+                    className="h-12 w-12 rounded-lg flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: `${center.color}20` }}
+                  >
+                    <CenterIcon name={center.icon} color={center.color} className="h-6 w-6" />
+                  </div>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="-mr-2 -mt-2">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(center)}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleTestPrinter(center)}
+                        disabled={!hasPrinter || testingId === center.id}
+                      >
+                        <Wifi className="h-4 w-4 mr-2" />
+                        {testingId === center.id ? "Testando..." : "Testar impressora"}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setDeletingCenter(center)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remover
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </CardHeader>
+
+                <CardContent className="flex-1 space-y-2 pb-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <CardTitle className="text-lg">{center.name}</CardTitle>
+                    <Badge variant="outline" className="text-xs font-mono">
+                      {center.slug}
+                    </Badge>
+                  </div>
+                  {hasPrinter ? (
+                    <div className="text-sm text-muted-foreground flex items-center gap-2">
+                      <StatusDot status={status} />
+                      <Printer className="h-3.5 w-3.5 shrink-0" />
+                      <span className="truncate font-mono">
+                        {center.printer_ip}:{center.printer_port ?? 9100}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic flex items-center gap-1.5">
+                      <Printer className="h-3.5 w-3.5 shrink-0 opacity-50" />
+                      Sem impressora configurada
+                    </p>
+                  )}
+                  {center.printer_name && hasPrinter && (
+                    <p className="text-xs text-muted-foreground truncate">{center.printer_name}</p>
+                  )}
+                </CardContent>
+
+                <div className="border-t">
+                  <button
+                    onClick={() => (hasPrinter ? handleTestPrinter(center) : handleEdit(center))}
+                    disabled={testingId === center.id}
+                    className="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-foreground hover:bg-accent transition-colors rounded-b-lg disabled:opacity-60"
+                  >
+                    {hasPrinter ? (
+                      <>
+                        <Wifi className="h-4 w-4" />
+                        {testingId === center.id ? "Testando..." : "Testar impressora"}
+                      </>
+                    ) : (
+                      <>
+                        <Settings className="h-4 w-4" />
+                        Configurar impressora
+                      </>
+                    )}
+                  </button>
                 </div>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="-mr-2 -mt-2">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleEdit(center)}>
-                      <Edit className="h-4 w-4 mr-2" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => setDeletingCenter(center)}
-                      className="text-destructive focus:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Remover
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </CardHeader>
-
-              <CardContent className="flex-1 space-y-2 pb-4">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <CardTitle className="text-lg">{center.name}</CardTitle>
-                  <Badge variant="outline" className="text-xs font-mono">
-                    {center.slug}
-                  </Badge>
-                </div>
-                {center.printer_name ? (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    <Printer className="h-3.5 w-3.5 shrink-0" />
-                    <span className="truncate">{center.printer_name}</span>
-                  </p>
-                ) : (
-                  <p className="text-sm text-muted-foreground italic flex items-center gap-1.5">
-                    <Printer className="h-3.5 w-3.5 shrink-0 opacity-50" />
-                    Sem impressora configurada
-                  </p>
-                )}
-              </CardContent>
-
-              <div className="border-t">
-                <button
-                  onClick={() => handleEdit(center)}
-                  className="w-full flex items-center justify-center gap-2 py-3 text-sm font-medium text-foreground hover:bg-accent transition-colors rounded-b-lg"
-                >
-                  <Settings className="h-4 w-4" />
-                  Configurar impressora
-                </button>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
 

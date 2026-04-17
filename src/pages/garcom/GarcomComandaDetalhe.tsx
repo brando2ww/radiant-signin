@@ -105,7 +105,17 @@ export default function GarcomComandaDetalhe() {
           {pendingIds.length > 0 && (
             <Button
               className="active:scale-95 h-11"
-              onClick={() => sendToKitchen(pendingIds)}
+              onClick={() => {
+                const pendingItems = items.filter((i) => pendingIds.includes(i.id));
+                const missing = pendingItems.filter((i) => !i.production_center_id).length;
+                sendToKitchen(pendingIds);
+                toast.success("Comanda enviada para a cozinha");
+                if (missing > 0) {
+                  toast.warning(
+                    `${missing} produto(s) sem centro de produção — verifique o cadastro`,
+                  );
+                }
+              }}
             >
               <Send className="h-4 w-4 mr-1" />
               Cozinha

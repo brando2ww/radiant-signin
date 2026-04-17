@@ -39,6 +39,8 @@ export function ProductionCenterDialog({ open, onOpenChange, center }: Productio
   const [color, setColor] = useState("#3b82f6");
   const [icon, setIcon] = useState("ChefHat");
   const [printerName, setPrinterName] = useState("");
+  const [printerIp, setPrinterIp] = useState("");
+  const [printerPort, setPrinterPort] = useState<string>("9100");
 
   const isEditing = !!center;
   const isSubmitting = isCreating || isUpdating;
@@ -49,33 +51,37 @@ export function ProductionCenterDialog({ open, onOpenChange, center }: Productio
       setColor(center.color);
       setIcon(center.icon);
       setPrinterName(center.printer_name || "");
+      setPrinterIp(center.printer_ip || "");
+      setPrinterPort(String(center.printer_port ?? 9100));
     } else {
       setName("");
       setColor("#3b82f6");
       setIcon("ChefHat");
       setPrinterName("");
+      setPrinterIp("");
+      setPrinterPort("9100");
     }
   }, [center, open]);
 
   const handleSubmit = async () => {
     if (!name.trim()) return;
 
+    const portNumber = parseInt(printerPort, 10);
+    const safePort = Number.isFinite(portNumber) && portNumber > 0 ? portNumber : 9100;
+
     try {
+      const payload = {
+        name: name.trim(),
+        color,
+        icon,
+        printer_name: printerName.trim() || null,
+        printer_ip: printerIp.trim() || null,
+        printer_port: safePort,
+      };
       if (isEditing && center) {
-        await updateCenter({
-          id: center.id,
-          name: name.trim(),
-          color,
-          icon,
-          printer_name: printerName.trim() || null,
-        });
+        await updateCenter({ id: center.id, ...payload });
       } else {
-        await createCenter({
-          name: name.trim(),
-          color,
-          icon,
-          printer_name: printerName.trim() || null,
-        });
+        await createCenter(payload);
       }
       onOpenChange(false);
     } catch (e) {
@@ -144,17 +150,39 @@ export function ProductionCenterDialog({ open, onOpenChange, center }: Productio
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="printer">Impressora (opcional)</Label>
+            <Label htmlFor="printer-name">Rótulo da impressora (opcional)</Label>
             <Input
-              id="printer"
-              placeholder="Ex: Bematech-Cozinha ou 192.168.1.50"
+              id="printer-name"
+              placeholder="Ex: Bematech-Cozinha"
               value={printerName}
               onChange={(e) => setPrinterName(e.target.value)}
             />
-            <p className="text-xs text-muted-foreground">
-              Nome ou IP da impressora térmica desta bancada
-            </p>
           </div>
+
+          <div className="grid grid-cols-[1fr_100px] gap-2">
+            <div className="space-y-2">
+              <Label htmlFor="printer-ip">IP da impressora</Label>
+              <Input
+                id="printer-ip"
+                placeholder="192.168.1.50"
+                value={printerIp}
+                onChange={(e) => setPrinterIp(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="printer-port">Porta</Label>
+              <Input
+                id="printer-port"
+                type="number"
+                placeholder="9100"
+                value={printerPort}
+                onChange={(e) => setPrinterPort(e.target.value)}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            IP e porta TCP da impressora térmica. Padrão é 9100 (ESC/POS). Deixe o IP em branco se não quiser imprimir automaticamente.
+          </p>
         </div>
 
         <DialogFooter>

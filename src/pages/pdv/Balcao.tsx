@@ -134,6 +134,7 @@ export default function PDVBalcao() {
         sent_to_kitchen_at: null,
         ready_at: null,
         created_at: item.created_at || orderForPayment.created_at,
+        production_center_id: item.production_center_id ?? null,
       }))
     : [];
 

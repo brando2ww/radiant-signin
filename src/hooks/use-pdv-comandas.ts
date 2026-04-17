@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEstablishmentId } from "@/hooks/use-establishment-id";
+import { resolveProductionCenterId } from "@/utils/resolveProductionCenter";
 import { toast } from "sonner";
 
 export type ComandaStatus = "aberta" | "fechada" | "cancelada";
@@ -35,6 +36,7 @@ export interface ComandaItem {
   sent_to_kitchen_at: string | null;
   ready_at: string | null;
   created_at: string;
+  production_center_id: string | null;
 }
 
 export function usePDVComandas() {
@@ -210,6 +212,10 @@ export function usePDVComandas() {
       notes?: string;
     }) => {
       const subtotal = data.quantity * data.unitPrice;
+      const ownerId = visibleUserId || user?.id;
+      const production_center_id = ownerId
+        ? await resolveProductionCenterId(data.productId, ownerId)
+        : null;
 
       const { data: newItem, error } = await supabase
         .from("pdv_comanda_items")
@@ -222,6 +228,7 @@ export function usePDVComandas() {
           subtotal,
           notes: data.notes || null,
           kitchen_status: "pendente",
+          production_center_id,
         }])
         .select()
         .single();
