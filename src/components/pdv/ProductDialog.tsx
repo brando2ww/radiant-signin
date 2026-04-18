@@ -210,6 +210,8 @@ export function ProductDialog({
         cofins_rate: product.cofins_rate || 0,
         tax_unit: product.tax_unit || "",
         ean: product.ean || "",
+        is_composite: (product as any)?.is_composite ?? false,
+        stock_deduction_mode: (product as any)?.stock_deduction_mode || "main",
       });
       setPreviewImage(product.image_url || null);
       // Determine ST mode
