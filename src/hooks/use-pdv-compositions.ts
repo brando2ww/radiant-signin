@@ -24,7 +24,7 @@ export function useProductCompositions(productId?: string) {
       if (!productId) return [];
       const { data, error } = await supabase
         .from("pdv_product_compositions")
-        .select("*, child_product:pdv_products(*)")
+        .select("*, child_product:pdv_products!pdv_product_compositions_child_product_id_fkey(*)")
         .eq("parent_product_id", productId)
         .order("order_position");
 
@@ -63,7 +63,7 @@ export function useProductCompositions(productId?: string) {
           quantity,
           order_position: maxPos + 1,
         })
-        .select("*, child_product:pdv_products(*)")
+        .select("*, child_product:pdv_products!pdv_product_compositions_child_product_id_fkey(*)")
         .single();
 
       if (error) throw error;
