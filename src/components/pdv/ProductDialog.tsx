@@ -706,14 +706,14 @@ export function ProductDialog({
                   <ProductCompositionManager
                     productId={product.id}
                     productPrice={currentPrice}
-                    isComposite={(product as any)?.is_composite || false}
-                    stockDeductionMode={(product as any)?.stock_deduction_mode || "main"}
-                    onCompositeChange={(value) => {
-                      onSubmit({ ...form.getValues(), is_composite: value });
-                    }}
-                    onStockDeductionModeChange={(value) => {
-                      onSubmit({ ...form.getValues(), stock_deduction_mode: value });
-                    }}
+                    isComposite={form.watch("is_composite")}
+                    stockDeductionMode={form.watch("stock_deduction_mode")}
+                    onCompositeChange={(value) =>
+                      form.setValue("is_composite", value, { shouldDirty: true })
+                    }
+                    onStockDeductionModeChange={(value) =>
+                      form.setValue("stock_deduction_mode", value, { shouldDirty: true })
+                    }
                   />
                 </TabsContent>
               )}
