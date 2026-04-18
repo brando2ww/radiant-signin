@@ -2960,9 +2960,11 @@ export type Database = {
           comanda_id: string
           created_at: string
           id: string
+          is_composite_child: boolean
           kitchen_status: string
           modifiers: Json | null
           notes: string | null
+          parent_item_id: string | null
           product_id: string
           product_name: string
           production_center_id: string | null
@@ -2976,9 +2978,11 @@ export type Database = {
           comanda_id: string
           created_at?: string
           id?: string
+          is_composite_child?: boolean
           kitchen_status?: string
           modifiers?: Json | null
           notes?: string | null
+          parent_item_id?: string | null
           product_id: string
           product_name: string
           production_center_id?: string | null
@@ -2992,9 +2996,11 @@ export type Database = {
           comanda_id?: string
           created_at?: string
           id?: string
+          is_composite_child?: boolean
           kitchen_status?: string
           modifiers?: Json | null
           notes?: string | null
+          parent_item_id?: string | null
           product_id?: string
           product_name?: string
           production_center_id?: string | null
@@ -3010,6 +3016,20 @@ export type Database = {
             columns: ["comanda_id"]
             isOneToOne: false
             referencedRelation: "pdv_comandas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_comanda_items_parent_item_id_fkey"
+            columns: ["parent_item_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_comanda_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_comanda_items_parent_item_id_fkey"
+            columns: ["parent_item_id"]
+            isOneToOne: false
+            referencedRelation: "vw_print_bridge_comanda_items"
             referencedColumns: ["id"]
           },
           {
@@ -3876,10 +3896,12 @@ export type Database = {
           assigned_to_person: number | null
           created_at: string | null
           id: string
+          is_composite_child: boolean
           kitchen_status: string | null
           modifiers: Json | null
           notes: string | null
           order_id: string
+          parent_item_id: string | null
           product_id: string
           product_name: string
           production_center_id: string | null
@@ -3896,10 +3918,12 @@ export type Database = {
           assigned_to_person?: number | null
           created_at?: string | null
           id?: string
+          is_composite_child?: boolean
           kitchen_status?: string | null
           modifiers?: Json | null
           notes?: string | null
           order_id: string
+          parent_item_id?: string | null
           product_id: string
           product_name: string
           production_center_id?: string | null
@@ -3916,10 +3940,12 @@ export type Database = {
           assigned_to_person?: number | null
           created_at?: string | null
           id?: string
+          is_composite_child?: boolean
           kitchen_status?: string | null
           modifiers?: Json | null
           notes?: string | null
           order_id?: string
+          parent_item_id?: string | null
           product_id?: string
           product_name?: string
           production_center_id?: string | null
@@ -3936,6 +3962,20 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "pdv_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_order_items_parent_item_id_fkey"
+            columns: ["parent_item_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_order_items_parent_item_id_fkey"
+            columns: ["parent_item_id"]
+            isOneToOne: false
+            referencedRelation: "vw_print_bridge_order_items"
             referencedColumns: ["id"]
           },
           {
@@ -6179,9 +6219,12 @@ export type Database = {
           comanda_number: string | null
           customer_name: string | null
           id: string | null
+          is_composite_child: boolean | null
           kitchen_status: string | null
           modifiers: Json | null
           notes: string | null
+          parent_item_id: string | null
+          parent_product_name: string | null
           printer_ip: string | null
           printer_port: number | null
           product_name: string | null
@@ -6199,6 +6242,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "pdv_comanda_items_parent_item_id_fkey"
+            columns: ["parent_item_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_comanda_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_comanda_items_parent_item_id_fkey"
+            columns: ["parent_item_id"]
+            isOneToOne: false
+            referencedRelation: "vw_print_bridge_comanda_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pdv_comanda_items_production_center_id_fkey"
             columns: ["production_center_id"]
             isOneToOne: false
@@ -6212,11 +6269,14 @@ export type Database = {
           center_name: string | null
           customer_name: string | null
           id: string | null
+          is_composite_child: boolean | null
           kitchen_status: string | null
           modifiers: Json | null
           notes: string | null
           order_id: string | null
           order_number: string | null
+          parent_item_id: string | null
+          parent_product_name: string | null
           printer_ip: string | null
           printer_port: number | null
           product_name: string | null
@@ -6234,6 +6294,20 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "pdv_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_order_items_parent_item_id_fkey"
+            columns: ["parent_item_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_order_items_parent_item_id_fkey"
+            columns: ["parent_item_id"]
+            isOneToOne: false
+            referencedRelation: "vw_print_bridge_order_items"
             referencedColumns: ["id"]
           },
           {

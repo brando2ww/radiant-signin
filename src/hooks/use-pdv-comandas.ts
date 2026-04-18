@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEstablishmentId } from "@/hooks/use-establishment-id";
 import { resolveProductionCenterId } from "@/utils/resolveProductionCenter";
+import { expandComposition } from "@/utils/expandComposition";
 import { toast } from "sonner";
 
 export type ComandaStatus = "aberta" | "fechada" | "cancelada";
@@ -234,6 +235,40 @@ export function usePDVComandas() {
         .single();
 
       if (error) throw error;
+
+      // Expandir produto composto: cria filhos invisíveis para roteamento de cozinha
+      if (ownerId) {
+        const children = await expandComposition(data.productId, data.quantity, ownerId);
+        if (children.length > 0) {
+          const missing = children.filter((c) => !c.production_center_id);
+          if (missing.length > 0) {
+            toast.warning(
+              `${missing.length} sub-produto(s) sem centro de produção configurado e não serão impressos.`,
+            );
+          }
+          const childRows = children.map((c) => ({
+            comanda_id: data.comandaId,
+            product_id: c.product_id,
+            product_name: c.product_name,
+            quantity: c.quantity,
+            unit_price: 0,
+            subtotal: 0,
+            notes: null,
+            kitchen_status: "pendente" as const,
+            production_center_id: c.production_center_id,
+            parent_item_id: (newItem as ComandaItem).id,
+            is_composite_child: true,
+          }));
+          const { error: childError } = await supabase
+            .from("pdv_comanda_items")
+            .insert(childRows);
+          if (childError) {
+            // não bloqueia o pai, mas avisa
+            toast.error("Erro ao expandir composição: " + childError.message);
+          }
+        }
+      }
+
       return newItem as ComandaItem;
     },
     onSuccess: () => {
@@ -331,16 +366,29 @@ export function usePDVComandas() {
     },
   });
 
-  // Send items to kitchen
+  // Send items to kitchen (also includes composite children)
   const sendToKitchenMutation = useMutation({
     mutationFn: async (itemIds: string[]) => {
+      if (itemIds.length === 0) return;
+
+      // Inclui filhos pendentes dos itens compostos selecionados
+      const { data: childRows } = await supabase
+        .from("pdv_comanda_items")
+        .select("id")
+        .in("parent_item_id", itemIds)
+        .is("sent_to_kitchen_at", null);
+
+      const allIds = Array.from(
+        new Set([...itemIds, ...((childRows ?? []).map((r: any) => r.id))]),
+      );
+
       const { error } = await supabase
         .from("pdv_comanda_items")
         .update({
           kitchen_status: "pendente",
           sent_to_kitchen_at: new Date().toISOString(),
         })
-        .in("id", itemIds);
+        .in("id", allIds);
 
       if (error) throw error;
     },
@@ -353,9 +401,11 @@ export function usePDVComandas() {
     },
   });
 
-  // Helper to get items for a specific comanda
+  // Helper to get items for a specific comanda (only visible/parent items)
   const getItemsByComanda = (comandaId: string) => {
-    return comandaItems.filter((item) => item.comanda_id === comandaId);
+    return comandaItems.filter(
+      (item) => item.comanda_id === comandaId && !(item as any).is_composite_child,
+    );
   };
 
   // Helper to get comandas for a specific order

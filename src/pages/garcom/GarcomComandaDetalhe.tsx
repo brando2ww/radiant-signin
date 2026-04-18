@@ -19,7 +19,9 @@ export default function GarcomComandaDetalhe() {
   } = usePDVComandas();
 
   const comanda = comandas.find((c) => c.id === id);
-  const items = comandaItems.filter((i) => i.comanda_id === id);
+  const items = comandaItems.filter(
+    (i) => i.comanda_id === id && !(i as any).is_composite_child,
+  );
   const total = items.reduce((s, i) => s + i.subtotal, 0);
 
   const pendingIds = items

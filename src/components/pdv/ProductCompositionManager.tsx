@@ -171,6 +171,7 @@ export function ProductCompositionManager({
                 const unitPrice = child?.price_salon || 0;
                 const totalPrice = unitPrice * comp.quantity;
                 const childIsComposite = (child as any)?.is_composite;
+                const childMissingStation = !!child && !(child as any)?.printer_station;
 
                 return (
                   <div
@@ -178,7 +179,7 @@ export function ProductCompositionManager({
                     className="flex items-center gap-3 p-3 border rounded-lg bg-muted/30"
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-sm truncate">
                           {child?.name || "Produto removido"}
                         </span>
@@ -189,6 +190,15 @@ export function ProductCompositionManager({
                           >
                             <AlertTriangle className="h-3 w-3" />
                             Composto
+                          </Badge>
+                        )}
+                        {childMissingStation && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs gap-1 shrink-0 border-destructive/40 text-destructive"
+                          >
+                            <AlertTriangle className="h-3 w-3" />
+                            Sem centro de produção
                           </Badge>
                         )}
                       </div>

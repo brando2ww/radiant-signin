@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEstablishmentId } from "@/hooks/use-establishment-id";
 import { resolveProductionCenterId } from "@/utils/resolveProductionCenter";
+import { expandComposition } from "@/utils/expandComposition";
 import { toast } from "sonner";
 
 export interface PDVOrderItem {
@@ -187,6 +188,38 @@ export function usePDVOrders() {
         .single();
 
       if (error) throw error;
+
+      // Expandir produto composto: cria filhos invisíveis para roteamento de cozinha
+      const children = await expandComposition(item.product_id, item.quantity, ownerId);
+      if (children.length > 0) {
+        const missing = children.filter((c) => !c.production_center_id);
+        if (missing.length > 0) {
+          toast.warning(
+            `${missing.length} sub-produto(s) sem centro de produção configurado e não serão impressos.`,
+          );
+        }
+        const childRows = children.map((c) => ({
+          order_id: item.order_id,
+          product_id: c.product_id,
+          product_name: c.product_name,
+          quantity: c.quantity,
+          unit_price: 0,
+          subtotal: 0,
+          notes: null,
+          modifiers: null,
+          kitchen_status: item.kitchen_status || "pendente",
+          added_by: user.id,
+          production_center_id: c.production_center_id,
+          parent_item_id: data.id,
+          is_composite_child: true,
+        }));
+        const { error: childError } = await supabase
+          .from("pdv_order_items")
+          .insert(childRows);
+        if (childError) {
+          toast.error("Erro ao expandir composição: " + childError.message);
+        }
+      }
 
       // Atualizar totais do pedido
       const order = orders?.find(o => o.id === item.order_id);
