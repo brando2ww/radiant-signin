@@ -1,54 +1,23 @@
 
 
-## Objetivo
-Permitir ao garçom enviar itens para a cozinha **direto da tela de adicionar itens** (`/garcom/comanda/:id/adicionar`), sem precisar voltar para a tela de detalhe da comanda. Os itens enviados disparam automaticamente a impressão via Print Bridge (já implementado — basta atualizar `sent_to_kitchen_at` que o Realtime escuta o INSERT/UPDATE).
+## Problema
+Ao clicar em "Novo Produto" depois de editar um produto, o formulário aparece com os dados do produto editado anteriormente. Deveria abrir limpo.
 
-## Contexto atual
-- `GarcomAdicionarItem.tsx` hoje só adiciona itens (cria com `kitchen_status='pendente'` e `sent_to_kitchen_at=null`).
-- `GarcomComandaDetalhe.tsx` já tem o botão "Cozinha" que chama `sendToKitchen(pendingIds)` — mesma lógica vai ser replicada na tela de adicionar.
-- O hook `usePDVComandas` já expõe `sendToKitchen`, `comandaItems`, `getItemsByComanda` e o estado `production_center_id` por item.
-- Print Bridge já escuta `pdv_comanda_items` no Realtime — assim que `sent_to_kitchen_at` é preenchido, ele imprime no centro de produção certo.
+## Causa
+Em `src/pages/pdv/Products.tsx`, o `handleCreate` faz `setSelectedProduct(null)` e `setDialogOpen(true)`, mas o `ProductDialog` usa `react-hook-form` com `defaultValues` derivados do `product` prop. O `reset` do form provavelmente só dispara quando `product` muda de objeto para objeto (não de objeto → null), ou o `useEffect` que reseta não trata o caso `null` corretamente.
 
-## Mudança proposta
+Preciso confirmar lendo `ProductDialog.tsx` para ver exatamente como o reset está feito hoje.
 
-Editar **apenas** `src/pages/garcom/GarcomAdicionarItem.tsx` para:
+## Plano
 
-1. **Trazer mais coisas do hook**: `comandaItems`, `sendToKitchen`, `getItemsByComanda`.
-2. **Calcular itens pendentes** da comanda atual (mesma regra do Detalhe: `kitchen_status === "pendente" && !sent_to_kitchen_at`).
-3. **Adicionar barra inferior fixa** quando houver pendentes:
-   - Mostra contador: "X item(ns) pendente(s) — R$ Y,YY"
-   - Botão **"Enviar para Cozinha"** que chama `sendToKitchen(pendingIds)` e mostra toast de sucesso (+ aviso se houver itens sem `production_center_id`).
-4. **Ajustar `pb-24` → `pb-32`** para a lista não ficar atrás da nova barra.
-5. Após enviar, opcionalmente mostrar feedback visual sutil (já basta o toast).
+1. **Ler `src/components/pdv/ProductDialog.tsx`** para identificar o `useEffect`/`reset` e ajustar para que, quando `product` for `null/undefined` E o dialog abrir, o form seja resetado para os valores default vazios (não apenas quando há um produto novo).
 
-A barra fica acima da bottom nav do garçom (`bottom-16`), no mesmo padrão visual de `GarcomComandaDetalhe`.
+2. **Correção típica esperada**: garantir que o `useEffect` que sincroniza `product → form.reset(...)` também rode quando `product` vira `null` (chamando `form.reset(defaultValues)` com objeto vazio/padrão), e que dependa de `[product, open]` para limpar sempre que reabrir em modo "novo".
 
-## Layout (mobile, 390x844)
+3. Limpar também estados auxiliares (imagem, modo Simples Nacional, etc.) no mesmo efeito quando `product` for `null`.
 
-```text
-┌──────────────────────────────────┐
-│ ← Adicionar Item                 │
-├──────────────────────────────────┤
-│ 🔍 Buscar produto...             │
-│ [Cat1] [Cat2] [Cat3] ...         │
-├──────────────────────────────────┤
-│ [img] Produto A    R$ 12,00      │
-│ [img] Produto B    R$ 18,50      │
-│       ...                         │
-├──────────────────────────────────┤  ← nova barra (só se houver pendentes)
-│ 3 itens pendentes · R$ 48,50     │
-│ [   📤 Enviar para Cozinha    ]  │
-├──────────────────────────────────┤  ← bottom nav garçom
-│ Mesas  Comandas  +  Cozinha  ⋯  │
-└──────────────────────────────────┘
-```
+## Arquivo
+- `src/components/pdv/ProductDialog.tsx` — ajustar lógica de reset.
 
-## Por que assim
-- **Zero mudança de schema, hook ou Print Bridge** — toda a infra já existe.
-- **Um único arquivo alterado**, mínimo de risco.
-- Fluxo natural: garçom adiciona vários itens em sequência e dispara a cozinha sem trocar de tela.
-- Mantém o botão atual em `GarcomComandaDetalhe` intocado (redundância proposital — dois pontos de entrada para a mesma ação).
-
-## Arquivos
-- `src/pages/garcom/GarcomAdicionarItem.tsx` — editar.
+Sem mudanças em schema, hooks ou outras telas. Risco mínimo.
 
