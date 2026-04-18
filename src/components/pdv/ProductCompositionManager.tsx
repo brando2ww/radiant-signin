@@ -132,7 +132,11 @@ export function ProductCompositionManager({
                           key={p.id}
                           value={p.name}
                           onSelect={() => handleAddProduct(p.id)}
-                          className="flex items-center justify-between"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleAddProduct(p.id);
+                          }}
+                          className="flex items-center justify-between cursor-pointer"
                         >
                           <div className="flex items-center gap-2">
                             <Package className="h-4 w-4 text-muted-foreground" />
