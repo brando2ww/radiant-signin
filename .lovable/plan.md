@@ -2,34 +2,38 @@
 
 ## Problema
 
-Ao adicionar sub-produto: `Could not embed because more than one relationship was found for 'pdv_product_compositions' and 'pdv_products'`.
+No popover de busca de sub-produto (`ProductCompositionManager.tsx`), clicar no item da lista não adiciona — só funciona ao apertar Enter. Causa: o `CommandItem` do `cmdk` dispara `onSelect` no Enter; o clique do mouse precisa ser explicitamente tratado via `onMouseDown`/`onClick`, ou o item precisa estar configurado para que o `cmdk` aceite cliques.
 
-## Causa
+## Causa provável
 
-A tabela `pdv_product_compositions` tem 2 FKs para `pdv_products` (`parent_product_id` e `child_product_id`). No `useProductCompositions` (`src/hooks/use-pdv-compositions.ts`), os selects usam embed ambíguo:
-
-```ts
-.select("*, child_product:pdv_products(*)")
-```
-
-PostgREST não sabe qual FK seguir → erro.
+O `CommandItem` filtra por `value` (texto) e o `onSelect` recebe esse valor. Se o `value` não bate com o filtro do `CommandInput`, o item fica "desabilitado" silenciosamente para clique. Além disso, o handler atual provavelmente está em `onSelect` apenas, e o clique pode estar sendo intercetado pelo fechamento do popover antes do `onSelect` disparar.
 
 ## Solução
 
-### Arquivo: `src/hooks/use-pdv-compositions.ts`
+### Arquivo: `src/components/pdv/ProductCompositionManager.tsx`
 
-Trocar embeds para nomear a FK explicitamente:
+Adicionar handler `onMouseDown` (que dispara antes do blur/fechamento do popover) no `CommandItem`, garantindo que o clique chame `handleAddProduct(product.id)` e feche o popover:
 
-```ts
-.select("*, child_product:pdv_products!pdv_product_compositions_child_product_id_fkey(*)")
+```tsx
+<CommandItem
+  key={product.id}
+  value={product.name}
+  onSelect={() => {
+    handleAddProduct(product.id);
+    setOpen(false);
+  }}
+  onMouseDown={(e) => {
+    e.preventDefault();
+    handleAddProduct(product.id);
+    setOpen(false);
+  }}
+>
+  ...
+</CommandItem>
 ```
 
-Locais a alterar:
-1. `useQuery` linha 27 — select da listagem
-2. `addComposition.mutationFn` linha 66 — select após insert
-
-Sem mudanças em schema, UI ou outros arquivos.
+O `e.preventDefault()` no `onMouseDown` evita que o popover roube o foco antes do clique completar.
 
 ## Arquivo
-- `src/hooks/use-pdv-compositions.ts`
+- `src/components/pdv/ProductCompositionManager.tsx` — único arquivo alterado.
 
