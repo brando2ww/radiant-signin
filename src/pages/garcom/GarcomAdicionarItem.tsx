@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Plus, Minus } from "lucide-react";
+import { ArrowLeft, Search, Plus, Minus, Send } from "lucide-react";
 import { usePDVProducts } from "@/hooks/use-pdv-products";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
+import { toast } from "sonner";
 import { ProductCategoryNav } from "@/components/garcom/ProductCategoryNav";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,22 @@ export default function GarcomAdicionarItem() {
   const { id: comandaId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { products, isLoading } = usePDVProducts();
-  const { addItem, isAddingItem } = usePDVComandas();
+  const { addItem, isAddingItem, getItemsByComanda, sendToKitchen } = usePDVComandas();
+
+  const items = comandaId ? getItemsByComanda(comandaId) : [];
+  const pendingItems = items.filter(
+    (i) => i.kitchen_status === "pendente" && !i.sent_to_kitchen_at
+  );
+  const pendingTotal = pendingItems.reduce((sum, i) => sum + Number(i.subtotal), 0);
+
+  const handleSendToKitchen = () => {
+    if (pendingItems.length === 0) return;
+    const missingCenter = pendingItems.some((i) => !i.production_center_id);
+    if (missingCenter) {
+      toast.warning("Alguns itens não têm centro de produção configurado e podem não ser impressos.");
+    }
+    sendToKitchen(pendingItems.map((i) => i.id));
+  };
 
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -83,7 +99,7 @@ export default function GarcomAdicionarItem() {
       />
 
       {/* Product List */}
-      <div className="flex-1 px-4 pb-24 space-y-2">
+      <div className="flex-1 px-4 pb-32 space-y-2">
         {isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -126,6 +142,25 @@ export default function GarcomAdicionarItem() {
           ))
         )}
       </div>
+
+      {/* Send to Kitchen Bar */}
+      {pendingItems.length > 0 && (
+        <div className="fixed bottom-16 left-0 right-0 z-30 border-t bg-background px-4 py-3 safe-area-bottom">
+          <div className="mb-2 flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">
+              {pendingItems.length} {pendingItems.length === 1 ? "item pendente" : "itens pendentes"}
+            </span>
+            <span className="font-semibold tabular-nums">R$ {pendingTotal.toFixed(2)}</span>
+          </div>
+          <Button
+            onClick={handleSendToKitchen}
+            className="w-full h-11 active:scale-[0.98] transition-transform"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Enviar para Cozinha
+          </Button>
+        </div>
+      )}
 
       {/* Product Detail Sheet */}
       <Sheet open={!!selectedProduct} onOpenChange={(o) => !o && setSelectedProduct(null)}>
