@@ -112,6 +112,7 @@ export function ProductCompositionManager({
             <Popover open={searchOpen} onOpenChange={setSearchOpen}>
               <PopoverTrigger asChild>
                 <Button
+                  type="button"
                   variant="outline"
                   className="w-full justify-start gap-2"
                   disabled={isAdding}
@@ -221,6 +222,9 @@ export function ProductCompositionManager({
                             quantity: Number(e.target.value) || 1,
                           })
                         }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.preventDefault();
+                        }}
                         className="w-20 h-8 text-center text-sm"
                       />
                       <span className="text-xs text-muted-foreground w-8">
@@ -238,6 +242,7 @@ export function ProductCompositionManager({
                     </div>
 
                     <Button
+                      type="button"
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
