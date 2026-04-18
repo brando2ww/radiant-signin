@@ -1,37 +1,39 @@
 
 
 ## Problema
-Ao ativar o toggle "Produto Composto" dentro da aba Composição, o produto é salvo automaticamente e o dialog fecha. O mesmo acontece ao mudar "Baixa de estoque". Deveria mudar apenas o estado local do formulário e só persistir quando o usuário clicar em "Salvar".
+
+Ao clicar em "Buscar produto para adicionar..." dentro da aba Composição, nada parece acontecer (ou o dialog fecha) — sub-produto não é adicionado.
 
 ## Causa
-Em `src/components/pdv/ProductDialog.tsx` (linhas 705-710), os handlers `onCompositeChange` e `onStockDeductionModeChange` chamam `onSubmit({ ...form.getValues(), is_composite: value })`, o que aciona o submit completo (salva no banco + reseta form + fecha dialog).
 
-Os sub-produtos em si (`addComposition`) já são persistidos diretamente em `pdv_product_compositions` via mutation no hook — isso está correto e não fecha o dialog. O problema é só o toggle e o select.
+Em `src/components/pdv/ProductCompositionManager.tsx`, todos os `<Button>` estão dentro do `<form>` do `ProductDialog` mas **sem `type="button"`**. Em HTML, o tipo padrão de `<button>` dentro de form é `submit`. Então:
+
+- Clicar no botão "Buscar produto para adicionar..." dispara o submit do formulário pai → salva o produto, reseta o form e fecha o dialog **antes** do popover sequer abrir.
+- O mesmo vale para o botão da lixeira (remover sub-produto).
+- Pressionar Enter no input de quantidade também dispara submit.
+
+Resultado: parece que "nada acontece" — na verdade o dialog fecha imediatamente.
 
 ## Solução
 
-### Arquivo: `src/components/pdv/ProductDialog.tsx`
+### Arquivo: `src/components/pdv/ProductCompositionManager.tsx`
 
-1. Adicionar os campos `is_composite` e `stock_deduction_mode` aos `defaultValues` do `useForm` e ao `form.reset(...)` que sincroniza com o `product` (no `useEffect`).
-2. Trocar os handlers da aba Composição para apenas atualizar o form local:
-   ```tsx
-   <ProductCompositionManager
-     productId={product.id}
-     productPrice={currentPrice}
-     isComposite={form.watch("is_composite")}
-     stockDeductionMode={form.watch("stock_deduction_mode")}
-     onCompositeChange={(value) => form.setValue("is_composite", value, { shouldDirty: true })}
-     onStockDeductionModeChange={(value) => form.setValue("stock_deduction_mode", value, { shouldDirty: true })}
-   />
-   ```
-3. Garantir que o `handleSubmit` (linha 249) já passe `is_composite` e `stock_deduction_mode` para `onSubmit` — como esses campos passam a fazer parte do form via `defaultValues`, o `form.handleSubmit(data => onSubmit(data))` já enviará automaticamente.
+Adicionar `type="button"` em todos os `<Button>` do componente:
+
+1. Botão `PopoverTrigger` "Buscar produto para adicionar..." (linha ~114)
+2. Botão da lixeira `Trash2` que remove sub-produto (dentro do `compositions.map`)
+3. Qualquer outro `<Button>` no arquivo
+
+Também garantir que o `<Input type="number">` da quantidade não dispare submit ao Enter — adicionar `onKeyDown` que faz `e.preventDefault()` em Enter, ou simplesmente confiar que sem botões submit o Enter não terá efeito (porém, com input numérico isolado, Enter pode ainda submeter; melhor prevenir explicitamente).
 
 ### Comportamento resultante
-- Toggle "Produto Composto" → muda só visualmente; aba Composição abre/fecha; nada é salvo.
-- Adicionar/remover sub-produtos → continua persistindo direto em `pdv_product_compositions` (essa tabela é independente; faz sentido salvar imediatamente para não perder o trabalho).
-- "Baixa de estoque" → muda só localmente.
-- Só ao clicar "Salvar" os campos `is_composite` e `stock_deduction_mode` vão para `pdv_products`.
+
+- Clicar em "Buscar produto..." → abre o popover normalmente.
+- Selecionar produto na lista → chama `addComposition` (já persistido direto na tabela `pdv_product_compositions`) e fecha só o popover. Dialog do produto continua aberto.
+- Clicar lixeira → remove sub-produto sem fechar o dialog.
+- Editar quantidade → atualiza sem submeter.
 
 ## Arquivo
-- `src/components/pdv/ProductDialog.tsx` — único arquivo alterado.
+
+- `src/components/pdv/ProductCompositionManager.tsx` — único arquivo alterado.
 
