@@ -244,6 +244,8 @@ export function ProductDialog({
         cofins_rate: 0,
         tax_unit: "",
         ean: "",
+        is_composite: false,
+        stock_deduction_mode: "main",
       });
       setPreviewImage(null);
       setIsSubstituicaoTributaria(false);
