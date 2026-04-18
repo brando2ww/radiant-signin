@@ -242,6 +242,7 @@ export function ProductCompositionManager({
                     </div>
 
                     <Button
+                      type="button"
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
