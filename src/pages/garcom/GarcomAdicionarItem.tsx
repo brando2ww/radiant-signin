@@ -20,7 +20,22 @@ export default function GarcomAdicionarItem() {
   const { id: comandaId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { products, isLoading } = usePDVProducts();
-  const { addItem, isAddingItem } = usePDVComandas();
+  const { addItem, isAddingItem, getItemsByComanda, sendToKitchen } = usePDVComandas();
+
+  const items = comandaId ? getItemsByComanda(comandaId) : [];
+  const pendingItems = items.filter(
+    (i) => i.kitchen_status === "pendente" && !i.sent_to_kitchen_at
+  );
+  const pendingTotal = pendingItems.reduce((sum, i) => sum + Number(i.subtotal), 0);
+
+  const handleSendToKitchen = () => {
+    if (pendingItems.length === 0) return;
+    const missingCenter = pendingItems.some((i) => !i.production_center_id);
+    if (missingCenter) {
+      toast.warning("Alguns itens não têm centro de produção configurado e podem não ser impressos.");
+    }
+    sendToKitchen(pendingItems.map((i) => i.id));
+  };
 
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
