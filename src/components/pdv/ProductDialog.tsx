@@ -179,6 +179,7 @@ export function ProductDialog({
   const cmv = calculateCMV(recipes);
 
   useEffect(() => {
+    if (!open) return;
     if (product) {
       form.reset({
         name: product.name,
@@ -208,10 +209,42 @@ export function ProductDialog({
         tax_unit: product.tax_unit || "",
         ean: product.ean || "",
       });
+      setPreviewImage(product.image_url || null);
       // Determine ST mode
       setIsSubstituicaoTributaria(!!(product.csosn && product.csosn.length > 0));
+    } else {
+      form.reset({
+        name: "",
+        description: "",
+        category: "",
+        image_url: "",
+        price_salon: 0,
+        price_balcao: 0,
+        price_delivery: 0,
+        preparation_time: 15,
+        serves: 1,
+        is_available: true,
+        is_sold_by_weight: false,
+        available_days: [],
+        printer_station: "cozinha",
+        ncm: "",
+        cest: "",
+        cfop: "",
+        origin: "",
+        cst_icms: "",
+        csosn: "",
+        icms_rate: 0,
+        pis_cst: "",
+        pis_rate: 0,
+        cofins_cst: "",
+        cofins_rate: 0,
+        tax_unit: "",
+        ean: "",
+      });
+      setPreviewImage(null);
+      setIsSubstituicaoTributaria(false);
     }
-  }, [product, form]);
+  }, [product, open, form]);
 
   const handleSubmit = form.handleSubmit((data) => {
     onSubmit(data);
