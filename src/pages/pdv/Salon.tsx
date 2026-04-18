@@ -233,7 +233,9 @@ export default function PDVSalon() {
   };
 
   const getOrderItems = (orderId: string) => {
-    return orderItems.filter((item) => item.order_id === orderId);
+    return orderItems.filter(
+      (item) => item.order_id === orderId && !(item as any).is_composite_child,
+    );
   };
 
   const handleCreateTable = () => {

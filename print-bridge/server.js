@@ -162,6 +162,9 @@ async function printRow(row, kind) {
     kind === "order" ? `Pedido #${row.order_number}` : `Comanda #${row.comanda_number}`,
     formatDateTime(),
   ];
+  if (row.is_composite_child && row.parent_product_name) {
+    header.push(`+ Parte de: ${String(row.parent_product_name).toUpperCase()}`);
+  }
   const payload = buildReceipt({
     header,
     body: [row],
