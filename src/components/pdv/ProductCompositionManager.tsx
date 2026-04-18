@@ -112,6 +112,7 @@ export function ProductCompositionManager({
             <Popover open={searchOpen} onOpenChange={setSearchOpen}>
               <PopoverTrigger asChild>
                 <Button
+                  type="button"
                   variant="outline"
                   className="w-full justify-start gap-2"
                   disabled={isAdding}
