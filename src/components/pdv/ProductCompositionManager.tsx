@@ -222,6 +222,9 @@ export function ProductCompositionManager({
                             quantity: Number(e.target.value) || 1,
                           })
                         }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.preventDefault();
+                        }}
                         className="w-20 h-8 text-center text-sm"
                       />
                       <span className="text-xs text-muted-foreground w-8">
