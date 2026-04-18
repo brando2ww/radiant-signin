@@ -254,7 +254,7 @@ function connectRealtime() {
     .subscribe((status, err) => {
       if (status === "SUBSCRIBED") {
         reconnectDelay = 30000;
-        log(`✓ Realtime conectado. Ouvindo INSERTs em pdv_order_items e pdv_comanda_items.`);
+        log(`✓ Realtime conectado. Ouvindo INSERT/UPDATE em pdv_order_items e pdv_comanda_items (imprime quando sent_to_kitchen_at é setado).`);
       } else if (status === "CHANNEL_ERROR" || status === "CLOSED" || status === "TIMED_OUT") {
         log(`✗ Realtime ${status}${err ? `: ${err.message}` : ""}`);
         scheduleReconnect();
