@@ -143,6 +143,25 @@ export default function GarcomAdicionarItem() {
         )}
       </div>
 
+      {/* Send to Kitchen Bar */}
+      {pendingItems.length > 0 && (
+        <div className="fixed bottom-16 left-0 right-0 z-30 border-t bg-background px-4 py-3 safe-area-bottom">
+          <div className="mb-2 flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">
+              {pendingItems.length} {pendingItems.length === 1 ? "item pendente" : "itens pendentes"}
+            </span>
+            <span className="font-semibold tabular-nums">R$ {pendingTotal.toFixed(2)}</span>
+          </div>
+          <Button
+            onClick={handleSendToKitchen}
+            className="w-full h-11 active:scale-[0.98] transition-transform"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            Enviar para Cozinha
+          </Button>
+        </div>
+      )}
+
       {/* Product Detail Sheet */}
       <Sheet open={!!selectedProduct} onOpenChange={(o) => !o && setSelectedProduct(null)}>
         <SheetContent side="bottom" className="rounded-t-2xl px-4 pb-8">
