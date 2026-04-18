@@ -172,6 +172,8 @@ export function ProductDialog({
       cofins_rate: product?.cofins_rate || 0,
       tax_unit: product?.tax_unit || "",
       ean: product?.ean || "",
+      is_composite: (product as any)?.is_composite ?? false,
+      stock_deduction_mode: (product as any)?.stock_deduction_mode || "main",
     },
   });
 
@@ -208,6 +210,8 @@ export function ProductDialog({
         cofins_rate: product.cofins_rate || 0,
         tax_unit: product.tax_unit || "",
         ean: product.ean || "",
+        is_composite: (product as any)?.is_composite ?? false,
+        stock_deduction_mode: (product as any)?.stock_deduction_mode || "main",
       });
       setPreviewImage(product.image_url || null);
       // Determine ST mode
@@ -240,6 +244,8 @@ export function ProductDialog({
         cofins_rate: 0,
         tax_unit: "",
         ean: "",
+        is_composite: false,
+        stock_deduction_mode: "main",
       });
       setPreviewImage(null);
       setIsSubstituicaoTributaria(false);
@@ -700,14 +706,14 @@ export function ProductDialog({
                   <ProductCompositionManager
                     productId={product.id}
                     productPrice={currentPrice}
-                    isComposite={(product as any)?.is_composite || false}
-                    stockDeductionMode={(product as any)?.stock_deduction_mode || "main"}
-                    onCompositeChange={(value) => {
-                      onSubmit({ ...form.getValues(), is_composite: value });
-                    }}
-                    onStockDeductionModeChange={(value) => {
-                      onSubmit({ ...form.getValues(), stock_deduction_mode: value });
-                    }}
+                    isComposite={form.watch("is_composite")}
+                    stockDeductionMode={form.watch("stock_deduction_mode")}
+                    onCompositeChange={(value) =>
+                      form.setValue("is_composite", value, { shouldDirty: true })
+                    }
+                    onStockDeductionModeChange={(value) =>
+                      form.setValue("stock_deduction_mode", value, { shouldDirty: true })
+                    }
                   />
                 </TabsContent>
               )}
