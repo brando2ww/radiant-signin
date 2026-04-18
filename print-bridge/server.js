@@ -209,9 +209,23 @@ function connectRealtime() {
       { event: "INSERT", schema: "public", table: "pdv_order_items" },
       (payload) => {
         const id = payload?.new?.id;
-        if (!id || processedIds.has(id)) return;
+        const sentAt = payload?.new?.sent_to_kitchen_at;
+        if (!id || !sentAt || processedIds.has(id)) return;
         markProcessed(id);
         handleOrderItem(id).catch((e) => log(`✗ handleOrderItem: ${e.message}`));
+      },
+    )
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "pdv_order_items" },
+      (payload) => {
+        const id = payload?.new?.id;
+        const oldSent = payload?.old?.sent_to_kitchen_at;
+        const newSent = payload?.new?.sent_to_kitchen_at;
+        // Só imprime na transição null → valor
+        if (!id || oldSent || !newSent || processedIds.has(id)) return;
+        markProcessed(id);
+        handleOrderItem(id).catch((e) => log(`✗ handleOrderItem (update): ${e.message}`));
       },
     )
     .on(
@@ -219,9 +233,22 @@ function connectRealtime() {
       { event: "INSERT", schema: "public", table: "pdv_comanda_items" },
       (payload) => {
         const id = payload?.new?.id;
-        if (!id || processedIds.has(id)) return;
+        const sentAt = payload?.new?.sent_to_kitchen_at;
+        if (!id || !sentAt || processedIds.has(id)) return;
         markProcessed(id);
         handleComandaItem(id).catch((e) => log(`✗ handleComandaItem: ${e.message}`));
+      },
+    )
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "pdv_comanda_items" },
+      (payload) => {
+        const id = payload?.new?.id;
+        const oldSent = payload?.old?.sent_to_kitchen_at;
+        const newSent = payload?.new?.sent_to_kitchen_at;
+        if (!id || oldSent || !newSent || processedIds.has(id)) return;
+        markProcessed(id);
+        handleComandaItem(id).catch((e) => log(`✗ handleComandaItem (update): ${e.message}`));
       },
     )
     .subscribe((status, err) => {
