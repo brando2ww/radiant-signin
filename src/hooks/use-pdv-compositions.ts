@@ -63,7 +63,7 @@ export function useProductCompositions(productId?: string) {
           quantity,
           order_position: maxPos + 1,
         })
-        .select("*, child_product:pdv_products(*)")
+        .select("*, child_product:pdv_products!pdv_product_compositions_child_product_id_fkey(*)")
         .single();
 
       if (error) throw error;
