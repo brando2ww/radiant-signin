@@ -175,18 +175,12 @@ async function processJob(job) {
 
   state.last_job_at = new Date().toISOString();
 
-  // Marca como printing
-  await supabase
-    .from("pdv_print_jobs")
-    .update({ status: "printing", attempts: (job.attempts || 0) + 1 })
-    .eq("id", job.id);
-
   if (!job.printer_ip) {
     const msg = "sem impressora configurada";
     log(`⚠ Job ${job.id} (${job.payload?.product_name}) sem printer_ip — falhando`);
     await supabase
       .from("pdv_print_jobs")
-      .update({ status: "failed", error_message: msg })
+      .update({ status: "failed", error_message: msg, attempts: (job.attempts || 0) + 1 })
       .eq("id", job.id);
     state.jobs_failed += 1;
     state.last_error = msg;
@@ -195,6 +189,7 @@ async function processJob(job) {
 
   const ip = normalizeIp(job.printer_ip);
   const port = job.printer_port || 9100;
+  const key = `${ip}:${port}`;
   const p = job.payload || {};
   const kind = p.kind || job.source_kind || "comanda";
 
@@ -221,28 +216,56 @@ async function processJob(job) {
     centerName: job.center_name,
   });
 
-  log(`→ Job ${job.id} | ${job.center_name} | ${p.quantity}x ${p.product_name} → ${ip}:${port}`);
-
-  try {
-    await sendToPrinter(ip, port, buf);
-    await supabase
-      .from("pdv_print_jobs")
-      .update({ status: "printed", printed_at: new Date().toISOString(), error_message: null })
-      .eq("id", job.id);
-    state.jobs_processed += 1;
-    state.last_print_at = new Date().toISOString();
-    state.last_error = null;
-    log(`✓ Impresso (${ip}) — job ${job.id}`);
-  } catch (err) {
-    const msg = err.message || String(err);
-    await supabase
-      .from("pdv_print_jobs")
-      .update({ status: "failed", error_message: msg })
-      .eq("id", job.id);
-    state.jobs_failed += 1;
-    state.last_error = msg;
-    log(`✗ Falha ${ip}:${port} — ${msg} (job ${job.id})`);
+  const existing = printerQueues.get(key);
+  if (existing && existing.depth > 0) {
+    log(`⏳ Aguardando fila de ${ip} (${existing.depth} job(s) à frente) — job ${job.id}`);
   }
+
+  const { promise } = enqueueForPrinter(key, async () => {
+    const attemptNumber = (job.attempts || 0) + 1;
+    await supabase
+      .from("pdv_print_jobs")
+      .update({ status: "printing", attempts: attemptNumber })
+      .eq("id", job.id);
+
+    log(`→ Job ${job.id} | ${job.center_name} | ${p.quantity}x ${p.product_name} → ${ip}:${port} (tent. ${attemptNumber}/${MAX_ATTEMPTS})`);
+
+    try {
+      await sendToPrinter(ip, port, buf);
+      await supabase
+        .from("pdv_print_jobs")
+        .update({ status: "printed", printed_at: new Date().toISOString(), error_message: null })
+        .eq("id", job.id);
+      state.jobs_processed += 1;
+      state.last_print_at = new Date().toISOString();
+      state.last_error = null;
+      log(`✓ Impresso (${ip}) — job ${job.id}`);
+    } catch (err) {
+      const msg = err.message || String(err);
+      state.last_error = msg;
+      if (attemptNumber < MAX_ATTEMPTS) {
+        const delay = RETRY_DELAYS_MS[attemptNumber - 1] || 3000;
+        log(`🔁 Retry ${attemptNumber}/${MAX_ATTEMPTS} do job ${job.id} em ${delay}ms — ${msg}`);
+        await supabase
+          .from("pdv_print_jobs")
+          .update({ status: "pending", error_message: `retry: ${msg}` })
+          .eq("id", job.id);
+        processedJobIds.delete(job.id);
+        sleep(delay).then(() => {
+          processJob({ ...job, attempts: attemptNumber }).catch((e) => log(`✗ retry processJob: ${e.message}`));
+        });
+      } else {
+        await supabase
+          .from("pdv_print_jobs")
+          .update({ status: "failed", error_message: msg })
+          .eq("id", job.id);
+        state.jobs_failed += 1;
+        log(`✗ Falha definitiva ${ip}:${port} — ${msg} (job ${job.id}, ${MAX_ATTEMPTS} tentativas)`);
+      }
+    }
+  });
+
+  await promise;
 }
 
 async function loadAndProcessJob(jobId) {
