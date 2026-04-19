@@ -1,99 +1,96 @@
 
+## Diagnóstico
 
-## Diagnóstico atual
+O frontend está funcionando no ponto principal:
+- o item é adicionado
+- o botão **Enviar para Cozinha** aparece
+- o `UPDATE` de `sent_to_kitchen_at` é disparado
+- o roteamento por `production_center_id` está sendo resolvido
 
-Pelo código atual, o fluxo principal já está implementado:
+O bloqueio mais provável agora está no **Print Bridge lendo os dados para imprimir**.
 
-- `src/hooks/use-pdv-comandas.ts`
-  - ao clicar em **Enviar para Cozinha**, ele atualiza `sent_to_kitchen_at` dos itens selecionados
-  - também busca os filhos compostos por `parent_item_id` e envia junto
-- `print-bridge/server.js`
-  - já escuta `INSERT` e `UPDATE` em `pdv_comanda_items` e `pdv_order_items`
-  - no `UPDATE`, imprime quando `sent_to_kitchen_at` muda de `null` para valor
+## Causa mais provável
 
-Então, se **nenhuma comanda imprimiu**, o problema mais provável agora não é o botão do garçom em si, e sim um destes pontos:
+Há uma inconsistência entre o modelo de acesso do bridge e as views de impressão:
 
-1. o **Print Bridge local** ainda está com código antigo / não foi reiniciado  
-2. o bridge está rodando, mas **não está conectado no Realtime**
-3. os itens enviados chegam à view de impressão **sem `printer_ip`**
-4. os itens nem chegaram com `sent_to_kitchen_at` no banco
-5. a conexão com a impressora falha no bridge local
+- `print-bridge/server.js` usa apenas `SUPABASE_ANON_KEY`
+- o README também assume bridge com **anon key**
+- porém as views `vw_print_bridge_comanda_items` e `vw_print_bridge_order_items` foram marcadas com `security_invoker = true`
+- e as tabelas-base (`pdv_comandas`, `pdv_comanda_items`, etc.) têm políticas RLS voltadas a `authenticated`, não a `anon`
+
+Na prática, isso pode fazer o bridge:
+1. receber o evento Realtime
+2. tentar buscar a linha na view
+3. receber `null`/sem acesso
+4. sair silenciosamente sem imprimir
+
+Isso explica bem o sintoma: **“nenhuma comanda sequer foi impressa”**.
 
 ## Plano
 
-### 1. Validar o dado real da comanda enviada
-Conferir no banco, para a comanda testada, se:
-- os itens pai e filhos existem
-- `sent_to_kitchen_at` foi preenchido após clicar em enviar
-- cada item ficou com `production_center_id`
-- a view `vw_print_bridge_comanda_items` retorna `center_name`, `printer_ip` e `printer_port`
+### 1. Corrigir o acesso das views do Print Bridge
+Criar uma migration para ajustar `vw_print_bridge_comanda_items` e `vw_print_bridge_order_items` para o modelo correto do bridge local:
 
-Isso separa rapidamente:
-- problema de **frontend/envio**
-vs
-- problema de **bridge/impressão**
+- remover a dependência de `security_invoker = true` para essas views
+- manter apenas os campos mínimos necessários para impressão
+- garantir `GRANT SELECT` nas views para `anon` e `authenticated`
 
-### 2. Validar o estado do Print Bridge local
-Inspecionar `print-bridge/server.js` e o ambiente local para confirmar:
-- a máquina está usando a **versão nova** do bridge
-- o processo foi **reiniciado**
-- o canal Realtime entrou em `SUBSCRIBED`
-- os eventos `UPDATE` de `pdv_comanda_items` estão chegando
-- se há logs como:
-  - item sem `printer_ip`
-  - erro de conexão TCP
-  - timeout
-  - `handleComandaItem` sem retorno da view
+Objetivo: permitir que o bridge com `anon key` leia somente os dados de impressão, sem depender do RLS das tabelas operacionais.
 
-### 3. Se o banco estiver certo e o bridge não reagir, ajustar o bridge
-Se confirmado que os itens foram enviados corretamente mas nada chega/imprime, ajustar `print-bridge/server.js` para deixar o diagnóstico explícito, com logs para:
-- recebimento do payload de `INSERT/UPDATE`
-- transição `old.sent_to_kitchen_at -> new.sent_to_kitchen_at`
-- resultado da busca na `vw_print_bridge_comanda_items`
-- motivo de ignorar o item
-- tentativa de impressão por IP/porta
+### 2. Melhorar o diagnóstico no `print-bridge/server.js`
+Hoje o bridge falha “mudo” quando a view não retorna linha.
 
-### 4. Se a view estiver sem IP/centro, corrigir roteamento/configuração
-Se os itens enviados chegarem sem `printer_ip`:
-- revisar a resolução em `src/utils/resolveProductionCenter.ts`
-- revisar os `slugs` dos centros e `printer_station` dos produtos/subprodutos
-- confirmar se os centros do tenant dono têm impressora configurada
+Vou ajustar para:
+- logar erro da consulta nas views
+- logar quando `handleComandaItem` / `handleOrderItem` não encontra dados
+- diferenciar claramente:
+  - sem acesso / sem linha
+  - sem `printer_ip`
+  - falha TCP
+  - evento ignorado por dedupe
 
-### 5. Validar ponta a ponta com produto simples e composto
-Depois do ajuste:
+Assim, da próxima vez o log mostrará exatamente onde parou.
+
+### 3. Manter o reforço de IP normalizado
+A normalização de IP com zeros à esquerda continua correta e deve ser mantida, porque alguns centros tinham IP inválido para TCP.
+
+Ela não resolve sozinha o problema atual, mas evita o próximo bloqueio depois que a leitura da view voltar a funcionar.
+
+### 4. Validar ponta a ponta
+Depois da correção:
 - testar 1 item simples
-- testar 1 item composto
-- confirmar:
-  - pai enviado
-  - filhos enviados
-  - cada filho indo para o centro correto
-  - bridge recebendo evento
-  - impressão acontecendo na impressora certa
+- testar 1 produto composto
+- confirmar nos logs do bridge:
+  - evento `UPDATE` recebido
+  - linha da view carregada
+  - IP/porta resolvidos
+  - tentativa de impressão por TCP
+  - sucesso ou erro explícito
+
+### 5. Reinício obrigatório do bridge local
+Como o bridge roda no PC do estabelecimento, após a atualização será necessário:
+- atualizar o `print-bridge/server.js` local
+- reiniciar o serviço (`pm2 restart velara-print-bridge` ou `npm start`)
 
 ## Arquivos envolvidos
 
-- `src/hooks/use-pdv-comandas.ts`
-- `src/utils/resolveProductionCenter.ts`
-- `src/utils/expandComposition.ts`
-- `print-bridge/server.js`
+- `supabase/migrations/...sql` — ajustar acesso das views `vw_print_bridge_*`
+- `print-bridge/server.js` — logs e diagnóstico de consulta/impressão
 
 ## Detalhes técnicos
 
 ```text
-Garçom -> sendToKitchen()
-       -> UPDATE pdv_comanda_items.sent_to_kitchen_at
-       -> Realtime no Print Bridge
-       -> handleComandaItem(id)
-       -> SELECT vw_print_bridge_comanda_items
-       -> row.printer_ip ?
-          ├─ não -> ignora/loga
-          └─ sim -> TCP 9100 -> impressora
+Garçom
+  -> UPDATE pdv_comanda_items.sent_to_kitchen_at
+  -> Realtime chega no Print Bridge
+  -> Bridge consulta vw_print_bridge_comanda_items(id)
+  -> hoje: consulta pode voltar vazia por anon + security_invoker + RLS
+  -> bridge sai sem imprimir
 ```
 
 ## Resultado esperado
 
-Após a implementação/validação:
-- clicar em **Enviar para Cozinha** gera impressão
-- isso funciona para item simples e produto composto
-- se algo impedir a impressão, o motivo fica visível no log do bridge
-
+Após a correção:
+- o bridge local conseguirá ler a linha da view com a `anon key`
+- itens enviados para a cozinha voltarão a imprimir
+- se houver falha restante (IP, porta, rede ou impressora), o motivo aparecerá claramente no log
