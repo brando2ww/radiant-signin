@@ -13,9 +13,15 @@ const ESC = 0x1b;
 const GS = 0x1d;
 const LF = 0x0a;
 
+function stripAccents(s) {
+  return String(s ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 const chunks = [];
 const push = (...b) => chunks.push(Buffer.from(b));
-const text = (s) => chunks.push(Buffer.from(s, "utf8"));
+const text = (s) => chunks.push(Buffer.from(stripAccents(s), "utf8"));
 
 push(ESC, 0x40);
 push(ESC, 0x61, 0x01);
