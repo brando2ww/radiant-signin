@@ -111,11 +111,19 @@ function buildReceipt({ header, body, centerName }) {
   });
   text("================================");
   line();
-  body.forEach((item) => {
+  body.forEach((item, idx) => {
+    if (idx > 0) {
+      text("--------------------------------");
+      line();
+    }
     push(GS, 0x21, 0x01);
     text(`${item.quantity}x ${String(item.product_name).toUpperCase()}`);
     line();
     push(GS, 0x21, 0x00);
+    if (item.parent_product_name) {
+      text(`  (parte de: ${String(item.parent_product_name).toUpperCase()})`);
+      line();
+    }
     if (item.notes) {
       text(`  OBS: ${item.notes}`);
       line();
@@ -199,6 +207,20 @@ async function processJob(job) {
   const p = job.payload || {};
   const kind = p.kind || job.source_kind || "comanda";
 
+  // Suporta dois formatos de payload:
+  //  - novo: p.items = [{ product_name, quantity, notes, modifiers, parent_product_name, is_composite_child }, ...]
+  //  - antigo (retrocompat): campos no topo
+  const items = Array.isArray(p.items) && p.items.length > 0
+    ? p.items
+    : [{
+        product_name: p.product_name,
+        quantity: p.quantity,
+        notes: p.notes,
+        modifiers: p.modifiers,
+        parent_product_name: p.parent_product_name,
+        is_composite_child: p.is_composite_child,
+      }];
+
   const header = [
     `Centro: ${job.center_name ?? "—"}`,
     kind === "order"
@@ -207,18 +229,21 @@ async function processJob(job) {
     kind === "order" ? `Pedido #${p.order_number}` : `Comanda #${p.comanda_number}`,
     formatDateTime(),
   ];
-  if (p.is_composite_child && p.parent_product_name) {
-    header.push(`+ Parte de: ${String(p.parent_product_name).toUpperCase()}`);
+  if (items.length > 1) {
+    header.push(`Itens: ${items.length}`);
   }
+
+  const body = items.map((it) => ({
+    product_name: it.product_name,
+    quantity: it.quantity,
+    notes: it.notes,
+    modifiers: it.modifiers,
+    parent_product_name: it.is_composite_child ? it.parent_product_name : null,
+  }));
 
   const buf = buildReceipt({
     header,
-    body: [{
-      product_name: p.product_name,
-      quantity: p.quantity,
-      notes: p.notes,
-      modifiers: p.modifiers,
-    }],
+    body,
     centerName: job.center_name,
   });
 
@@ -234,7 +259,10 @@ async function processJob(job) {
       .update({ status: "printing", attempts: attemptNumber })
       .eq("id", job.id);
 
-    log(`→ Job ${job.id} | ${job.center_name} | ${p.quantity}x ${p.product_name} → ${ip}:${port} (tent. ${attemptNumber}/${MAX_ATTEMPTS})`);
+    const logSummary = items.length === 1
+      ? `${items[0].quantity}x ${items[0].product_name}`
+      : `${items.length} itens (${items.reduce((s, i) => s + (Number(i.quantity) || 0), 0)} un)`;
+    log(`→ Job ${job.id} | ${job.center_name} | ${logSummary} → ${ip}:${port} (tent. ${attemptNumber}/${MAX_ATTEMPTS})`);
 
     try {
       await sendToPrinter(ip, port, buf);
