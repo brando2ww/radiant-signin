@@ -199,6 +199,20 @@ async function processJob(job) {
   const p = job.payload || {};
   const kind = p.kind || job.source_kind || "comanda";
 
+  // Suporta dois formatos de payload:
+  //  - novo: p.items = [{ product_name, quantity, notes, modifiers, parent_product_name, is_composite_child }, ...]
+  //  - antigo (retrocompat): campos no topo
+  const items = Array.isArray(p.items) && p.items.length > 0
+    ? p.items
+    : [{
+        product_name: p.product_name,
+        quantity: p.quantity,
+        notes: p.notes,
+        modifiers: p.modifiers,
+        parent_product_name: p.parent_product_name,
+        is_composite_child: p.is_composite_child,
+      }];
+
   const header = [
     `Centro: ${job.center_name ?? "—"}`,
     kind === "order"
@@ -207,18 +221,21 @@ async function processJob(job) {
     kind === "order" ? `Pedido #${p.order_number}` : `Comanda #${p.comanda_number}`,
     formatDateTime(),
   ];
-  if (p.is_composite_child && p.parent_product_name) {
-    header.push(`+ Parte de: ${String(p.parent_product_name).toUpperCase()}`);
+  if (items.length > 1) {
+    header.push(`Itens: ${items.length}`);
   }
+
+  const body = items.map((it) => ({
+    product_name: it.product_name,
+    quantity: it.quantity,
+    notes: it.notes,
+    modifiers: it.modifiers,
+    parent_product_name: it.is_composite_child ? it.parent_product_name : null,
+  }));
 
   const buf = buildReceipt({
     header,
-    body: [{
-      product_name: p.product_name,
-      quantity: p.quantity,
-      notes: p.notes,
-      modifiers: p.modifiers,
-    }],
+    body,
     centerName: job.center_name,
   });
 
