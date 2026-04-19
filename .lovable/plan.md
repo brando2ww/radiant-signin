@@ -1,39 +1,99 @@
 
 
-## Problema
+## Diagnóstico atual
 
-Itens do garçom não estão imprimindo na cozinha. O Print Bridge escuta apenas eventos `INSERT` no Realtime, mas no fluxo do garçom o item é INSERIDO no carrinho ainda como rascunho — e depois um UPDATE seta `sent_to_kitchen_at` quando o garçom clica "Enviar para Cozinha". O bridge não escuta UPDATE → não imprime.
+Pelo código atual, o fluxo principal já está implementado:
 
-Adicional: mesmo no fluxo PDV salão, o bridge imprime no INSERT sem checar se o item realmente foi enviado para cozinha (`sent_to_kitchen_at IS NOT NULL`), então pode imprimir cedo demais ou imprimir itens cancelados/excluídos.
+- `src/hooks/use-pdv-comandas.ts`
+  - ao clicar em **Enviar para Cozinha**, ele atualiza `sent_to_kitchen_at` dos itens selecionados
+  - também busca os filhos compostos por `parent_item_id` e envia junto
+- `print-bridge/server.js`
+  - já escuta `INSERT` e `UPDATE` em `pdv_comanda_items` e `pdv_order_items`
+  - no `UPDATE`, imprime quando `sent_to_kitchen_at` muda de `null` para valor
 
-## Solução
+Então, se **nenhuma comanda imprimiu**, o problema mais provável agora não é o botão do garçom em si, e sim um destes pontos:
 
-### 1. `print-bridge/server.js` — escutar UPDATE também
+1. o **Print Bridge local** ainda está com código antigo / não foi reiniciado  
+2. o bridge está rodando, mas **não está conectado no Realtime**
+3. os itens enviados chegam à view de impressão **sem `printer_ip`**
+4. os itens nem chegaram com `sent_to_kitchen_at` no banco
+5. a conexão com a impressora falha no bridge local
 
-Adicionar listeners de `UPDATE` em `pdv_comanda_items` e `pdv_order_items`. No handler:
-- Só imprimir se `sent_to_kitchen_at` mudou de `null` para um valor (transição "enviado agora").
-- Comparar `payload.old.sent_to_kitchen_at` (null) com `payload.new.sent_to_kitchen_at` (não-null).
-- Manter dedupe via `processedIds` para não imprimir 2x.
+## Plano
 
-### 2. `print-bridge/server.js` — INSERT só imprime se já vier com `sent_to_kitchen_at`
+### 1. Validar o dado real da comanda enviada
+Conferir no banco, para a comanda testada, se:
+- os itens pai e filhos existem
+- `sent_to_kitchen_at` foi preenchido após clicar em enviar
+- cada item ficou com `production_center_id`
+- a view `vw_print_bridge_comanda_items` retorna `center_name`, `printer_ip` e `printer_port`
 
-No handler de INSERT, checar `payload.new.sent_to_kitchen_at`. Se for null, ignorar (será impresso quando o UPDATE acontecer). Isso cobre o fluxo PDV salão (Balcão), onde itens são criados já como `entregue` ou já enviados.
+Isso separa rapidamente:
+- problema de **frontend/envio**
+vs
+- problema de **bridge/impressão**
 
-### 3. Reforço nas views `vw_print_bridge_*`
+### 2. Validar o estado do Print Bridge local
+Inspecionar `print-bridge/server.js` e o ambiente local para confirmar:
+- a máquina está usando a **versão nova** do bridge
+- o processo foi **reiniciado**
+- o canal Realtime entrou em `SUBSCRIBED`
+- os eventos `UPDATE` de `pdv_comanda_items` estão chegando
+- se há logs como:
+  - item sem `printer_ip`
+  - erro de conexão TCP
+  - timeout
+  - `handleComandaItem` sem retorno da view
 
-As views já expõem `sent_to_kitchen_at`. Sem mudança necessária — o bridge pode usar esse campo para validar antes de imprimir (defesa adicional).
+### 3. Se o banco estiver certo e o bridge não reagir, ajustar o bridge
+Se confirmado que os itens foram enviados corretamente mas nada chega/imprime, ajustar `print-bridge/server.js` para deixar o diagnóstico explícito, com logs para:
+- recebimento do payload de `INSERT/UPDATE`
+- transição `old.sent_to_kitchen_at -> new.sent_to_kitchen_at`
+- resultado da busca na `vw_print_bridge_comanda_items`
+- motivo de ignorar o item
+- tentativa de impressão por IP/porta
 
-### Comportamento resultante
+### 4. Se a view estiver sem IP/centro, corrigir roteamento/configuração
+Se os itens enviados chegarem sem `printer_ip`:
+- revisar a resolução em `src/utils/resolveProductionCenter.ts`
+- revisar os `slugs` dos centros e `printer_station` dos produtos/subprodutos
+- confirmar se os centros do tenant dono têm impressora configurada
 
-- **Garçom adiciona item**: INSERT chega ao bridge sem `sent_to_kitchen_at` → bridge ignora.
-- **Garçom clica "Enviar para Cozinha"**: UPDATE seta `sent_to_kitchen_at` → bridge recebe UPDATE, valida que `old.sent_to_kitchen_at = null` e `new.sent_to_kitchen_at != null` → imprime.
-- **PDV salão / Balcão (item já criado enviado)**: INSERT chega com `sent_to_kitchen_at` preenchido → bridge imprime na hora.
-- **Edição de item depois de enviado** (ex: mudar quantidade): bridge não reimprime (não há nova transição null→valor).
+### 5. Validar ponta a ponta com produto simples e composto
+Depois do ajuste:
+- testar 1 item simples
+- testar 1 item composto
+- confirmar:
+  - pai enviado
+  - filhos enviados
+  - cada filho indo para o centro correto
+  - bridge recebendo evento
+  - impressão acontecendo na impressora certa
 
-### Observação importante
+## Arquivos envolvidos
 
-O Print Bridge roda **localmente** na máquina do estabelecimento (PM2 / Node). Após este ajuste, o usuário precisará **reiniciar o serviço** (`pm2 restart velara-print-bridge` ou parar/iniciar `npm start`) para que as mudanças entrem em efeito. Vou destacar isso na resposta final.
+- `src/hooks/use-pdv-comandas.ts`
+- `src/utils/resolveProductionCenter.ts`
+- `src/utils/expandComposition.ts`
+- `print-bridge/server.js`
 
-## Arquivos
-- `print-bridge/server.js` — único arquivo alterado.
+## Detalhes técnicos
+
+```text
+Garçom -> sendToKitchen()
+       -> UPDATE pdv_comanda_items.sent_to_kitchen_at
+       -> Realtime no Print Bridge
+       -> handleComandaItem(id)
+       -> SELECT vw_print_bridge_comanda_items
+       -> row.printer_ip ?
+          ├─ não -> ignora/loga
+          └─ sim -> TCP 9100 -> impressora
+```
+
+## Resultado esperado
+
+Após a implementação/validação:
+- clicar em **Enviar para Cozinha** gera impressão
+- isso funciona para item simples e produto composto
+- se algo impedir a impressão, o motivo fica visível no log do bridge
 
