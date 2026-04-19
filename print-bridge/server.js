@@ -259,7 +259,10 @@ async function processJob(job) {
       .update({ status: "printing", attempts: attemptNumber })
       .eq("id", job.id);
 
-    log(`→ Job ${job.id} | ${job.center_name} | ${p.quantity}x ${p.product_name} → ${ip}:${port} (tent. ${attemptNumber}/${MAX_ATTEMPTS})`);
+    const logSummary = items.length === 1
+      ? `${items[0].quantity}x ${items[0].product_name}`
+      : `${items.length} itens (${items.reduce((s, i) => s + (Number(i.quantity) || 0), 0)} un)`;
+    log(`→ Job ${job.id} | ${job.center_name} | ${logSummary} → ${ip}:${port} (tent. ${attemptNumber}/${MAX_ATTEMPTS})`);
 
     try {
       await sendToPrinter(ip, port, buf);
