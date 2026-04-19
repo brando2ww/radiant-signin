@@ -8,6 +8,7 @@ const {
   SUPABASE_ANON_KEY,
   ESTABLISHMENT_NAME = "Estabelecimento",
   BRIDGE_HTTP_PORT = "7777",
+  TENANT_USER_ID, // opcional: filtra reprocessamento on-boot por dono
 } = process.env;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
@@ -19,21 +20,30 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   realtime: { params: { eventsPerSecond: 10 } },
 });
 
+// ─── Estado interno (para /health) ───────────────────────────────────────
+const state = {
+  subscription_status: "connecting",
+  last_job_at: null,
+  last_print_at: null,
+  last_error: null,
+  jobs_processed: 0,
+  jobs_failed: 0,
+  started_at: new Date().toISOString(),
+};
+
 // ─── Utilidades ──────────────────────────────────────────────────────────
 const ts = () => new Date().toTimeString().slice(0, 8);
 const log = (...args) => console.log(`[${ts()}]`, ...args);
 
-const processedIds = new Set();
+const processedJobIds = new Set();
 function markProcessed(id) {
-  processedIds.add(id);
-  // Limpa IDs antigos para não crescer sem limite
-  if (processedIds.size > 5000) {
-    const arr = [...processedIds];
-    arr.slice(0, 2500).forEach((x) => processedIds.delete(x));
+  processedJobIds.add(id);
+  if (processedJobIds.size > 5000) {
+    const arr = [...processedJobIds];
+    arr.slice(0, 2500).forEach((x) => processedJobIds.delete(x));
   }
 }
 
-// Normaliza IPs: remove zeros à esquerda nos octetos (ex.: 192.168.03.95 → 192.168.3.95)
 function normalizeIp(ip) {
   if (!ip || typeof ip !== "string") return ip;
   const parts = ip.split(".");
@@ -52,15 +62,11 @@ function buildReceipt({ header, body, centerName }) {
   const text = (s) => chunks.push(Buffer.from(s, "utf8"));
   const line = () => push(LF);
 
-  // Init
   push(ESC, 0x40);
-  // Center align
   push(ESC, 0x61, 0x01);
-  // Double size
   push(GS, 0x21, 0x11);
   text(ESTABLISHMENT_NAME);
   line();
-  // Left align + normal
   push(ESC, 0x61, 0x00);
   push(GS, 0x21, 0x00);
   text("================================");
@@ -71,7 +77,6 @@ function buildReceipt({ header, body, centerName }) {
   });
   text("================================");
   line();
-  // Items (width 2x)
   body.forEach((item) => {
     push(GS, 0x21, 0x01);
     text(`${item.quantity}x ${String(item.product_name).toUpperCase()}`);
@@ -101,7 +106,6 @@ function buildReceipt({ header, body, centerName }) {
     line();
     push(ESC, 0x61, 0x00);
   }
-  // Feed + partial cut
   push(LF, LF, LF, LF);
   push(GS, 0x56, 0x41, 0x05);
 
@@ -124,95 +128,143 @@ function sendToPrinter(ip, port, payload) {
     socket.connect(port, ip, () => {
       socket.write(payload, (err) => {
         if (err) return finish(err);
-        // pequeno delay para garantir flush
         setTimeout(() => finish(), 200);
       });
     });
   });
 }
 
-// ─── Formatação do cupom a partir de uma linha da view ───────────────────
 function formatDateTime(d = new Date()) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-async function handleOrderItem(itemId) {
-  const { data, error } = await supabase
-    .from("vw_print_bridge_order_items")
-    .select("*")
-    .eq("id", itemId)
-    .maybeSingle();
-  if (error) {
-    log(`✗ Erro consultando vw_print_bridge_order_items (${itemId}): ${error.message}`);
-    return;
-  }
-  if (!data) {
-    log(`⚠ vw_print_bridge_order_items não retornou linha para id=${itemId} (sem acesso anon ou linha inexistente)`);
-    return;
-  }
-  await printRow(data, "order");
-}
+// ─── Processamento de Job ────────────────────────────────────────────────
+async function processJob(job) {
+  if (!job || !job.id) return;
+  if (processedJobIds.has(job.id)) return;
+  markProcessed(job.id);
 
-async function handleComandaItem(itemId) {
-  const { data, error } = await supabase
-    .from("vw_print_bridge_comanda_items")
-    .select("*")
-    .eq("id", itemId)
-    .maybeSingle();
-  if (error) {
-    log(`✗ Erro consultando vw_print_bridge_comanda_items (${itemId}): ${error.message}`);
-    return;
-  }
-  if (!data) {
-    log(`⚠ vw_print_bridge_comanda_items não retornou linha para id=${itemId} (sem acesso anon ou linha inexistente)`);
-    return;
-  }
-  log(`📄 Linha carregada da view: produto=${data.product_name}, centro=${data.center_name ?? "—"}, ip=${data.printer_ip ?? "—"}:${data.printer_port ?? 9100}`);
-  await printRow(data, "comanda");
-}
+  state.last_job_at = new Date().toISOString();
 
-async function printRow(row, kind) {
-  if (!row.printer_ip) {
-    log(`⚠ Item ${row.id} (${row.product_name}) sem printer_ip configurado (centro: ${row.center_name ?? "—"}). Ignorando.`);
+  // Marca como printing
+  await supabase
+    .from("pdv_print_jobs")
+    .update({ status: "printing", attempts: (job.attempts || 0) + 1 })
+    .eq("id", job.id);
+
+  if (!job.printer_ip) {
+    const msg = "sem impressora configurada";
+    log(`⚠ Job ${job.id} (${job.payload?.product_name}) sem printer_ip — falhando`);
+    await supabase
+      .from("pdv_print_jobs")
+      .update({ status: "failed", error_message: msg })
+      .eq("id", job.id);
+    state.jobs_failed += 1;
+    state.last_error = msg;
     return;
   }
-  const ip = normalizeIp(row.printer_ip);
-  if (ip !== row.printer_ip) {
-    log(`ℹ IP normalizado: ${row.printer_ip} → ${ip}`);
-  }
+
+  const ip = normalizeIp(job.printer_ip);
+  const port = job.printer_port || 9100;
+  const p = job.payload || {};
+  const kind = p.kind || job.source_kind || "comanda";
+
   const header = [
-    `Centro: ${row.center_name ?? "—"}`,
+    `Centro: ${job.center_name ?? "—"}`,
     kind === "order"
-      ? `Mesa: ${row.table_number ? `Mesa ${row.table_number}` : row.customer_name || "Balcão"}`
-      : `Comanda: ${row.customer_name || row.comanda_number}`,
-    kind === "order" ? `Pedido #${row.order_number}` : `Comanda #${row.comanda_number}`,
+      ? `Mesa: ${p.table_number ? `Mesa ${p.table_number}` : p.customer_name || "Balcão"}`
+      : `Comanda: ${p.customer_name || p.comanda_number}`,
+    kind === "order" ? `Pedido #${p.order_number}` : `Comanda #${p.comanda_number}`,
     formatDateTime(),
   ];
-  if (row.is_composite_child && row.parent_product_name) {
-    header.push(`+ Parte de: ${String(row.parent_product_name).toUpperCase()}`);
+  if (p.is_composite_child && p.parent_product_name) {
+    header.push(`+ Parte de: ${String(p.parent_product_name).toUpperCase()}`);
   }
-  const payload = buildReceipt({
+
+  const buf = buildReceipt({
     header,
-    body: [row],
-    centerName: row.center_name,
+    body: [{
+      product_name: p.product_name,
+      quantity: p.quantity,
+      notes: p.notes,
+      modifiers: p.modifiers,
+    }],
+    centerName: job.center_name,
   });
-  const port = row.printer_port || 9100;
-  log(
-    `→ ${kind === "order" ? "Pedido" : "Comanda"} ${row.order_number || row.comanda_number} | ${row.center_name} | ${row.quantity}x ${row.product_name} → ${ip}:${port}`,
-  );
+
+  log(`→ Job ${job.id} | ${job.center_name} | ${p.quantity}x ${p.product_name} → ${ip}:${port}`);
+
   try {
-    await sendToPrinter(ip, port, payload);
-    log(`✓ Impresso (${ip}) — item ${row.id}`);
+    await sendToPrinter(ip, port, buf);
+    await supabase
+      .from("pdv_print_jobs")
+      .update({ status: "printed", printed_at: new Date().toISOString(), error_message: null })
+      .eq("id", job.id);
+    state.jobs_processed += 1;
+    state.last_print_at = new Date().toISOString();
+    state.last_error = null;
+    log(`✓ Impresso (${ip}) — job ${job.id}`);
   } catch (err) {
-    log(`✗ Falha ao imprimir em ${ip}:${port} — ${err.message} (item ${row.id} / ${row.product_name})`);
+    const msg = err.message || String(err);
+    await supabase
+      .from("pdv_print_jobs")
+      .update({ status: "failed", error_message: msg })
+      .eq("id", job.id);
+    state.jobs_failed += 1;
+    state.last_error = msg;
+    log(`✗ Falha ${ip}:${port} — ${msg} (job ${job.id})`);
+  }
+}
+
+async function loadAndProcessJob(jobId) {
+  const { data, error } = await supabase
+    .from("pdv_print_jobs")
+    .select("*")
+    .eq("id", jobId)
+    .maybeSingle();
+  if (error) {
+    log(`✗ Erro carregando job ${jobId}: ${error.message}`);
+    return;
+  }
+  if (!data) {
+    log(`⚠ Job ${jobId} não encontrado`);
+    return;
+  }
+  await processJob(data);
+}
+
+// ─── Reprocessamento on-boot ─────────────────────────────────────────────
+async function reprocessPending() {
+  const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+  let q = supabase
+    .from("pdv_print_jobs")
+    .select("*")
+    .eq("status", "pending")
+    .gte("created_at", cutoff)
+    .order("created_at", { ascending: true })
+    .limit(200);
+  if (TENANT_USER_ID) q = q.eq("tenant_user_id", TENANT_USER_ID);
+
+  const { data, error } = await q;
+  if (error) {
+    log(`✗ Reprocessamento: ${error.message}`);
+    return;
+  }
+  if (!data || data.length === 0) {
+    log(`✓ Nenhum job pendente nas últimas 2h`);
+    return;
+  }
+  log(`⟳ Reprocessando ${data.length} job(s) pendente(s)...`);
+  for (const job of data) {
+    await processJob(job);
   }
 }
 
 // ─── Realtime com reconexão ──────────────────────────────────────────────
 let currentChannel = null;
-let reconnectDelay = 30000; // 30s base
-const MAX_DELAY = 5 * 60 * 1000; // 5min
+let reconnectDelay = 30000;
+const MAX_DELAY = 5 * 60 * 1000;
 
 function scheduleReconnect() {
   log(`⟳ Reconectando em ${Math.round(reconnectDelay / 1000)}s...`);
@@ -228,71 +280,28 @@ function connectRealtime() {
     currentChannel = null;
   }
   const name = `print-bridge-${Date.now()}`;
-  log(`→ Conectando Realtime (${name})...`);
+  log(`→ Conectando Realtime (${name}) — escutando pdv_print_jobs...`);
+  state.subscription_status = "connecting";
+
   const channel = supabase
     .channel(name)
     .on(
       "postgres_changes",
-      { event: "INSERT", schema: "public", table: "pdv_order_items" },
+      { event: "INSERT", schema: "public", table: "pdv_print_jobs" },
       (payload) => {
-        const id = payload?.new?.id;
-        const sentAt = payload?.new?.sent_to_kitchen_at;
-        if (!id || !sentAt || processedIds.has(id)) return;
-        markProcessed(id);
-        handleOrderItem(id).catch((e) => log(`✗ handleOrderItem: ${e.message}`));
-      },
-    )
-    .on(
-      "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "pdv_order_items" },
-      (payload) => {
-        const id = payload?.new?.id;
-        const oldSent = payload?.old?.sent_to_kitchen_at;
-        const newSent = payload?.new?.sent_to_kitchen_at;
-        // Só imprime na transição null → valor
-        if (!id || oldSent || !newSent || processedIds.has(id)) return;
-        markProcessed(id);
-        handleOrderItem(id).catch((e) => log(`✗ handleOrderItem (update): ${e.message}`));
-      },
-    )
-    .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "pdv_comanda_items" },
-      (payload) => {
-        const id = payload?.new?.id;
-        const sentAt = payload?.new?.sent_to_kitchen_at;
-        log(`📥 INSERT comanda_item ${id} sent_to_kitchen_at=${sentAt ?? "null"}`);
-        if (!id || !sentAt || processedIds.has(id)) {
-          if (processedIds.has(id)) log(`   ↳ ignorado (já processado)`);
-          else if (!sentAt) log(`   ↳ ignorado (sent_to_kitchen_at null)`);
-          return;
-        }
-        markProcessed(id);
-        handleComandaItem(id).catch((e) => log(`✗ handleComandaItem: ${e.message}`));
-      },
-    )
-    .on(
-      "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "pdv_comanda_items" },
-      (payload) => {
-        const id = payload?.new?.id;
-        const oldSent = payload?.old?.sent_to_kitchen_at;
-        const newSent = payload?.new?.sent_to_kitchen_at;
-        log(`📝 UPDATE comanda_item ${id} sent: ${oldSent ?? "null"} → ${newSent ?? "null"}`);
-        if (!id || oldSent || !newSent || processedIds.has(id)) {
-          if (processedIds.has(id)) log(`   ↳ ignorado (já processado)`);
-          else if (oldSent) log(`   ↳ ignorado (já tinha sent_to_kitchen_at antes)`);
-          else if (!newSent) log(`   ↳ ignorado (sent_to_kitchen_at continua null)`);
-          return;
-        }
-        markProcessed(id);
-        handleComandaItem(id).catch((e) => log(`✗ handleComandaItem (update): ${e.message}`));
+        const job = payload?.new;
+        if (!job || job.status !== "pending") return;
+        log(`📥 Novo job ${job.id} (${job.payload?.product_name}) status=${job.status}`);
+        processJob(job).catch((e) => log(`✗ processJob: ${e.message}`));
       },
     )
     .subscribe((status, err) => {
+      state.subscription_status = status;
       if (status === "SUBSCRIBED") {
         reconnectDelay = 30000;
-        log(`✓ Realtime conectado. Ouvindo INSERT/UPDATE em pdv_order_items e pdv_comanda_items (imprime quando sent_to_kitchen_at é setado).`);
+        log(`✓ Realtime conectado. Ouvindo INSERT em pdv_print_jobs.`);
+        // Após reconectar, reprocessa pendentes
+        reprocessPending().catch((e) => log(`✗ reprocessPending: ${e.message}`));
       } else if (status === "CHANNEL_ERROR" || status === "CLOSED" || status === "TIMED_OUT") {
         log(`✗ Realtime ${status}${err ? `: ${err.message}` : ""}`);
         scheduleReconnect();
@@ -301,7 +310,18 @@ function connectRealtime() {
   currentChannel = channel;
 }
 
-// ─── HTTP server local (test-print / health) ─────────────────────────────
+// ─── HTTP server local ───────────────────────────────────────────────────
+async function getPendingCount() {
+  let q = supabase
+    .from("pdv_print_jobs")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
+  if (TENANT_USER_ID) q = q.eq("tenant_user_id", TENANT_USER_ID);
+  const { count, error } = await q;
+  if (error) return null;
+  return count ?? 0;
+}
+
 function startHttpServer() {
   const server = http.createServer((req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -311,25 +331,72 @@ function startHttpServer() {
       res.writeHead(204);
       return res.end();
     }
+
     if (req.method === "GET" && req.url === "/health") {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      return res.end(JSON.stringify({ status: "ok", establishment: ESTABLISHMENT_NAME }));
+      getPendingCount().then((pending) => {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({
+          status: "ok",
+          establishment: ESTABLISHMENT_NAME,
+          subscription_status: state.subscription_status,
+          last_job_at: state.last_job_at,
+          last_print_at: state.last_print_at,
+          last_error: state.last_error,
+          jobs_processed: state.jobs_processed,
+          jobs_failed: state.jobs_failed,
+          pending_jobs_count: pending,
+          started_at: state.started_at,
+        }));
+      });
+      return;
     }
+
     if (req.method === "POST" && req.url === "/reprint") {
       let buf = "";
       req.on("data", (chunk) => (buf += chunk));
       req.on("end", async () => {
         try {
-          const { itemId, kind = "comanda" } = JSON.parse(buf || "{}");
-          if (!itemId) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            return res.end(JSON.stringify({ ok: false, error: "itemId obrigatório" }));
+          const body = JSON.parse(buf || "{}");
+          const { jobId, itemId, kind = "comanda" } = body;
+
+          if (jobId) {
+            // Reenfileira job existente
+            await supabase
+              .from("pdv_print_jobs")
+              .update({ status: "pending", error_message: null })
+              .eq("id", jobId);
+            processedJobIds.delete(jobId);
+            await loadAndProcessJob(jobId);
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ ok: true, jobId }));
           }
-          processedIds.delete(itemId);
-          if (kind === "order") await handleOrderItem(itemId);
-          else await handleComandaItem(itemId);
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ ok: true }));
+
+          if (itemId) {
+            // Compatibilidade: cria/processa job buscando o último com aquele source_item_id
+            const { data } = await supabase
+              .from("pdv_print_jobs")
+              .select("*")
+              .eq("source_item_id", itemId)
+              .eq("source_kind", kind)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (!data) {
+              res.writeHead(404, { "Content-Type": "application/json" });
+              return res.end(JSON.stringify({ ok: false, error: "Nenhum job encontrado para esse itemId" }));
+            }
+            await supabase
+              .from("pdv_print_jobs")
+              .update({ status: "pending", error_message: null })
+              .eq("id", data.id);
+            processedJobIds.delete(data.id);
+            await loadAndProcessJob(data.id);
+            res.writeHead(200, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ ok: true, jobId: data.id }));
+          }
+
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: "jobId ou itemId obrigatório" }));
         } catch (err) {
           log(`✗ Reprint falhou: ${err.message}`);
           res.writeHead(200, { "Content-Type": "application/json" });
@@ -338,6 +405,7 @@ function startHttpServer() {
       });
       return;
     }
+
     if (req.method === "POST" && req.url === "/test-print") {
       let buf = "";
       req.on("data", (chunk) => (buf += chunk));
@@ -353,7 +421,7 @@ function startHttpServer() {
             body: [{ product_name: "Print Bridge OK", quantity: 1 }],
             centerName,
           });
-          await sendToPrinter(ip, port, payload);
+          await sendToPrinter(normalizeIp(ip), port, payload);
           log(`✓ Teste impresso em ${ip}:${port}`);
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ ok: true }));
@@ -365,16 +433,18 @@ function startHttpServer() {
       });
       return;
     }
+
     res.writeHead(404);
     res.end();
   });
   server.listen(Number(BRIDGE_HTTP_PORT), "127.0.0.1", () => {
-    log(`HTTP local em http://localhost:${BRIDGE_HTTP_PORT} (health, test-print)`);
+    log(`HTTP local em http://localhost:${BRIDGE_HTTP_PORT} (health, test-print, reprint)`);
   });
 }
 
 // ─── Boot ────────────────────────────────────────────────────────────────
 log(`=== Velara Print Bridge — ${ESTABLISHMENT_NAME} ===`);
+if (TENANT_USER_ID) log(`Filtro de tenant: ${TENANT_USER_ID}`);
 startHttpServer();
 connectRealtime();
 
