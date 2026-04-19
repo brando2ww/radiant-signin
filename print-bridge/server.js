@@ -143,7 +143,14 @@ async function handleOrderItem(itemId) {
     .select("*")
     .eq("id", itemId)
     .maybeSingle();
-  if (error || !data) return;
+  if (error) {
+    log(`✗ Erro consultando vw_print_bridge_order_items (${itemId}): ${error.message}`);
+    return;
+  }
+  if (!data) {
+    log(`⚠ vw_print_bridge_order_items não retornou linha para id=${itemId} (sem acesso anon ou linha inexistente)`);
+    return;
+  }
   await printRow(data, "order");
 }
 
@@ -153,7 +160,15 @@ async function handleComandaItem(itemId) {
     .select("*")
     .eq("id", itemId)
     .maybeSingle();
-  if (error || !data) return;
+  if (error) {
+    log(`✗ Erro consultando vw_print_bridge_comanda_items (${itemId}): ${error.message}`);
+    return;
+  }
+  if (!data) {
+    log(`⚠ vw_print_bridge_comanda_items não retornou linha para id=${itemId} (sem acesso anon ou linha inexistente)`);
+    return;
+  }
+  log(`📄 Linha carregada da view: produto=${data.product_name}, centro=${data.center_name ?? "—"}, ip=${data.printer_ip ?? "—"}:${data.printer_port ?? 9100}`);
   await printRow(data, "comanda");
 }
 
