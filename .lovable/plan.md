@@ -1,105 +1,57 @@
 
 
-## Plano: Fila de impressão `pdv_print_jobs` + bridge resiliente
+## Plano: serializar impressão por IP + retry automático
 
-### 1. Migration — criar fila e infraestrutura
+### 1. Fila por impressora (serial dentro do mesmo IP)
 
-Nova tabela `pdv_print_jobs` com snapshot completo:
+Em `print-bridge/server.js`, criar um mapa `printerQueues = Map<ip, Promise>`.
 
-- `id uuid pk default gen_random_uuid()`
-- `tenant_user_id uuid not null` — dono do estabelecimento
-- `source_kind text not null check (source_kind in ('comanda','order'))`
-- `source_item_id uuid not null` — id do item original
-- `center_id uuid` / `center_name text`
-- `printer_ip text` / `printer_port int`
-- `payload jsonb not null` — snapshot: product_name, quantity, notes, modifiers, comanda_number, customer_name, order_number, table_number, parent_product_name, is_composite_child
-- `status text not null default 'pending'` — pending, printing, printed, failed
-- `attempts int not null default 0`
-- `error_message text`
-- `created_at timestamptz default now()`
-- `printed_at timestamptz`
+Em `processJob`, antes de chamar `sendToPrinter`:
+- chave = `ip:port`
+- encadear o trabalho na promise da fila daquela impressora:
+  ```
+  const prev = printerQueues.get(key) || Promise.resolve();
+  const next = prev.then(() => doPrint()).catch(() => {});
+  printerQueues.set(key, next);
+  await next;
+  ```
+- isso garante 1 conexão TCP por vez **por impressora**, mas mantém paralelismo entre impressoras diferentes (COZINHA1 e SASHIMI continuam imprimindo ao mesmo tempo)
 
-Índices:
-- `idx_print_jobs_status_created on (status, created_at)`
-- `idx_print_jobs_tenant on (tenant_user_id)`
+### 2. Retry automático com backoff
 
-RLS:
-- INSERT permitido para `authenticated` quando `tenant_user_id = auth.uid()` OU `is_establishment_member(tenant_user_id)`
-- SELECT permitido para `anon` e `authenticated` (bridge usa anon key)
-- UPDATE permitido para `anon` e `authenticated` (bridge marca printed/failed)
+Constantes:
+- `MAX_ATTEMPTS = 3`
+- delays: 1s, 3s
 
-Realtime:
-- `ALTER PUBLICATION supabase_realtime ADD TABLE pdv_print_jobs`
-- `ALTER TABLE pdv_print_jobs REPLICA IDENTITY FULL`
+Em `processJob` no bloco de erro TCP:
+- se `job.attempts < MAX_ATTEMPTS`: marcar `status='pending'` (não `failed`), aguardar delay, reenfileirar (chamar `processJob` de novo)
+- se atingiu max: marcar `failed` como hoje
 
-### 2. App — gravar jobs no envio para cozinha
+Erros que **não** devem retry: "sem impressora configurada" (continua `failed` na hora).
 
-Em `src/hooks/use-pdv-comandas.ts`, dentro de `sendToKitchenMutation`:
+### 3. Pequena pausa entre prints na mesma impressora
 
-Após o `UPDATE` de `sent_to_kitchen_at`:
-1. Consultar a `vw_print_bridge_comanda_items` para os ids enviados (pais + filhos)
-2. Para cada linha retornada, montar o payload snapshot
-3. `INSERT` em `pdv_print_jobs` (uma linha por item com impressora)
-4. Itens sem `printer_ip` viram job com `status='failed'` + `error_message='sem impressora configurada'` (para ficarem visíveis no painel)
+Após `sendToPrinter` resolver com sucesso, aguardar 300ms antes de liberar a fila daquele IP. Dá tempo da impressora térmica fechar o socket e processar buffer interno antes da próxima conexão.
 
-Mesmo tratamento será replicado no fluxo equivalente de `pdv_order_items` se houver hook similar usado pelo balcão/salão.
+### 4. Log mais claro
 
-### 3. Bridge — escutar fila e reprocessar
+- `🔁 Retry 1/3 do job ... em 1s` quando reagendar
+- `⏳ Aguardando fila de 192.168.3.95 (2 jobs à frente)` quando empilhar
 
-Em `print-bridge/server.js`:
+### 5. Validação
 
-**Subscribe**:
-- Trocar assinatura de `pdv_comanda_items`/`pdv_order_items` por `pdv_print_jobs` (INSERT, status='pending')
-- Manter conexão Realtime existente apenas como fallback opcional (ou remover)
+1. Enviar comanda com 5+ itens na mesma impressora → todos imprimem em sequência, zero timeout
+2. Enviar comanda com itens em impressoras diferentes → impressão paralela mantida
+3. Desligar uma impressora → 3 tentativas com backoff, depois `failed`
+4. Religar impressora e usar `/reprint` → imprime normalmente
 
-**Processamento de job**:
-1. Marcar `status='printing'`, `attempts = attempts + 1`
-2. Normalizar IP (já existe), montar receipt a partir do `payload`
-3. TCP 9100
-4. Sucesso → `status='printed'`, `printed_at=now()`
-5. Falha → `status='failed'`, `error_message=...`
+### Arquivo
 
-**Reprocessamento on-boot**:
-- Ao iniciar, buscar `status='pending'` com `created_at > now() - interval '2 hours'` filtrando pelo `tenant_user_id` do estabelecimento (via `ESTABLISHMENT_NAME` resolvido)
-- Processar em ordem cronológica
-
-**Estado interno** (em memória) para `/health`:
-- `last_job_at`, `last_print_at`, `last_error`, `jobs_processed`, `subscription_status`
-
-**Endpoint `/health`** retorna:
-```json
-{
-  "status": "ok",
-  "subscription_status": "subscribed",
-  "last_job_at": "...",
-  "last_print_at": "...",
-  "last_error": null,
-  "jobs_processed": 12,
-  "pending_jobs_count": 0
-}
-```
-- `pending_jobs_count` consultado on-demand na fila
-
-**Endpoint `/reprint`**: aceitar `{ jobId }` para reenfileirar um job específico (volta para pending).
-
-### 4. Validação ponta-a-ponta
-
-1. Enviar item simples → conferir job criado, evento Realtime, impressão, `status='printed'`
-2. Enviar produto composto → N jobs (1 por filho com impressora), todos impressos
-3. Parar bridge, enviar comanda, religar bridge → reprocessamento automático imprime
-4. Item sem impressora → job `failed` com mensagem clara
-
-### Arquivos
-
-- `supabase/migrations/...sql` — tabela, RLS, índices, publication
-- `src/hooks/use-pdv-comandas.ts` — insert na fila após sendToKitchen
-- `print-bridge/server.js` — assinar fila, reprocessar on-boot, `/health` enriquecido, `/reprint` por jobId
-- `print-bridge/README.md` — atualizar fluxo
+- `print-bridge/server.js` — adicionar fila por IP, retry, delay pós-print
 
 ### Resultado esperado
 
-- Envio para cozinha sempre gera job persistente
-- Bridge offline não perde comanda (reprocessa em até 2h)
-- `/health` mostra status real e contagem de pendentes
-- Falhas ficam rastreáveis por job no banco
+- Fim dos timeouts quando a comanda tem múltiplos itens na mesma impressora
+- Falhas transitórias (rede momentânea) se autorrecuperam sem ação manual
+- Throughput total mantido (impressoras diferentes continuam paralelas)
 
