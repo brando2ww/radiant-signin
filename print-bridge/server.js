@@ -84,10 +84,16 @@ const ESC = 0x1b;
 const GS = 0x1d;
 const LF = 0x0a;
 
+function stripAccents(s) {
+  return String(s ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function buildReceipt({ header, body, centerName }) {
   const chunks = [];
   const push = (...bytes) => chunks.push(Buffer.from(bytes));
-  const text = (s) => chunks.push(Buffer.from(s, "utf8"));
+  const text = (s) => chunks.push(Buffer.from(stripAccents(s), "utf8"));
   const line = () => push(LF);
 
   push(ESC, 0x40);
