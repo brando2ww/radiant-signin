@@ -366,7 +366,7 @@ export function usePDVComandas() {
     },
   });
 
-  // Send items to kitchen (also includes composite children)
+  // Send items to kitchen (also includes composite children) + enqueue print jobs
   const sendToKitchenMutation = useMutation({
     mutationFn: async (itemIds: string[]) => {
       if (itemIds.length === 0) return;
@@ -391,6 +391,55 @@ export function usePDVComandas() {
         .in("id", allIds);
 
       if (error) throw error;
+
+      // Enfileira jobs de impressão (snapshot via view)
+      const ownerId = visibleUserId || user?.id;
+      if (!ownerId) return;
+
+      const { data: viewRows, error: viewError } = await supabase
+        .from("vw_print_bridge_comanda_items")
+        .select("*")
+        .in("id", allIds);
+
+      if (viewError) {
+        toast.error("Erro ao montar fila de impressão: " + viewError.message);
+        return;
+      }
+
+      const jobs = (viewRows ?? []).map((row: any) => {
+        const hasPrinter = !!row.printer_ip;
+        return {
+          tenant_user_id: ownerId,
+          source_kind: "comanda" as const,
+          source_item_id: row.id,
+          center_id: row.production_center_id,
+          center_name: row.center_name,
+          printer_ip: row.printer_ip,
+          printer_port: row.printer_port || 9100,
+          payload: {
+            product_name: row.product_name,
+            quantity: row.quantity,
+            notes: row.notes,
+            modifiers: row.modifiers,
+            comanda_number: row.comanda_number,
+            customer_name: row.customer_name,
+            parent_product_name: row.parent_product_name,
+            is_composite_child: row.is_composite_child,
+            kind: "comanda",
+          },
+          status: hasPrinter ? "pending" : "failed",
+          error_message: hasPrinter ? null : "sem impressora configurada",
+        };
+      });
+
+      if (jobs.length > 0) {
+        const { error: jobsError } = await supabase
+          .from("pdv_print_jobs")
+          .insert(jobs);
+        if (jobsError) {
+          toast.error("Erro ao criar jobs de impressão: " + jobsError.message);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pdv-comanda-items"] });

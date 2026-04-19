@@ -4144,6 +4144,57 @@ export type Database = {
           },
         ]
       }
+      pdv_print_jobs: {
+        Row: {
+          attempts: number
+          center_id: string | null
+          center_name: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          payload: Json
+          printed_at: string | null
+          printer_ip: string | null
+          printer_port: number | null
+          source_item_id: string
+          source_kind: string
+          status: string
+          tenant_user_id: string
+        }
+        Insert: {
+          attempts?: number
+          center_id?: string | null
+          center_name?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload: Json
+          printed_at?: string | null
+          printer_ip?: string | null
+          printer_port?: number | null
+          source_item_id: string
+          source_kind: string
+          status?: string
+          tenant_user_id: string
+        }
+        Update: {
+          attempts?: number
+          center_id?: string | null
+          center_name?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json
+          printed_at?: string | null
+          printer_ip?: string | null
+          printer_port?: number | null
+          source_item_id?: string
+          source_kind?: string
+          status?: string
+          tenant_user_id?: string
+        }
+        Relationships: []
+      }
       pdv_product_compositions: {
         Row: {
           child_product_id: string

@@ -8,15 +8,19 @@ em cada centro.
 ## Arquitetura
 
 ```
-Tablet do garçom → INSERT em pdv_order_items / pdv_comanda_items (com production_center_id)
-                         ↓ Supabase Realtime (WebSocket)
-                 Print Bridge (PC do caixa)
-                         ↓ TCP :9100 (ESC/POS)
-                 Impressora térmica do centro
+Tablet do garçom → UPDATE pdv_comanda_items.sent_to_kitchen_at
+                 → INSERT em pdv_print_jobs (snapshot do item)
+                          ↓ Supabase Realtime (WebSocket)
+                  Print Bridge (PC do caixa)
+                          ↓ TCP :9100 (ESC/POS)
+                  Impressora térmica do centro
+                          ↓ UPDATE pdv_print_jobs.status = 'printed'|'failed'
 ```
 
-O Print Bridge nunca é chamado diretamente pelo tablet. Ele reage a inserções no
-banco, então funciona mesmo que o tablet perca conexão após o envio.
+A fila `pdv_print_jobs` é a fonte de verdade da impressão:
+- Cada item enviado para cozinha vira um job com snapshot completo
+- O bridge marca como `printing` → `printed` ou `failed`
+- Se o bridge estiver offline, ao voltar reprocessa jobs `pending` das últimas 2h
 
 ## Requisitos
 
