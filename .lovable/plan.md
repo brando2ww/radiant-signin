@@ -1,57 +1,48 @@
 
 
-## Plano: serializar impressão por IP + retry automático
+## Plano: remover acentos antes de imprimir
 
-### 1. Fila por impressora (serial dentro do mesmo IP)
+Solução mais simples: normalizar o texto para ASCII no bridge antes de enviar para a impressora. Sem dependências novas, sem mexer em code page.
 
-Em `print-bridge/server.js`, criar um mapa `printerQueues = Map<ip, Promise>`.
+### Mudança em `print-bridge/server.js`
 
-Em `processJob`, antes de chamar `sendToPrinter`:
-- chave = `ip:port`
-- encadear o trabalho na promise da fila daquela impressora:
-  ```
-  const prev = printerQueues.get(key) || Promise.resolve();
-  const next = prev.then(() => doPrint()).catch(() => {});
-  printerQueues.set(key, next);
-  await next;
-  ```
-- isso garante 1 conexão TCP por vez **por impressora**, mas mantém paralelismo entre impressoras diferentes (COZINHA1 e SASHIMI continuam imprimindo ao mesmo tempo)
+Adicionar função utilitária:
+```js
+function stripAccents(s) {
+  return String(s)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+```
 
-### 2. Retry automático com backoff
+Trocar a função `text(s)` usada em `buildReceipt` para passar pelo `stripAccents` antes de gerar o Buffer UTF-8:
+```js
+const text = (s) => chunks.push(Buffer.from(stripAccents(s), "utf8"));
+```
 
-Constantes:
-- `MAX_ATTEMPTS = 3`
-- delays: 1s, 3s
+Aplicar a mesma normalização em qualquer campo do payload que vire texto impresso (product_name, notes, customer_name, comanda_number, center_name, parent_product_name).
 
-Em `processJob` no bloco de erro TCP:
-- se `job.attempts < MAX_ATTEMPTS`: marcar `status='pending'` (não `failed`), aguardar delay, reenfileirar (chamar `processJob` de novo)
-- se atingiu max: marcar `failed` como hoje
+### Mudança em `print-bridge/test-print.js`
 
-Erros que **não** devem retry: "sem impressora configurada" (continua `failed` na hora).
+Mesma função `stripAccents` + mesmo wrapper em `text()` para o teste refletir o comportamento real.
 
-### 3. Pequena pausa entre prints na mesma impressora
+### Resultado
 
-Após `sendToPrinter` resolver com sucesso, aguardar 300ms antes de liberar a fila daquele IP. Dá tempo da impressora térmica fechar o socket e processar buffer interno antes da próxima conexão.
+- "Água sem Gás" → `Agua sem Gas`
+- "Sequência" → `Sequencia`
+- "Ação" → `Acao`
+- "Coração" → `Coracao`
+- Cedilha (ç) e til (ã, õ) viram c/a/o
+- Sem caracteres estranhos no papel
 
-### 4. Log mais claro
+### Ação do usuário após deploy
 
-- `🔁 Retry 1/3 do job ... em 1s` quando reagendar
-- `⏳ Aguardando fila de 192.168.3.95 (2 jobs à frente)` quando empilhar
+1. Substituir `server.js` e `test-print.js` no PC do bridge
+2. `pm2 restart velara-print-bridge`
+3. Reenviar uma comanda de teste com acentos
 
-### 5. Validação
+### Arquivos
 
-1. Enviar comanda com 5+ itens na mesma impressora → todos imprimem em sequência, zero timeout
-2. Enviar comanda com itens em impressoras diferentes → impressão paralela mantida
-3. Desligar uma impressora → 3 tentativas com backoff, depois `failed`
-4. Religar impressora e usar `/reprint` → imprime normalmente
-
-### Arquivo
-
-- `print-bridge/server.js` — adicionar fila por IP, retry, delay pós-print
-
-### Resultado esperado
-
-- Fim dos timeouts quando a comanda tem múltiplos itens na mesma impressora
-- Falhas transitórias (rede momentânea) se autorrecuperam sem ação manual
-- Throughput total mantido (impressoras diferentes continuam paralelas)
+- `print-bridge/server.js` — adicionar `stripAccents` e aplicar em `text()`
+- `print-bridge/test-print.js` — mesma normalização
 
