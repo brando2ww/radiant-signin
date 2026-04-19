@@ -33,6 +33,14 @@ function markProcessed(id) {
   }
 }
 
+// Normaliza IPs: remove zeros à esquerda nos octetos (ex.: 192.168.03.95 → 192.168.3.95)
+function normalizeIp(ip) {
+  if (!ip || typeof ip !== "string") return ip;
+  const parts = ip.split(".");
+  if (parts.length !== 4) return ip;
+  return parts.map((p) => String(parseInt(p, 10))).join(".");
+}
+
 // ─── ESC/POS ─────────────────────────────────────────────────────────────
 const ESC = 0x1b;
 const GS = 0x1d;
@@ -151,8 +159,12 @@ async function handleComandaItem(itemId) {
 
 async function printRow(row, kind) {
   if (!row.printer_ip) {
-    log(`⚠ Item ${row.id} sem printer_ip configurado (centro: ${row.center_name ?? "—"}). Ignorando.`);
+    log(`⚠ Item ${row.id} (${row.product_name}) sem printer_ip configurado (centro: ${row.center_name ?? "—"}). Ignorando.`);
     return;
+  }
+  const ip = normalizeIp(row.printer_ip);
+  if (ip !== row.printer_ip) {
+    log(`ℹ IP normalizado: ${row.printer_ip} → ${ip}`);
   }
   const header = [
     `Centro: ${row.center_name ?? "—"}`,
@@ -172,13 +184,13 @@ async function printRow(row, kind) {
   });
   const port = row.printer_port || 9100;
   log(
-    `${kind === "order" ? "Pedido" : "Comanda"} ${row.order_number || row.comanda_number} — ${row.center_name} — 1 item → Imprimindo em ${row.printer_ip}:${port}`,
+    `→ ${kind === "order" ? "Pedido" : "Comanda"} ${row.order_number || row.comanda_number} | ${row.center_name} | ${row.quantity}x ${row.product_name} → ${ip}:${port}`,
   );
   try {
-    await sendToPrinter(row.printer_ip, port, payload);
-    log(`✓ Impresso com sucesso (${row.printer_ip})`);
+    await sendToPrinter(ip, port, payload);
+    log(`✓ Impresso (${ip}) — item ${row.id}`);
   } catch (err) {
-    log(`✗ Erro ao imprimir em ${row.printer_ip}: ${err.message}`);
+    log(`✗ Falha ao imprimir em ${ip}:${port} — ${err.message} (item ${row.id} / ${row.product_name})`);
   }
 }
 
@@ -234,7 +246,12 @@ function connectRealtime() {
       (payload) => {
         const id = payload?.new?.id;
         const sentAt = payload?.new?.sent_to_kitchen_at;
-        if (!id || !sentAt || processedIds.has(id)) return;
+        log(`📥 INSERT comanda_item ${id} sent_to_kitchen_at=${sentAt ?? "null"}`);
+        if (!id || !sentAt || processedIds.has(id)) {
+          if (processedIds.has(id)) log(`   ↳ ignorado (já processado)`);
+          else if (!sentAt) log(`   ↳ ignorado (sent_to_kitchen_at null)`);
+          return;
+        }
         markProcessed(id);
         handleComandaItem(id).catch((e) => log(`✗ handleComandaItem: ${e.message}`));
       },
@@ -246,7 +263,13 @@ function connectRealtime() {
         const id = payload?.new?.id;
         const oldSent = payload?.old?.sent_to_kitchen_at;
         const newSent = payload?.new?.sent_to_kitchen_at;
-        if (!id || oldSent || !newSent || processedIds.has(id)) return;
+        log(`📝 UPDATE comanda_item ${id} sent: ${oldSent ?? "null"} → ${newSent ?? "null"}`);
+        if (!id || oldSent || !newSent || processedIds.has(id)) {
+          if (processedIds.has(id)) log(`   ↳ ignorado (já processado)`);
+          else if (oldSent) log(`   ↳ ignorado (já tinha sent_to_kitchen_at antes)`);
+          else if (!newSent) log(`   ↳ ignorado (sent_to_kitchen_at continua null)`);
+          return;
+        }
         markProcessed(id);
         handleComandaItem(id).catch((e) => log(`✗ handleComandaItem (update): ${e.message}`));
       },
@@ -276,6 +299,29 @@ function startHttpServer() {
     if (req.method === "GET" && req.url === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
       return res.end(JSON.stringify({ status: "ok", establishment: ESTABLISHMENT_NAME }));
+    }
+    if (req.method === "POST" && req.url === "/reprint") {
+      let buf = "";
+      req.on("data", (chunk) => (buf += chunk));
+      req.on("end", async () => {
+        try {
+          const { itemId, kind = "comanda" } = JSON.parse(buf || "{}");
+          if (!itemId) {
+            res.writeHead(400, { "Content-Type": "application/json" });
+            return res.end(JSON.stringify({ ok: false, error: "itemId obrigatório" }));
+          }
+          processedIds.delete(itemId);
+          if (kind === "order") await handleOrderItem(itemId);
+          else await handleComandaItem(itemId);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: true }));
+        } catch (err) {
+          log(`✗ Reprint falhou: ${err.message}`);
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ ok: false, error: err.message }));
+        }
+      });
+      return;
     }
     if (req.method === "POST" && req.url === "/test-print") {
       let buf = "";
