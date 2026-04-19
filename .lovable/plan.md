@@ -1,96 +1,105 @@
 
-## Diagnóstico
 
-O frontend está funcionando no ponto principal:
-- o item é adicionado
-- o botão **Enviar para Cozinha** aparece
-- o `UPDATE` de `sent_to_kitchen_at` é disparado
-- o roteamento por `production_center_id` está sendo resolvido
+## Plano: Fila de impressão `pdv_print_jobs` + bridge resiliente
 
-O bloqueio mais provável agora está no **Print Bridge lendo os dados para imprimir**.
+### 1. Migration — criar fila e infraestrutura
 
-## Causa mais provável
+Nova tabela `pdv_print_jobs` com snapshot completo:
 
-Há uma inconsistência entre o modelo de acesso do bridge e as views de impressão:
+- `id uuid pk default gen_random_uuid()`
+- `tenant_user_id uuid not null` — dono do estabelecimento
+- `source_kind text not null check (source_kind in ('comanda','order'))`
+- `source_item_id uuid not null` — id do item original
+- `center_id uuid` / `center_name text`
+- `printer_ip text` / `printer_port int`
+- `payload jsonb not null` — snapshot: product_name, quantity, notes, modifiers, comanda_number, customer_name, order_number, table_number, parent_product_name, is_composite_child
+- `status text not null default 'pending'` — pending, printing, printed, failed
+- `attempts int not null default 0`
+- `error_message text`
+- `created_at timestamptz default now()`
+- `printed_at timestamptz`
 
-- `print-bridge/server.js` usa apenas `SUPABASE_ANON_KEY`
-- o README também assume bridge com **anon key**
-- porém as views `vw_print_bridge_comanda_items` e `vw_print_bridge_order_items` foram marcadas com `security_invoker = true`
-- e as tabelas-base (`pdv_comandas`, `pdv_comanda_items`, etc.) têm políticas RLS voltadas a `authenticated`, não a `anon`
+Índices:
+- `idx_print_jobs_status_created on (status, created_at)`
+- `idx_print_jobs_tenant on (tenant_user_id)`
 
-Na prática, isso pode fazer o bridge:
-1. receber o evento Realtime
-2. tentar buscar a linha na view
-3. receber `null`/sem acesso
-4. sair silenciosamente sem imprimir
+RLS:
+- INSERT permitido para `authenticated` quando `tenant_user_id = auth.uid()` OU `is_establishment_member(tenant_user_id)`
+- SELECT permitido para `anon` e `authenticated` (bridge usa anon key)
+- UPDATE permitido para `anon` e `authenticated` (bridge marca printed/failed)
 
-Isso explica bem o sintoma: **“nenhuma comanda sequer foi impressa”**.
+Realtime:
+- `ALTER PUBLICATION supabase_realtime ADD TABLE pdv_print_jobs`
+- `ALTER TABLE pdv_print_jobs REPLICA IDENTITY FULL`
 
-## Plano
+### 2. App — gravar jobs no envio para cozinha
 
-### 1. Corrigir o acesso das views do Print Bridge
-Criar uma migration para ajustar `vw_print_bridge_comanda_items` e `vw_print_bridge_order_items` para o modelo correto do bridge local:
+Em `src/hooks/use-pdv-comandas.ts`, dentro de `sendToKitchenMutation`:
 
-- remover a dependência de `security_invoker = true` para essas views
-- manter apenas os campos mínimos necessários para impressão
-- garantir `GRANT SELECT` nas views para `anon` e `authenticated`
+Após o `UPDATE` de `sent_to_kitchen_at`:
+1. Consultar a `vw_print_bridge_comanda_items` para os ids enviados (pais + filhos)
+2. Para cada linha retornada, montar o payload snapshot
+3. `INSERT` em `pdv_print_jobs` (uma linha por item com impressora)
+4. Itens sem `printer_ip` viram job com `status='failed'` + `error_message='sem impressora configurada'` (para ficarem visíveis no painel)
 
-Objetivo: permitir que o bridge com `anon key` leia somente os dados de impressão, sem depender do RLS das tabelas operacionais.
+Mesmo tratamento será replicado no fluxo equivalente de `pdv_order_items` se houver hook similar usado pelo balcão/salão.
 
-### 2. Melhorar o diagnóstico no `print-bridge/server.js`
-Hoje o bridge falha “mudo” quando a view não retorna linha.
+### 3. Bridge — escutar fila e reprocessar
 
-Vou ajustar para:
-- logar erro da consulta nas views
-- logar quando `handleComandaItem` / `handleOrderItem` não encontra dados
-- diferenciar claramente:
-  - sem acesso / sem linha
-  - sem `printer_ip`
-  - falha TCP
-  - evento ignorado por dedupe
+Em `print-bridge/server.js`:
 
-Assim, da próxima vez o log mostrará exatamente onde parou.
+**Subscribe**:
+- Trocar assinatura de `pdv_comanda_items`/`pdv_order_items` por `pdv_print_jobs` (INSERT, status='pending')
+- Manter conexão Realtime existente apenas como fallback opcional (ou remover)
 
-### 3. Manter o reforço de IP normalizado
-A normalização de IP com zeros à esquerda continua correta e deve ser mantida, porque alguns centros tinham IP inválido para TCP.
+**Processamento de job**:
+1. Marcar `status='printing'`, `attempts = attempts + 1`
+2. Normalizar IP (já existe), montar receipt a partir do `payload`
+3. TCP 9100
+4. Sucesso → `status='printed'`, `printed_at=now()`
+5. Falha → `status='failed'`, `error_message=...`
 
-Ela não resolve sozinha o problema atual, mas evita o próximo bloqueio depois que a leitura da view voltar a funcionar.
+**Reprocessamento on-boot**:
+- Ao iniciar, buscar `status='pending'` com `created_at > now() - interval '2 hours'` filtrando pelo `tenant_user_id` do estabelecimento (via `ESTABLISHMENT_NAME` resolvido)
+- Processar em ordem cronológica
 
-### 4. Validar ponta a ponta
-Depois da correção:
-- testar 1 item simples
-- testar 1 produto composto
-- confirmar nos logs do bridge:
-  - evento `UPDATE` recebido
-  - linha da view carregada
-  - IP/porta resolvidos
-  - tentativa de impressão por TCP
-  - sucesso ou erro explícito
+**Estado interno** (em memória) para `/health`:
+- `last_job_at`, `last_print_at`, `last_error`, `jobs_processed`, `subscription_status`
 
-### 5. Reinício obrigatório do bridge local
-Como o bridge roda no PC do estabelecimento, após a atualização será necessário:
-- atualizar o `print-bridge/server.js` local
-- reiniciar o serviço (`pm2 restart velara-print-bridge` ou `npm start`)
-
-## Arquivos envolvidos
-
-- `supabase/migrations/...sql` — ajustar acesso das views `vw_print_bridge_*`
-- `print-bridge/server.js` — logs e diagnóstico de consulta/impressão
-
-## Detalhes técnicos
-
-```text
-Garçom
-  -> UPDATE pdv_comanda_items.sent_to_kitchen_at
-  -> Realtime chega no Print Bridge
-  -> Bridge consulta vw_print_bridge_comanda_items(id)
-  -> hoje: consulta pode voltar vazia por anon + security_invoker + RLS
-  -> bridge sai sem imprimir
+**Endpoint `/health`** retorna:
+```json
+{
+  "status": "ok",
+  "subscription_status": "subscribed",
+  "last_job_at": "...",
+  "last_print_at": "...",
+  "last_error": null,
+  "jobs_processed": 12,
+  "pending_jobs_count": 0
+}
 ```
+- `pending_jobs_count` consultado on-demand na fila
 
-## Resultado esperado
+**Endpoint `/reprint`**: aceitar `{ jobId }` para reenfileirar um job específico (volta para pending).
 
-Após a correção:
-- o bridge local conseguirá ler a linha da view com a `anon key`
-- itens enviados para a cozinha voltarão a imprimir
-- se houver falha restante (IP, porta, rede ou impressora), o motivo aparecerá claramente no log
+### 4. Validação ponta-a-ponta
+
+1. Enviar item simples → conferir job criado, evento Realtime, impressão, `status='printed'`
+2. Enviar produto composto → N jobs (1 por filho com impressora), todos impressos
+3. Parar bridge, enviar comanda, religar bridge → reprocessamento automático imprime
+4. Item sem impressora → job `failed` com mensagem clara
+
+### Arquivos
+
+- `supabase/migrations/...sql` — tabela, RLS, índices, publication
+- `src/hooks/use-pdv-comandas.ts` — insert na fila após sendToKitchen
+- `print-bridge/server.js` — assinar fila, reprocessar on-boot, `/health` enriquecido, `/reprint` por jobId
+- `print-bridge/README.md` — atualizar fluxo
+
+### Resultado esperado
+
+- Envio para cozinha sempre gera job persistente
+- Bridge offline não perde comanda (reprocessa em até 2h)
+- `/health` mostra status real e contagem de pendentes
+- Falhas ficam rastreáveis por job no banco
+
