@@ -111,11 +111,19 @@ function buildReceipt({ header, body, centerName }) {
   });
   text("================================");
   line();
-  body.forEach((item) => {
+  body.forEach((item, idx) => {
+    if (idx > 0) {
+      text("--------------------------------");
+      line();
+    }
     push(GS, 0x21, 0x01);
     text(`${item.quantity}x ${String(item.product_name).toUpperCase()}`);
     line();
     push(GS, 0x21, 0x00);
+    if (item.parent_product_name) {
+      text(`  (parte de: ${String(item.parent_product_name).toUpperCase()})`);
+      line();
+    }
     if (item.notes) {
       text(`  OBS: ${item.notes}`);
       line();
