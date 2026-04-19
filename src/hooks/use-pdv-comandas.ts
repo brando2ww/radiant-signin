@@ -406,26 +406,38 @@ export function usePDVComandas() {
         return;
       }
 
-      const jobs = (viewRows ?? []).map((row: any) => {
-        const hasPrinter = !!row.printer_ip;
+      // Agrupa por (comanda + impressora/centro) para imprimir 1 papel por grupo
+      const groups = new Map<string, any[]>();
+      (viewRows ?? []).forEach((row: any) => {
+        const groupKey = `${row.comanda_id ?? "nocomanda"}::${row.production_center_id ?? "nocenter"}::${row.printer_ip ?? "noip"}::${row.printer_port ?? 9100}`;
+        const arr = groups.get(groupKey) || [];
+        arr.push(row);
+        groups.set(groupKey, arr);
+      });
+
+      const jobs = Array.from(groups.values()).map((rows) => {
+        const first = rows[0];
+        const hasPrinter = !!first.printer_ip;
         return {
           tenant_user_id: ownerId,
           source_kind: "comanda" as const,
-          source_item_id: row.id,
-          center_id: row.production_center_id,
-          center_name: row.center_name,
-          printer_ip: row.printer_ip,
-          printer_port: row.printer_port || 9100,
+          source_item_id: first.id, // representativo (1º item do grupo)
+          center_id: first.production_center_id,
+          center_name: first.center_name,
+          printer_ip: first.printer_ip,
+          printer_port: first.printer_port || 9100,
           payload: {
-            product_name: row.product_name,
-            quantity: row.quantity,
-            notes: row.notes,
-            modifiers: row.modifiers,
-            comanda_number: row.comanda_number,
-            customer_name: row.customer_name,
-            parent_product_name: row.parent_product_name,
-            is_composite_child: row.is_composite_child,
+            comanda_number: first.comanda_number,
+            customer_name: first.customer_name,
             kind: "comanda",
+            items: rows.map((r: any) => ({
+              product_name: r.product_name,
+              quantity: r.quantity,
+              notes: r.notes,
+              modifiers: r.modifiers,
+              parent_product_name: r.parent_product_name,
+              is_composite_child: r.is_composite_child,
+            })),
           },
           status: hasPrinter ? "pending" : "failed",
           error_message: hasPrinter ? null : "sem impressora configurada",
