@@ -44,6 +44,34 @@ function markProcessed(id) {
   }
 }
 
+// Fila por impressora (serializa conexões TCP para o mesmo IP:porta)
+const printerQueues = new Map(); // key=ip:port -> { promise, depth }
+const POST_PRINT_DELAY_MS = 300;
+const MAX_ATTEMPTS = 3;
+const RETRY_DELAYS_MS = [1000, 3000]; // após attempt 1 espera 1s; após 2 espera 3s
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function enqueueForPrinter(key, taskFn) {
+  const slot = printerQueues.get(key) || { promise: Promise.resolve(), depth: 0 };
+  slot.depth += 1;
+  const next = slot.promise
+    .catch(() => {})
+    .then(taskFn)
+    .finally(async () => {
+      await sleep(POST_PRINT_DELAY_MS);
+      const cur = printerQueues.get(key);
+      if (cur) {
+        cur.depth -= 1;
+        if (cur.depth <= 0 && cur.promise === next) {
+          printerQueues.delete(key);
+        }
+      }
+    });
+  slot.promise = next;
+  printerQueues.set(key, slot);
+  return { promise: next, depth: slot.depth };
+}
+
 function normalizeIp(ip) {
   if (!ip || typeof ip !== "string") return ip;
   const parts = ip.split(".");
