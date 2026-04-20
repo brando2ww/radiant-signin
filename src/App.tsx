@@ -15,6 +15,7 @@ import SuperAdmin from "./pages/SuperAdmin";
 import PublicMenu from "./pages/PublicMenu";
 import PublicEvaluation from "./pages/PublicEvaluation";
 import PublicTasks from "./pages/PublicTasks";
+import PublicChecklistAccess from "./pages/PublicChecklistAccess";
 import EvaluationsPanel from "./pages/EvaluationsPanel";
 import NotFound from "./pages/NotFound";
 
@@ -67,6 +68,7 @@ const App = () => (
                 <Route path="/cardapio/:userId" element={<PublicMenu />} />
                 <Route path="/avaliacao/:campaignId" element={<PublicEvaluation />} />
                 <Route path="/tarefas/:userId" element={<PublicTasks />} />
+                <Route path="/c/:checklistId" element={<PublicChecklistAccess />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
