@@ -26,6 +26,7 @@ import { useProductImageUpload } from "@/hooks/use-product-image-upload";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { Image as ImageIcon, Upload, X, Info } from "lucide-react";
 import { ProductRecipeManager } from "./ProductRecipeManager";
 import { PDVProductOptionsManager } from "./PDVProductOptionsManager";
