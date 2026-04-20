@@ -137,6 +137,12 @@ export function CampaignDetail({ campaignId }: CampaignDetailProps) {
           <CampaignReports campaignId={campaignId} />
         </TabsContent>
       </Tabs>
+
+      <EditCampaignDialog
+        campaign={campaign}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
     </div>
   );
 }
