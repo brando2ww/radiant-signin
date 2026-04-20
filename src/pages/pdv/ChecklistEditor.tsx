@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Save, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, QrCode } from "lucide-react";
 import { ChecklistConfigPanel } from "@/components/pdv/checklists/editor/ChecklistConfigPanel";
 import { ChecklistItemsList } from "@/components/pdv/checklists/editor/ChecklistItemsList";
 import { ChecklistMobilePreview } from "@/components/pdv/checklists/editor/ChecklistMobilePreview";
+import { ChecklistQrPosterDialog } from "@/components/pdv/checklists/ChecklistQrPosterDialog";
 import { useChecklists, useChecklistItems, type ChecklistSector, type ChecklistItemType } from "@/hooks/use-checklists";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export interface LocalItem {
   id?: string;
@@ -32,6 +32,7 @@ export interface ChecklistConfig {
   color: string;
   default_shift: string;
   is_active: boolean;
+  qr_access_enabled: boolean;
 }
 
 export default function ChecklistEditor() {
@@ -39,7 +40,7 @@ export default function ChecklistEditor() {
   const navigate = useNavigate();
   const isNew = !id || id === "novo";
   const { createChecklist, updateChecklist } = useChecklists();
-  const { items: dbItems, isLoading: loadingItems } = useChecklistItems(isNew ? null : id!);
+  const { items: dbItems } = useChecklistItems(isNew ? null : id!);
 
   const [config, setConfig] = useState<ChecklistConfig>({
     name: "",
@@ -48,11 +49,13 @@ export default function ChecklistEditor() {
     color: "#6366f1",
     default_shift: "todos",
     is_active: true,
+    qr_access_enabled: true,
   });
 
   const [localItems, setLocalItems] = useState<LocalItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
 
   // Load existing checklist data
   useEffect(() => {
@@ -71,6 +74,7 @@ export default function ChecklistEditor() {
               color: (data as any).color || "#6366f1",
               default_shift: (data as any).default_shift || "todos",
               is_active: data.is_active,
+              qr_access_enabled: (data as any).qr_access_enabled ?? true,
             });
           }
         });
@@ -117,6 +121,7 @@ export default function ChecklistEditor() {
           color: config.color,
           default_shift: config.default_shift,
           is_active: config.is_active,
+          qr_access_enabled: config.qr_access_enabled,
         } as any);
         checklistId = created.id;
       } else {
@@ -128,6 +133,7 @@ export default function ChecklistEditor() {
           color: config.color,
           default_shift: config.default_shift,
           is_active: config.is_active,
+          qr_access_enabled: config.qr_access_enabled,
         } as any);
       }
 
@@ -185,10 +191,20 @@ export default function ChecklistEditor() {
             )}
           </div>
         </div>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-          Salvar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setQrOpen(true)}
+            disabled={isNew}
+            title={isNew ? "Salve o checklist para gerar o QR Code" : "Gerar QR Code"}
+          >
+            <QrCode className="h-4 w-4 mr-2" /> QR Code
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+            Salvar
+          </Button>
+        </div>
       </div>
 
       {/* Content - Two Columns */}
@@ -215,6 +231,15 @@ export default function ChecklistEditor() {
           </div>
         </div>
       </div>
+
+      {/* QR Poster Dialog */}
+      {!isNew && id && (
+        <ChecklistQrPosterDialog
+          open={qrOpen}
+          onOpenChange={setQrOpen}
+          checklist={{ id, name: config.name, sector: config.sector, color: config.color }}
+        />
+      )}
     </div>
   );
 }
