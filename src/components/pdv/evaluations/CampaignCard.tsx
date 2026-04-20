@@ -58,6 +58,7 @@ function getNpsLabel(nps: number): string {
 
 export function CampaignCard({ campaign, onClick }: CampaignCardProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const updateCampaign = useUpdateCampaign();
   const deleteCampaign = useDeleteCampaign();
 
