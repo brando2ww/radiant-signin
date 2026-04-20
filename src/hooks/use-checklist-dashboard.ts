@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEstablishmentId } from "@/hooks/use-establishment-id";
 import { subDays, format, differenceInMinutes } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface DashboardFilters {
   date: string;
@@ -54,7 +55,8 @@ export function useChecklistDashboard(filters?: DashboardFilters) {
       for (let i = 6; i >= 0; i--) {
         const d = subDays(new Date(), i);
         const dateStr = format(d, "yyyy-MM-dd");
-        const label = format(d, "EEE");
+        const rawLabel = format(d, "EEE", { locale: ptBR }).replace(".", "");
+        const label = rawLabel.charAt(0).toUpperCase() + rawLabel.slice(1);
         const { data } = await supabase
           .from("checklist_executions")
           .select("status")
