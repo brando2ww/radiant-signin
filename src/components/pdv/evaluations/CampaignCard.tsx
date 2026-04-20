@@ -201,6 +201,12 @@ export function CampaignCard({ campaign, onClick }: CampaignCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EditCampaignDialog
+        campaign={campaign}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
     </>
   );
 }
