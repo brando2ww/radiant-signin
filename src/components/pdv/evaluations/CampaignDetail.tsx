@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QRCodeSVG } from "qrcode.react";
-import { Copy, ExternalLink, QrCode } from "lucide-react";
+import { Copy, ExternalLink, QrCode, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   useEvaluationCampaigns,
@@ -18,6 +18,7 @@ import { CampaignReports } from "./CampaignReports";
 
 import { CampaignLeads } from "./CampaignLeads";
 import { CampaignRoulette } from "./CampaignRoulette";
+import { EditCampaignDialog } from "./EditCampaignDialog";
 
 interface CampaignDetailProps {
   campaignId: string;
