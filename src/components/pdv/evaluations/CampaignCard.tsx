@@ -19,11 +19,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, Clock, HelpCircle, MoreVertical, Copy, Power, Trash2, ExternalLink } from "lucide-react";
+import { Users, Clock, HelpCircle, MoreVertical, Copy, Power, Trash2, ExternalLink, Pencil } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { CampaignWithStats } from "@/hooks/use-evaluation-campaigns";
 import { useUpdateCampaign, useDeleteCampaign } from "@/hooks/use-evaluation-campaigns";
+import { EditCampaignDialog } from "./EditCampaignDialog";
 
 interface CampaignCardProps {
   campaign: CampaignWithStats;
