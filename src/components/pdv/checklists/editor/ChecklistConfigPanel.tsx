@@ -11,6 +11,7 @@ import { SECTOR_LABELS, type ChecklistSector } from "@/hooks/use-checklists";
 import { SECTOR_COLORS } from "@/data/sector-colors";
 import { cn } from "@/lib/utils";
 import type { ChecklistConfig } from "@/pages/pdv/ChecklistEditor";
+import { QrCode } from "lucide-react";
 
 const SECTOR_ICONS: Record<ChecklistSector, React.ElementType> = {
   cozinha: UtensilsCrossed,
@@ -153,6 +154,23 @@ export function ChecklistConfigPanel({ config, onChange }: Props) {
             onCheckedChange={(v) => update({ is_active: v })}
           />
         </div>
+      </div>
+
+      {/* QR Access */}
+      <div className="flex items-center justify-between rounded-lg border border-border p-3">
+        <div className="flex items-start gap-2">
+          <QrCode className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0" />
+          <div>
+            <Label className="text-sm font-medium">Acesso via QR Code</Label>
+            <p className="text-xs text-muted-foreground">
+              Permite escanear o QR para abrir o checklist sem login
+            </p>
+          </div>
+        </div>
+        <Switch
+          checked={config.qr_access_enabled}
+          onCheckedChange={(v) => update({ qr_access_enabled: v })}
+        />
       </div>
     </div>
   );

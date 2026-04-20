@@ -848,6 +848,7 @@ export type Database = {
           is_active: boolean
           is_template: boolean
           name: string
+          qr_access_enabled: boolean
           sector: Database["public"]["Enums"]["checklist_sector"]
           updated_at: string
           user_id: string
@@ -861,6 +862,7 @@ export type Database = {
           is_active?: boolean
           is_template?: boolean
           name: string
+          qr_access_enabled?: boolean
           sector?: Database["public"]["Enums"]["checklist_sector"]
           updated_at?: string
           user_id: string
@@ -874,6 +876,7 @@ export type Database = {
           is_active?: boolean
           is_template?: boolean
           name?: string
+          qr_access_enabled?: boolean
           sector?: Database["public"]["Enums"]["checklist_sector"]
           updated_at?: string
           user_id?: string

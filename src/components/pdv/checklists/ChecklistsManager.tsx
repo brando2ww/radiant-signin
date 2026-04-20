@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Copy, Trash2, ChevronRight, Library } from "lucide-react";
+import { Plus, Copy, Trash2, ChevronRight, Library, QrCode, Printer } from "lucide-react";
 import { useChecklists, SECTOR_LABELS, type ChecklistSector } from "@/hooks/use-checklists";
 import { TemplateLibraryDialog } from "./TemplateLibraryDialog";
+import { ChecklistQrPosterDialog } from "./ChecklistQrPosterDialog";
+import { BatchQrPosterDialog } from "./BatchQrPosterDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +22,8 @@ import {
 export function ChecklistsManager() {
   const { checklists, isLoading, deleteChecklist, duplicateChecklist } = useChecklists();
   const [templateLibOpen, setTemplateLibOpen] = useState(false);
+  const [batchQrOpen, setBatchQrOpen] = useState(false);
+  const [qrChecklist, setQrChecklist] = useState<any>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -40,6 +44,9 @@ export function ChecklistsManager() {
         </Button>
         <Button variant="outline" size="sm" onClick={() => setTemplateLibOpen(true)}>
           <Library className="h-4 w-4 mr-2" /> Templates Prontos
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setBatchQrOpen(true)}>
+          <Printer className="h-4 w-4 mr-2" /> Imprimir QR Codes do Setor
         </Button>
       </div>
 
@@ -76,6 +83,15 @@ export function ChecklistsManager() {
                     </Badge>
                   </div>
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      title="QR Code"
+                      onClick={() => setQrChecklist(cl)}
+                    >
+                      <QrCode className="h-3.5 w-3.5" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => duplicateChecklist(cl.id)}>
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
@@ -98,6 +114,18 @@ export function ChecklistsManager() {
       )}
 
       <TemplateLibraryDialog open={templateLibOpen} onOpenChange={setTemplateLibOpen} />
+
+      <ChecklistQrPosterDialog
+        open={!!qrChecklist}
+        onOpenChange={(o) => !o && setQrChecklist(null)}
+        checklist={qrChecklist}
+      />
+
+      <BatchQrPosterDialog
+        open={batchQrOpen}
+        onOpenChange={setBatchQrOpen}
+        checklists={checklists as any}
+      />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
