@@ -254,7 +254,15 @@ export function ProductDialog({
   }, [product, open, form]);
 
   const handleSubmit = form.handleSubmit((data) => {
-    onSubmit(data);
+    if (!data.name?.trim()) {
+      toast.error("Nome do produto é obrigatório");
+      return;
+    }
+    if (!data.category?.trim()) {
+      toast.error("Categoria é obrigatória");
+      return;
+    }
+    onSubmit({ ...data, name: data.name.trim(), category: data.category.trim() });
     form.reset();
     setPreviewImage(null);
   });
