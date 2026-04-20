@@ -114,6 +114,9 @@ export function CampaignCard({ campaign, onClick }: CampaignCardProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditOpen(true); }}>
+                    <Pencil className="h-4 w-4 mr-2" /> Editar
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleCopyLink}>
                     <Copy className="h-4 w-4 mr-2" /> Copiar link
                   </DropdownMenuItem>
