@@ -30,7 +30,7 @@ export function EditCampaignDialog({ campaign, open, onOpenChange }: EditCampaig
       {
         id: campaign.id,
         name: name.trim(),
-        description: description.trim() || null,
+        description: description.trim() || undefined,
       },
       {
         onSuccess: () => onOpenChange(false),
