@@ -26,6 +26,7 @@ import { useProductImageUpload } from "@/hooks/use-product-image-upload";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { Image as ImageIcon, Upload, X, Info } from "lucide-react";
 import { ProductRecipeManager } from "./ProductRecipeManager";
 import { PDVProductOptionsManager } from "./PDVProductOptionsManager";
@@ -253,7 +254,15 @@ export function ProductDialog({
   }, [product, open, form]);
 
   const handleSubmit = form.handleSubmit((data) => {
-    onSubmit(data);
+    if (!data.name?.trim()) {
+      toast.error("Nome do produto é obrigatório");
+      return;
+    }
+    if (!data.category?.trim()) {
+      toast.error("Categoria é obrigatória");
+      return;
+    }
+    onSubmit({ ...data, name: data.name.trim(), category: data.category.trim() });
     form.reset();
     setPreviewImage(null);
   });
