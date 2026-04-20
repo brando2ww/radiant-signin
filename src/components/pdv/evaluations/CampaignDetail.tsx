@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QRCodeSVG } from "qrcode.react";
-import { Copy, ExternalLink, QrCode } from "lucide-react";
+import { Copy, ExternalLink, QrCode, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import {
   useEvaluationCampaigns,
@@ -18,6 +18,7 @@ import { CampaignReports } from "./CampaignReports";
 
 import { CampaignLeads } from "./CampaignLeads";
 import { CampaignRoulette } from "./CampaignRoulette";
+import { EditCampaignDialog } from "./EditCampaignDialog";
 
 interface CampaignDetailProps {
   campaignId: string;
@@ -26,6 +27,7 @@ interface CampaignDetailProps {
 export function CampaignDetail({ campaignId }: CampaignDetailProps) {
   const { data: campaigns } = useEvaluationCampaigns();
   const updateCampaign = useUpdateCampaign();
+  const [editOpen, setEditOpen] = useState(false);
   const campaign = campaigns?.find((c) => c.id === campaignId);
 
   if (!campaign) return null;
@@ -40,8 +42,19 @@ export function CampaignDetail({ campaignId }: CampaignDetailProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">{campaign.name}</h2>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-semibold truncate">{campaign.name}</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              onClick={() => setEditOpen(true)}
+              aria-label="Editar campanha"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+          </div>
           {campaign.description && (
             <p className="text-sm text-muted-foreground mt-1">{campaign.description}</p>
           )}
@@ -124,6 +137,12 @@ export function CampaignDetail({ campaignId }: CampaignDetailProps) {
           <CampaignReports campaignId={campaignId} />
         </TabsContent>
       </Tabs>
+
+      <EditCampaignDialog
+        campaign={campaign}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
     </div>
   );
 }

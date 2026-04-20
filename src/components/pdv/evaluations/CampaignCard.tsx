@@ -19,11 +19,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Users, Clock, HelpCircle, MoreVertical, Copy, Power, Trash2, ExternalLink } from "lucide-react";
+import { Users, Clock, HelpCircle, MoreVertical, Copy, Power, Trash2, ExternalLink, Pencil } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { CampaignWithStats } from "@/hooks/use-evaluation-campaigns";
 import { useUpdateCampaign, useDeleteCampaign } from "@/hooks/use-evaluation-campaigns";
+import { EditCampaignDialog } from "./EditCampaignDialog";
 
 interface CampaignCardProps {
   campaign: CampaignWithStats;
@@ -57,6 +58,7 @@ function getNpsLabel(nps: number): string {
 
 export function CampaignCard({ campaign, onClick }: CampaignCardProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const updateCampaign = useUpdateCampaign();
   const deleteCampaign = useDeleteCampaign();
 
@@ -112,6 +114,9 @@ export function CampaignCard({ campaign, onClick }: CampaignCardProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditOpen(true); }}>
+                    <Pencil className="h-4 w-4 mr-2" /> Editar
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleCopyLink}>
                     <Copy className="h-4 w-4 mr-2" /> Copiar link
                   </DropdownMenuItem>
@@ -196,6 +201,12 @@ export function CampaignCard({ campaign, onClick }: CampaignCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <EditCampaignDialog
+        campaign={campaign}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+      />
     </>
   );
 }
