@@ -48,7 +48,11 @@ export default function PDVProducts() {
 
   // Categorias únicas
   const categories = useMemo(() => {
-    const cats = new Set(products.map((p) => p.category));
+    const cats = new Set(
+      products
+        .map((p) => p.category)
+        .filter((c): c is string => !!c && c.trim() !== "")
+    );
     return Array.from(cats).sort();
   }, [products]);
 
