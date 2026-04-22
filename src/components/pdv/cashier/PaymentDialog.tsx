@@ -214,6 +214,7 @@ export function PaymentDialog({
   };
 
   const handleSubmit = async () => {
+    if (isProcessing) return;
     try {
       const finalAmount = total;
       const paymentData = {
