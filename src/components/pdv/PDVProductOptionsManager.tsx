@@ -30,7 +30,27 @@ interface Props {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-type DraftOption = PDVProductOption;
+type DraftItem = PDVProductOption["items"][number] & {
+  _isNew?: boolean;
+  _deleted?: boolean;
+};
+type DraftOption = Omit<PDVProductOption, "items"> & {
+  items: DraftItem[];
+  _isNew?: boolean;
+  _deleted?: boolean;
+};
+
+const isTempId = (id: string) => id.startsWith("tmp-");
+const genId = (prefix: string) =>
+  `tmp-${prefix}-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+
+const stripDraftFlags = (opts: DraftOption[]): DraftOption[] =>
+  opts.map((o) => ({
+    ...o,
+    _isNew: undefined,
+    _deleted: undefined,
+    items: o.items.map((i) => ({ ...i, _isNew: undefined, _deleted: undefined })),
+  }));
 
 export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
   const {
