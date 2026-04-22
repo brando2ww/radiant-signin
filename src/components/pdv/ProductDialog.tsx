@@ -144,6 +144,18 @@ export function ProductDialog({
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const [isSubstituicaoTributaria, setIsSubstituicaoTributaria] = useState(false);
+  const [optionsDirty, setOptionsDirty] = useState(false);
+
+  const handleDialogOpenChange = (next: boolean) => {
+    if (!next && optionsDirty) {
+      const ok = window.confirm(
+        "Há alterações não salvas na aba Opções. Deseja descartá-las e fechar?"
+      );
+      if (!ok) return;
+      setOptionsDirty(false);
+    }
+    onOpenChange(next);
+  };
 
   const form = useForm({
     defaultValues: {
