@@ -74,52 +74,48 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const baselineRef = useRef<DraftOption[]>([]);
 
-  // Sync draft with server data when it changes (and we're not mid-edit)
+  // Sync draft with server data — preserves local-only drafts (_isNew, _deleted)
+  // and any in-flight edits to existing options/items.
   useEffect(() => {
     setDraft((prev) => {
+      const serverDeep = JSON.parse(JSON.stringify(options)) as DraftOption[];
+
+      // First load: just hydrate from server.
       if (prev.length === 0) {
-        baselineRef.current = JSON.parse(JSON.stringify(options));
-        return JSON.parse(JSON.stringify(options));
+        baselineRef.current = JSON.parse(JSON.stringify(serverDeep));
+        return serverDeep;
       }
+
+      // No local edits: replace fully with server.
       const dirty = JSON.stringify(prev) !== JSON.stringify(baselineRef.current);
       if (!dirty) {
-        baselineRef.current = JSON.parse(JSON.stringify(options));
-        return JSON.parse(JSON.stringify(options));
+        baselineRef.current = JSON.parse(JSON.stringify(serverDeep));
+        return serverDeep;
       }
-      // merge new server items
-      const draftOptionIds = new Set(prev.map((o) => o.id));
-      const merged = [...prev];
-      options.forEach((srvOpt) => {
-        if (!draftOptionIds.has(srvOpt.id)) {
-          merged.push(JSON.parse(JSON.stringify(srvOpt)));
-          baselineRef.current.push(JSON.parse(JSON.stringify(srvOpt)));
-        } else {
-          const draftOpt = merged.find((o) => o.id === srvOpt.id)!;
-          const draftItemIds = new Set(draftOpt.items.map((i) => i.id));
-          srvOpt.items.forEach((srvItem) => {
-            if (!draftItemIds.has(srvItem.id)) {
-              draftOpt.items.push(JSON.parse(JSON.stringify(srvItem)));
-              const baseOpt = baselineRef.current.find((o) => o.id === srvOpt.id);
-              if (baseOpt) baseOpt.items.push(JSON.parse(JSON.stringify(srvItem)));
-            }
-          });
-          draftOpt.items = draftOpt.items.filter((i) =>
-            srvOpt.items.some((s) => s.id === i.id),
-          );
-          const baseOpt = baselineRef.current.find((o) => o.id === srvOpt.id);
-          if (baseOpt)
-            baseOpt.items = baseOpt.items.filter((i) =>
-              srvOpt.items.some((s) => s.id === i.id),
-            );
-        }
+
+      // Has local edits: keep them as-is. Only refresh baseline so isDirty
+      // calculations stay correct against latest server state, but never
+      // overwrite user's pending changes.
+      const newBaseline: DraftOption[] = serverDeep.map((srvOpt) => {
+        const draftOpt = prev.find((o) => o.id === srvOpt.id);
+        if (!draftOpt) return srvOpt;
+        // Keep only baseline items that still exist on server (don't add
+        // newly fetched items into baseline as if they were locally-known).
+        return srvOpt;
       });
-      const serverIds = new Set(options.map((o) => o.id));
-      const filtered = merged.filter((o) => serverIds.has(o.id));
-      baselineRef.current = baselineRef.current.filter((o) => serverIds.has(o.id));
-      return filtered;
+      baselineRef.current = newBaseline;
+      return prev;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options, productId]);
+
+  const visibleDraft = useMemo(
+    () =>
+      draft
+        .filter((o) => !o._deleted)
+        .map((o) => ({ ...o, items: o.items.filter((i) => !i._deleted) })),
+    [draft],
+  );
 
   const isDirty = useMemo(
     () => JSON.stringify(draft) !== JSON.stringify(baselineRef.current),
