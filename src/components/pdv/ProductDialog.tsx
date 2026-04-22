@@ -144,6 +144,18 @@ export function ProductDialog({
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const [isSubstituicaoTributaria, setIsSubstituicaoTributaria] = useState(false);
+  const [optionsDirty, setOptionsDirty] = useState(false);
+
+  const handleDialogOpenChange = (next: boolean) => {
+    if (!next && optionsDirty) {
+      const ok = window.confirm(
+        "Há alterações não salvas na aba Opções. Deseja descartá-las e fechar?"
+      );
+      if (!ok) return;
+      setOptionsDirty(false);
+    }
+    onOpenChange(next);
+  };
 
   const form = useForm({
     defaultValues: {
@@ -302,7 +314,7 @@ export function ProductDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -689,7 +701,10 @@ export function ProductDialog({
 
               <TabsContent value="options" className="space-y-4 mt-4">
                 {product ? (
-                  <PDVProductOptionsManager productId={product.id} />
+                  <PDVProductOptionsManager
+                    productId={product.id}
+                    onDirtyChange={setOptionsDirty}
+                  />
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     Salve o produto primeiro para configurar opções
