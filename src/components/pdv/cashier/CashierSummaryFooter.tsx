@@ -1,4 +1,5 @@
 import { Banknote, CreditCard, Smartphone, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 interface CashierSummaryFooterProps {
   openingBalance: number;
@@ -12,9 +13,6 @@ interface CashierSummaryFooterProps {
   isOpen: boolean;
 }
 
-const formatBRL = (value: number) =>
-  new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
-
 export function CashierSummaryFooter({
   openingBalance,
   totalCash,
@@ -26,54 +24,89 @@ export function CashierSummaryFooter({
   currentBalance,
   isOpen,
 }: CashierSummaryFooterProps) {
-  const items = [
-    { label: "Abertura", value: openingBalance, icon: Wallet, sign: "" as const },
-    { label: "Dinheiro", value: totalCash, icon: Banknote, sign: "+" as const },
-    { label: "Cartão", value: totalCard, icon: CreditCard, sign: "" as const },
-    { label: "PIX", value: totalPix, icon: Smartphone, sign: "" as const },
-    { label: "Sangrias", value: totalWithdrawals, icon: TrendingDown, sign: "-" as const },
-    { label: "Reforços", value: totalReinforcements, icon: TrendingUp, sign: "+" as const },
+  const summaryItems = [
+    {
+      label: "Abertura",
+      value: openingBalance,
+      icon: Wallet,
+      prefix: "",
+    },
+    {
+      label: "Dinheiro",
+      value: totalCash,
+      icon: Banknote,
+      prefix: "+",
+    },
+    {
+      label: "Cartão",
+      value: totalCard,
+      icon: CreditCard,
+      prefix: "",
+    },
+    {
+      label: "PIX",
+      value: totalPix,
+      icon: Smartphone,
+      prefix: "",
+    },
+    {
+      label: "Sangrias",
+      value: totalWithdrawals,
+      icon: TrendingDown,
+      prefix: "-",
+    },
+    {
+      label: "Reforços",
+      value: totalReinforcements,
+      icon: TrendingUp,
+      prefix: "+",
+    },
   ];
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto">
-      {/* Saldo Atual - destaque principal */}
-      <div
-        className={`rounded-md border-2 p-3 ${
-          isOpen ? "border-primary bg-primary/5" : "border-muted-foreground/20 bg-muted/30"
-        }`}
-      >
-        <p className="text-xs text-muted-foreground uppercase tracking-wide">Saldo Atual</p>
-        <p className="text-2xl font-bold text-foreground mt-1 tabular-nums">
-          {formatBRL(currentBalance)}
-        </p>
-      </div>
-
-      {/* Total de Vendas - destaque secundário */}
-      <div className="mt-2 rounded-md border bg-muted/40 p-3">
-        <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Vendas</p>
-        <p className="text-lg font-semibold text-foreground mt-0.5 tabular-nums">
-          {formatBRL(totalSales)}
-        </p>
-      </div>
-
-      {/* Lista compacta de movimentações */}
-      <div className="mt-3 pt-3 border-t space-y-1.5">
-        {items.map((item) => (
-          <div
-            key={item.label}
-            className="flex items-center justify-between gap-2 px-1 py-1 rounded hover:bg-muted/40"
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <item.icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-              <span className="text-xs text-muted-foreground truncate">{item.label}</span>
-            </div>
-            <span className="text-xs font-medium text-foreground tabular-nums shrink-0">
-              {item.sign && item.value > 0 ? item.sign : ""}
-              {formatBRL(item.value)}
-            </span>
-          </div>
+    <div className="bg-muted/30 border rounded-lg p-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
+        {/* Cards menores de resumo */}
+        {summaryItems.map((item) => (
+          <Card key={item.label} className="border-0 shadow-none bg-background">
+            <CardContent className="p-2">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="h-5 w-5 rounded bg-muted flex items-center justify-center">
+                  <item.icon className="h-3 w-3 text-muted-foreground" />
+                </div>
+                <span className="text-xs text-muted-foreground">{item.label}</span>
+              </div>
+              <p className="text-sm font-semibold text-foreground">
+                {item.prefix && item.value > 0 ? item.prefix : ""}
+                R$ {item.value.toFixed(2)}
+              </p>
+            </CardContent>
+          </Card>
         ))}
+
+        {/* Card Total de Vendas */}
+        <Card className="border shadow-none bg-muted/50">
+          <CardContent className="p-2">
+            <p className="text-xs text-muted-foreground mb-1">Total Vendas</p>
+            <p className="text-base font-bold text-foreground">
+              R$ {totalSales.toFixed(2)}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Card Saldo Atual - Destaque */}
+        <Card
+          className={`border-2 shadow-sm bg-muted/50 ${
+            isOpen ? "border-primary" : "border-muted-foreground/20"
+          }`}
+        >
+          <CardContent className="p-2">
+            <p className="text-xs text-muted-foreground mb-1">Saldo Atual</p>
+            <p className="text-lg font-bold text-foreground">
+              R$ {currentBalance.toFixed(2)}
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

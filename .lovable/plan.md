@@ -1,78 +1,51 @@
 
 
-## Reorganizar layout do Caixa: resumo financeiro como sidebar esquerda
+## Fazer a página do Caixa caber 100% na tela, sem rolagem externa
 
-O rodapé com 8+ cards de resumo está estourando a largura no zoom 1.6 e cobrindo "Saldo Atual", "Total Vendas" e o botão "Atalhos". A solução é eliminar o rodapé horizontal e transformar o resumo financeiro em uma **sidebar vertical à esquerda**, deixando a página em 3 colunas verticais que cabem perfeitamente sem rolagem.
+A página `/pdv/caixa` hoje usa `min-h-[calc(100vh-3.5rem)]`, ou seja, ela pode crescer além da viewport — o que faz aparecer a barra de rolagem do navegador (visível no print: header do PDV, cabeçalho do operador, tabela de movimentações, sidebar de ações **e** rodapé com 8 cards de resumo + Total Vendas + Saldo Atual não cabem juntos em 1131px com zoom 1.6).
 
-### Novo layout (3 colunas verticais)
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ Header (operador • aberto em • hora • status) — compacto     │
-├──────────────┬──────────────────────────────┬────────────────┤
-│              │                              │                │
-│  RESUMO      │   MOVIMENTAÇÕES              │  AÇÕES         │
-│  FINANCEIRO  │   (tabela com scroll         │  RÁPIDAS       │
-│  (sidebar)   │    interno)                  │                │
-│              │                              │  Reforço F2    │
-│  Saldo Atual │                              │  Sangria F3    │
-│  R$ 565,50   │                              │  Cobrar F5     │
-│  ──────────  │                              │  Consumo Func  │
-│  Abertura    │                              │                │
-│  Dinheiro    │                              │  Fechar Caixa  │
-│  Cartão      │                              │  F4            │
-│  PIX         │                              │                │
-│  Sangrias    │                              │  Atalhos F12   │
-│  Reforços    │                              │                │
-│  ──────────  │                              │                │
-│  Total Vendas│                              │                │
-│              │                              │                │
-└──────────────┴──────────────────────────────┴────────────────┘
-```
+A regra que o usuário quer:
+- **Página do PDV**: sempre completa, sem rolagem da janela e sem cortes.
+- **Modal de Fechamento**: única superfície que pode rolar internamente (já feito na iteração anterior).
 
 ### O que vai mudar
 
-**1. `src/components/pdv/cashier/CashierSummaryFooter.tsx` → renomeado conceitualmente para sidebar vertical**
-   - Trocar o grid horizontal de 8 colunas por um **layout vertical empilhado**.
-   - Topo: card de **destaque "Saldo Atual"** grande (text-2xl), com borda `border-primary` quando aberto.
-   - Logo abaixo: **"Total Vendas"** em destaque secundário (text-lg).
-   - Separador, depois lista vertical compacta dos 6 itens (Abertura, Dinheiro, Cartão, PIX, Sangrias, Reforços) — cada um em uma linha única `flex justify-between`: ícone+label à esquerda, valor à direita. Sem cards aninhados, sem padding excessivo.
-   - Container: `h-full overflow-y-auto` para que, em telas menores, a própria sidebar role internamente em vez de quebrar o layout.
+Arquivo único: `src/pages/pdv/Cashier.tsx`
 
-**2. `src/pages/pdv/Cashier.tsx` — restruturar o grid principal**
-   - Remover o `<CashierSummaryFooter>` do final da página.
-   - Trocar o grid `lg:grid-cols-4` (3+1) por `lg:grid-cols-12` com proporções:
-     - **Sidebar Resumo (esquerda)**: `lg:col-span-3`
-     - **Movimentações (centro)**: `lg:col-span-6`
-     - **Ações Rápidas (direita)**: `lg:col-span-3`
-   - Em mobile (<lg): empilha em 1 coluna na ordem: Resumo → Movimentações → Ações.
-   - Cada coluna fica em um `Card` com `h-full flex flex-col min-h-0` e o conteúdo interno usa `overflow-y-auto` quando necessário.
-   - Manter `h-[calc(100vh-3.5rem)] overflow-hidden` no container raiz (já está) — agora vai funcionar de verdade porque não há mais rodapé puxando altura.
+1. **Travar a altura da página exatamente na viewport disponível**
+   - Trocar `min-h-[calc(100vh-3.5rem)]` por `h-[calc(100vh-3.5rem)] overflow-hidden` no container raiz (linhas 212 e 224).
+   - Isso impede que a página cresça além da janela e mata a rolagem global.
 
-**3. `src/components/pdv/cashier/CashierActionsSidebar.tsx` — pequeno ajuste**
-   - Reduzir altura dos botões principais de `h-20` → `h-16` e dos secundários de `h-16` → `h-14` para garantir que todos (Reforço, Sangria, Cobrar, Consumo Func, Fechar Caixa, Atalhos) caibam na coluna sem precisar de scroll mesmo em zoom alto.
-   - Manter ícones, labels e atalhos visíveis.
+2. **Garantir que a área central (Movimentações + Sidebar) seja a única que se ajusta**
+   - O grid `grid-cols-1 lg:grid-cols-4 ... flex-1` já existe e tem `min-h-0` implícito faltando — adicionar `min-h-0` para que o `flex-1` realmente respeite o espaço disponível e a tabela de movimentações role internamente (o `overflow-auto` interno já está pronto na linha 245).
+   - Adicionar `min-h-0` também no `Card` da tabela (linha 234) e usar `overflow-hidden` no `CardContent` (já tem).
 
-**4. `src/components/pdv/cashier/CashierHeader.tsx` — sem mudanças**
-   - Já está compacto após a iteração anterior.
+3. **Compactar o rodapé de resumo para caber sem cortar**
+   - No `CashierSummaryFooter`: reduzir `p-4` → `p-3`, `gap-3` → `gap-2`, padding dos cards internos `p-3` → `p-2`, ícones `h-6 w-6` → `h-5 w-5`, e tipografia do "Saldo Atual" de `text-xl` → `text-lg`. Resultado: ~25% mais baixo, libera espaço vertical para o miolo.
+   - Arquivo: `src/components/pdv/cashier/CashierSummaryFooter.tsx`.
+
+4. **Compactar levemente o header superior**
+   - No `CashierHeader`: reduzir `p-4` → `p-3` e ícones `h-10 w-10` → `h-9 w-9`. Pequena economia, mas suficiente para zoom alto.
+   - Arquivo: `src/components/pdv/cashier/CashierHeader.tsx`.
+
+5. **Skeleton de loading com a mesma regra**
+   - Aplicar a mesma troca (`h-[calc(100vh-3.5rem)] overflow-hidden`) no bloco de loading (linha 212) para evitar flash de rolagem.
 
 ### Resultado esperado
 
-- Em zoom 1.6 / 1131px de altura: header + 3 colunas (resumo | movimentações | ações) cabem inteiros sem rolagem do navegador e sem cortes.
-- "Saldo Atual" fica em destaque visível no canto superior esquerdo, sempre.
-- "Fechar Caixa" e "Atalhos" ficam totalmente visíveis na coluna direita, sem sobreposição.
-- A tabela de Movimentações continua sendo a única superfície que rola internamente quando há muitas linhas.
-- Modal de Fechamento permanece com seu próprio scroll interno (já feito).
-- Em mobile: tudo empilha em 1 coluna na ordem natural de leitura.
+- Em qualquer zoom (incluindo o 1.6 do print): header, tabela de movimentações, sidebar de ações e rodapé com resumo financeiro **cabem inteiros** na tela, sem barra de rolagem do navegador e sem cortes nos botões "Fechar Caixa" / "Atalhos".
+- Se a tabela de Movimentações tiver muitas linhas, **só ela rola internamente** (já é o comportamento atual via `overflow-auto` na linha 245).
+- O modal de Fechamento de Caixa continua sendo o único componente com rolagem interna própria (já implementado).
+- Em telas muito pequenas (mobile), o grid quebra em 1 coluna e o `overflow-hidden` ainda funciona porque o conteúdo crítico (sidebar + footer) é compacto o suficiente.
 
 ### Fora de escopo
 
-- Nenhuma mudança em lógica de caixa, mutações, antifraude ou demais dialogs.
-- `OpenCashierDialog` e outros modais permanecem como estão.
+- Nenhuma mudança em lógica de caixa, antifraude, mutações ou nos demais dialogs.
+- Outras páginas do PDV (Salão, Comandas, etc.) não são tocadas.
 
 ### Arquivos modificados
 
-- `src/pages/pdv/Cashier.tsx` (restruturação do grid principal)
-- `src/components/pdv/cashier/CashierSummaryFooter.tsx` (rodapé horizontal → sidebar vertical)
-- `src/components/pdv/cashier/CashierActionsSidebar.tsx` (alturas reduzidas)
+- `src/pages/pdv/Cashier.tsx`
+- `src/components/pdv/cashier/CashierSummaryFooter.tsx`
+- `src/components/pdv/cashier/CashierHeader.tsx`
 
