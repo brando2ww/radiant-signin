@@ -115,8 +115,15 @@ export function PaymentDialog({
   // Success state
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<{ change: number } | null>(null);
-  
+  const [nfceState, setNfceState] = useState<
+    | { kind: "idle" }
+    | { kind: "success"; chave: string; danfe?: string }
+    | { kind: "error"; message: string; missing?: string[] }
+  >({ kind: "idle" });
+
   const { registerPayment, isRegisteringPayment, registerTablePayment, isRegisteringTablePayment } = usePDVPayments();
+  const { emitNFCe, isEmitting } = useNFCeEmission();
+  const { settings } = usePDVSettings();
 
   // Determine payment context
   const isTablePayment = !!table;
