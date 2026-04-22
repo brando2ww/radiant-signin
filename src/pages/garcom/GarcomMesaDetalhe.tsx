@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Send } from "lucide-react";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
+import { usePDVCashier } from "@/hooks/use-pdv-cashier";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +28,10 @@ export default function GarcomMesaDetalhe() {
 
   const handleNewComanda = async () => {
     if (!table) return;
+    if (!activeSession) {
+      toast.error("Abra o caixa antes de criar uma comanda.");
+      return;
+    }
     try {
       const comanda = await createComanda({
         orderId: table.current_order_id,
