@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { FileText, Upload, ShieldCheck, ExternalLink, Loader2 } from "lucide-react";
+import { FileText, Upload, ShieldCheck, ExternalLink, Loader2, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { usePDVSettings } from "@/hooks/use-pdv-settings";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +47,8 @@ export function NFAutomaticaIntegrationCard() {
   const [enableNfce, setEnableNfce] = useState(false);
   const [nomeFantasia, setNomeFantasia] = useState("");
   const [inscricaoMunicipal, setInscricaoMunicipal] = useState("");
+  const [cscId, setCscId] = useState("");
+  const [cscToken, setCscToken] = useState("");
   const [endereco, setEndereco] = useState<EnderecoFiscal>({
     logradouro: "", numero: "", complemento: "", bairro: "",
     cidade: "", uf: "", cep: "", codigo_municipio: "",
@@ -71,6 +73,8 @@ export function NFAutomaticaIntegrationCard() {
     setEnableNfce(settings.nfe_enable_nfce || false);
     setNomeFantasia(settings.nfe_nome_fantasia || "");
     setInscricaoMunicipal(settings.nfe_inscricao_municipal || "");
+    setCscId(settings.nfe_csc_id || "");
+    setCscToken(settings.nfe_csc_token || "");
     const addr = settings.nfe_endereco_fiscal as EnderecoFiscal | undefined;
     if (addr) setEndereco(addr);
   }, [settings]);
@@ -125,6 +129,8 @@ export function NFAutomaticaIntegrationCard() {
       nfe_nome_fantasia: nomeFantasia,
       nfe_inscricao_municipal: inscricaoMunicipal,
       nfe_endereco_fiscal: endereco as any,
+      nfe_csc_id: cscId,
+      nfe_csc_token: cscToken,
     });
   };
 
