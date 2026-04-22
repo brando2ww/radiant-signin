@@ -11,6 +11,7 @@ import {
 import { PDVOrder } from "@/hooks/use-pdv-orders";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { deferMenuAction } from "@/lib/ui/defer-menu-action";
 
 interface OrderCardProps {
   order: PDVOrder;
@@ -57,18 +58,18 @@ export function OrderCard({ order, itemCount, onView, onClose, onCancel }: Order
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onView(order)}>
+              <DropdownMenuItem onClick={() => deferMenuAction(() => onView(order))}>
                 <Eye className="mr-2 h-4 w-4" />
                 Ver detalhes
               </DropdownMenuItem>
               {order.status === "aberta" && (
                 <>
-                  <DropdownMenuItem onClick={() => onClose(order.id)}>
+                  <DropdownMenuItem onClick={() => deferMenuAction(() => onClose(order.id))}>
                     <Check className="mr-2 h-4 w-4" />
                     Fechar pedido
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => onCancel(order.id)}
+                    onClick={() => deferMenuAction(() => onCancel(order.id))}
                     className="text-destructive focus:text-destructive"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />

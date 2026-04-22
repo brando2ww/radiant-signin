@@ -18,6 +18,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
 import { cn } from "@/lib/utils";
+import { deferMenuAction } from "@/lib/ui/defer-menu-action";
 
 interface ComandaCardProps {
   comanda: Comanda;
@@ -93,22 +94,22 @@ export function ComandaCard({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onView(comanda)}>
+                <DropdownMenuItem onClick={() => deferMenuAction(() => onView(comanda))}>
                   <Eye className="h-4 w-4 mr-2" />
                   Ver detalhes
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onAddItem(comanda)}>
+                <DropdownMenuItem onClick={() => deferMenuAction(() => onAddItem(comanda))}>
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar item
                 </DropdownMenuItem>
                 {onClose && (
-                  <DropdownMenuItem onClick={() => onClose(comanda)}>
+                  <DropdownMenuItem onClick={() => deferMenuAction(() => onClose(comanda))}>
                     Fechar comanda
                   </DropdownMenuItem>
                 )}
                 {onCancel && (
                   <DropdownMenuItem 
-                    onClick={() => onCancel(comanda)}
+                    onClick={() => deferMenuAction(() => onCancel(comanda))}
                     className="text-destructive"
                   >
                     Cancelar comanda

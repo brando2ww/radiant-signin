@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { deferMenuAction } from "@/lib/ui/defer-menu-action";
 
 const ICON_MAP: Record<string, any> = {
   ChefHat, Wine, Coffee, Cake, Pizza, Soup, Sandwich, IceCream, Beer, Utensils,
@@ -179,7 +180,7 @@ export function ProductionCentersTab() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(center)}>
+                      <DropdownMenuItem onClick={() => deferMenuAction(() => handleEdit(center))}>
                         <Edit className="h-4 w-4 mr-2" />
                         Editar
                       </DropdownMenuItem>
@@ -192,7 +193,7 @@ export function ProductionCentersTab() {
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onClick={() => setDeletingCenter(center)}
+                        onClick={() => deferMenuAction(() => setDeletingCenter(center))}
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
