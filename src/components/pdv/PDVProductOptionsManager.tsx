@@ -288,7 +288,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
           onChange={(e) => setNewOptionName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddOption())}
         />
-        <Button onClick={handleAddOption} disabled={!newOptionName.trim()}>
+        <Button onClick={handleAddOption}>
           <Plus className="h-4 w-4 mr-1" /> Adicionar
         </Button>
       </div>
