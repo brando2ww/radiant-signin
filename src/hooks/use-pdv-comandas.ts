@@ -84,11 +84,12 @@ export function usePDVComandas() {
   const generateComandaNumber = async (): Promise<string> => {
     const today = new Date();
     const datePrefix = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
-    
+    const ownerId = visibleUserId || user?.id;
+
     const { count } = await supabase
       .from("pdv_comandas")
       .select("*", { count: "exact", head: true })
-      .eq("user_id", user?.id)
+      .eq("user_id", ownerId)
       .gte("created_at", today.toISOString().split("T")[0]);
 
     const nextNumber = (count || 0) + 1;
@@ -104,13 +105,14 @@ export function usePDVComandas() {
       notes?: string;
     }) => {
       if (!user) throw new Error("Usuário não autenticado");
+      const ownerId = visibleUserId || user.id;
 
       const comandaNumber = await generateComandaNumber();
 
       const { data: newComanda, error } = await supabase
         .from("pdv_comandas")
         .insert({
-          user_id: user.id,
+          user_id: ownerId,
           order_id: data.orderId || null,
           comanda_number: comandaNumber,
           customer_name: data.customerName || null,
