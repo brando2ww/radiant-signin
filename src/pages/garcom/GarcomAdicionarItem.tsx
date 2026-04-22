@@ -4,10 +4,8 @@ import { ArrowLeft, Search, Plus, Minus, Send } from "lucide-react";
 import { usePDVProducts } from "@/hooks/use-pdv-products";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVProductOptionsForOrder } from "@/hooks/use-pdv-product-options";
-import {
-  ProductOptionSelector,
-  type SelectedOption,
-} from "@/components/pdv/ProductOptionSelector";
+import type { SelectedOption } from "@/components/pdv/ProductOptionSelector";
+import { MobileProductOptionSelector } from "@/components/garcom/MobileProductOptionSelector";
 import { ProductCategoryNav } from "@/components/garcom/ProductCategoryNav";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
