@@ -233,7 +233,7 @@ export default function GarcomAdicionarItem() {
 
           {/* Step: Quantity */}
           {effectiveStep === "quantity" && (
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-4 pb-[max(env(safe-area-inset-bottom),1.5rem)]">
               {selectedOptions.length > 0 && (
                 <div className="rounded-xl border bg-muted/40 p-3 text-sm">
                   {selectedOptions.map((opt) => (
