@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Lock } from "lucide-react";
+import { toast } from "sonner";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
 import { usePDVComandas, Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
 import { usePDVTables, PDVTable } from "@/hooks/use-pdv-tables";
@@ -85,6 +86,15 @@ export default function PDVCashier() {
   const handleOpenMovementDialog = (type: "sangria" | "reforco") => {
     setMovementType(type);
     setMovementDialog(true);
+  };
+
+  const handleTryCloseCashier = () => {
+    const openComandas = comandas.filter(c => c.status === "aberta");
+    if (openComandas.length > 0) {
+      toast.error(`Existem ${openComandas.length} comanda(s) aberta(s). Feche ou cancele todas antes de encerrar o caixa.`);
+      return;
+    }
+    setCloseDialog(true);
   };
 
   const handleSelectComanda = (comanda: Comanda, items: ComandaItem[]) => {
@@ -180,7 +190,7 @@ export default function PDVCashier() {
           break;
         case "F4":
           e.preventDefault();
-          if (activeSession) setCloseDialog(true);
+          if (activeSession) handleTryCloseCashier();
           break;
         case "F5":
           e.preventDefault();
@@ -258,7 +268,7 @@ export default function PDVCashier() {
               isOpen={!!activeSession}
               isLoading={isOpeningCashier || isClosingCashier || isAddingMovement}
               onOpenCashier={() => setOpenDialog(true)}
-              onCloseCashier={() => setCloseDialog(true)}
+              onCloseCashier={handleTryCloseCashier}
               onAddReinforcement={() => handleOpenMovementDialog("reforco")}
               onAddWithdrawal={() => handleOpenMovementDialog("sangria")}
               onCharge={() => setChargeDialog(true)}
