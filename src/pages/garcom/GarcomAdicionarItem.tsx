@@ -3,6 +3,11 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Search, Plus, Minus, Send } from "lucide-react";
 import { usePDVProducts } from "@/hooks/use-pdv-products";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
+import { usePDVProductOptionsForOrder } from "@/hooks/use-pdv-product-options";
+import {
+  ProductOptionSelector,
+  type SelectedOption,
+} from "@/components/pdv/ProductOptionSelector";
 import { ProductCategoryNav } from "@/components/garcom/ProductCategoryNav";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,6 +19,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+
+type Step = "options" | "quantity";
 
 export default function GarcomAdicionarItem() {
   const { id: comandaId } = useParams<{ id: string }>();
@@ -37,6 +44,15 @@ export default function GarcomAdicionarItem() {
   const [selectedProduct, setSelectedProduct] = useState<typeof products extends (infer T)[] ? T : never | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
+  const [step, setStep] = useState<Step>("quantity");
+  const [selectedOptions, setSelectedOptions] = useState<SelectedOption[]>([]);
+
+  const { data: productOptions } = usePDVProductOptionsForOrder(selectedProduct?.id);
+
+  const optionsExtra = selectedOptions.reduce(
+    (total, opt) => total + opt.items.reduce((s, i) => s + i.priceAdjustment, 0),
+    0,
+  );
 
   const available = (products ?? []).filter((p) => p.is_available);
   const categories = [...new Set(available.map((p) => p.category))].sort();
@@ -48,19 +64,46 @@ export default function GarcomAdicionarItem() {
     return matchCat && matchSearch;
   });
 
+  const resetSheet = () => {
+    setSelectedProduct(null);
+    setSelectedOptions([]);
+    setStep("quantity");
+    setQuantity(1);
+    setNotes("");
+  };
+
+  const handleSelectProduct = (product: any) => {
+    setSelectedProduct(product);
+    setSelectedOptions([]);
+    setQuantity(1);
+    setNotes("");
+    // Vamos para "options"; se o produto não tiver options, o efeito abaixo
+    // (avaliação direta no JSX) renderiza a tela de quantidade.
+    setStep("options");
+  };
+
+  // Quando os productOptions carregarem e o produto não tiver opções,
+  // pula direto para a tela de quantidade.
+  const hasOptions = (productOptions?.length ?? 0) > 0;
+  const effectiveStep: Step = step === "options" && !hasOptions ? "quantity" : step;
+
   const handleAdd = async () => {
     if (!selectedProduct || !comandaId) return;
+
+    const optionsNotes = selectedOptions
+      .map((opt) => `${opt.optionName}: ${opt.items.map((i) => i.itemName).join(", ")}`)
+      .join("; ");
+    const fullNotes = [optionsNotes, notes.trim()].filter(Boolean).join(" | ");
+
     await addItem({
       comandaId,
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       quantity,
-      unitPrice: selectedProduct.price_salon,
-      notes: notes || undefined,
+      unitPrice: (selectedProduct.price_salon ?? 0) + optionsExtra,
+      notes: fullNotes || undefined,
     });
-    setSelectedProduct(null);
-    setQuantity(1);
-    setNotes("");
+    resetSheet();
   };
 
   return (
@@ -110,11 +153,7 @@ export default function GarcomAdicionarItem() {
             <button
               key={product.id}
               type="button"
-              onClick={() => {
-                setSelectedProduct(product);
-                setQuantity(1);
-                setNotes("");
-              }}
+              onClick={() => handleSelectProduct(product)}
               className="flex w-full items-center gap-3 rounded-xl border bg-card p-3 text-left active:scale-[0.98] transition-transform"
             >
               {product.image_url ? (
@@ -158,56 +197,110 @@ export default function GarcomAdicionarItem() {
       )}
 
       {/* Product Detail Sheet */}
-      <Sheet open={!!selectedProduct} onOpenChange={(o) => !o && setSelectedProduct(null)}>
-        <SheetContent side="bottom" className="rounded-t-2xl px-4 pb-8">
+      <Sheet
+        open={!!selectedProduct}
+        onOpenChange={(o) => {
+          if (!o) resetSheet();
+        }}
+      >
+        <SheetContent
+          side="bottom"
+          className="rounded-t-2xl px-4 pb-8 max-h-[90vh] overflow-y-auto"
+        >
           <SheetHeader>
             <SheetTitle className="text-left">{selectedProduct?.name}</SheetTitle>
           </SheetHeader>
-          <div className="mt-4 space-y-4">
-            {/* Quantity */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Quantidade</span>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border active:scale-95 transition-transform"
-                >
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="w-8 text-center font-bold tabular-nums">{quantity}</span>
-                <button
-                  type="button"
-                  onClick={() => setQuantity(quantity + 1)}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border active:scale-95 transition-transform"
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
 
-            {/* Notes */}
-            <div>
-              <label className="text-sm font-medium">Observações</label>
-              <Textarea
-                placeholder="Ex: sem cebola, ponto bem passado..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="mt-1 rounded-xl resize-none"
-                rows={2}
+          {/* Step: Options */}
+          {effectiveStep === "options" && hasOptions && productOptions && (
+            <div className="mt-4">
+              <ProductOptionSelector
+                options={productOptions}
+                onConfirm={(s) => {
+                  setSelectedOptions(s);
+                  setStep("quantity");
+                }}
+                onBack={() => resetSheet()}
               />
             </div>
+          )}
 
-            {/* Add Button */}
-            <Button
-              className="w-full h-12 text-base active:scale-[0.98] transition-transform"
-              onClick={handleAdd}
-              disabled={isAddingItem}
-            >
-              Adicionar · R${" "}
-              {((selectedProduct?.price_salon ?? 0) * quantity).toFixed(2)}
-            </Button>
-          </div>
+          {/* Step: Quantity */}
+          {effectiveStep === "quantity" && (
+            <div className="mt-4 space-y-4">
+              {selectedOptions.length > 0 && (
+                <div className="rounded-xl border bg-muted/40 p-3 text-sm">
+                  {selectedOptions.map((opt) => (
+                    <p key={opt.optionId} className="text-muted-foreground">
+                      <span className="font-medium text-foreground">
+                        {opt.optionName}:
+                      </span>{" "}
+                      {opt.items.map((i) => i.itemName).join(", ")}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {/* Quantity */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Quantidade</span>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border active:scale-95 transition-transform"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="w-8 text-center font-bold tabular-nums">{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border active:scale-95 transition-transform"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="text-sm font-medium">Observações</label>
+                <Textarea
+                  placeholder="Ex: sem cebola, ponto bem passado..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="mt-1 rounded-xl resize-none"
+                  rows={2}
+                />
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                {hasOptions && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 h-12"
+                    onClick={() => {
+                      setSelectedOptions([]);
+                      setStep("options");
+                    }}
+                  >
+                    Voltar
+                  </Button>
+                )}
+                <Button
+                  className="flex-1 h-12 text-base active:scale-[0.98] transition-transform"
+                  onClick={handleAdd}
+                  disabled={isAddingItem}
+                >
+                  Adicionar · R${" "}
+                  {(((selectedProduct?.price_salon ?? 0) + optionsExtra) * quantity).toFixed(2)}
+                </Button>
+              </div>
+            </div>
+          )}
         </SheetContent>
       </Sheet>
     </div>
