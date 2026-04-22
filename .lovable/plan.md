@@ -1,30 +1,47 @@
 
 
-## Corrigir o sheet de opções no mobile
+## Definir senha na edição + excluir usuários
 
-### Problemas identificados
-1. **Footer cortado pela tab bar inferior** — `BottomTabBar` é `fixed bottom-0 z-50 h-16` e o `SheetContent` também é `z-50`. Em alguns navegadores móveis, a tab bar acaba cobrindo o footer "Voltar / Continuar" do seletor.
-2. **Preço duplicado** no topo — aparece no título do Sheet ("Caipira Cremosa · R$ 24,00") e logo abaixo no card "Total · R$ 24,00".
-3. **Padding inferior do footer** depende de `env(safe-area-inset-bottom)` que pode resolver para 0 em algumas WebViews, deixando o botão colado na borda.
-4. **`pb-24` excessivo** no container de grupos sobra espaço quando a lista é curta.
+### O que existe hoje
+- **Criar usuário**: já pede e-mail + senha (form em `UserForm.tsx`, edge function `create-establishment-user` cria a conta no `auth.users` e o vínculo em `establishment_users`).
+- **Editar usuário**: o e-mail é bloqueado (correto — chave do auth) e **a senha não pode ser alterada**.
+- **"Excluir"**: hoje só existe **Desativar/Reativar** (toggle de `is_active`) — não há exclusão definitiva nem do vínculo nem da conta de auth.
 
-### Correção
+### O que muda
 
-**`src/pages/garcom/GarcomAdicionarItem.tsx`**
-- `SheetContent`: adicionar `z-[60]` para garantir que fique acima da `BottomTabBar` (`z-50`).
-- `SheetTitle`: remover o preço (deixar só o nome do produto). O total já aparece no card "Total" e no botão "Continuar".
+**1. Permitir o admin definir/alterar a senha de acesso na edição**
 
-**`src/components/garcom/MobileProductOptionSelector.tsx`**
-- Footer sticky:
-  - Trocar `pb-[env(safe-area-inset-bottom)]` por `pb-4` com fallback seguro.
-  - Adicionar leve sombra superior (`shadow-[0_-8px_16px_-8px_rgba(0,0,0,0.15)]`) para destacar do conteúdo que rola atrás.
-- Container dos grupos: trocar `pb-24` por `pb-4` (o footer sticky já reserva espaço; com max-h do Sheet ele sempre fica visível).
+- `UserForm.tsx` (modo edição): mostrar uma seção **"Redefinir senha de acesso"** (opcional, aberta sob demanda):
+  - Campos: `Nova senha` + `Confirmar nova senha` (mín. 6 caracteres).
+  - Se ambos vazios → não muda a senha. Se preenchidos → manda para a edge function.
+  - Validação inline igual ao fluxo de criação ("As senhas não conferem").
+- `usePDVUsers.updateUser`: aceitar `password?: string` opcional. Quando vier, chamar uma edge function (não dá pra mudar senha pelo client) em vez do `update` direto.
 
-### Por que não esconder a tab bar
-O Radix já cobre a tela com overlay escuro `z-50 fixed inset-0`. Só subir o `SheetContent` para `z-[60]` resolve a sobreposição sem mexer na tab bar nem em rotas, e mantém o comportamento em todos os outros sheets do app intacto.
+**2. Edge function `update-establishment-user` (nova)**
+
+- Recebe: `establishment_user_id`, `display_name`, `phone`, `role`, `discount_password`, `max_discount_percent`, `password?`.
+- Valida que o caller é o `establishment_owner_id` desse vínculo (segurança — admin só mexe em quem é dele).
+- Atualiza a linha em `establishment_users` (campos editáveis).
+- Se `password` veio: `adminClient.auth.admin.updateUserById(user_id, { password })`.
+
+**3. Edge function `delete-establishment-user` (nova) + UI de exclusão**
+
+- Recebe: `establishment_user_id`.
+- Valida que o caller é o `establishment_owner_id` do vínculo.
+- Bloqueia exclusão do próprio caller (admin não pode se auto-excluir).
+- Apaga a linha em `establishment_users` (remove o vínculo / acesso ao estabelecimento).
+- Apaga a conta em `auth.users` via `adminClient.auth.admin.deleteUser(user_id)` (cascata limpa profile via FK existente).
+- `usePDVUsers`: novo `mutation deleteUser` que invoca essa função.
+- `UserCard.tsx`: novo item "Excluir" no menu, em vermelho (`text-destructive`), com `<AlertDialog>` de confirmação ("Esta ação é permanente. O usuário perderá acesso e os dados de vínculo serão apagados. Histórico de vendas/comandas é preservado.").
+- `Users.tsx` / `UserForm.tsx`: passar `onDelete` para o card e botão "Excluir usuário" também no rodapé do form de edição.
+
+### Segurança
+- Ambas as edge functions validam o JWT, identificam o caller, e checam que `establishment_users.establishment_owner_id === caller.id` antes de qualquer mudança. Service role só é usada após essa checagem.
+- Bloqueio explícito: caller não pode excluir/alterar a si mesmo via essas funções (continua existindo via auto-cadastro do tenant).
+- Toggle desativar/reativar continua existindo (caso o admin queira só pausar acesso sem perder o vínculo).
 
 ### Fora de escopo
-- Mexer no z-index global da tab bar.
-- Alterar o `ProductOptionSelector` desktop do PDV.
-- Ajustes em outros sheets/dialogs do garçom.
+- Auditoria/log de quem alterou/excluiu (pode entrar em iteração futura).
+- Forçar logout imediato de sessões já ativas do usuário cuja senha foi trocada (Supabase invalida o token na próxima renovação naturalmente).
+- Mexer em comandas/vendas históricas geradas pelo usuário excluído — ficam com `created_by` apontando para um id que não existe mais (sem quebrar a UI, pois usamos display_name salvo nos registros).
 
