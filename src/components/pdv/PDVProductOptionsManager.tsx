@@ -450,7 +450,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
         </Button>
       </div>
 
-      {draft.map((option) => (
+      {visibleDraft.map((option) => (
         <Card key={option.id}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
