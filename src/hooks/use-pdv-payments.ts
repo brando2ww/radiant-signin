@@ -38,16 +38,21 @@ export function usePDVPayments() {
     }: RegisterPaymentParams) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
-      // 1. Close the comanda
-      const { error: comandaError } = await supabase
+      // 1. Close the comanda (only if still open)
+      const { data: updatedComandas, error: comandaError } = await supabase
         .from("pdv_comandas")
         .update({
           status: "fechada",
           updated_at: new Date().toISOString(),
         })
-        .eq("id", comandaId);
+        .eq("id", comandaId)
+        .eq("status", "aberta")
+        .select();
 
       if (comandaError) throw comandaError;
+      if (!updatedComandas || updatedComandas.length === 0) {
+        throw new Error("Comanda já finalizada");
+      }
 
       // 2. If there's an order_id, insert payment record
       if (orderId) {
@@ -151,16 +156,21 @@ export function usePDVPayments() {
     }) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
-      // 1. Close all comandas for this table
-      const { error: comandaError } = await supabase
+      // 1. Close all comandas for this table (only if still open)
+      const { data: updatedComandas, error: comandaError } = await supabase
         .from("pdv_comandas")
         .update({
           status: "fechada",
           updated_at: new Date().toISOString(),
         })
-        .in("id", comandaIds);
+        .in("id", comandaIds)
+        .eq("status", "aberta")
+        .select();
 
       if (comandaError) throw comandaError;
+      if (!updatedComandas || updatedComandas.length === 0) {
+        throw new Error("Comandas já finalizadas");
+      }
 
       // 2. Free the table
       const { error: tableError } = await supabase
