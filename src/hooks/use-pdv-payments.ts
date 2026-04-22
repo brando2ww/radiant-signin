@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEstablishmentId } from "@/hooks/use-establishment-id";
 import { toast } from "sonner";
 
 export type PaymentMethod = "dinheiro" | "cartao" | "pix";
@@ -21,6 +22,7 @@ interface RegisterPaymentParams {
 
 export function usePDVPayments() {
   const { user } = useAuth();
+  const { visibleUserId } = useEstablishmentId();
   const queryClient = useQueryClient();
 
   // Register payment and close comanda
@@ -74,10 +76,11 @@ export function usePDVPayments() {
       }
 
       // 3. Register sale in cashier (if cashier is open)
+      const ownerId = visibleUserId || user.id;
       const { data: activeSession } = await supabase
         .from("pdv_cashier_sessions")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", ownerId)
         .is("closed_at", null)
         .maybeSingle();
 
@@ -184,10 +187,11 @@ export function usePDVPayments() {
       if (tableError) throw tableError;
 
       // 3. Register sale in cashier
+      const ownerId = visibleUserId || user.id;
       const { data: activeSession } = await supabase
         .from("pdv_cashier_sessions")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", ownerId)
         .is("closed_at", null)
         .maybeSingle();
 
