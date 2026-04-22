@@ -62,9 +62,11 @@ export function usePDVProductOptions(productId?: string) {
 
       if (itemsError) throw itemsError;
 
+      const itemsWithRecipes = await attachRecipesToItems(items || []);
+
       return opts.map((o: any) => ({
         ...o,
-        items: (items || []).filter((i: any) => i.option_id === o.id),
+        items: itemsWithRecipes.filter((i: any) => i.option_id === o.id),
       })) as PDVProductOption[];
     },
   });
