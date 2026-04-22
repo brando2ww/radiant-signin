@@ -36,6 +36,39 @@ export interface PDVProductOption {
   items: PDVProductOptionItem[];
 }
 
+async function attachRecipesToItems(items: any[]): Promise<any[]> {
+  if (!items || items.length === 0) return items;
+  const itemIds = items.map((i) => i.id);
+  const { data: recipes } = await supabase
+    .from("pdv_option_item_recipes")
+    .select("*")
+    .in("option_item_id", itemIds);
+  if (!recipes || recipes.length === 0) {
+    return items.map((i) => ({ ...i, recipes: [] }));
+  }
+  const ingIds = Array.from(new Set(recipes.map((r: any) => r.ingredient_id)));
+  const { data: ings } = await supabase
+    .from("pdv_ingredients")
+    .select("id, name, unit")
+    .in("id", ingIds);
+  const ingMap = new Map((ings || []).map((i: any) => [i.id, i]));
+  const recipesByItem = new Map<string, PDVOptionItemRecipeRef[]>();
+  recipes.forEach((r: any) => {
+    const ing = ingMap.get(r.ingredient_id);
+    const arr = recipesByItem.get(r.option_item_id) || [];
+    arr.push({
+      id: r.id,
+      ingredient_id: r.ingredient_id,
+      quantity: Number(r.quantity),
+      unit: r.unit,
+      ingredient_name: ing?.name,
+      ingredient_unit: ing?.unit,
+    });
+    recipesByItem.set(r.option_item_id, arr);
+  });
+  return items.map((i) => ({ ...i, recipes: recipesByItem.get(i.id) || [] }));
+}
+
 export function usePDVProductOptions(productId?: string) {
   const queryClient = useQueryClient();
 
