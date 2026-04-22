@@ -234,6 +234,8 @@ export type Database = {
           google_review_url: string | null
           id: string
           logo_url: string | null
+          nfe_csc_id: string | null
+          nfe_csc_token: string | null
           primary_color: string | null
           secondary_color: string | null
           thank_you_message: string | null
@@ -251,6 +253,8 @@ export type Database = {
           google_review_url?: string | null
           id?: string
           logo_url?: string | null
+          nfe_csc_id?: string | null
+          nfe_csc_token?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           thank_you_message?: string | null
@@ -268,6 +272,8 @@ export type Database = {
           google_review_url?: string | null
           id?: string
           logo_url?: string | null
+          nfe_csc_id?: string | null
+          nfe_csc_token?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           thank_you_message?: string | null
@@ -3858,6 +3864,108 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pdv_nfce_emissions: {
+        Row: {
+          ambiente: string
+          cashier_session_id: string | null
+          chave_acesso: string | null
+          comanda_id: string | null
+          created_at: string
+          customer_cpf: string | null
+          customer_email: string | null
+          customer_name: string | null
+          danfe_html_url: string | null
+          danfe_pdf_url: string | null
+          data_autorizacao: string | null
+          data_emissao: string
+          error_payload: Json | null
+          forma_pagamento: string | null
+          id: string
+          items_snapshot: Json | null
+          numero: number | null
+          nuvem_fiscal_id: string | null
+          order_id: string | null
+          parcelas: number | null
+          protocolo_autorizacao: string | null
+          rejection_reason: string | null
+          serie: string | null
+          status: string
+          table_id: string | null
+          updated_at: string
+          user_id: string
+          valor_desconto: number
+          valor_servico: number
+          valor_total: number
+          xml_url: string | null
+        }
+        Insert: {
+          ambiente?: string
+          cashier_session_id?: string | null
+          chave_acesso?: string | null
+          comanda_id?: string | null
+          created_at?: string
+          customer_cpf?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          danfe_html_url?: string | null
+          danfe_pdf_url?: string | null
+          data_autorizacao?: string | null
+          data_emissao?: string
+          error_payload?: Json | null
+          forma_pagamento?: string | null
+          id?: string
+          items_snapshot?: Json | null
+          numero?: number | null
+          nuvem_fiscal_id?: string | null
+          order_id?: string | null
+          parcelas?: number | null
+          protocolo_autorizacao?: string | null
+          rejection_reason?: string | null
+          serie?: string | null
+          status?: string
+          table_id?: string | null
+          updated_at?: string
+          user_id: string
+          valor_desconto?: number
+          valor_servico?: number
+          valor_total?: number
+          xml_url?: string | null
+        }
+        Update: {
+          ambiente?: string
+          cashier_session_id?: string | null
+          chave_acesso?: string | null
+          comanda_id?: string | null
+          created_at?: string
+          customer_cpf?: string | null
+          customer_email?: string | null
+          customer_name?: string | null
+          danfe_html_url?: string | null
+          danfe_pdf_url?: string | null
+          data_autorizacao?: string | null
+          data_emissao?: string
+          error_payload?: Json | null
+          forma_pagamento?: string | null
+          id?: string
+          items_snapshot?: Json | null
+          numero?: number | null
+          nuvem_fiscal_id?: string | null
+          order_id?: string | null
+          parcelas?: number | null
+          protocolo_autorizacao?: string | null
+          rejection_reason?: string | null
+          serie?: string | null
+          status?: string
+          table_id?: string | null
+          updated_at?: string
+          user_id?: string
+          valor_desconto?: number
+          valor_servico?: number
+          valor_total?: number
+          xml_url?: string | null
+        }
+        Relationships: []
       }
       pdv_notifications: {
         Row: {
