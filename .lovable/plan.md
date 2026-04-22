@@ -1,33 +1,29 @@
 
 
-## Corrigir clique nos insumos dentro do popover
+## Substituir popup do navegador por modal do sistema ao fechar com alterações não salvas
 
 ### Causa
-Os dois popovers de busca de insumo estão dentro do `Dialog` do `ProductDialog`. Como o Dialog do shadcn/Radix é modal por padrão e o `PopoverContent` é renderizado em portal (fora do `DialogContent`), o overlay do Dialog está bloqueando os cliques dos botões de insumo na lista do popover.
-
-Esse comportamento já está documentado na memória do projeto (`mem://ui-patterns/dialog-interaction-standards`): popovers aninhados em diálogos precisam de tratamento especial.
+Em `src/components/pdv/ProductDialog.tsx`, o `handleDialogOpenChange` usa `window.confirm(...)` para perguntar se o usuário quer descartar as edições pendentes da aba **Opções**. Isso exibe o popup nativo do navegador, fora do design system.
 
 ### Correção
-
-Adicionar `modal` no componente `Popover` (Radix) nos dois popovers de busca de insumo. Isso faz o popover assumir o controle de pointer/focus enquanto está aberto, sobrepondo corretamente o overlay do Dialog e permitindo cliques nos itens.
+Trocar o `window.confirm` por um `AlertDialog` do design system (shadcn/Radix), com botões "Continuar editando" e "Descartar e fechar".
 
 ### Arquivo
-- `src/components/pdv/PDVProductOptionsManager.tsx`
+- `src/components/pdv/ProductDialog.tsx`
 
 ### Mudanças
-1. **Popover do item já existente** (linha 578): adicionar prop `modal` no `<Popover>`.
-2. **Popover do novo item** (linha 714): adicionar prop `modal` no `<Popover>`.
 
-Nada mais muda — o resto da estrutura, autopreenchimento, `type="button"`, lista de insumos e handlers continuam iguais.
+1. Importar `AlertDialog`, `AlertDialogAction`, `AlertDialogCancel`, `AlertDialogContent`, `AlertDialogDescription`, `AlertDialogFooter`, `AlertDialogHeader`, `AlertDialogTitle` de `@/components/ui/alert-dialog`.
+2. Importar `buttonVariants` de `@/components/ui/button` para estilizar a ação destrutiva.
+3. Novo estado: `const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);`
+4. Reescrever `handleDialogOpenChange`: quando `optionsDirty` e o dialog está fechando, abrir o `AlertDialog` em vez de chamar `window.confirm`, e não propagar o fechamento.
+5. Novo handler `handleConfirmDiscardClose`: zera `optionsDirty`, fecha o `AlertDialog` e propaga o fechamento do Dialog principal.
+6. Renderizar o `AlertDialog` ao final do componente (irmão do `Dialog`), com:
+   - Título: "Descartar alterações?"
+   - Descrição: "Há alterações não salvas na aba Opções. Se você fechar agora, elas serão perdidas."
+   - Cancel: "Continuar editando"
+   - Action: "Descartar e fechar" com `className={buttonVariants({ variant: "destructive" })}`
 
-### Resultado esperado
-- Clicar no ícone de buscar insumo abre o popover normalmente
-- A busca digitada filtra
-- Clicar em um insumo da lista funciona: vincula no item existente ou autopreenche o nome no formulário de novo item
-- O Dialog principal continua aberto durante toda a operação
-
-### Por que não usar outra abordagem
-- `container={dialogContentRef}`: funciona, mas exige refs e `forwardRef` — mais código sem ganho real
-- `onPointerDownOutside` no Dialog: arriscado, pode quebrar fechamento por clique fora em outros lugares
-- `modal` no Popover: 1 linha por popover, é a abordagem oficial do Radix para esse cenário e já é usada em outros lugares do projeto (padrão estabelecido)
+### Resultado
+O popup nativo do navegador desaparece. No lugar, aparece o modal do design system, coerente com o restante do app.
 
