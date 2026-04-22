@@ -354,41 +354,97 @@ export function PaymentDialog({
   const isProcessing = isRegisteringPayment || isRegisteringTablePayment;
 
   if (showSuccess) {
+    const nfceEnabled = !!settings?.nfe_enable_nfce;
+    const nfceConfigured = nfceEnabled && !!settings?.nfe_certificate_url && !!settings?.nfe_csc_id && !!settings?.nfe_csc_token;
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={(o) => { if (!o) handleFinish(); }}>
         <DialogContent className="sm:max-w-md">
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="flex flex-col items-center justify-center py-12 space-y-4"
+            className="flex flex-col items-center py-6 space-y-4"
           >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center"
-            >
-              <CheckCircle className="w-12 h-12 text-green-600" />
-            </motion.div>
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="text-center space-y-2"
-            >
-              <h3 className="text-xl font-bold text-green-600">
-                Pagamento Confirmado!
-              </h3>
-              <p className="text-muted-foreground">
-                {formatCurrency(total)}
-              </p>
+            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <CheckCircle className="w-10 h-10 text-green-600" />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-xl font-bold text-green-600">Pagamento Confirmado!</h3>
+              <p className="text-2xl font-bold">{formatCurrency(total)}</p>
               {successData && successData.change > 0 && (
-                <div className="mt-4 p-3 bg-muted rounded-lg">
-                  <span className="text-sm text-muted-foreground">Troco: </span>
-                  <span className="font-bold text-lg">{formatCurrency(successData.change)}</span>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Troco: <span className="font-bold text-foreground">{formatCurrency(successData.change)}</span>
+                </p>
               )}
-            </motion.div>
+            </div>
+
+            {/* NFC-e status */}
+            {nfceState.kind === "success" && (
+              <div className="w-full rounded-md border border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-900 p-3 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-green-700 dark:text-green-400">
+                  <CheckCircle className="h-4 w-4" />
+                  NFC-e autorizada
+                </div>
+                <p className="text-[11px] font-mono break-all text-muted-foreground">{nfceState.chave}</p>
+                {nfceState.danfe && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => printDanfeFromUrl(nfceState.danfe!)}
+                  >
+                    <Printer className="h-4 w-4 mr-2" />
+                    Imprimir DANFE NFC-e
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {nfceState.kind === "error" && (
+              <div className="w-full rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-900 p-3 space-y-1">
+                <div className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
+                  <AlertTriangle className="h-4 w-4" />
+                  NFC-e não emitida
+                </div>
+                <p className="text-xs text-muted-foreground">{nfceState.message}</p>
+                {nfceState.missing?.length ? (
+                  <ul className="text-xs text-muted-foreground list-disc list-inside">
+                    {nfceState.missing.map((m, i) => <li key={i}>{m}</li>)}
+                  </ul>
+                ) : null}
+              </div>
+            )}
+
+            <div className="w-full space-y-2 pt-2">
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handleEmitNFCe}
+                disabled={isEmitting || nfceState.kind === "success" || !nfceConfigured}
+                title={!nfceConfigured ? "Configure NFC-e em Integrações > NF Automática" : undefined}
+              >
+                {isEmitting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4 mr-2" />
+                )}
+                {nfceState.kind === "error" ? "Tentar emitir NFC-e novamente" : "Emitir NFC-e (Cupom Fiscal)"}
+              </Button>
+
+              {!nfceConfigured && (
+                <p className="text-[11px] text-center text-muted-foreground -mt-1">
+                  {!nfceEnabled ? "NFC-e desabilitada nas configurações" : "Configure certificado e CSC em Integrações > NF Automática"}
+                </p>
+              )}
+
+              <Button variant="outline" className="w-full" onClick={handlePrintNonFiscal}>
+                <Printer className="h-4 w-4 mr-2" />
+                Imprimir Recibo Não-Fiscal
+              </Button>
+
+              <Button variant="ghost" className="w-full" onClick={handleFinish}>
+                Concluir
+              </Button>
+            </div>
           </motion.div>
         </DialogContent>
       </Dialog>
