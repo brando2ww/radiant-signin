@@ -2,16 +2,20 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus, Send } from "lucide-react";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
+import { usePDVOrders } from "@/hooks/use-pdv-orders";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function GarcomMesaDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { tables, isLoading: loadingTables } = usePDVTables();
+  const queryClient = useQueryClient();
+  const { tables, isLoading: loadingTables, updateTable } = usePDVTables();
   const {
     comandas,
     comandaItems,
@@ -23,9 +27,17 @@ export default function GarcomMesaDetalhe() {
   const { activeSession, isLoadingSession } = usePDVCashier();
 
   const table = tables.find((t) => t.id === id);
-  const tableComandas = comandas.filter(
-    (c) => c.order_id === table?.current_order_id && c.status === "aberta"
-  );
+
+  // CRÍTICO: só lista comandas se a mesa tiver order_id válido.
+  // Sem isso, mesas livres (current_order_id = null) acabam batendo
+  // com comandas avulsas (order_id = null) e mostrando o mesmo item
+  // em todas as mesas.
+  const tableComandas = table?.current_order_id
+    ? comandas.filter(
+        (c) =>
+          c.order_id === table.current_order_id && c.status === "aberta",
+      )
+    : [];
 
   const handleNewComanda = async () => {
     if (!table) return;
@@ -38,8 +50,49 @@ export default function GarcomMesaDetalhe() {
       return;
     }
     try {
+      let orderId = table.current_order_id;
+
+      // Se a mesa ainda não tem pedido, cria agora e amarra na mesa.
+      // Sem isso a comanda fica solta (order_id null) e aparece em todas
+      // as mesas livres ao mesmo tempo.
+      if (!orderId) {
+        const orderNumber = `PDV${Date.now().toString().slice(-6)}`;
+        const { data: newOrder, error: orderError } = await supabase
+          .from("pdv_orders")
+          .insert({
+            user_id: table.user_id,
+            order_number: orderNumber,
+            source: "salao",
+            table_id: table.id,
+            status: "aberta",
+            subtotal: 0,
+            service_fee: 0,
+            discount: 0,
+            total: 0,
+          })
+          .select()
+          .single();
+
+        if (orderError || !newOrder) {
+          toast.error("Erro ao abrir mesa: " + (orderError?.message ?? "desconhecido"));
+          return;
+        }
+
+        orderId = newOrder.id;
+        await new Promise<void>((resolve) => {
+          updateTable(
+            {
+              id: table.id,
+              updates: { status: "ocupada", current_order_id: orderId },
+            },
+            { onSettled: () => resolve() },
+          );
+        });
+        queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
+      }
+
       const comanda = await createComanda({
-        orderId: table.current_order_id,
+        orderId,
         customerName: `Mesa ${table.table_number}`,
       });
       navigate(`/garcom/comanda/${comanda.id}`);
