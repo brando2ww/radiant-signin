@@ -262,8 +262,8 @@ export default function PDVCashier() {
         </Card>
 
         {/* Sidebar de Ações */}
-        <Card>
-          <CardContent className="p-4 h-full">
+        <Card className="flex flex-col min-h-0 overflow-hidden">
+          <CardContent className="p-3 flex-1 min-h-0 overflow-hidden">
             <CashierActionsSidebar
               isOpen={!!activeSession}
               isLoading={isOpeningCashier || isClosingCashier || isAddingMovement}

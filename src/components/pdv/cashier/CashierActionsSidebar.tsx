@@ -27,8 +27,8 @@ export function CashierActionsSidebar({
   onEmployeeConsumption,
 }: CashierActionsSidebarProps) {
   return (
-    <div className="flex flex-col gap-3 h-full">
-      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+    <div className="flex flex-col gap-2 h-full overflow-y-auto">
+      <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">
         Ações Rápidas
       </h3>
 
@@ -61,10 +61,10 @@ export function CashierActionsSidebar({
             onClick={onAddReinforcement}
             disabled={isLoading}
             variant="outline"
-            className="h-20 flex-col gap-1 border-green-500/30 hover:bg-green-500/10 hover:border-green-500/50"
+            className="h-16 flex-col gap-0.5 border-green-500/30 hover:bg-green-500/10 hover:border-green-500/50"
           >
-            <TrendingUp className="h-6 w-6 text-green-600" />
-            <span className="text-sm font-medium">Reforço</span>
+            <TrendingUp className="h-5 w-5 text-green-600" />
+            <span className="text-xs font-medium">Reforço</span>
             <kbd className="text-[10px] opacity-50 bg-muted px-1.5 py-0.5 rounded">F2</kbd>
           </Button>
 
@@ -72,10 +72,10 @@ export function CashierActionsSidebar({
             onClick={onAddWithdrawal}
             disabled={isLoading}
             variant="outline"
-            className="h-20 flex-col gap-1 border-orange-500/30 hover:bg-orange-500/10 hover:border-orange-500/50"
+            className="h-16 flex-col gap-0.5 border-orange-500/30 hover:bg-orange-500/10 hover:border-orange-500/50"
           >
-            <TrendingDown className="h-6 w-6 text-orange-600" />
-            <span className="text-sm font-medium">Sangria</span>
+            <TrendingDown className="h-5 w-5 text-orange-600" />
+            <span className="text-xs font-medium">Sangria</span>
             <kbd className="text-[10px] opacity-50 bg-muted px-1.5 py-0.5 rounded">F3</kbd>
           </Button>
 
@@ -83,10 +83,10 @@ export function CashierActionsSidebar({
             onClick={onCharge}
             disabled={isLoading}
             variant="outline"
-            className="h-20 flex-col gap-1 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+            className="h-16 flex-col gap-0.5 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
           >
-            <Receipt className="h-6 w-6 text-primary" />
-            <span className="text-sm font-medium">Cobrar</span>
+            <Receipt className="h-5 w-5 text-primary" />
+            <span className="text-xs font-medium">Cobrar</span>
             <kbd className="text-[10px] opacity-50 bg-muted px-1.5 py-0.5 rounded">F5</kbd>
           </Button>
 
@@ -95,23 +95,23 @@ export function CashierActionsSidebar({
               onClick={onEmployeeConsumption}
               disabled={isLoading}
               variant="outline"
-              className="h-16 flex-col gap-1 border-muted-foreground/30 hover:bg-muted"
+              className="h-14 flex-col gap-0.5 border-muted-foreground/30 hover:bg-muted"
             >
-              <Users className="h-5 w-5 text-muted-foreground" />
+              <Users className="h-4 w-4 text-muted-foreground" />
               <span className="text-xs font-medium">Consumo Func.</span>
             </Button>
           )}
 
-          <div className="flex-1" />
+          <div className="flex-1 min-h-2" />
 
           <Button
             onClick={onCloseCashier}
             disabled={isLoading}
             variant="destructive"
-            className="h-20 flex-col gap-1"
+            className="h-16 flex-col gap-0.5"
           >
-            <Lock className="h-6 w-6" />
-            <span className="text-sm font-medium">Fechar Caixa</span>
+            <Lock className="h-5 w-5" />
+            <span className="text-xs font-medium">Fechar Caixa</span>
             <kbd className="text-[10px] opacity-70 bg-black/20 px-1.5 py-0.5 rounded">F4</kbd>
           </Button>
         </>
