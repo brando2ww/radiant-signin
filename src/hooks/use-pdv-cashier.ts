@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useEstablishmentId } from "@/hooks/use-establishment-id";
 import { toast } from "sonner";
 
 interface CashierSession {
@@ -30,18 +31,20 @@ interface CashMovement {
 
 export function usePDVCashier() {
   const { user } = useAuth();
+  const { visibleUserId, isLoading: isLoadingEstablishment } = useEstablishmentId();
   const queryClient = useQueryClient();
+  const isOwner = !!user?.id && !!visibleUserId && user.id === visibleUserId;
 
-  // Buscar sessão ativa do caixa
+  // Buscar sessão ativa do caixa (do dono do estabelecimento — staff compartilha)
   const { data: activeSession, isLoading: isLoadingSession } = useQuery({
-    queryKey: ["pdv-cashier-active", user?.id],
+    queryKey: ["pdv-cashier-active", visibleUserId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!visibleUserId) return null;
 
       const { data, error } = await supabase
         .from("pdv_cashier_sessions")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", visibleUserId)
         .is("closed_at", null)
         .order("opened_at", { ascending: false })
         .maybeSingle();
@@ -49,7 +52,7 @@ export function usePDVCashier() {
       if (error) throw error;
       return data as CashierSession | null;
     },
-    enabled: !!user?.id,
+    enabled: !!visibleUserId && !isLoadingEstablishment,
   });
 
   // Buscar movimentações da sessão ativa
@@ -74,6 +77,7 @@ export function usePDVCashier() {
   const openCashier = useMutation({
     mutationFn: async ({ openingBalance }: { openingBalance: number }) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
+      if (!isOwner) throw new Error("Apenas o responsável pelo estabelecimento pode abrir o caixa");
 
       const { data, error } = await supabase
         .from("pdv_cashier_sessions")
@@ -258,14 +262,14 @@ export function usePDVCashier() {
 
   // Buscar última sessão fechada
   const { data: lastClosedSession } = useQuery({
-    queryKey: ["pdv-cashier-last-closed", user?.id],
+    queryKey: ["pdv-cashier-last-closed", visibleUserId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!visibleUserId) return null;
 
       const { data, error } = await supabase
         .from("pdv_cashier_sessions")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", visibleUserId)
         .not("closed_at", "is", null)
         .order("closed_at", { ascending: false })
         .limit(1)
@@ -274,7 +278,7 @@ export function usePDVCashier() {
       if (error) throw error;
       return data as CashierSession | null;
     },
-    enabled: !!user?.id,
+    enabled: !!visibleUserId && !isLoadingEstablishment,
   });
 
   // Buscar movimentações da última sessão fechada
