@@ -18,7 +18,7 @@ import GarcomItemDetalhe from "./garcom/GarcomItemDetalhe";
 export default function Garcom() {
   const navigate = useNavigate();
   const { createComanda, isCreating } = usePDVComandas();
-  const { activeSession } = usePDVCashier();
+  const { activeSession, isLoadingSession } = usePDVCashier();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [comandaDialogOpen, setComandaDialogOpen] = useState(false);
 
@@ -29,6 +29,10 @@ export default function Garcom() {
 
   const handleSelectComandaAvulsa = () => {
     setSheetOpen(false);
+    if (isLoadingSession) {
+      toast.info("Carregando caixa...", { position: "top-center" });
+      return;
+    }
     if (!activeSession) {
       toast.error("Abra o caixa antes de criar uma comanda.", { position: "top-center" });
       return;

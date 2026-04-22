@@ -20,7 +20,7 @@ export default function GarcomMesaDetalhe() {
     isCreating,
     sendToKitchen,
   } = usePDVComandas();
-  const { activeSession } = usePDVCashier();
+  const { activeSession, isLoadingSession } = usePDVCashier();
 
   const table = tables.find((t) => t.id === id);
   const tableComandas = comandas.filter(
@@ -29,6 +29,10 @@ export default function GarcomMesaDetalhe() {
 
   const handleNewComanda = async () => {
     if (!table) return;
+    if (isLoadingSession) {
+      toast.info("Carregando caixa...", { position: "top-center" });
+      return;
+    }
     if (!activeSession) {
       toast.error("Abra o caixa antes de criar uma comanda.", { position: "top-center" });
       return;
