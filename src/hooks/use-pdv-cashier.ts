@@ -77,6 +77,7 @@ export function usePDVCashier() {
   const openCashier = useMutation({
     mutationFn: async ({ openingBalance }: { openingBalance: number }) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
+      if (!isOwner) throw new Error("Apenas o responsável pelo estabelecimento pode abrir o caixa");
 
       const { data, error } = await supabase
         .from("pdv_cashier_sessions")
