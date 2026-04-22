@@ -122,7 +122,7 @@ export function MobileProductOptionSelector({
       </div>
 
       {/* Grupos */}
-      <div className="space-y-5 pb-24">
+      <div className="space-y-5 pb-4">
         {options.map((option, idx) => {
           const selected = selections[option.id] || [];
           const valid = isGroupValid(option);
@@ -252,7 +252,7 @@ export function MobileProductOptionSelector({
       </div>
 
       {/* Footer sticky */}
-      <div className="sticky bottom-0 -mx-4 mt-2 border-t bg-background px-4 pb-[env(safe-area-inset-bottom)] pt-3">
+      <div className="sticky bottom-0 -mx-4 mt-2 border-t bg-background px-4 pt-3 pb-4 shadow-[0_-8px_16px_-8px_rgba(0,0,0,0.15)]" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
         <div className="flex gap-2">
           <Button
             type="button"
