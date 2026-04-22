@@ -18,11 +18,11 @@ export function CashierHeader({ isOpen, openedAt }: CashierHeaderProps) {
   }, []);
 
   return (
-    <div className="bg-muted/50 border rounded-lg p-4">
+    <div className="bg-muted/50 border rounded-lg p-3">
       <div className="flex flex-wrap items-center justify-between gap-4">
         {/* Operador */}
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
             <User className="h-5 w-5 text-primary" />
           </div>
           <div>
@@ -33,7 +33,7 @@ export function CashierHeader({ isOpen, openedAt }: CashierHeaderProps) {
 
         {/* Data e Hora de Abertura */}
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+          <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
             <Calendar className="h-5 w-5 text-muted-foreground" />
           </div>
           <div>
@@ -50,7 +50,7 @@ export function CashierHeader({ isOpen, openedAt }: CashierHeaderProps) {
 
         {/* Relógio em Tempo Real */}
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+          <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
             <Clock className="h-5 w-5 text-muted-foreground" />
           </div>
           <div>
