@@ -183,6 +183,7 @@ export function PaymentDialog({
       setSplitPayments([]);
       setShowSuccess(false);
       setSuccessData(null);
+      setNfceState({ kind: "idle" });
     }
   }, [open]);
 
@@ -254,17 +255,99 @@ export function PaymentDialog({
         });
       }
 
-      // Show success animation
+      // Show success screen (manual close: user pode emitir NFC-e ou imprimir)
       setSuccessData({ change: changeAmount });
       setShowSuccess(true);
-      
-      // Auto close after animation
-      setTimeout(() => {
-        onOpenChange(false);
-        onSuccess?.();
-      }, 2000);
     } catch (error) {
       console.error("Erro ao processar pagamento:", error);
+    }
+  };
+
+  const handleFinish = () => {
+    onOpenChange(false);
+    onSuccess?.();
+  };
+
+  const buildBusinessInfo = () => ({
+    name: settings?.business_name || settings?.nfe_nome_fantasia || "Estabelecimento",
+    cnpj: settings?.business_cnpj || "",
+    address: settings?.business_address || "",
+    phone: settings?.business_phone || "",
+  });
+
+  const handlePrintNonFiscal = () => {
+    printNonFiscalReceipt({
+      business: buildBusinessInfo(),
+      identifier: title,
+      items: displayItems.map((i) => ({
+        product_name: i.product_name,
+        quantity: i.quantity,
+        unit_price: i.unit_price,
+        subtotal: i.subtotal,
+      })),
+      subtotal,
+      desconto: discountAmount,
+      taxa_servico: serviceFeeAmount,
+      total,
+      forma_pagamento: selectedMethod,
+      valor_pago: selectedMethod === "dinheiro" ? cashReceivedNum : total,
+      troco: changeAmount,
+    });
+  };
+
+  const handleEmitNFCe = async () => {
+    try {
+      // Buscar dados fiscais dos produtos
+      const productIds = Array.from(new Set(displayItems.map((i) => i.product_id).filter(Boolean)));
+      let productMap: Record<string, any> = {};
+      if (productIds.length) {
+        const { data: prods } = await supabase
+          .from("pdv_products")
+          .select("id, ncm, cfop, cest, origem, ean, unit")
+          .in("id", productIds as string[]);
+        (prods || []).forEach((p: any) => { productMap[p.id] = p; });
+      }
+
+      const result = await emitNFCe({
+        comanda_id: comanda?.id || null,
+        table_id: table?.id || null,
+        order_id: comanda?.order_id || null,
+        cashier_session_id: null,
+        items: displayItems.map((i) => {
+          const p = productMap[i.product_id] || {};
+          return {
+            product_id: i.product_id,
+            product_name: i.product_name,
+            quantity: i.quantity,
+            unit_price: i.unit_price,
+            subtotal: i.subtotal,
+            ncm: p.ncm,
+            cfop: p.cfop,
+            cest: p.cest,
+            origem: p.origem,
+            ean: p.ean,
+            unidade: p.unit,
+          };
+        }),
+        valor_desconto: discountAmount || 0,
+        valor_servico: serviceFeeAmount || 0,
+        forma_pagamento: selectedMethod === "cartao" ? (cardType === "credito" ? "cartao_credito" : "cartao_debito") : selectedMethod,
+        valor_pago: selectedMethod === "dinheiro" ? cashReceivedNum : total,
+        troco: changeAmount || 0,
+        parcelas: selectedMethod === "cartao" ? parseInt(installments) : 1,
+      });
+
+      if (result.success && result.chave_acesso) {
+        setNfceState({ kind: "success", chave: result.chave_acesso, danfe: result.danfe_url });
+      } else {
+        setNfceState({
+          kind: "error",
+          message: result.motivo || result.error || "Falha ao emitir",
+          missing: result.missing,
+        });
+      }
+    } catch (e: any) {
+      setNfceState({ kind: "error", message: e.message || "Erro inesperado" });
     }
   };
 
