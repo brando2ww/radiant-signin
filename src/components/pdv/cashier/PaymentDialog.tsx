@@ -190,12 +190,14 @@ export function PaymentDialog({
   };
 
   const addSplitPayment = () => {
+    const allocated = splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+    const remaining = total - allocated;
     setSplitPayments([
       ...splitPayments,
       {
         id: crypto.randomUUID(),
         method: "dinheiro",
-        amount: "",
+        amount: remaining > 0 ? remaining.toFixed(2) : "",
         installments: "1",
       },
     ]);
