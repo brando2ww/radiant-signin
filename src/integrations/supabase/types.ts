@@ -234,8 +234,6 @@ export type Database = {
           google_review_url: string | null
           id: string
           logo_url: string | null
-          nfe_csc_id: string | null
-          nfe_csc_token: string | null
           primary_color: string | null
           secondary_color: string | null
           thank_you_message: string | null
@@ -253,8 +251,6 @@ export type Database = {
           google_review_url?: string | null
           id?: string
           logo_url?: string | null
-          nfe_csc_id?: string | null
-          nfe_csc_token?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           thank_you_message?: string | null
@@ -272,8 +268,6 @@ export type Database = {
           google_review_url?: string | null
           id?: string
           logo_url?: string | null
-          nfe_csc_id?: string | null
-          nfe_csc_token?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           thank_you_message?: string | null
@@ -5092,6 +5086,8 @@ export type Database = {
           nfe_certificate_password: string | null
           nfe_certificate_url: string | null
           nfe_cfop_padrao: string | null
+          nfe_csc_id: string | null
+          nfe_csc_token: string | null
           nfe_cst_csosn: string | null
           nfe_email_customer: boolean | null
           nfe_enable_nfce: boolean | null
@@ -5152,6 +5148,8 @@ export type Database = {
           nfe_certificate_password?: string | null
           nfe_certificate_url?: string | null
           nfe_cfop_padrao?: string | null
+          nfe_csc_id?: string | null
+          nfe_csc_token?: string | null
           nfe_cst_csosn?: string | null
           nfe_email_customer?: boolean | null
           nfe_enable_nfce?: boolean | null
@@ -5212,6 +5210,8 @@ export type Database = {
           nfe_certificate_password?: string | null
           nfe_certificate_url?: string | null
           nfe_cfop_padrao?: string | null
+          nfe_csc_id?: string | null
+          nfe_csc_token?: string | null
           nfe_cst_csosn?: string | null
           nfe_email_customer?: boolean | null
           nfe_enable_nfce?: boolean | null

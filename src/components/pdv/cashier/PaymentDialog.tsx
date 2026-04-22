@@ -38,6 +38,8 @@ import {
   Sparkles,
   Lock,
   FileText,
+  Printer,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
@@ -45,6 +47,9 @@ import { PDVTable } from "@/hooks/use-pdv-tables";
 import { usePDVPayments, PaymentMethod } from "@/hooks/use-pdv-payments";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNFCeEmission } from "@/hooks/use-nfce-emission";
+import { usePDVSettings } from "@/hooks/use-pdv-settings";
+import { printNonFiscalReceipt, printDanfeFromUrl } from "@/lib/print-fiscal-receipt";
 
 interface PaymentDialogProps {
   open: boolean;
@@ -110,8 +115,15 @@ export function PaymentDialog({
   // Success state
   const [showSuccess, setShowSuccess] = useState(false);
   const [successData, setSuccessData] = useState<{ change: number } | null>(null);
-  
+  const [nfceState, setNfceState] = useState<
+    | { kind: "idle" }
+    | { kind: "success"; chave: string; danfe?: string }
+    | { kind: "error"; message: string; missing?: string[] }
+  >({ kind: "idle" });
+
   const { registerPayment, isRegisteringPayment, registerTablePayment, isRegisteringTablePayment } = usePDVPayments();
+  const { emitNFCe, isEmitting } = useNFCeEmission();
+  const { settings } = usePDVSettings();
 
   // Determine payment context
   const isTablePayment = !!table;
@@ -171,6 +183,7 @@ export function PaymentDialog({
       setSplitPayments([]);
       setShowSuccess(false);
       setSuccessData(null);
+      setNfceState({ kind: "idle" });
     }
   }, [open]);
 
@@ -242,58 +255,196 @@ export function PaymentDialog({
         });
       }
 
-      // Show success animation
+      // Show success screen (manual close: user pode emitir NFC-e ou imprimir)
       setSuccessData({ change: changeAmount });
       setShowSuccess(true);
-      
-      // Auto close after animation
-      setTimeout(() => {
-        onOpenChange(false);
-        onSuccess?.();
-      }, 2000);
     } catch (error) {
       console.error("Erro ao processar pagamento:", error);
+    }
+  };
+
+  const handleFinish = () => {
+    onOpenChange(false);
+    onSuccess?.();
+  };
+
+  const buildBusinessInfo = () => ({
+    name: settings?.business_name || settings?.nfe_nome_fantasia || "Estabelecimento",
+    cnpj: settings?.business_cnpj || "",
+    address: settings?.business_address || "",
+    phone: settings?.business_phone || "",
+  });
+
+  const handlePrintNonFiscal = () => {
+    printNonFiscalReceipt({
+      business: buildBusinessInfo(),
+      identifier: title,
+      items: displayItems.map((i) => ({
+        product_name: i.product_name,
+        quantity: i.quantity,
+        unit_price: i.unit_price,
+        subtotal: i.subtotal,
+      })),
+      subtotal,
+      desconto: discountAmount,
+      taxa_servico: serviceFeeAmount,
+      total,
+      forma_pagamento: selectedMethod,
+      valor_pago: selectedMethod === "dinheiro" ? cashReceivedNum : total,
+      troco: changeAmount,
+    });
+  };
+
+  const handleEmitNFCe = async () => {
+    try {
+      // Buscar dados fiscais dos produtos
+      const productIds = Array.from(new Set(displayItems.map((i) => i.product_id).filter(Boolean)));
+      let productMap: Record<string, any> = {};
+      if (productIds.length) {
+        const { data: prods } = await supabase
+          .from("pdv_products")
+          .select("id, ncm, cfop, cest, origem, ean, unit")
+          .in("id", productIds as string[]);
+        (prods || []).forEach((p: any) => { productMap[p.id] = p; });
+      }
+
+      const result = await emitNFCe({
+        comanda_id: comanda?.id || null,
+        table_id: table?.id || null,
+        order_id: comanda?.order_id || null,
+        cashier_session_id: null,
+        items: displayItems.map((i) => {
+          const p = productMap[i.product_id] || {};
+          return {
+            product_id: i.product_id,
+            product_name: i.product_name,
+            quantity: i.quantity,
+            unit_price: i.unit_price,
+            subtotal: i.subtotal,
+            ncm: p.ncm,
+            cfop: p.cfop,
+            cest: p.cest,
+            origem: p.origem,
+            ean: p.ean,
+            unidade: p.unit,
+          };
+        }),
+        valor_desconto: discountAmount || 0,
+        valor_servico: serviceFeeAmount || 0,
+        forma_pagamento: selectedMethod === "cartao" ? (cardType === "credito" ? "cartao_credito" : "cartao_debito") : selectedMethod,
+        valor_pago: selectedMethod === "dinheiro" ? cashReceivedNum : total,
+        troco: changeAmount || 0,
+        parcelas: selectedMethod === "cartao" ? parseInt(installments) : 1,
+      });
+
+      if (result.success && result.chave_acesso) {
+        setNfceState({ kind: "success", chave: result.chave_acesso, danfe: result.danfe_url });
+      } else {
+        setNfceState({
+          kind: "error",
+          message: result.motivo || result.error || "Falha ao emitir",
+          missing: result.missing,
+        });
+      }
+    } catch (e: any) {
+      setNfceState({ kind: "error", message: e.message || "Erro inesperado" });
     }
   };
 
   const isProcessing = isRegisteringPayment || isRegisteringTablePayment;
 
   if (showSuccess) {
+    const nfceEnabled = !!settings?.nfe_enable_nfce;
+    const nfceConfigured = nfceEnabled && !!settings?.nfe_certificate_url && !!settings?.nfe_csc_id && !!settings?.nfe_csc_token;
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={(o) => { if (!o) handleFinish(); }}>
         <DialogContent className="sm:max-w-md">
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
+            initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="flex flex-col items-center justify-center py-12 space-y-4"
+            className="flex flex-col items-center py-6 space-y-4"
           >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center"
-            >
-              <CheckCircle className="w-12 h-12 text-green-600" />
-            </motion.div>
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="text-center space-y-2"
-            >
-              <h3 className="text-xl font-bold text-green-600">
-                Pagamento Confirmado!
-              </h3>
-              <p className="text-muted-foreground">
-                {formatCurrency(total)}
-              </p>
+            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <CheckCircle className="w-10 h-10 text-green-600" />
+            </div>
+            <div className="text-center space-y-1">
+              <h3 className="text-xl font-bold text-green-600">Pagamento Confirmado!</h3>
+              <p className="text-2xl font-bold">{formatCurrency(total)}</p>
               {successData && successData.change > 0 && (
-                <div className="mt-4 p-3 bg-muted rounded-lg">
-                  <span className="text-sm text-muted-foreground">Troco: </span>
-                  <span className="font-bold text-lg">{formatCurrency(successData.change)}</span>
-                </div>
+                <p className="text-sm text-muted-foreground">
+                  Troco: <span className="font-bold text-foreground">{formatCurrency(successData.change)}</span>
+                </p>
               )}
-            </motion.div>
+            </div>
+
+            {/* NFC-e status */}
+            {nfceState.kind === "success" && (
+              <div className="w-full rounded-md border border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-900 p-3 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-semibold text-green-700 dark:text-green-400">
+                  <CheckCircle className="h-4 w-4" />
+                  NFC-e autorizada
+                </div>
+                <p className="text-[11px] font-mono break-all text-muted-foreground">{nfceState.chave}</p>
+                {nfceState.danfe && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => printDanfeFromUrl(nfceState.danfe!)}
+                  >
+                    <Printer className="h-4 w-4 mr-2" />
+                    Imprimir DANFE NFC-e
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {nfceState.kind === "error" && (
+              <div className="w-full rounded-md border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-900 p-3 space-y-1">
+                <div className="flex items-center gap-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
+                  <AlertTriangle className="h-4 w-4" />
+                  NFC-e não emitida
+                </div>
+                <p className="text-xs text-muted-foreground">{nfceState.message}</p>
+                {nfceState.missing?.length ? (
+                  <ul className="text-xs text-muted-foreground list-disc list-inside">
+                    {nfceState.missing.map((m, i) => <li key={i}>{m}</li>)}
+                  </ul>
+                ) : null}
+              </div>
+            )}
+
+            <div className="w-full space-y-2 pt-2">
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handleEmitNFCe}
+                disabled={isEmitting || nfceState.kind === "success" || !nfceConfigured}
+                title={!nfceConfigured ? "Configure NFC-e em Integrações > NF Automática" : undefined}
+              >
+                {isEmitting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4 mr-2" />
+                )}
+                {nfceState.kind === "error" ? "Tentar emitir NFC-e novamente" : "Emitir NFC-e (Cupom Fiscal)"}
+              </Button>
+
+              {!nfceConfigured && (
+                <p className="text-[11px] text-center text-muted-foreground -mt-1">
+                  {!nfceEnabled ? "NFC-e desabilitada nas configurações" : "Configure certificado e CSC em Integrações > NF Automática"}
+                </p>
+              )}
+
+              <Button variant="outline" className="w-full" onClick={handlePrintNonFiscal}>
+                <Printer className="h-4 w-4 mr-2" />
+                Imprimir Recibo Não-Fiscal
+              </Button>
+
+              <Button variant="ghost" className="w-full" onClick={handleFinish}>
+                Concluir
+              </Button>
+            </div>
           </motion.div>
         </DialogContent>
       </Dialog>
