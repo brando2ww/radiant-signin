@@ -1,47 +1,44 @@
 
 
-## Definir senha na edição + excluir usuários
+## Garçom não consegue lançar pedido — caixa "fechado"
 
-### O que existe hoje
-- **Criar usuário**: já pede e-mail + senha (form em `UserForm.tsx`, edge function `create-establishment-user` cria a conta no `auth.users` e o vínculo em `establishment_users`).
-- **Editar usuário**: o e-mail é bloqueado (correto — chave do auth) e **a senha não pode ser alterada**.
-- **"Excluir"**: hoje só existe **Desativar/Reativar** (toggle de `is_active`) — não há exclusão definitiva nem do vínculo nem da conta de auth.
+### Causa raiz
+`usePDVCashier` busca a sessão de caixa filtrando por `user.id` do usuário logado:
 
-### O que muda
+```ts
+.eq("user_id", user.id)   // ← user.id é o id do GARÇOM
+.is("closed_at", null)
+```
 
-**1. Permitir o admin definir/alterar a senha de acesso na edição**
+Como o caixa é aberto pelo **dono do estabelecimento** (não pelo garçom), o garçom nunca encontra uma sessão aberta. Resultado: `activeSession = null` → toda tela do garçom (`Garcom.tsx`, `GarcomMesaDetalhe.tsx`) bloqueia com "Abra o caixa antes de criar uma comanda".
 
-- `UserForm.tsx` (modo edição): mostrar uma seção **"Redefinir senha de acesso"** (opcional, aberta sob demanda):
-  - Campos: `Nova senha` + `Confirmar nova senha` (mín. 6 caracteres).
-  - Se ambos vazios → não muda a senha. Se preenchidos → manda para a edge function.
-  - Validação inline igual ao fluxo de criação ("As senhas não conferem").
-- `usePDVUsers.updateUser`: aceitar `password?: string` opcional. Quando vier, chamar uma edge function (não dá pra mudar senha pelo client) em vez do `update` direto.
+Isso vale para todos os usuários staff vinculados via `establishment_users` (garçom, gerente, caixa, cozinheiro). O dono continua funcionando porque `user.id` dele é o mesmo da sessão.
 
-**2. Edge function `update-establishment-user` (nova)**
+### Correção
 
-- Recebe: `establishment_user_id`, `display_name`, `phone`, `role`, `discount_password`, `max_discount_percent`, `password?`.
-- Valida que o caller é o `establishment_owner_id` desse vínculo (segurança — admin só mexe em quem é dele).
-- Atualiza a linha em `establishment_users` (campos editáveis).
-- Se `password` veio: `adminClient.auth.admin.updateUserById(user_id, { password })`.
+**1. `src/hooks/use-pdv-cashier.ts` — usar o `establishment_owner_id` em vez de `user.id` nas leituras**
 
-**3. Edge function `delete-establishment-user` (nova) + UI de exclusão**
+- Importar `useEstablishmentId` (já existe em `src/hooks/use-establishment-id.ts` e retorna `visibleUserId` = id do dono se for staff, ou o próprio id se for o dono).
+- Trocar todas as queries de leitura (`pdv-cashier-active`, `pdv-cashier-last-closed`) para filtrar por `visibleUserId`.
+- Aguardar o `isLoading` do `useEstablishmentId` antes de habilitar a query (`enabled: !!visibleUserId && !establishmentLoading`) — evita primeiro render mostrando "fechado" em telas que decidem rota com base no caixa.
+- Mutations que **abrem/fecham caixa** (`openCashier`, `closeCashier`) continuam usando `user.id` do dono — garçom não abre caixa. Adicional: bloquear `openCashier` e `addMovement` se o usuário logado não for o dono (`user.id !== visibleUserId`) — defesa em profundidade.
+- `registerSale` (venda) precisa funcionar para garçom: a query `activeSession` agora retorna a sessão correta do dono, então o insert em `pdv_cashier_movements` e o update em `pdv_cashier_sessions` passam a referenciar a sessão certa. (RLS dessa tabela já permite staff via `is_establishment_member` — confirmado pelo memory `staff-rls-authorization`.)
 
-- Recebe: `establishment_user_id`.
-- Valida que o caller é o `establishment_owner_id` do vínculo.
-- Bloqueia exclusão do próprio caller (admin não pode se auto-excluir).
-- Apaga a linha em `establishment_users` (remove o vínculo / acesso ao estabelecimento).
-- Apaga a conta em `auth.users` via `adminClient.auth.admin.deleteUser(user_id)` (cascata limpa profile via FK existente).
-- `usePDVUsers`: novo `mutation deleteUser` que invoca essa função.
-- `UserCard.tsx`: novo item "Excluir" no menu, em vermelho (`text-destructive`), com `<AlertDialog>` de confirmação ("Esta ação é permanente. O usuário perderá acesso e os dados de vínculo serão apagados. Histórico de vendas/comandas é preservado.").
-- `Users.tsx` / `UserForm.tsx`: passar `onDelete` para o card e botão "Excluir usuário" também no rodapé do form de edição.
+**2. Expor `isLoading` corretamente no consumo**
 
-### Segurança
-- Ambas as edge functions validam o JWT, identificam o caller, e checam que `establishment_users.establishment_owner_id === caller.id` antes de qualquer mudança. Service role só é usada após essa checagem.
-- Bloqueio explícito: caller não pode excluir/alterar a si mesmo via essas funções (continua existindo via auto-cadastro do tenant).
-- Toggle desativar/reativar continua existindo (caso o admin queira só pausar acesso sem perder o vínculo).
+`Garcom.tsx` e `GarcomMesaDetalhe.tsx` chamam `if (!activeSession) toast.error(...)` no clique. Como o usuário só dispara isso depois da tela carregar, basta o fix do item 1. Sem mudanças adicionais ali.
+
+**3. Corrigir warning do React Router (Users.tsx)**
+
+`<Route path="usuarios">` em `App.tsx` (ou similar) precisa virar `usuarios/*` para o `<Routes>` interno do `Users.tsx` funcionar. Esse warning provavelmente está relacionado ao "Rendered more hooks than during the previous render" que aparece em `UsersList` — o React Router re-monta com tree diferente entre renders. Ajustar a rota pai para `usuarios/*` resolve ambos.
+
+### Como validar
+1. Logar como dono → abrir caixa pelo PDV.
+2. Logar (em outra sessão/aba) como garçom vinculado → abrir `/garcom`, tocar em "+", criar comanda avulsa **sem** receber o toast de "Abra o caixa".
+3. Adicionar item, enviar para cozinha, fechar comanda — venda deve registrar em `pdv_cashier_movements` da sessão do dono.
+4. Revisitar `/pdv/usuarios` — sem warning de "Rendered more hooks" no console.
 
 ### Fora de escopo
-- Auditoria/log de quem alterou/excluiu (pode entrar em iteração futura).
-- Forçar logout imediato de sessões já ativas do usuário cuja senha foi trocada (Supabase invalida o token na próxima renovação naturalmente).
-- Mexer em comandas/vendas históricas geradas pelo usuário excluído — ficam com `created_by` apontando para um id que não existe mais (sem quebrar a UI, pois usamos display_name salvo nos registros).
+- Permitir múltiplas sessões de caixa simultâneas (1 por terminal/garçom). Hoje há 1 caixa por estabelecimento, conduzido pelo dono — isso continua igual.
+- Mexer no `usePDVCashierStatement` (relatórios), que também filtra por `user.id` mas é usado apenas no painel do dono.
 
