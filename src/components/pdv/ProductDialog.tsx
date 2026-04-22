@@ -155,16 +155,20 @@ export function ProductDialog({
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const [isSubstituicaoTributaria, setIsSubstituicaoTributaria] = useState(false);
   const [optionsDirty, setOptionsDirty] = useState(false);
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
 
   const handleDialogOpenChange = (next: boolean) => {
     if (!next && optionsDirty) {
-      const ok = window.confirm(
-        "Há alterações não salvas na aba Opções. Deseja descartá-las e fechar?"
-      );
-      if (!ok) return;
-      setOptionsDirty(false);
+      setConfirmCloseOpen(true);
+      return;
     }
     onOpenChange(next);
+  };
+
+  const handleConfirmDiscardClose = () => {
+    setOptionsDirty(false);
+    setConfirmCloseOpen(false);
+    onOpenChange(false);
   };
 
   const form = useForm({
