@@ -89,6 +89,7 @@ function UsersList() {
               user={user}
               onEdit={(u) => navigate(`/pdv/usuarios/${u.id}/editar`)}
               onToggleActive={(id, isActive) => toggleActive.mutate({ id, is_active: isActive })}
+              onDelete={(id) => deleteUser.mutate(id)}
             />
           ))}
         </div>
