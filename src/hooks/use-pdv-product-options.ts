@@ -3,6 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PDVProduct } from "@/hooks/use-pdv-products";
 
+export interface PDVOptionItemRecipeRef {
+  id: string;
+  ingredient_id: string;
+  quantity: number;
+  unit: string;
+  ingredient_name?: string;
+  ingredient_unit?: string;
+}
+
 export interface PDVProductOptionItem {
   id: string;
   option_id: string;
@@ -12,6 +21,7 @@ export interface PDVProductOptionItem {
   order_position: number;
   linked_product_id?: string | null;
   linked_product?: PDVProduct | null;
+  recipes?: PDVOptionItemRecipeRef[];
 }
 
 export interface PDVProductOption {
@@ -24,6 +34,39 @@ export interface PDVProductOption {
   max_selections: number;
   order_position: number;
   items: PDVProductOptionItem[];
+}
+
+async function attachRecipesToItems(items: any[]): Promise<any[]> {
+  if (!items || items.length === 0) return items;
+  const itemIds = items.map((i) => i.id);
+  const { data: recipes } = await supabase
+    .from("pdv_option_item_recipes")
+    .select("*")
+    .in("option_item_id", itemIds);
+  if (!recipes || recipes.length === 0) {
+    return items.map((i) => ({ ...i, recipes: [] }));
+  }
+  const ingIds = Array.from(new Set(recipes.map((r: any) => r.ingredient_id)));
+  const { data: ings } = await supabase
+    .from("pdv_ingredients")
+    .select("id, name, unit")
+    .in("id", ingIds);
+  const ingMap = new Map((ings || []).map((i: any) => [i.id, i]));
+  const recipesByItem = new Map<string, PDVOptionItemRecipeRef[]>();
+  recipes.forEach((r: any) => {
+    const ing = ingMap.get(r.ingredient_id);
+    const arr = recipesByItem.get(r.option_item_id) || [];
+    arr.push({
+      id: r.id,
+      ingredient_id: r.ingredient_id,
+      quantity: Number(r.quantity),
+      unit: r.unit,
+      ingredient_name: ing?.name,
+      ingredient_unit: ing?.unit,
+    });
+    recipesByItem.set(r.option_item_id, arr);
+  });
+  return items.map((i) => ({ ...i, recipes: recipesByItem.get(i.id) || [] }));
 }
 
 export function usePDVProductOptions(productId?: string) {
@@ -52,9 +95,11 @@ export function usePDVProductOptions(productId?: string) {
 
       if (itemsError) throw itemsError;
 
+      const itemsWithRecipes = await attachRecipesToItems(items || []);
+
       return opts.map((o: any) => ({
         ...o,
-        items: (items || []).filter((i: any) => i.option_id === o.id),
+        items: itemsWithRecipes.filter((i: any) => i.option_id === o.id),
       })) as PDVProductOption[];
     },
   });
@@ -187,9 +232,11 @@ export function usePDVProductOptionsForOrder(productId?: string) {
 
       if (itemsError) throw itemsError;
 
+      const itemsWithRecipes = await attachRecipesToItems(items || []);
+
       return opts.map((o: any) => ({
         ...o,
-        items: (items || []).filter((i: any) => i.option_id === o.id),
+        items: itemsWithRecipes.filter((i: any) => i.option_id === o.id),
       })) as PDVProductOption[];
     },
   });

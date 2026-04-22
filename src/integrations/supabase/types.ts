@@ -5279,6 +5279,7 @@ export type Database = {
       }
       pdv_stock_movements: {
         Row: {
+          comanda_item_id: string | null
           created_at: string | null
           created_by: string | null
           id: string
@@ -5290,6 +5291,7 @@ export type Database = {
           unit_cost: number | null
         }
         Insert: {
+          comanda_item_id?: string | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -5301,6 +5303,7 @@ export type Database = {
           unit_cost?: number | null
         }
         Update: {
+          comanda_item_id?: string | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -5312,6 +5315,20 @@ export type Database = {
           unit_cost?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "pdv_stock_movements_comanda_item_id_fkey"
+            columns: ["comanda_item_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_comanda_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_stock_movements_comanda_item_id_fkey"
+            columns: ["comanda_item_id"]
+            isOneToOne: false
+            referencedRelation: "vw_print_bridge_comanda_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "pdv_stock_movements_ingredient_id_fkey"
             columns: ["ingredient_id"]
@@ -6537,6 +6554,13 @@ export type Database = {
         Returns: {
           device_id: string
           owner_user_id: string
+        }[]
+      }
+      consume_ingredients_for_comanda_items: {
+        Args: { p_item_ids: string[] }
+        Returns: {
+          out_ingredient_id: string
+          out_total_consumed: number
         }[]
       }
       get_user_child_tenant_ids: { Args: never; Returns: string[] }
