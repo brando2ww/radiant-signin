@@ -305,6 +305,7 @@ export function usePDVCashier() {
     activeSession,
     movements,
     isLoading,
+    isLoadingSession: isLoadingSession || isLoadingEstablishment,
     openCashier: openCashier.mutate,
     isOpeningCashier: openCashier.isPending,
     closeCashier: closeCashier.mutate,
