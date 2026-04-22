@@ -98,6 +98,7 @@ export function usePDVOrders() {
       customer_name?: string;
     }) => {
       if (!user) throw new Error("Usuário não autenticado");
+      const ownerId = visibleUserId || user.id;
 
       // Gerar número do pedido
       const orderNumber = `PDV${Date.now().toString().slice(-6)}`;
@@ -105,7 +106,7 @@ export function usePDVOrders() {
       const { data, error } = await supabase
         .from("pdv_orders")
         .insert({
-          user_id: user.id,
+          user_id: ownerId,
           order_number: orderNumber,
           source: order.source,
           table_id: order.table_id || null,
