@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Textarea } from "@/components/ui/textarea";
@@ -145,16 +155,20 @@ export function ProductDialog({
   const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
   const [isSubstituicaoTributaria, setIsSubstituicaoTributaria] = useState(false);
   const [optionsDirty, setOptionsDirty] = useState(false);
+  const [confirmCloseOpen, setConfirmCloseOpen] = useState(false);
 
   const handleDialogOpenChange = (next: boolean) => {
     if (!next && optionsDirty) {
-      const ok = window.confirm(
-        "Há alterações não salvas na aba Opções. Deseja descartá-las e fechar?"
-      );
-      if (!ok) return;
-      setOptionsDirty(false);
+      setConfirmCloseOpen(true);
+      return;
     }
     onOpenChange(next);
+  };
+
+  const handleConfirmDiscardClose = () => {
+    setOptionsDirty(false);
+    setConfirmCloseOpen(false);
+    onOpenChange(false);
   };
 
   const form = useForm({
@@ -314,6 +328,7 @@ export function ProductDialog({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -1040,5 +1055,26 @@ export function ProductDialog({
         />
       )}
     </Dialog>
+
+      <AlertDialog open={confirmCloseOpen} onOpenChange={setConfirmCloseOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Descartar alterações?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Há alterações não salvas na aba Opções. Se você fechar agora, elas serão perdidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar editando</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDiscardClose}
+              className={buttonVariants({ variant: "destructive" })}
+            >
+              Descartar e fechar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
