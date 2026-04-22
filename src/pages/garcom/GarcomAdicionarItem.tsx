@@ -4,10 +4,8 @@ import { ArrowLeft, Search, Plus, Minus, Send } from "lucide-react";
 import { usePDVProducts } from "@/hooks/use-pdv-products";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVProductOptionsForOrder } from "@/hooks/use-pdv-product-options";
-import {
-  ProductOptionSelector,
-  type SelectedOption,
-} from "@/components/pdv/ProductOptionSelector";
+import type { SelectedOption } from "@/components/pdv/ProductOptionSelector";
+import { MobileProductOptionSelector } from "@/components/garcom/MobileProductOptionSelector";
 import { ProductCategoryNav } from "@/components/garcom/ProductCategoryNav";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -205,17 +203,25 @@ export default function GarcomAdicionarItem() {
       >
         <SheetContent
           side="bottom"
-          className="rounded-t-2xl px-4 pb-8 max-h-[90vh] overflow-y-auto"
+          className="rounded-t-2xl px-4 pb-0 max-h-[92vh] overflow-y-auto"
         >
           <SheetHeader>
-            <SheetTitle className="text-left">{selectedProduct?.name}</SheetTitle>
+            <SheetTitle className="text-left flex items-baseline justify-between gap-3">
+              <span className="truncate">{selectedProduct?.name}</span>
+              {selectedProduct && (
+                <span className="shrink-0 text-sm font-normal text-muted-foreground tabular-nums">
+                  R$ {selectedProduct.price_salon.toFixed(2)}
+                </span>
+              )}
+            </SheetTitle>
           </SheetHeader>
 
           {/* Step: Options */}
           {effectiveStep === "options" && hasOptions && productOptions && (
             <div className="mt-4">
-              <ProductOptionSelector
+              <MobileProductOptionSelector
                 options={productOptions}
+                basePrice={selectedProduct?.price_salon ?? 0}
                 onConfirm={(s) => {
                   setSelectedOptions(s);
                   setStep("quantity");
@@ -227,7 +233,7 @@ export default function GarcomAdicionarItem() {
 
           {/* Step: Quantity */}
           {effectiveStep === "quantity" && (
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-4 pb-[max(env(safe-area-inset-bottom),1.5rem)]">
               {selectedOptions.length > 0 && (
                 <div className="rounded-xl border bg-muted/40 p-3 text-sm">
                   {selectedOptions.map((opt) => (
