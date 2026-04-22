@@ -20,6 +20,7 @@ export default function GarcomMesaDetalhe() {
     isCreating,
     sendToKitchen,
   } = usePDVComandas();
+  const { activeSession } = usePDVCashier();
 
   const table = tables.find((t) => t.id === id);
   const tableComandas = comandas.filter(
