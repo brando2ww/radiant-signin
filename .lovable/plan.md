@@ -1,38 +1,51 @@
 
 
-## Tornar o modal de Fechar Caixa responsivo
+## Fazer a página do Caixa caber 100% na tela, sem rolagem externa
 
-O modal atualmente usa `max-w-2xl` sem controle de altura nem scroll interno, então em telas com zoom alto (caso da imagem, devicePixelRatio 1.6) ou alturas menores ele estoura a viewport — o cabeçalho e o rodapé com os botões "Cancelar" e "Fechar Caixa" ficam fora da tela e o usuário não consegue concluir a ação.
+A página `/pdv/caixa` hoje usa `min-h-[calc(100vh-3.5rem)]`, ou seja, ela pode crescer além da viewport — o que faz aparecer a barra de rolagem do navegador (visível no print: header do PDV, cabeçalho do operador, tabela de movimentações, sidebar de ações **e** rodapé com 8 cards de resumo + Total Vendas + Saldo Atual não cabem juntos em 1131px com zoom 1.6).
+
+A regra que o usuário quer:
+- **Página do PDV**: sempre completa, sem rolagem da janela e sem cortes.
+- **Modal de Fechamento**: única superfície que pode rolar internamente (já feito na iteração anterior).
 
 ### O que vai mudar
 
-Arquivo único: `src/components/pdv/CloseCashierDialog.tsx`
+Arquivo único: `src/pages/pdv/Cashier.tsx`
 
-1. **Limitar altura do modal e adicionar scroll interno**
-   - `DialogContent` recebe: `max-w-2xl w-[95vw] max-h-[90vh] p-0 flex flex-col gap-0`
-   - Isso garante que o modal nunca passe de 90% da altura da tela e se adapte à largura em qualquer viewport.
+1. **Travar a altura da página exatamente na viewport disponível**
+   - Trocar `min-h-[calc(100vh-3.5rem)]` por `h-[calc(100vh-3.5rem)] overflow-hidden` no container raiz (linhas 212 e 224).
+   - Isso impede que a página cresça além da janela e mata a rolagem global.
 
-2. **Estruturar header / corpo / footer com áreas independentes**
-   - `DialogHeader` fica fixo no topo com `px-6 pt-6 pb-4 border-b`.
-   - O bloco do conteúdo (resumo + saldo final + alertas + justificativa + checkbox + bloqueio) vira a única área rolável: `flex-1 overflow-y-auto px-6 py-4 space-y-4`.
-   - `DialogFooter` fica fixo no rodapé com `px-6 py-4 border-t`, sempre visível — assim os botões "Cancelar" e "Fechar Caixa" nunca somem.
+2. **Garantir que a área central (Movimentações + Sidebar) seja a única que se ajusta**
+   - O grid `grid-cols-1 lg:grid-cols-4 ... flex-1` já existe e tem `min-h-0` implícito faltando — adicionar `min-h-0` para que o `flex-1` realmente respeite o espaço disponível e a tabela de movimentações role internamente (o `overflow-auto` interno já está pronto na linha 245).
+   - Adicionar `min-h-0` também no `Card` da tabela (linha 234) e usar `overflow-hidden` no `CardContent` (já tem).
 
-3. **Reduzir densidade visual em telas menores**
-   - Card de resumo financeiro: `pt-6` → `pt-4 pb-4` e `space-y-3` → `space-y-2` para encurtar o bloco vertical.
-   - Tipografia dos cards de alerta/bloqueio: manter `text-sm`, mas garantir `break-words` na descrição para evitar overflow horizontal.
-   - `DialogTitle` e `DialogDescription` mantêm tamanho atual (já estão bons).
+3. **Compactar o rodapé de resumo para caber sem cortar**
+   - No `CashierSummaryFooter`: reduzir `p-4` → `p-3`, `gap-3` → `gap-2`, padding dos cards internos `p-3` → `p-2`, ícones `h-6 w-6` → `h-5 w-5`, e tipografia do "Saldo Atual" de `text-xl` → `text-lg`. Resultado: ~25% mais baixo, libera espaço vertical para o miolo.
+   - Arquivo: `src/components/pdv/cashier/CashierSummaryFooter.tsx`.
 
-4. **Footer empilhável no mobile**
-   - `DialogFooter` recebe `flex-col-reverse sm:flex-row sm:justify-end gap-2` para que em telas estreitas o botão primário fique acima do "Cancelar" e ambos ocupem a largura cheia (`w-full sm:w-auto` nos dois `Button`).
+4. **Compactar levemente o header superior**
+   - No `CashierHeader`: reduzir `p-4` → `p-3` e ícones `h-10 w-10` → `h-9 w-9`. Pequena economia, mas suficiente para zoom alto.
+   - Arquivo: `src/components/pdv/cashier/CashierHeader.tsx`.
+
+5. **Skeleton de loading com a mesma regra**
+   - Aplicar a mesma troca (`h-[calc(100vh-3.5rem)] overflow-hidden`) no bloco de loading (linha 212) para evitar flash de rolagem.
 
 ### Resultado esperado
 
-- Em desktop normal: aparência idêntica à atual, só com bordas separando header/footer.
-- Em telas com zoom alto (como a do print) ou alturas reduzidas: o conteúdo central rola, o header e os botões ficam sempre visíveis, e o usuário consegue digitar o saldo, justificar e fechar o caixa sem precisar dar zoom out no navegador.
-- Em mobile (<640px): modal ocupa 95% da largura, botões empilhados em coluna inversa (ação principal acima).
+- Em qualquer zoom (incluindo o 1.6 do print): header, tabela de movimentações, sidebar de ações e rodapé com resumo financeiro **cabem inteiros** na tela, sem barra de rolagem do navegador e sem cortes nos botões "Fechar Caixa" / "Atalhos".
+- Se a tabela de Movimentações tiver muitas linhas, **só ela rola internamente** (já é o comportamento atual via `overflow-auto` na linha 245).
+- O modal de Fechamento de Caixa continua sendo o único componente com rolagem interna própria (já implementado).
+- Em telas muito pequenas (mobile), o grid quebra em 1 coluna e o `overflow-hidden` ainda funciona porque o conteúdo crítico (sidebar + footer) é compacto o suficiente.
 
 ### Fora de escopo
 
-- Nenhuma alteração na lógica de cálculo, antifraude, impressão ou nas mutações do `usePDVCashier`.
-- O `OpenCashierDialog` não tem o mesmo problema (conteúdo curto), então fica como está.
+- Nenhuma mudança em lógica de caixa, antifraude, mutações ou nos demais dialogs.
+- Outras páginas do PDV (Salão, Comandas, etc.) não são tocadas.
+
+### Arquivos modificados
+
+- `src/pages/pdv/Cashier.tsx`
+- `src/components/pdv/cashier/CashierSummaryFooter.tsx`
+- `src/components/pdv/cashier/CashierHeader.tsx`
 
