@@ -272,79 +272,160 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
   const handleSave = async () => {
     if (!isDirty) return;
     setIsSaving(true);
-    const tasks: Promise<unknown>[] = [];
-    let updatedCount = 0;
 
-    draft.forEach((draftOpt) => {
-      const baseOpt = baselineRef.current.find((o) => o.id === draftOpt.id);
-      if (!baseOpt) return;
-
-      const optChanges: Record<string, unknown> = {};
-      (["name", "type", "is_required", "min_selections", "max_selections"] as const).forEach(
-        (k) => {
-          if ((draftOpt as any)[k] !== (baseOpt as any)[k])
-            optChanges[k] = (draftOpt as any)[k];
-        },
-      );
-      if (Object.keys(optChanges).length > 0) {
-        tasks.push(updateOption.mutateAsync({ id: draftOpt.id, ...optChanges } as any));
-        updatedCount++;
-      }
-
-      draftOpt.items.forEach((draftItem) => {
-        const baseItem = baseOpt.items.find((i) => i.id === draftItem.id);
-        if (!baseItem) return;
-        const itemChanges: Record<string, unknown> = {};
-        (["name", "price_adjustment", "is_available"] as const).forEach((k) => {
-          if ((draftItem as any)[k] !== (baseItem as any)[k])
-            itemChanges[k] = (draftItem as any)[k];
-        });
-        if (Object.keys(itemChanges).length > 0) {
-          tasks.push(updateItem.mutateAsync({ id: draftItem.id, ...itemChanges } as any));
-          updatedCount++;
-        }
-
-        // Recipe diff: compare by stringified
-        const draftRec = draftItem.recipes || [];
-        const baseRec = baseItem.recipes || [];
-        const draftKey = JSON.stringify(
-          draftRec.map((r) => ({ ing: r.ingredient_id, qty: r.quantity })).sort(),
-        );
-        const baseKey = JSON.stringify(
-          baseRec.map((r) => ({ ing: r.ingredient_id, qty: r.quantity })).sort(),
-        );
-        if (draftKey !== baseKey) {
-          if (draftRec.length === 0) {
-            tasks.push(removeByOptionItem(draftItem.id));
-          } else {
-            // For now we support single ingredient per item; replace whole set
-            tasks.push(
-              removeByOptionItem(draftItem.id).then(() =>
-                Promise.all(
-                  draftRec.map((r) =>
-                    upsertRecipe({
-                      optionItemId: draftItem.id,
-                      ingredientId: r.ingredient_id,
-                      quantity: Number(r.quantity) || 1,
-                      unit: r.unit || "un",
-                    }),
-                  ),
-                ),
-              ),
-            );
-          }
-          updatedCount++;
-        }
-      });
-    });
+    let created = 0;
+    let updated = 0;
+    let removed = 0;
 
     try {
-      await Promise.all(tasks);
-      baselineRef.current = JSON.parse(JSON.stringify(draft));
+      // ---- Phase 1: deletions (existing items, then existing options) ----
+      const itemsToDelete: string[] = [];
+      const optionsToDelete: string[] = [];
+      draft.forEach((o) => {
+        if (o._deleted && !isTempId(o.id)) {
+          optionsToDelete.push(o.id);
+          // Items inside a deleted option will cascade — no need to delete one by one.
+        } else if (!o._deleted) {
+          o.items.forEach((i) => {
+            if (i._deleted && !isTempId(i.id)) itemsToDelete.push(i.id);
+          });
+        }
+      });
+
+      for (const id of itemsToDelete) {
+        await deleteItem.mutateAsync(id);
+        removed++;
+      }
+      for (const id of optionsToDelete) {
+        await deleteOption.mutateAsync(id);
+        removed++;
+      }
+
+      // ---- Phase 2: create new options & update existing ones ----
+      // Map of tmp option id -> real id (for resolving items below).
+      const optionIdMap = new Map<string, string>();
+
+      for (const draftOpt of draft) {
+        if (draftOpt._deleted) continue;
+
+        if (draftOpt._isNew) {
+          const result = await createOption.mutateAsync({
+            product_id: productId,
+            name: draftOpt.name,
+            type: draftOpt.type,
+            is_required: draftOpt.is_required,
+            min_selections: draftOpt.min_selections,
+            max_selections: draftOpt.max_selections,
+          } as any);
+          optionIdMap.set(draftOpt.id, (result as any).id);
+          created++;
+        } else {
+          const baseOpt = baselineRef.current.find((o) => o.id === draftOpt.id);
+          if (baseOpt) {
+            const optChanges: Record<string, unknown> = {};
+            (
+              ["name", "type", "is_required", "min_selections", "max_selections"] as const
+            ).forEach((k) => {
+              if ((draftOpt as any)[k] !== (baseOpt as any)[k])
+                optChanges[k] = (draftOpt as any)[k];
+            });
+            if (Object.keys(optChanges).length > 0) {
+              await updateOption.mutateAsync({ id: draftOpt.id, ...optChanges } as any);
+              updated++;
+            }
+          }
+        }
+      }
+
+      // ---- Phase 3: items (create new, update existing) + recipes ----
+      const itemIdMap = new Map<string, string>();
+
+      for (const draftOpt of draft) {
+        if (draftOpt._deleted) continue;
+        const realOptionId = optionIdMap.get(draftOpt.id) || draftOpt.id;
+
+        for (const draftItem of draftOpt.items) {
+          if (draftItem._deleted) continue;
+
+          let realItemId = draftItem.id;
+          if (draftItem._isNew) {
+            const result = await createItem.mutateAsync({
+              option_id: realOptionId,
+              name: draftItem.name,
+              price_adjustment: draftItem.price_adjustment,
+            } as any);
+            realItemId = (result as any).id;
+            itemIdMap.set(draftItem.id, realItemId);
+            // Apply non-default fields if needed (is_available defaults to true on insert)
+            if (draftItem.is_available === false) {
+              await updateItem.mutateAsync({
+                id: realItemId,
+                is_available: false,
+              } as any);
+            }
+            created++;
+          } else {
+            const baseOpt = baselineRef.current.find((o) => o.id === draftOpt.id);
+            const baseItem = baseOpt?.items.find((i) => i.id === draftItem.id);
+            if (baseItem) {
+              const itemChanges: Record<string, unknown> = {};
+              (["name", "price_adjustment", "is_available"] as const).forEach((k) => {
+                if ((draftItem as any)[k] !== (baseItem as any)[k])
+                  itemChanges[k] = (draftItem as any)[k];
+              });
+              if (Object.keys(itemChanges).length > 0) {
+                await updateItem.mutateAsync({ id: draftItem.id, ...itemChanges } as any);
+                updated++;
+              }
+            }
+          }
+
+          // ---- Recipes diff ----
+          const draftRec = draftItem.recipes || [];
+          const baseOpt = baselineRef.current.find((o) => o.id === draftOpt.id);
+          const baseItem = baseOpt?.items.find((i) => i.id === draftItem.id);
+          const baseRec = baseItem?.recipes || [];
+          const draftKey = JSON.stringify(
+            draftRec.map((r) => ({ ing: r.ingredient_id, qty: r.quantity })).sort(),
+          );
+          const baseKey = JSON.stringify(
+            baseRec.map((r) => ({ ing: r.ingredient_id, qty: r.quantity })).sort(),
+          );
+          if (draftItem._isNew ? draftRec.length > 0 : draftKey !== baseKey) {
+            if (!draftItem._isNew) {
+              await removeByOptionItem(realItemId);
+            }
+            if (draftRec.length > 0) {
+              await Promise.all(
+                draftRec.map((r) =>
+                  upsertRecipe({
+                    optionItemId: realItemId,
+                    ingredientId: r.ingredient_id,
+                    quantity: Number(r.quantity) || 1,
+                    unit: r.unit || "un",
+                  }),
+                ),
+              );
+            }
+            updated++;
+          }
+        }
+      }
+
+      // Reset draft from server (invalidations will refetch); clear local state
+      // so the sync effect repopulates from the fresh server snapshot.
+      baselineRef.current = [];
+      setDraft([]);
+
+      const parts: string[] = [];
+      if (created) parts.push(`${created} criada${created > 1 ? "s" : ""}`);
+      if (updated) parts.push(`${updated} atualizada${updated > 1 ? "s" : ""}`);
+      if (removed) parts.push(`${removed} removida${removed > 1 ? "s" : ""}`);
       toast.success(
-        `Opções salvas${updatedCount > 1 ? ` (${updatedCount} alterações)` : ""}`,
+        parts.length > 0 ? `Alterações salvas (${parts.join(", ")})` : "Alterações salvas",
       );
     } catch (err) {
+      console.error("[PDVProductOptionsManager] save error", err);
       toast.error("Erro ao salvar algumas alterações");
     } finally {
       setIsSaving(false);
