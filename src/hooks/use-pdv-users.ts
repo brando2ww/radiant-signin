@@ -50,7 +50,6 @@ export function usePDVUsers() {
       );
 
       if (error) {
-        // supabase.functions.invoke returns error body in data when status >= 400
         const errorBody = data || error;
         const msg = typeof errorBody === 'object' ? (errorBody.error || errorBody.message || JSON.stringify(errorBody)) : String(errorBody);
         throw new Error(msg);
@@ -73,29 +72,36 @@ export function usePDVUsers() {
   });
 
   const updateUser = useMutation({
-    mutationFn: async ({ id, ...userData }: {
+    mutationFn: async ({ id, password, ...userData }: {
       id: string;
       display_name: string;
-      email: string;
+      email?: string;
       phone: string;
       role: string;
       discount_password?: string;
       max_discount_percent?: number;
+      password?: string;
     }) => {
-      const { data, error } = await supabase
-        .from("establishment_users")
-        .update({
-          display_name: userData.display_name,
-          email: userData.email,
-          phone: userData.phone,
-          role: userData.role as any,
-          discount_password: userData.discount_password || null,
-          max_discount_percent: userData.max_discount_percent ?? 100,
-        } as any)
-        .eq("id", id)
-        .select()
-        .single();
-      if (error) throw error;
+      const { data, error } = await supabase.functions.invoke(
+        "update-establishment-user",
+        {
+          body: {
+            establishment_user_id: id,
+            display_name: userData.display_name,
+            phone: userData.phone,
+            role: userData.role,
+            discount_password: userData.discount_password,
+            max_discount_percent: userData.max_discount_percent,
+            ...(password ? { password } : {}),
+          },
+        }
+      );
+      if (error) {
+        const errorBody = data || error;
+        const msg = typeof errorBody === 'object' ? (errorBody.error || errorBody.message || JSON.stringify(errorBody)) : String(errorBody);
+        throw new Error(msg);
+      }
+      if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: () => {
@@ -124,11 +130,39 @@ export function usePDVUsers() {
     },
   });
 
+  const deleteUser = useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase.functions.invoke(
+        "delete-establishment-user",
+        { body: { establishment_user_id: id } }
+      );
+      if (error) {
+        const errorBody = data || error;
+        const msg = typeof errorBody === 'object' ? (errorBody.error || errorBody.message || JSON.stringify(errorBody)) : String(errorBody);
+        throw new Error(msg);
+      }
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["establishment-users"] });
+      if (data?.warning) {
+        toast.warning(data.warning);
+      } else {
+        toast.success("Usuário excluído com sucesso");
+      }
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Erro ao excluir usuário");
+    },
+  });
+
   return {
     users,
     isLoading,
     createUser,
     updateUser,
     toggleActive,
+    deleteUser,
   };
 }
