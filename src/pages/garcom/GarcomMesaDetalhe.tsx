@@ -6,6 +6,7 @@ import { usePDVCashier } from "@/hooks/use-pdv-cashier";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 
 export default function GarcomMesaDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -29,6 +30,7 @@ export default function GarcomMesaDetalhe() {
   const handleNewComanda = async () => {
     if (!table) return;
     if (!activeSession) {
+      toast.error("Abra o caixa antes de criar uma comanda.", { position: "top-center" });
       return;
     }
     try {
