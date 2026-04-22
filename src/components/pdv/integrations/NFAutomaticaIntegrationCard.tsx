@@ -334,6 +334,26 @@ export function NFAutomaticaIntegrationCard() {
 
         <Separator />
 
+        {/* CSC NFC-e */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">CSC NFC-e</h4>
+          <p className="text-xs text-muted-foreground">
+            Código de Segurança do Contribuinte. Gere no portal SEFAZ do seu estado. Obrigatório para emitir NFC-e.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-sm">ID do CSC (idToken)</Label>
+              <Input value={cscId} onChange={(e) => setCscId(e.target.value)} placeholder="Ex: 000001" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm">Token CSC</Label>
+              <Input type="password" value={cscToken} onChange={(e) => setCscToken(e.target.value)} placeholder="Token gerado pela SEFAZ" />
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
         {/* AUTOMAÇÃO */}
         <div className="space-y-3">
           <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Automação</h4>
@@ -351,6 +371,35 @@ export function NFAutomaticaIntegrationCard() {
               <Switch checked={enableNfce} onCheckedChange={setEnableNfce} />
             </div>
           </div>
+        </div>
+
+        <Separator />
+
+        {/* CHECKLIST */}
+        <div className="space-y-2 rounded-md border p-3 bg-muted/30">
+          <h4 className="text-sm font-semibold flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            Checklist para emitir NFC-e
+          </h4>
+          {[
+            { ok: !!settings?.nfe_certificate_url, label: "Certificado A1 (.pfx) carregado" },
+            { ok: !!settings?.business_cnpj, label: "CNPJ do estabelecimento" },
+            { ok: !!cscId && !!cscToken, label: "CSC (ID + Token) preenchidos" },
+            { ok: !!endereco.uf && !!endereco.codigo_municipio, label: "Endereço fiscal completo (UF + IBGE)" },
+            { ok: enableNfce, label: "NFC-e habilitada acima" },
+          ].map((item, i) => (
+            <div key={i} className="flex items-center gap-2 text-xs">
+              {item.ok ? (
+                <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+              ) : (
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              )}
+              <span className={item.ok ? "text-foreground" : "text-muted-foreground"}>{item.label}</span>
+            </div>
+          ))}
+          <p className="text-[11px] text-muted-foreground pt-1">
+            Lembrete: a empresa também precisa estar habilitada para emitir NFC-e na SEFAZ do seu estado, e cada produto vendido precisa ter NCM válido (8 dígitos).
+          </p>
         </div>
 
         <Button className="w-full" onClick={handleSave} disabled={isUpdating}>
