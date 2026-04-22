@@ -68,6 +68,10 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
   const [newOptionName, setNewOptionName] = useState("");
   const [newItemNames, setNewItemNames] = useState<Record<string, string>>({});
   const [newItemPrices, setNewItemPrices] = useState<Record<string, string>>({});
+  const [newItemIngredients, setNewItemIngredients] = useState<
+    Record<string, { id: string; name: string; unit: string } | null>
+  >({});
+  const [newItemPopoverOpen, setNewItemPopoverOpen] = useState<string | null>(null);
   const [ingredientPopoverOpen, setIngredientPopoverOpen] = useState<string | null>(null);
   const [ingredientSearch, setIngredientSearch] = useState("");
   const [draft, setDraft] = useState<DraftOption[]>([]);
@@ -177,6 +181,19 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
     const name = newItemNames[optionId]?.trim();
     if (!name) return;
     const price = Number(newItemPrices[optionId] || 0);
+    const ing = newItemIngredients[optionId];
+    const recipes: PDVOptionItemRecipeRef[] = ing
+      ? [
+          {
+            id: `tmp-${ing.id}`,
+            ingredient_id: ing.id,
+            quantity: 1,
+            unit: ing.unit,
+            ingredient_name: ing.name,
+            ingredient_unit: ing.unit,
+          },
+        ]
+      : [];
     setDraft((prev) =>
       prev.map((o) =>
         o.id === optionId
@@ -191,7 +208,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                   price_adjustment: price,
                   is_available: true,
                   order_position: o.items.length,
-                  recipes: [],
+                  recipes,
                   _isNew: true,
                 } as DraftItem,
               ],
@@ -201,6 +218,21 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
     );
     setNewItemNames((prev) => ({ ...prev, [optionId]: "" }));
     setNewItemPrices((prev) => ({ ...prev, [optionId]: "" }));
+    setNewItemIngredients((prev) => ({ ...prev, [optionId]: null }));
+  };
+
+  const handleSelectNewItemIngredient = (
+    optionId: string,
+    ingredient: { id: string; name: string; unit: string },
+  ) => {
+    setNewItemIngredients((prev) => ({ ...prev, [optionId]: ingredient }));
+    setNewItemNames((prev) => ({ ...prev, [optionId]: ingredient.name }));
+    setNewItemPopoverOpen(null);
+    setIngredientSearch("");
+  };
+
+  const handleClearNewItemIngredient = (optionId: string) => {
+    setNewItemIngredients((prev) => ({ ...prev, [optionId]: null }));
   };
 
   const handleDeleteOption = (optionId: string) => {
