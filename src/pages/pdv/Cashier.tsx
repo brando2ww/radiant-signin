@@ -88,6 +88,15 @@ export default function PDVCashier() {
     setMovementDialog(true);
   };
 
+  const handleTryCloseCashier = () => {
+    const openComandas = comandas.filter(c => c.status === "aberta");
+    if (openComandas.length > 0) {
+      toast.error(`Existem ${openComandas.length} comanda(s) aberta(s). Feche ou cancele todas antes de encerrar o caixa.`);
+      return;
+    }
+    setCloseDialog(true);
+  };
+
   const handleSelectComanda = (comanda: Comanda, items: ComandaItem[]) => {
     setSelectedComanda(comanda);
     setSelectedComandaItems(items);
