@@ -5,6 +5,7 @@ import { NewOrderSheet } from "@/components/garcom/NewOrderSheet";
 import { ComandaDialog } from "@/components/pdv/ComandaDialog";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
+import { toast } from "sonner";
 import GarcomMesas from "./garcom/GarcomMesas";
 import GarcomComandas from "./garcom/GarcomComandas";
 import GarcomComandaDetalhe from "./garcom/GarcomComandaDetalhe";
@@ -29,6 +30,7 @@ export default function Garcom() {
   const handleSelectComandaAvulsa = () => {
     setSheetOpen(false);
     if (!activeSession) {
+      toast.error("Abra o caixa antes de criar uma comanda.", { position: "top-center" });
       return;
     }
     setComandaDialogOpen(true);
