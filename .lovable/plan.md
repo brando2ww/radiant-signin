@@ -1,42 +1,65 @@
 
 
-## Corrigir sobreposição do footer pela sidebar de Ações Rápidas (caixa aberto)
+## Sidebar com botões compactos lado a lado e "Fechar Caixa" em destaque
 
-Quando o caixa está **aberto**, a sidebar lateral renderiza 6 botões verticais (Reforço, Sangria, Cobrar, Consumo Func., spacer, Fechar Caixa, Atalhos). Somados, eles precisam de ~520px de altura. Em telas Windows com zoom (devicePixelRatio 1.6, viewport efetivo ~700px de altura útil para a área central), esse conteúdo estoura o `Card` da sidebar e **sobrepõe o rodapé** — exatamente o que aparece no print: "Cobrar" e "Consumo Func." cobrindo "Total Vendas / Saldo Atual / Fechar Caixa".
+Em vez de empilhar 6 botões verticalmente (o que estoura no Windows com zoom), reorganizar a sidebar de Ações Rápidas para:
 
-Quando o caixa está **fechado**, a sidebar tem apenas 1-2 botões e cabe sem problema — por isso o bug só aparece com caixa aberto.
+- **Grid 2×2 de botões pequenos** no topo: Reforço, Sangria, Cobrar, Consumo Func.
+- **Espaço flexível** no meio (empurra o botão principal para baixo)
+- **"Fechar Caixa" full-width grande** no final, mantendo o destaque visual
+- **"Atalhos"** continua ancorado no rodapé como hoje
 
-### O que vai mudar
+### Layout visual (caixa aberto)
 
-**1. `src/components/pdv/cashier/CashierActionsSidebar.tsx` — compactar botões e habilitar scroll interno seguro**
+```text
+┌─────────────────────────┐
+│ AÇÕES RÁPIDAS           │
+├────────────┬────────────┤
+│ ↗ Reforço  │ ↘ Sangria  │  ← h-14
+│    F2      │    F3      │
+├────────────┼────────────┤
+│ 🧾 Cobrar  │ 👥 Consumo │  ← h-14
+│    F5      │    Func.   │
+├────────────┴────────────┤
+│                         │
+│  (espaço flexível)      │
+│                         │
+├─────────────────────────┤
+│   🔒 Fechar Caixa       │  ← h-20, destruct, full-width
+│         F4              │
+├─────────────────────────┤
+│ ❓ Atalhos          F12 │
+└─────────────────────────┘
+```
 
-- Trocar todos `h-20` (Reforço, Sangria, Cobrar, Fechar Caixa) → `h-16`.
-- Trocar `h-16` (Consumo Func.) → `h-14`.
-- Reduzir ícones grandes `h-6 w-6` → `h-5 w-5` e `text-sm` → `text-xs` nos labels dos botões principais para acompanhar a altura menor.
-- Reduzir o `gap-3` do container → `gap-2` e o `mb-2` do título → `mb-1`.
-- Trocar o spacer `<div className="flex-1" />` por `<div className="flex-1 min-h-2" />` para garantir respiro mínimo entre o bloco superior e "Fechar Caixa" sem quebrar quando o espaço é apertado.
-- Adicionar `overflow-y-auto` no container raiz como fallback: se ainda assim faltar espaço (telas muito pequenas), a sidebar rola internamente em vez de invadir o footer.
+### Mudanças (1 arquivo)
 
-**2. `src/pages/pdv/Cashier.tsx` — garantir que o Card da sidebar respeite a altura disponível**
+**`src/components/pdv/cashier/CashierActionsSidebar.tsx`** (apenas o ramo `isOpen === true`):
 
-- Linha do `Card` da sidebar (atualmente `<Card>`): adicionar classes `flex flex-col min-h-0 overflow-hidden`.
-- Trocar `<CardContent className="p-4 h-full">` por `<CardContent className="p-3 flex-1 min-h-0 overflow-hidden">` para que o `h-full` da sidebar interna realmente herde altura limitada e o overflow seja contido pelo Card.
+- Envolver Reforço, Sangria, Cobrar e Consumo Func. em um `<div className="grid grid-cols-2 gap-2">`.
+- Cada um desses 4 botões: `h-14`, ícone `h-4 w-4`, label `text-xs`, kbd `text-[9px]`.
+- Manter o spacer `flex-1 min-h-2` entre o grid e o botão de fechar.
+- "Fechar Caixa" volta a ser `h-20` full-width com ícone `h-6 w-6` e destaque visual `destructive` (estética principal preservada).
+- Botão "Atalhos" no rodapé permanece igual.
+
+### Economia de altura
+
+- Antes (vertical): 4 botões × ~64px + spacer + Fechar 64px = **~340px** só nos botões de ação.
+- Depois (grid + Fechar grande): 2 linhas × 56px + spacer + Fechar 80px = **~200px**.
+- Sobra ~140px de respiro vertical → cabe sem scroll mesmo no Windows com zoom 1.6.
 
 ### Resultado esperado
 
-- Caixa aberto em qualquer zoom (incluindo Windows zoom 1.6 / 1131px de altura): todos os 6 botões da sidebar cabem dentro do próprio Card sem invadir o rodapé.
-- "Total Vendas", "Saldo Atual" e "Fechar Caixa" no rodapé voltam a ficar totalmente visíveis e clicáveis.
-- Em telas extremamente pequenas, a sidebar rola internamente em vez de quebrar o layout.
-- Caixa fechado continua igual (já cabia).
-- Nenhuma mudança em lógica, atalhos de teclado, mutations ou no modal de fechamento.
-
-### Arquivos modificados
-
-- `src/components/pdv/cashier/CashierActionsSidebar.tsx`
-- `src/pages/pdv/Cashier.tsx`
+- Tudo cabe na viewport sem rolagem interna na sidebar e sem cortar o footer.
+- "Fechar Caixa" continua sendo o botão visualmente dominante (destrutivo, grande, isolado).
+- Fluxo de teclado (F2/F3/F4/F5) inalterado.
+- Caixa fechado: continua igual (Abrir Caixa grande + Reimprimir Último).
 
 ### Fora de escopo
 
-- Header, footer de resumo, modal de fechamento (já corrigidos nas iterações anteriores).
-- Outras páginas do PDV.
+- Lógica, mutations, modal de fechamento, header, footer de resumo.
+
+### Arquivo modificado
+
+- `src/components/pdv/cashier/CashierActionsSidebar.tsx`
 
