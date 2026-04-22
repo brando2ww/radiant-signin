@@ -203,16 +203,11 @@ export default function GarcomAdicionarItem() {
       >
         <SheetContent
           side="bottom"
-          className="rounded-t-2xl px-4 pb-0 max-h-[92vh] overflow-y-auto"
+          className="z-[60] rounded-t-2xl px-4 pb-0 max-h-[92vh] overflow-y-auto"
         >
           <SheetHeader>
-            <SheetTitle className="text-left flex items-baseline justify-between gap-3">
-              <span className="truncate">{selectedProduct?.name}</span>
-              {selectedProduct && (
-                <span className="shrink-0 text-sm font-normal text-muted-foreground tabular-nums">
-                  R$ {selectedProduct.price_salon.toFixed(2)}
-                </span>
-              )}
+            <SheetTitle className="text-left truncate pr-8">
+              {selectedProduct?.name}
             </SheetTitle>
           </SheetHeader>
 
