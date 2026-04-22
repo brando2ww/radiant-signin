@@ -38,6 +38,8 @@ import {
   Sparkles,
   Lock,
   FileText,
+  Printer,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
@@ -45,6 +47,9 @@ import { PDVTable } from "@/hooks/use-pdv-tables";
 import { usePDVPayments, PaymentMethod } from "@/hooks/use-pdv-payments";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNFCeEmission } from "@/hooks/use-nfce-emission";
+import { usePDVSettings } from "@/hooks/use-pdv-settings";
+import { printNonFiscalReceipt, printDanfeFromUrl } from "@/lib/print-fiscal-receipt";
 
 interface PaymentDialogProps {
   open: boolean;
