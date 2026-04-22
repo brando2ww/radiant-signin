@@ -262,14 +262,14 @@ export function usePDVCashier() {
 
   // Buscar última sessão fechada
   const { data: lastClosedSession } = useQuery({
-    queryKey: ["pdv-cashier-last-closed", user?.id],
+    queryKey: ["pdv-cashier-last-closed", visibleUserId],
     queryFn: async () => {
-      if (!user?.id) return null;
+      if (!visibleUserId) return null;
 
       const { data, error } = await supabase
         .from("pdv_cashier_sessions")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", visibleUserId)
         .not("closed_at", "is", null)
         .order("closed_at", { ascending: false })
         .limit(1)
@@ -278,7 +278,7 @@ export function usePDVCashier() {
       if (error) throw error;
       return data as CashierSession | null;
     },
-    enabled: !!user?.id,
+    enabled: !!visibleUserId && !isLoadingEstablishment,
   });
 
   // Buscar movimentações da última sessão fechada
