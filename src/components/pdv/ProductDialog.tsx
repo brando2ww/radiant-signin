@@ -701,7 +701,10 @@ export function ProductDialog({
 
               <TabsContent value="options" className="space-y-4 mt-4">
                 {product ? (
-                  <PDVProductOptionsManager productId={product.id} />
+                  <PDVProductOptionsManager
+                    productId={product.id}
+                    onDirtyChange={setOptionsDirty}
+                  />
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     Salve o produto primeiro para configurar opções
