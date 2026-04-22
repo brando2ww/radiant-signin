@@ -1,51 +1,61 @@
 
+## Corrigir o clique em “Adicionar” que está salvando e fechando
 
-## Acumular todas as edições e salvar somente no final
+### Causa identificada
+O gerenciador de opções (`PDVProductOptionsManager`) está renderizado dentro do `<form>` principal do `ProductDialog`.
 
-Hoje, vários botões dentro do gerenciador de Opções disparam o salvamento imediatamente no banco — e o painel de edição fecha. O usuário quer trabalhar em modo "rascunho", fazendo todas as alterações, e só efetivar tudo ao clicar em **"Salvar alterações"** na barra inferior.
+Em HTML, qualquer `<Button>` ou `<button>` dentro de um formulário, quando não recebe `type`, assume `type="submit"` por padrão. Por isso, ao clicar em **“Adicionar”** na aba de opções, o formulário do produto é submetido, o produto é salvo e o diálogo fecha.
 
-### Comportamento alvo
+### O que será ajustado
+Vou transformar em `type="button"` todos os botões de ação interna da aba **Opções** que não devem enviar o formulário.
 
-Todas as ações abaixo passam a alterar apenas o **draft local** (sem ir ao servidor):
+### Arquivos
+- `src/components/pdv/PDVProductOptionsManager.tsx`
+- Referência estrutural: `src/components/pdv/ProductDialog.tsx`
 
-1. **Adicionar opção** ("Adicionar") — cria a opção apenas no rascunho.
-2. **Adicionar item** ("+") — cria o item de opção apenas no rascunho.
-3. **Excluir opção** (lixeira no cabeçalho da opção) — marca a opção para remoção.
-4. **Excluir item** (lixeira ao lado do item) — marca o item para remoção.
-5. **Vincular/desvincular insumo, alterar quantidade, nome, preço, tipo, mín/máx, obrigatório, disponível** — já são draft, permanecem assim.
+### Alterações previstas
 
-A barra inferior **"Salvar alterações"** passa a ser o único ponto que persiste tudo:
-- Cria as novas opções/itens (com IDs temporários) chamando `createOption` / `createItem`
-- Aplica updates de campos alterados em opções/itens existentes
-- Deleta opções/itens marcados para remoção
-- Sincroniza receitas (insumos vinculados) por item — incluindo os recém-criados
-- Mostra um único toast no final, ex.: "Alterações salvas (3 criadas, 2 atualizadas, 1 removida)"
+#### 1. Botão “Adicionar” da nova opção
+No topo do gerenciador:
+- adicionar `type="button"` ao botão **Adicionar**
 
-O botão **"Descartar"** descarta todas as mudanças locais voltando ao baseline, sem tocar no banco.
+#### 2. Botão “+” para adicionar item dentro da opção
+Na linha de inclusão de item:
+- adicionar `type="button"` ao botão com ícone `Plus`
 
-### Detalhes técnicos
+#### 3. Botões de excluir
+Nos botões de lixeira:
+- adicionar `type="button"` ao excluir opção
+- adicionar `type="button"` ao excluir item
 
-Arquivo único: `src/components/pdv/PDVProductOptionsManager.tsx`
+#### 4. Botões auxiliares de insumo
+Nos controles que só manipulam o draft local:
+- adicionar `type="button"` ao botão que abre o popover de vincular insumo
+- adicionar `type="button"` ao botão de desvincular insumo
 
-1. **IDs temporários**: novos itens/opções recebem id `tmp-opt-<uuid>` / `tmp-item-<uuid>`. Um helper `isTempId(id)` identifica registros não persistidos.
-2. **Estado de remoção**: estender `DraftOption` e `DraftOption["items"]` localmente com flag `_deleted?: boolean` (não enviada ao backend, apenas controle de draft). A renderização filtra `_deleted` para esconder visualmente.
-3. **Handlers reescritos**:
-   - `handleAddOption` → `setDraft(prev => [...prev, { id: tmpId, name, type:'single', is_required:false, min_selections:0, max_selections:1, items: [], _isNew:true }])`
-   - `handleAddItem(optionId)` → push de item com `id: tmpItemId, _isNew:true` no array `items` da opção draft
-   - `handleDeleteOption(optionId)` → se temp, remove do array; senão marca `_deleted=true`
-   - `handleDeleteItem(optionId, itemId)` → idem
-4. **`isDirty`** continua via comparação `JSON.stringify(draft) !== baseline`, que já cobre criações/remoções/edições.
-5. **`handleSave` (refeito em ordem segura)**:
-   - **Fase 1 — Deleções**: `deleteItem` para items marcados (apenas não-temp), depois `deleteOption` para opções marcadas (não-temp).
-   - **Fase 2 — Criação de opções novas**: para cada opção `_isNew`, chamar `createOption.mutateAsync` e capturar o `id` real retornado; mapear `tmpOptId → realOptId`.
-   - **Fase 3 — Updates de opções existentes**: campos alterados vs baseline.
-   - **Fase 4 — Itens**: para cada opção (usando id real), criar items `_isNew` via `createItem.mutateAsync` (capturar id real); atualizar items existentes alterados.
-   - **Fase 5 — Receitas**: aplicar `removeByOptionItem` + `upsertRecipe` por item (incluindo os recém-criados, usando o id real retornado).
-   - Toast final consolidado; em caso de erro parcial, manter draft (não atualizar baseline) e mostrar `toast.error`.
-6. **Sync com servidor (`useEffect` linhas 58–102)**: ajustar para **não** sobrescrever opções/itens com flag `_isNew` ou `_deleted`, evitando que o merge apague rascunhos enquanto o usuário edita.
-7. **Sinalização visual** (opcional, leve): badge "Novo" ao lado de itens/opções `_isNew` e opacidade reduzida em itens marcados como `_deleted` antes de salvar — ou simplesmente esconder removidos. Vou esconder removidos e adicionar um pequeno texto "Não salvo" na barra inferior listando contagem (já existente é suficiente; manter simples).
+#### 5. Botões HTML puros dentro do popover
+Na lista de insumos há um `<button>` nativo para selecionar o insumo:
+- adicionar `type="button"` nesse elemento também
 
-### Fora de escopo
-- Reordenação por drag-and-drop (não mexe no fluxo atual).
-- Validações adicionais além das já existentes (nome obrigatório, etc.).
+### Resultado esperado
+Depois da correção:
+- clicar em **Adicionar** não salvará mais o produto
+- clicar em **+**, lixeira, vincular/desvincular insumo também não enviará o formulário
+- o produto só será salvo pelos pontos corretos:
+  - botão **Salvar** do `ProductDialog`
+  - botão **Salvar alterações** da barra da aba de opções
 
+### Detalhe técnico
+A estrutura atual confirma isso:
+- `ProductDialog.tsx` contém `<form onSubmit={handleSubmit}>`
+- `PDVProductOptionsManager.tsx` está dentro desse formulário
+- vários botões internos não possuem `type`, então hoje se comportam como submit involuntário
+
+### Validação após implementar
+Vou verificar estes fluxos:
+1. clicar em **Adicionar opção**
+2. clicar em **Adicionar item**
+3. excluir opção/item
+4. selecionar insumo no popover
+5. confirmar que nada fecha ou salva automaticamente
+6. confirmar que apenas **Salvar alterações** e **Salvar** persistem dados
