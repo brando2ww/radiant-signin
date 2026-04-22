@@ -15,6 +15,7 @@ export interface SelectedOption {
     priceAdjustment: number;
     linkedProductId?: string | null;
     printerStation?: string | null;
+    recipes?: { ingredient_id: string; quantity: number }[];
   }[];
 }
 
