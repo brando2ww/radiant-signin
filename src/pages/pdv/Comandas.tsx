@@ -6,10 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ResponsivePageHeader } from "@/components/ui/responsive-page-header";
 import { Plus, Search, ClipboardList } from "lucide-react";
 import { usePDVComandas, Comanda } from "@/hooks/use-pdv-comandas";
+import { usePDVCashier } from "@/hooks/use-pdv-cashier";
 import { ComandaCard } from "@/components/pdv/ComandaCard";
 import { ComandaDialog } from "@/components/pdv/ComandaDialog";
 import { ComandaDetailsDialog } from "@/components/pdv/ComandaDetailsDialog";
 import { ComandaAddItemDialog } from "@/components/pdv/ComandaAddItemDialog";
+import { toast } from "sonner";
 
 export default function ComandasPage() {
   const {
@@ -35,6 +37,16 @@ export default function ComandasPage() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
   const [addItemComanda, setAddItemComanda] = useState<Comanda | null>(null);
+
+  const { activeSession } = usePDVCashier();
+
+  const handleTryOpenCreateDialog = () => {
+    if (!activeSession) {
+      toast.error("Abra o caixa antes de criar uma comanda.");
+      return;
+    }
+    setCreateDialogOpen(true);
+  };
 
   // Filter comandas based on tab and search
   const standaloneComandas = getStandaloneComandas();
@@ -126,7 +138,7 @@ export default function ComandasPage() {
         title="Comandas Avulsas"
         description="Gerencie comandas sem mesa associada"
         action={
-          <Button onClick={() => setCreateDialogOpen(true)}>
+          <Button onClick={handleTryOpenCreateDialog}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Comanda
           </Button>
@@ -173,7 +185,7 @@ export default function ComandasPage() {
           {tab === "abertas" && (
             <Button
               className="mt-4"
-              onClick={() => setCreateDialogOpen(true)}
+              onClick={handleTryOpenCreateDialog}
             >
               <Plus className="h-4 w-4 mr-2" />
               Nova Comanda
