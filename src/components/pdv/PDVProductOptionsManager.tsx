@@ -68,6 +68,10 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
   const [newOptionName, setNewOptionName] = useState("");
   const [newItemNames, setNewItemNames] = useState<Record<string, string>>({});
   const [newItemPrices, setNewItemPrices] = useState<Record<string, string>>({});
+  const [newItemIngredients, setNewItemIngredients] = useState<
+    Record<string, { id: string; name: string; unit: string } | null>
+  >({});
+  const [newItemPopoverOpen, setNewItemPopoverOpen] = useState<string | null>(null);
   const [ingredientPopoverOpen, setIngredientPopoverOpen] = useState<string | null>(null);
   const [ingredientSearch, setIngredientSearch] = useState("");
   const [draft, setDraft] = useState<DraftOption[]>([]);
@@ -177,6 +181,19 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
     const name = newItemNames[optionId]?.trim();
     if (!name) return;
     const price = Number(newItemPrices[optionId] || 0);
+    const ing = newItemIngredients[optionId];
+    const recipes: PDVOptionItemRecipeRef[] = ing
+      ? [
+          {
+            id: `tmp-${ing.id}`,
+            ingredient_id: ing.id,
+            quantity: 1,
+            unit: ing.unit,
+            ingredient_name: ing.name,
+            ingredient_unit: ing.unit,
+          },
+        ]
+      : [];
     setDraft((prev) =>
       prev.map((o) =>
         o.id === optionId
@@ -191,7 +208,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                   price_adjustment: price,
                   is_available: true,
                   order_position: o.items.length,
-                  recipes: [],
+                  recipes,
                   _isNew: true,
                 } as DraftItem,
               ],
@@ -201,6 +218,21 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
     );
     setNewItemNames((prev) => ({ ...prev, [optionId]: "" }));
     setNewItemPrices((prev) => ({ ...prev, [optionId]: "" }));
+    setNewItemIngredients((prev) => ({ ...prev, [optionId]: null }));
+  };
+
+  const handleSelectNewItemIngredient = (
+    optionId: string,
+    ingredient: { id: string; name: string; unit: string },
+  ) => {
+    setNewItemIngredients((prev) => ({ ...prev, [optionId]: ingredient }));
+    setNewItemNames((prev) => ({ ...prev, [optionId]: ingredient.name }));
+    setNewItemPopoverOpen(null);
+    setIngredientSearch("");
+  };
+
+  const handleClearNewItemIngredient = (optionId: string) => {
+    setNewItemIngredients((prev) => ({ ...prev, [optionId]: null }));
   };
 
   const handleDeleteOption = (optionId: string) => {
@@ -679,6 +711,79 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                 placeholder="+ R$"
                 className="w-28"
               />
+              <Popover
+                open={newItemPopoverOpen === option.id}
+                onOpenChange={(open) => {
+                  setNewItemPopoverOpen(open ? option.id : null);
+                  if (!open) setIngredientSearch("");
+                }}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant={newItemIngredients[option.id] ? "secondary" : "ghost"}
+                    size="icon"
+                    className="h-9 w-9 shrink-0"
+                    title={
+                      newItemIngredients[option.id]
+                        ? `Insumo: ${newItemIngredients[option.id]?.name}`
+                        : "Vincular insumo"
+                    }
+                  >
+                    <Boxes className="h-3.5 w-3.5" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-2" align="end">
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar insumo..."
+                        value={ingredientSearch}
+                        onChange={(e) => setIngredientSearch(e.target.value)}
+                        className="pl-7 h-8 text-xs"
+                        autoFocus
+                      />
+                    </div>
+                    <ScrollArea className="h-48">
+                      <div className="space-y-1">
+                        {filteredIngredients.slice(0, 30).map((ing) => (
+                          <button
+                            key={ing.id}
+                            type="button"
+                            onClick={() =>
+                              handleSelectNewItemIngredient(option.id, ing)
+                            }
+                            className="w-full text-left p-2 rounded text-xs hover:bg-accent transition-colors"
+                          >
+                            <p className="font-medium">{ing.name}</p>
+                            <p className="text-muted-foreground">
+                              Estoque: {ing.current_stock} {ing.unit}
+                            </p>
+                          </button>
+                        ))}
+                        {filteredIngredients.length === 0 && (
+                          <p className="text-xs text-muted-foreground text-center py-4">
+                            Nenhum insumo encontrado
+                          </p>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              {newItemIngredients[option.id] && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 shrink-0 text-muted-foreground"
+                  onClick={() => handleClearNewItemIngredient(option.id)}
+                  title="Remover insumo selecionado"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              )}
               <Button type="button" size="sm" onClick={() => handleAddItem(option.id)}>
                 <Plus className="h-3.5 w-3.5" />
               </Button>
