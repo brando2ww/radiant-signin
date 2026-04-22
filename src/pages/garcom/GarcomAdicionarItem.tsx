@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Search, Plus, Minus, Send } from "lucide-react";
 import { usePDVProducts } from "@/hooks/use-pdv-products";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
-import { toast } from "sonner";
 import { ProductCategoryNav } from "@/components/garcom/ProductCategoryNav";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,10 +29,6 @@ export default function GarcomAdicionarItem() {
 
   const handleSendToKitchen = () => {
     if (pendingItems.length === 0) return;
-    const missingCenter = pendingItems.some((i) => !i.production_center_id);
-    if (missingCenter) {
-      toast.warning("Alguns itens não têm centro de produção configurado e podem não ser impressos.");
-    }
     sendToKitchen(pendingItems.map((i) => i.id));
   };
 
