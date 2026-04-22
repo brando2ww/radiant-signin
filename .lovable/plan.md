@@ -1,30 +1,34 @@
 
 
-## Plano: exigir caixa aberto para criar comanda
+## Plano: preencher automaticamente o valor restante ao adicionar forma de pagamento dividido
 
-### Regra
-Criar comanda (avulsa ou vinculada a mesa) só é permitido se houver sessão de caixa ativa. Caso contrário, exibir `toast.error("Abra o caixa antes de criar uma comanda")` e bloquear a ação.
+### Problema
+Ao dividir o pagamento, cada nova forma é adicionada com o campo de valor vazio. O operador precisa calcular mentalmente (ou na calculadora) quanto falta para completar o total.
 
-O Salão (`Salon.tsx`) já implementa essa verificação. Falta aplicar nos demais pontos de criação.
+### Solução
+Ao adicionar uma nova forma de pagamento (`addSplitPayment`), preencher automaticamente o campo `amount` com o valor restante (`splitRemaining`). Assim o operador só precisa ajustar se quiser um valor diferente.
 
-### Correções
+### Implementação
 
-**1. `src/pages/pdv/Comandas.tsx`**
-- Importar `usePDVCashier` e obter `activeSession`
-- No `handleCreateComanda`, verificar `if (!activeSession)` antes de prosseguir — se não houver sessão, exibir toast e retornar
-- No botão "Nova Comanda" (que abre `setCreateDialogOpen(true)`), aplicar a mesma verificação antes de abrir o dialog
+**Arquivo: `src/components/pdv/cashier/PaymentDialog.tsx`**
 
-**2. `src/pages/Garcom.tsx`**
-- Importar `usePDVCashier` e obter `activeSession`
-- Em `handleSelectComandaAvulsa`, verificar `if (!activeSession)` antes de abrir o `ComandaDialog`
-- Em `handleSelectMesa`, manter livre (navegar para mesas é apenas visualização)
+Alterar a função `addSplitPayment` (linha ~192) para calcular o restante e pré-preencher:
 
-**3. `src/pages/garcom/GarcomMesaDetalhe.tsx`**
-- Importar `usePDVCashier` e obter `activeSession`
-- Em `handleNewComanda`, verificar `if (!activeSession)` antes de criar
+```typescript
+const addSplitPayment = () => {
+  const remaining = total - splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
+  setSplitPayments([
+    ...splitPayments,
+    {
+      id: crypto.randomUUID(),
+      method: "dinheiro",
+      amount: remaining > 0 ? remaining.toFixed(2) : "",
+      installments: "1",
+    },
+  ]);
+};
+```
 
 ### Arquivos
-- **Editado:** `src/pages/pdv/Comandas.tsx`
-- **Editado:** `src/pages/Garcom.tsx`
-- **Editado:** `src/pages/garcom/GarcomMesaDetalhe.tsx`
+- **Editado:** `src/components/pdv/cashier/PaymentDialog.tsx` (1 ponto: `addSplitPayment`)
 
