@@ -1,61 +1,50 @@
 
-## Corrigir o clique em “Adicionar” que está salvando e fechando
 
-### Causa identificada
-O gerenciador de opções (`PDVProductOptionsManager`) está renderizado dentro do `<form>` principal do `ProductDialog`.
+## Botão de insumo no formulário de novo item + autopreenchimento do nome
 
-Em HTML, qualquer `<Button>` ou `<button>` dentro de um formulário, quando não recebe `type`, assume `type="submit"` por padrão. Por isso, ao clicar em **“Adicionar”** na aba de opções, o formulário do produto é submetido, o produto é salvo e o diálogo fecha.
+### Por que o botão não aparecia
+O ícone de buscar insumo só existia **dentro de cada item já criado**. Como a opção "BASE ALCÓLICA" foi recém-criada e ainda não tinha itens, não havia onde clicar.
 
-### O que será ajustado
-Vou transformar em `type="button"` todos os botões de ação interna da aba **Opções** que não devem enviar o formulário.
+### O que muda
 
-### Arquivos
-- `src/components/pdv/PDVProductOptionsManager.tsx`
-- Referência estrutural: `src/components/pdv/ProductDialog.tsx`
+No rodapé de cada opção (a linha que hoje tem **Nome do item**, **R$**, **+**), passa a aparecer também o **botão de buscar insumo** (ícone de caixas). Comportamento:
 
-### Alterações previstas
+1. Clicar no ícone abre o popover de busca (mesmo componente já existente)
+2. Ao **selecionar um insumo**, automaticamente:
+   - o campo **Nome do item** é preenchido com o nome do insumo
+   - o popover fecha
+   - o ícone fica em destaque (variante `secondary`) sinalizando que há insumo pré-vinculado
+   - aparece um pequeno **X** ao lado para limpar a seleção (volta ao estado neutro, mas **não apaga o nome** já digitado — usuário pode editar)
+3. Ao clicar em **+** (ou Enter no campo), o item é criado já com o insumo vinculado em `recipes` (quantidade 1, unidade do insumo)
+4. Após criar o item, os três campos (nome, preço, insumo selecionado) são limpos
+5. Se o usuário não clicar em **+**, nada é salvo — segue o padrão de rascunho local
 
-#### 1. Botão “Adicionar” da nova opção
-No topo do gerenciador:
-- adicionar `type="button"` ao botão **Adicionar**
+### Sobre o autopreenchimento
+- Se o campo **Nome do item** estiver vazio no momento da seleção: preenche com o nome do insumo
+- Se já tiver texto digitado: **sobrescreve** com o nome do insumo (comportamento que você pediu: "ao selecionar autopreencher o nome do item")
+- O campo continua editável depois — o usuário pode renomear sem perder o vínculo
 
-#### 2. Botão “+” para adicionar item dentro da opção
-Na linha de inclusão de item:
-- adicionar `type="button"` ao botão com ícone `Plus`
+### Persistência
+Sem mudança no `handleSave`: a Fase 5 já chama `upsertRecipe` para itens novos com `recipes` populado. O vínculo será salvo no clique em **Salvar alterações**.
 
-#### 3. Botões de excluir
-Nos botões de lixeira:
-- adicionar `type="button"` ao excluir opção
-- adicionar `type="button"` ao excluir item
+### Detalhes técnicos
+Arquivo único: `src/components/pdv/PDVProductOptionsManager.tsx`
 
-#### 4. Botões auxiliares de insumo
-Nos controles que só manipulam o draft local:
-- adicionar `type="button"` ao botão que abre o popover de vincular insumo
-- adicionar `type="button"` ao botão de desvincular insumo
+- Novos estados locais:
+  - `newItemIngredients: Record<string, { id: string; name: string; unit: string } | null>`
+  - `newItemPopoverOpen: string | null` (separado de `ingredientPopoverOpen` para não colidir com os itens já existentes)
+- No bloco `<div className="flex gap-2 pt-2 border-t">` adicionar, antes do botão "+":
+  - `Popover` com `PopoverTrigger` `<Button type="button" variant={selected ? "secondary" : "ghost"} size="icon">` com ícone `Boxes`
+  - Reusar `filteredIngredients` e `ingredientSearch`
+  - `onSelect` do insumo: setar `newItemIngredients[optionId]` e `newItemNames[optionId] = ing.name`
+  - `<Button type="button" size="icon">` com ícone `X` quando há seleção, para limpar apenas `newItemIngredients[optionId]`
+- Atualizar `handleAddItem(optionId)`:
+  - Se `newItemIngredients[optionId]` existir, montar `recipes: [{ id: 'tmp-…', ingredient_id, quantity: 1, unit, ingredient_name, ingredient_unit }]`
+  - Limpar `newItemIngredients[optionId]` junto com nome e preço após adicionar
+- Todos os novos `<Button>` com `type="button"` (mantém a correção contra submit involuntário do form pai)
 
-#### 5. Botões HTML puros dentro do popover
-Na lista de insumos há um `<button>` nativo para selecionar o insumo:
-- adicionar `type="button"` nesse elemento também
+### Fora de escopo
+- Múltiplos insumos por item
+- Edição da quantidade no formulário de novo item (continua 1 por padrão, ajustável depois na linha do item)
+- Reordenação
 
-### Resultado esperado
-Depois da correção:
-- clicar em **Adicionar** não salvará mais o produto
-- clicar em **+**, lixeira, vincular/desvincular insumo também não enviará o formulário
-- o produto só será salvo pelos pontos corretos:
-  - botão **Salvar** do `ProductDialog`
-  - botão **Salvar alterações** da barra da aba de opções
-
-### Detalhe técnico
-A estrutura atual confirma isso:
-- `ProductDialog.tsx` contém `<form onSubmit={handleSubmit}>`
-- `PDVProductOptionsManager.tsx` está dentro desse formulário
-- vários botões internos não possuem `type`, então hoje se comportam como submit involuntário
-
-### Validação após implementar
-Vou verificar estes fluxos:
-1. clicar em **Adicionar opção**
-2. clicar em **Adicionar item**
-3. excluir opção/item
-4. selecionar insumo no popover
-5. confirmar que nada fecha ou salva automaticamente
-6. confirmar que apenas **Salvar alterações** e **Salvar** persistem dados
