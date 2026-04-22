@@ -137,7 +137,10 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
   };
 
   const handleAddOption = () => {
-    if (!newOptionName.trim()) return;
+    if (!newOptionName.trim()) {
+      toast.warning("Informe o nome da opção");
+      return;
+    }
     createOption.mutate({ product_id: productId, name: newOptionName.trim() });
     setNewOptionName("");
   };
