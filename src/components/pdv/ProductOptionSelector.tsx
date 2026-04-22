@@ -73,6 +73,10 @@ export function ProductOptionSelector({ options, onConfirm, onBack }: Props) {
             priceAdjustment: getItemPrice(item),
             linkedProductId: item.linked_product_id || null,
             printerStation: (item.linked_product as any)?.printer_station || null,
+            recipes: (item.recipes || []).map((r: any) => ({
+              ingredient_id: r.ingredient_id,
+              quantity: Number(r.quantity) || 1,
+            })),
           };
         }),
       }));
