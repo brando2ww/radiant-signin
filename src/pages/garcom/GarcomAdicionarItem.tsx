@@ -203,17 +203,25 @@ export default function GarcomAdicionarItem() {
       >
         <SheetContent
           side="bottom"
-          className="rounded-t-2xl px-4 pb-8 max-h-[90vh] overflow-y-auto"
+          className="rounded-t-2xl px-4 pb-0 max-h-[92vh] overflow-y-auto"
         >
           <SheetHeader>
-            <SheetTitle className="text-left">{selectedProduct?.name}</SheetTitle>
+            <SheetTitle className="text-left flex items-baseline justify-between gap-3">
+              <span className="truncate">{selectedProduct?.name}</span>
+              {selectedProduct && (
+                <span className="shrink-0 text-sm font-normal text-muted-foreground tabular-nums">
+                  R$ {selectedProduct.price_salon.toFixed(2)}
+                </span>
+              )}
+            </SheetTitle>
           </SheetHeader>
 
           {/* Step: Options */}
           {effectiveStep === "options" && hasOptions && productOptions && (
             <div className="mt-4">
-              <ProductOptionSelector
+              <MobileProductOptionSelector
                 options={productOptions}
+                basePrice={selectedProduct?.price_salon ?? 0}
                 onConfirm={(s) => {
                   setSelectedOptions(s);
                   setStep("quantity");
