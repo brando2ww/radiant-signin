@@ -516,11 +516,12 @@ export function CloseCashierDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 py-4 border-t flex-col-reverse sm:flex-row sm:justify-end gap-2">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isClosing}
+            className="w-full sm:w-auto"
           >
             Cancelar
           </Button>
@@ -528,6 +529,7 @@ export function CloseCashierDialog({
             onClick={handleClose}
             disabled={isClosing || !canClose}
             variant={isBlocked ? "destructive" : "default"}
+            className="w-full sm:w-auto"
           >
             {isClosing ? "Fechando..." : isBlocked ? "Bloqueado" : "Fechar Caixa"}
           </Button>
