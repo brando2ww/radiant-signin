@@ -12,7 +12,7 @@ import UserForm from "./UserForm";
 
 function UsersList() {
   const navigate = useNavigate();
-  const { users, isLoading, toggleActive } = usePDVUsers();
+  const { users, isLoading, toggleActive, deleteUser } = usePDVUsers();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -89,6 +89,7 @@ function UsersList() {
               user={user}
               onEdit={(u) => navigate(`/pdv/usuarios/${u.id}/editar`)}
               onToggleActive={(id, isActive) => toggleActive.mutate({ id, is_active: isActive })}
+              onDelete={(id) => deleteUser.mutate(id)}
             />
           ))}
         </div>
