@@ -1,51 +1,42 @@
 
 
-## Fazer a página do Caixa caber 100% na tela, sem rolagem externa
+## Corrigir sobreposição do footer pela sidebar de Ações Rápidas (caixa aberto)
 
-A página `/pdv/caixa` hoje usa `min-h-[calc(100vh-3.5rem)]`, ou seja, ela pode crescer além da viewport — o que faz aparecer a barra de rolagem do navegador (visível no print: header do PDV, cabeçalho do operador, tabela de movimentações, sidebar de ações **e** rodapé com 8 cards de resumo + Total Vendas + Saldo Atual não cabem juntos em 1131px com zoom 1.6).
+Quando o caixa está **aberto**, a sidebar lateral renderiza 6 botões verticais (Reforço, Sangria, Cobrar, Consumo Func., spacer, Fechar Caixa, Atalhos). Somados, eles precisam de ~520px de altura. Em telas Windows com zoom (devicePixelRatio 1.6, viewport efetivo ~700px de altura útil para a área central), esse conteúdo estoura o `Card` da sidebar e **sobrepõe o rodapé** — exatamente o que aparece no print: "Cobrar" e "Consumo Func." cobrindo "Total Vendas / Saldo Atual / Fechar Caixa".
 
-A regra que o usuário quer:
-- **Página do PDV**: sempre completa, sem rolagem da janela e sem cortes.
-- **Modal de Fechamento**: única superfície que pode rolar internamente (já feito na iteração anterior).
+Quando o caixa está **fechado**, a sidebar tem apenas 1-2 botões e cabe sem problema — por isso o bug só aparece com caixa aberto.
 
 ### O que vai mudar
 
-Arquivo único: `src/pages/pdv/Cashier.tsx`
+**1. `src/components/pdv/cashier/CashierActionsSidebar.tsx` — compactar botões e habilitar scroll interno seguro**
 
-1. **Travar a altura da página exatamente na viewport disponível**
-   - Trocar `min-h-[calc(100vh-3.5rem)]` por `h-[calc(100vh-3.5rem)] overflow-hidden` no container raiz (linhas 212 e 224).
-   - Isso impede que a página cresça além da janela e mata a rolagem global.
+- Trocar todos `h-20` (Reforço, Sangria, Cobrar, Fechar Caixa) → `h-16`.
+- Trocar `h-16` (Consumo Func.) → `h-14`.
+- Reduzir ícones grandes `h-6 w-6` → `h-5 w-5` e `text-sm` → `text-xs` nos labels dos botões principais para acompanhar a altura menor.
+- Reduzir o `gap-3` do container → `gap-2` e o `mb-2` do título → `mb-1`.
+- Trocar o spacer `<div className="flex-1" />` por `<div className="flex-1 min-h-2" />` para garantir respiro mínimo entre o bloco superior e "Fechar Caixa" sem quebrar quando o espaço é apertado.
+- Adicionar `overflow-y-auto` no container raiz como fallback: se ainda assim faltar espaço (telas muito pequenas), a sidebar rola internamente em vez de invadir o footer.
 
-2. **Garantir que a área central (Movimentações + Sidebar) seja a única que se ajusta**
-   - O grid `grid-cols-1 lg:grid-cols-4 ... flex-1` já existe e tem `min-h-0` implícito faltando — adicionar `min-h-0` para que o `flex-1` realmente respeite o espaço disponível e a tabela de movimentações role internamente (o `overflow-auto` interno já está pronto na linha 245).
-   - Adicionar `min-h-0` também no `Card` da tabela (linha 234) e usar `overflow-hidden` no `CardContent` (já tem).
+**2. `src/pages/pdv/Cashier.tsx` — garantir que o Card da sidebar respeite a altura disponível**
 
-3. **Compactar o rodapé de resumo para caber sem cortar**
-   - No `CashierSummaryFooter`: reduzir `p-4` → `p-3`, `gap-3` → `gap-2`, padding dos cards internos `p-3` → `p-2`, ícones `h-6 w-6` → `h-5 w-5`, e tipografia do "Saldo Atual" de `text-xl` → `text-lg`. Resultado: ~25% mais baixo, libera espaço vertical para o miolo.
-   - Arquivo: `src/components/pdv/cashier/CashierSummaryFooter.tsx`.
-
-4. **Compactar levemente o header superior**
-   - No `CashierHeader`: reduzir `p-4` → `p-3` e ícones `h-10 w-10` → `h-9 w-9`. Pequena economia, mas suficiente para zoom alto.
-   - Arquivo: `src/components/pdv/cashier/CashierHeader.tsx`.
-
-5. **Skeleton de loading com a mesma regra**
-   - Aplicar a mesma troca (`h-[calc(100vh-3.5rem)] overflow-hidden`) no bloco de loading (linha 212) para evitar flash de rolagem.
+- Linha do `Card` da sidebar (atualmente `<Card>`): adicionar classes `flex flex-col min-h-0 overflow-hidden`.
+- Trocar `<CardContent className="p-4 h-full">` por `<CardContent className="p-3 flex-1 min-h-0 overflow-hidden">` para que o `h-full` da sidebar interna realmente herde altura limitada e o overflow seja contido pelo Card.
 
 ### Resultado esperado
 
-- Em qualquer zoom (incluindo o 1.6 do print): header, tabela de movimentações, sidebar de ações e rodapé com resumo financeiro **cabem inteiros** na tela, sem barra de rolagem do navegador e sem cortes nos botões "Fechar Caixa" / "Atalhos".
-- Se a tabela de Movimentações tiver muitas linhas, **só ela rola internamente** (já é o comportamento atual via `overflow-auto` na linha 245).
-- O modal de Fechamento de Caixa continua sendo o único componente com rolagem interna própria (já implementado).
-- Em telas muito pequenas (mobile), o grid quebra em 1 coluna e o `overflow-hidden` ainda funciona porque o conteúdo crítico (sidebar + footer) é compacto o suficiente.
-
-### Fora de escopo
-
-- Nenhuma mudança em lógica de caixa, antifraude, mutações ou nos demais dialogs.
-- Outras páginas do PDV (Salão, Comandas, etc.) não são tocadas.
+- Caixa aberto em qualquer zoom (incluindo Windows zoom 1.6 / 1131px de altura): todos os 6 botões da sidebar cabem dentro do próprio Card sem invadir o rodapé.
+- "Total Vendas", "Saldo Atual" e "Fechar Caixa" no rodapé voltam a ficar totalmente visíveis e clicáveis.
+- Em telas extremamente pequenas, a sidebar rola internamente em vez de quebrar o layout.
+- Caixa fechado continua igual (já cabia).
+- Nenhuma mudança em lógica, atalhos de teclado, mutations ou no modal de fechamento.
 
 ### Arquivos modificados
 
+- `src/components/pdv/cashier/CashierActionsSidebar.tsx`
 - `src/pages/pdv/Cashier.tsx`
-- `src/components/pdv/cashier/CashierSummaryFooter.tsx`
-- `src/components/pdv/cashier/CashierHeader.tsx`
+
+### Fora de escopo
+
+- Header, footer de resumo, modal de fechamento (já corrigidos nas iterações anteriores).
+- Outras páginas do PDV.
 
