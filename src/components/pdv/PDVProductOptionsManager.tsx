@@ -682,7 +682,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
         </Card>
       ))}
 
-      {draft.length === 0 && (
+      {visibleDraft.length === 0 && (
         <p className="text-center text-muted-foreground text-sm py-4">
           Nenhuma opção cadastrada. Adicione opções como "Tamanho", "Adicionais", etc.
         </p>
