@@ -70,6 +70,9 @@ export interface PDVSettings {
   nfe_auto_emit?: boolean;
   nfe_email_customer?: boolean;
   nfe_enable_nfce?: boolean;
+  // CSC NFC-e (gerado no portal SEFAZ)
+  nfe_csc_id?: string;
+  nfe_csc_token?: string;
 }
 
 export function usePDVSettings() {
