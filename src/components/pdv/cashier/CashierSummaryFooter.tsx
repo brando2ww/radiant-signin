@@ -64,15 +64,15 @@ export function CashierSummaryFooter({
   ];
 
   return (
-    <div className="bg-muted/30 border rounded-lg p-4">
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+    <div className="bg-muted/30 border rounded-lg p-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
         {/* Cards menores de resumo */}
         {summaryItems.map((item) => (
           <Card key={item.label} className="border-0 shadow-none bg-background">
-            <CardContent className="p-3">
+            <CardContent className="p-2">
               <div className="flex items-center gap-2 mb-1">
-                <div className="h-6 w-6 rounded bg-muted flex items-center justify-center">
-                  <item.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                <div className="h-5 w-5 rounded bg-muted flex items-center justify-center">
+                  <item.icon className="h-3 w-3 text-muted-foreground" />
                 </div>
                 <span className="text-xs text-muted-foreground">{item.label}</span>
               </div>
@@ -86,9 +86,9 @@ export function CashierSummaryFooter({
 
         {/* Card Total de Vendas */}
         <Card className="border shadow-none bg-muted/50">
-          <CardContent className="p-3">
+          <CardContent className="p-2">
             <p className="text-xs text-muted-foreground mb-1">Total Vendas</p>
-            <p className="text-lg font-bold text-foreground">
+            <p className="text-base font-bold text-foreground">
               R$ {totalSales.toFixed(2)}
             </p>
           </CardContent>
@@ -100,9 +100,9 @@ export function CashierSummaryFooter({
             isOpen ? "border-primary" : "border-muted-foreground/20"
           }`}
         >
-          <CardContent className="p-3">
+          <CardContent className="p-2">
             <p className="text-xs text-muted-foreground mb-1">Saldo Atual</p>
-            <p className="text-xl font-bold text-foreground">
+            <p className="text-lg font-bold text-foreground">
               R$ {currentBalance.toFixed(2)}
             </p>
           </CardContent>
