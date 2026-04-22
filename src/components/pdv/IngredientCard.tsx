@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PDVIngredient } from "@/hooks/use-pdv-ingredients";
 import { format, parseISO, differenceInDays } from "date-fns";
+import { deferMenuAction } from "@/lib/ui/defer-menu-action";
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
 
@@ -81,12 +82,12 @@ export function IngredientCard({ ingredient, onEdit, onDelete, onAdjustStock }: 
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(ingredient)}>
+                <DropdownMenuItem onClick={() => deferMenuAction(() => onEdit(ingredient))}>
                   <Edit className="mr-2 h-4 w-4" />
                   Editar
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => onDelete(ingredient.id)}
+                  onClick={() => deferMenuAction(() => onDelete(ingredient.id))}
                   className="text-destructive focus:text-destructive"
                 >
                   <Trash2 className="mr-2 h-4 w-4" />

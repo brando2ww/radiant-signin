@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import type { CampaignWithStats } from "@/hooks/use-evaluation-campaigns";
 import { useUpdateCampaign, useDeleteCampaign } from "@/hooks/use-evaluation-campaigns";
 import { EditCampaignDialog } from "./EditCampaignDialog";
+import { deferMenuAction } from "@/lib/ui/defer-menu-action";
 
 interface CampaignCardProps {
   campaign: CampaignWithStats;
@@ -114,7 +115,7 @@ export function CampaignCard({ campaign, onClick }: CampaignCardProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setEditOpen(true); }}>
+                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); deferMenuAction(() => setEditOpen(true)); }}>
                     <Pencil className="h-4 w-4 mr-2" /> Editar
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleCopyLink}>
@@ -131,7 +132,7 @@ export function CampaignCard({ campaign, onClick }: CampaignCardProps) {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive"
-                    onClick={(e) => { e.stopPropagation(); setDeleteOpen(true); }}
+                    onClick={(e) => { e.stopPropagation(); deferMenuAction(() => setDeleteOpen(true)); }}
                   >
                     <Trash2 className="h-4 w-4 mr-2" /> Excluir
                   </DropdownMenuItem>

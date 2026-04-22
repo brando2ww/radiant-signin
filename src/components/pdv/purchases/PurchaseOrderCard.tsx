@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PurchaseOrder, usePDVPurchaseOrders } from "@/hooks/use-pdv-purchase-orders";
 import { formatCurrency, generateOrderMessage, openWhatsApp } from "@/lib/whatsapp-message";
+import { deferMenuAction } from "@/lib/ui/defer-menu-action";
 
 interface PurchaseOrderCardProps {
   order: PurchaseOrder;
@@ -181,7 +182,7 @@ export function PurchaseOrderCard({ order }: PurchaseOrderCardProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive"
-                  onClick={() => setDeleteOpen(true)}
+                  onClick={() => deferMenuAction(() => setDeleteOpen(true))}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Excluir

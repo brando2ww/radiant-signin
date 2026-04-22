@@ -11,6 +11,7 @@ import {
 import { PDVProduct } from "@/hooks/use-pdv-products";
 import { usePDVRecipes } from "@/hooks/use-pdv-recipes";
 import { CMVBadge } from "./CMVBadge";
+import { deferMenuAction } from "@/lib/ui/defer-menu-action";
 
 interface ProductCardProps {
   product: PDVProduct;
@@ -24,12 +25,6 @@ interface ProductCardProps {
 export function ProductCard({ product, onEdit, onDelete, onDuplicate, isSharedToDelivery, onShareToDelivery }: ProductCardProps) {
   const { recipes, calculateCMV } = usePDVRecipes(product.id);
   const cmv = calculateCMV(recipes);
-
-  // Defer dialog-opening actions to the next tick to avoid Radix
-  // DropdownMenu + Dialog pointer-events conflict
-  const deferAction = (fn: () => void) => {
-    window.setTimeout(fn, 0);
-  };
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -53,24 +48,24 @@ export function ProductCard({ product, onEdit, onDelete, onDuplicate, isSharedTo
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => deferAction(() => onEdit(product))}>
+              <DropdownMenuItem onClick={() => deferMenuAction(() => onEdit(product))}>
                 <Edit className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
               {onDuplicate && (
-                <DropdownMenuItem onClick={() => deferAction(() => onDuplicate(product))}>
+                <DropdownMenuItem onClick={() => deferMenuAction(() => onDuplicate(product))}>
                   <Copy className="mr-2 h-4 w-4" />
                   Duplicar
                 </DropdownMenuItem>
               )}
               {!isSharedToDelivery && onShareToDelivery && (
-                <DropdownMenuItem onClick={() => deferAction(() => onShareToDelivery(product))}>
+                <DropdownMenuItem onClick={() => deferMenuAction(() => onShareToDelivery(product))}>
                   <Send className="mr-2 h-4 w-4" />
                   Enviar para Delivery
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem
-                onClick={() => onDelete(product.id)}
+                onClick={() => deferMenuAction(() => onDelete(product.id))}
                 className="text-destructive focus:text-destructive"
               >
                 <Trash2 className="mr-2 h-4 w-4" />

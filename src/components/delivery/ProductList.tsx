@@ -14,6 +14,7 @@ import { useProductOptions } from "@/hooks/use-product-options";
 import { useState } from "react";
 import { ProductDialog } from "./ProductDialog";
 import { useDeliveryCategories } from "@/hooks/use-delivery-categories";
+import { deferMenuAction } from "@/lib/ui/defer-menu-action";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,11 +77,11 @@ const ProductListItem = ({ product, onEdit, onDuplicate, onDelete }: { product: 
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={onEdit}>
+                  <DropdownMenuItem onClick={() => deferMenuAction(onEdit)}>
                     <Edit className="mr-2 h-4 w-4" />
                     Editar
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onDuplicate}>
+                  <DropdownMenuItem onClick={() => deferMenuAction(onDuplicate)}>
                     <Copy className="mr-2 h-4 w-4" />
                     Duplicar
                   </DropdownMenuItem>
@@ -92,7 +93,7 @@ const ProductListItem = ({ product, onEdit, onDuplicate, onDelete }: { product: 
                     )}
                     {product.is_available ? "Ocultar" : "Mostrar"}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                  <DropdownMenuItem onClick={() => deferMenuAction(onDelete)} className="text-destructive focus:text-destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Excluir
                   </DropdownMenuItem>

@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { deferMenuAction } from "@/lib/ui/defer-menu-action";
 
 interface InvoiceCardProps {
   invoice: PDVInvoice;
@@ -94,12 +95,12 @@ export function InvoiceCard({ invoice, onView, onDelete }: InvoiceCardProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onView(invoice)}>
+            <DropdownMenuItem onClick={() => deferMenuAction(() => onView(invoice))}>
               <Eye className="h-4 w-4 mr-2" />
               Visualizar
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => onDelete(invoice)}
+              onClick={() => deferMenuAction(() => onDelete(invoice))}
               className="text-destructive"
             >
               <Trash2 className="h-4 w-4 mr-2" />

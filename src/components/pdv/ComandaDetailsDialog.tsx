@@ -108,7 +108,13 @@ export function ComandaDetailsDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={(o) => {
+          if (!o) {
+            setConfirmClose(false);
+            setConfirmCancel(false);
+          }
+          onOpenChange(o);
+        }}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
@@ -314,6 +320,7 @@ export function ComandaDetailsDialog({
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
+                setConfirmClose(false);
                 onClose();
                 onOpenChange(false);
               }}
@@ -337,6 +344,7 @@ export function ComandaDetailsDialog({
             <AlertDialogCancel>Voltar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
+                setConfirmCancel(false);
                 onCancel();
                 onOpenChange(false);
               }}

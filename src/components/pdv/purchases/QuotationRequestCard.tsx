@@ -37,6 +37,7 @@ import { QuotationRequest, usePDVQuotations } from "@/hooks/use-pdv-quotations";
 import { WhatsAppSendDialog } from "./WhatsAppSendDialog";
 import { QuotationResponseDialog } from "./QuotationResponseDialog";
 import { QuotationComparisonDialog } from "./QuotationComparisonDialog";
+import { deferMenuAction } from "@/lib/ui/defer-menu-action";
 
 interface QuotationRequestCardProps {
   quotation: QuotationRequest;
@@ -132,11 +133,11 @@ export function QuotationRequestCard({ quotation }: QuotationRequestCardProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setComparisonOpen(true)}>
+                <DropdownMenuItem onClick={() => deferMenuAction(() => setComparisonOpen(true))}>
                   <Eye className="h-4 w-4 mr-2" />
                   Ver Comparativo
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setResponseOpen(true)}>
+                <DropdownMenuItem onClick={() => deferMenuAction(() => setResponseOpen(true))}>
                   <FileText className="h-4 w-4 mr-2" />
                   Registrar Resposta
                 </DropdownMenuItem>
@@ -164,7 +165,7 @@ export function QuotationRequestCard({ quotation }: QuotationRequestCardProps) {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive"
-                  onClick={() => setDeleteOpen(true)}
+                  onClick={() => deferMenuAction(() => setDeleteOpen(true))}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
                   Excluir
