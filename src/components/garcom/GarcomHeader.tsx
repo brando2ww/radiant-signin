@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bell, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +21,7 @@ export function GarcomHeader({ title }: { title?: string }) {
     user?.user_metadata?.name?.split(" ")[0] || "Garçom";
 
   const handleCallManager = () => {
-    toast.info("Chamado enviado ao gerente!", { duration: 3000 });
+    // feedback de toast removido a pedido — botão segue funcional
   };
 
   const handleSignOut = async () => {
