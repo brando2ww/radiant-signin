@@ -116,7 +116,6 @@ export function usePDVProductOptions(productId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pdv-product-options", productId] });
-      toast.success("Opção criada");
     },
     onError: () => toast.error("Erro ao criar opção"),
   });
@@ -145,7 +144,6 @@ export function usePDVProductOptions(productId?: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pdv-product-options", productId] });
-      toast.success("Opção removida");
     },
     onError: () => toast.error("Erro ao remover opção"),
   });

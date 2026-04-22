@@ -30,7 +30,27 @@ interface Props {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-type DraftOption = PDVProductOption;
+type DraftItem = PDVProductOption["items"][number] & {
+  _isNew?: boolean;
+  _deleted?: boolean;
+};
+type DraftOption = Omit<PDVProductOption, "items"> & {
+  items: DraftItem[];
+  _isNew?: boolean;
+  _deleted?: boolean;
+};
+
+const isTempId = (id: string) => id.startsWith("tmp-");
+const genId = (prefix: string) =>
+  `tmp-${prefix}-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+
+const stripDraftFlags = (opts: DraftOption[]): DraftOption[] =>
+  opts.map((o) => ({
+    ...o,
+    _isNew: undefined,
+    _deleted: undefined,
+    items: o.items.map((i) => ({ ...i, _isNew: undefined, _deleted: undefined })),
+  }));
 
 export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
   const {
@@ -54,52 +74,48 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const baselineRef = useRef<DraftOption[]>([]);
 
-  // Sync draft with server data when it changes (and we're not mid-edit)
+  // Sync draft with server data — preserves local-only drafts (_isNew, _deleted)
+  // and any in-flight edits to existing options/items.
   useEffect(() => {
     setDraft((prev) => {
+      const serverDeep = JSON.parse(JSON.stringify(options)) as DraftOption[];
+
+      // First load: just hydrate from server.
       if (prev.length === 0) {
-        baselineRef.current = JSON.parse(JSON.stringify(options));
-        return JSON.parse(JSON.stringify(options));
+        baselineRef.current = JSON.parse(JSON.stringify(serverDeep));
+        return serverDeep;
       }
+
+      // No local edits: replace fully with server.
       const dirty = JSON.stringify(prev) !== JSON.stringify(baselineRef.current);
       if (!dirty) {
-        baselineRef.current = JSON.parse(JSON.stringify(options));
-        return JSON.parse(JSON.stringify(options));
+        baselineRef.current = JSON.parse(JSON.stringify(serverDeep));
+        return serverDeep;
       }
-      // merge new server items
-      const draftOptionIds = new Set(prev.map((o) => o.id));
-      const merged = [...prev];
-      options.forEach((srvOpt) => {
-        if (!draftOptionIds.has(srvOpt.id)) {
-          merged.push(JSON.parse(JSON.stringify(srvOpt)));
-          baselineRef.current.push(JSON.parse(JSON.stringify(srvOpt)));
-        } else {
-          const draftOpt = merged.find((o) => o.id === srvOpt.id)!;
-          const draftItemIds = new Set(draftOpt.items.map((i) => i.id));
-          srvOpt.items.forEach((srvItem) => {
-            if (!draftItemIds.has(srvItem.id)) {
-              draftOpt.items.push(JSON.parse(JSON.stringify(srvItem)));
-              const baseOpt = baselineRef.current.find((o) => o.id === srvOpt.id);
-              if (baseOpt) baseOpt.items.push(JSON.parse(JSON.stringify(srvItem)));
-            }
-          });
-          draftOpt.items = draftOpt.items.filter((i) =>
-            srvOpt.items.some((s) => s.id === i.id),
-          );
-          const baseOpt = baselineRef.current.find((o) => o.id === srvOpt.id);
-          if (baseOpt)
-            baseOpt.items = baseOpt.items.filter((i) =>
-              srvOpt.items.some((s) => s.id === i.id),
-            );
-        }
+
+      // Has local edits: keep them as-is. Only refresh baseline so isDirty
+      // calculations stay correct against latest server state, but never
+      // overwrite user's pending changes.
+      const newBaseline: DraftOption[] = serverDeep.map((srvOpt) => {
+        const draftOpt = prev.find((o) => o.id === srvOpt.id);
+        if (!draftOpt) return srvOpt;
+        // Keep only baseline items that still exist on server (don't add
+        // newly fetched items into baseline as if they were locally-known).
+        return srvOpt;
       });
-      const serverIds = new Set(options.map((o) => o.id));
-      const filtered = merged.filter((o) => serverIds.has(o.id));
-      baselineRef.current = baselineRef.current.filter((o) => serverIds.has(o.id));
-      return filtered;
+      baselineRef.current = newBaseline;
+      return prev;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options, productId]);
+
+  const visibleDraft = useMemo(
+    () =>
+      draft
+        .filter((o) => !o._deleted)
+        .map((o) => ({ ...o, items: o.items.filter((i) => !i._deleted) })),
+    [draft],
+  );
 
   const isDirty = useMemo(
     () => JSON.stringify(draft) !== JSON.stringify(baselineRef.current),
@@ -141,7 +157,19 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
       toast.warning("Informe o nome da opção");
       return;
     }
-    createOption.mutate({ product_id: productId, name: newOptionName.trim() });
+    const newOpt: DraftOption = {
+      id: genId("opt"),
+      product_id: productId,
+      name: newOptionName.trim(),
+      type: "single",
+      is_required: false,
+      min_selections: 0,
+      max_selections: 1,
+      order_position: draft.length,
+      items: [],
+      _isNew: true,
+    };
+    setDraft((prev) => [...prev, newOpt]);
     setNewOptionName("");
   };
 
@@ -149,9 +177,57 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
     const name = newItemNames[optionId]?.trim();
     if (!name) return;
     const price = Number(newItemPrices[optionId] || 0);
-    createItem.mutate({ option_id: optionId, name, price_adjustment: price });
+    setDraft((prev) =>
+      prev.map((o) =>
+        o.id === optionId
+          ? {
+              ...o,
+              items: [
+                ...o.items,
+                {
+                  id: genId("item"),
+                  option_id: optionId,
+                  name,
+                  price_adjustment: price,
+                  is_available: true,
+                  order_position: o.items.length,
+                  recipes: [],
+                  _isNew: true,
+                } as DraftItem,
+              ],
+            }
+          : o,
+      ),
+    );
     setNewItemNames((prev) => ({ ...prev, [optionId]: "" }));
     setNewItemPrices((prev) => ({ ...prev, [optionId]: "" }));
+  };
+
+  const handleDeleteOption = (optionId: string) => {
+    setDraft((prev) => {
+      const target = prev.find((o) => o.id === optionId);
+      if (!target) return prev;
+      // brand-new local-only option: just drop it.
+      if (target._isNew) return prev.filter((o) => o.id !== optionId);
+      return prev.map((o) => (o.id === optionId ? { ...o, _deleted: true } : o));
+    });
+  };
+
+  const handleDeleteItem = (optionId: string, itemId: string) => {
+    setDraft((prev) =>
+      prev.map((o) => {
+        if (o.id !== optionId) return o;
+        const target = o.items.find((i) => i.id === itemId);
+        if (!target) return o;
+        if (target._isNew) {
+          return { ...o, items: o.items.filter((i) => i.id !== itemId) };
+        }
+        return {
+          ...o,
+          items: o.items.map((i) => (i.id === itemId ? { ...i, _deleted: true } : i)),
+        };
+      }),
+    );
   };
 
   const handleLinkIngredient = (
@@ -196,79 +272,160 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
   const handleSave = async () => {
     if (!isDirty) return;
     setIsSaving(true);
-    const tasks: Promise<unknown>[] = [];
-    let updatedCount = 0;
 
-    draft.forEach((draftOpt) => {
-      const baseOpt = baselineRef.current.find((o) => o.id === draftOpt.id);
-      if (!baseOpt) return;
-
-      const optChanges: Record<string, unknown> = {};
-      (["name", "type", "is_required", "min_selections", "max_selections"] as const).forEach(
-        (k) => {
-          if ((draftOpt as any)[k] !== (baseOpt as any)[k])
-            optChanges[k] = (draftOpt as any)[k];
-        },
-      );
-      if (Object.keys(optChanges).length > 0) {
-        tasks.push(updateOption.mutateAsync({ id: draftOpt.id, ...optChanges } as any));
-        updatedCount++;
-      }
-
-      draftOpt.items.forEach((draftItem) => {
-        const baseItem = baseOpt.items.find((i) => i.id === draftItem.id);
-        if (!baseItem) return;
-        const itemChanges: Record<string, unknown> = {};
-        (["name", "price_adjustment", "is_available"] as const).forEach((k) => {
-          if ((draftItem as any)[k] !== (baseItem as any)[k])
-            itemChanges[k] = (draftItem as any)[k];
-        });
-        if (Object.keys(itemChanges).length > 0) {
-          tasks.push(updateItem.mutateAsync({ id: draftItem.id, ...itemChanges } as any));
-          updatedCount++;
-        }
-
-        // Recipe diff: compare by stringified
-        const draftRec = draftItem.recipes || [];
-        const baseRec = baseItem.recipes || [];
-        const draftKey = JSON.stringify(
-          draftRec.map((r) => ({ ing: r.ingredient_id, qty: r.quantity })).sort(),
-        );
-        const baseKey = JSON.stringify(
-          baseRec.map((r) => ({ ing: r.ingredient_id, qty: r.quantity })).sort(),
-        );
-        if (draftKey !== baseKey) {
-          if (draftRec.length === 0) {
-            tasks.push(removeByOptionItem(draftItem.id));
-          } else {
-            // For now we support single ingredient per item; replace whole set
-            tasks.push(
-              removeByOptionItem(draftItem.id).then(() =>
-                Promise.all(
-                  draftRec.map((r) =>
-                    upsertRecipe({
-                      optionItemId: draftItem.id,
-                      ingredientId: r.ingredient_id,
-                      quantity: Number(r.quantity) || 1,
-                      unit: r.unit || "un",
-                    }),
-                  ),
-                ),
-              ),
-            );
-          }
-          updatedCount++;
-        }
-      });
-    });
+    let created = 0;
+    let updated = 0;
+    let removed = 0;
 
     try {
-      await Promise.all(tasks);
-      baselineRef.current = JSON.parse(JSON.stringify(draft));
+      // ---- Phase 1: deletions (existing items, then existing options) ----
+      const itemsToDelete: string[] = [];
+      const optionsToDelete: string[] = [];
+      draft.forEach((o) => {
+        if (o._deleted && !isTempId(o.id)) {
+          optionsToDelete.push(o.id);
+          // Items inside a deleted option will cascade — no need to delete one by one.
+        } else if (!o._deleted) {
+          o.items.forEach((i) => {
+            if (i._deleted && !isTempId(i.id)) itemsToDelete.push(i.id);
+          });
+        }
+      });
+
+      for (const id of itemsToDelete) {
+        await deleteItem.mutateAsync(id);
+        removed++;
+      }
+      for (const id of optionsToDelete) {
+        await deleteOption.mutateAsync(id);
+        removed++;
+      }
+
+      // ---- Phase 2: create new options & update existing ones ----
+      // Map of tmp option id -> real id (for resolving items below).
+      const optionIdMap = new Map<string, string>();
+
+      for (const draftOpt of draft) {
+        if (draftOpt._deleted) continue;
+
+        if (draftOpt._isNew) {
+          const result = await createOption.mutateAsync({
+            product_id: productId,
+            name: draftOpt.name,
+            type: draftOpt.type,
+            is_required: draftOpt.is_required,
+            min_selections: draftOpt.min_selections,
+            max_selections: draftOpt.max_selections,
+          } as any);
+          optionIdMap.set(draftOpt.id, (result as any).id);
+          created++;
+        } else {
+          const baseOpt = baselineRef.current.find((o) => o.id === draftOpt.id);
+          if (baseOpt) {
+            const optChanges: Record<string, unknown> = {};
+            (
+              ["name", "type", "is_required", "min_selections", "max_selections"] as const
+            ).forEach((k) => {
+              if ((draftOpt as any)[k] !== (baseOpt as any)[k])
+                optChanges[k] = (draftOpt as any)[k];
+            });
+            if (Object.keys(optChanges).length > 0) {
+              await updateOption.mutateAsync({ id: draftOpt.id, ...optChanges } as any);
+              updated++;
+            }
+          }
+        }
+      }
+
+      // ---- Phase 3: items (create new, update existing) + recipes ----
+      const itemIdMap = new Map<string, string>();
+
+      for (const draftOpt of draft) {
+        if (draftOpt._deleted) continue;
+        const realOptionId = optionIdMap.get(draftOpt.id) || draftOpt.id;
+
+        for (const draftItem of draftOpt.items) {
+          if (draftItem._deleted) continue;
+
+          let realItemId = draftItem.id;
+          if (draftItem._isNew) {
+            const result = await createItem.mutateAsync({
+              option_id: realOptionId,
+              name: draftItem.name,
+              price_adjustment: draftItem.price_adjustment,
+            } as any);
+            realItemId = (result as any).id;
+            itemIdMap.set(draftItem.id, realItemId);
+            // Apply non-default fields if needed (is_available defaults to true on insert)
+            if (draftItem.is_available === false) {
+              await updateItem.mutateAsync({
+                id: realItemId,
+                is_available: false,
+              } as any);
+            }
+            created++;
+          } else {
+            const baseOpt = baselineRef.current.find((o) => o.id === draftOpt.id);
+            const baseItem = baseOpt?.items.find((i) => i.id === draftItem.id);
+            if (baseItem) {
+              const itemChanges: Record<string, unknown> = {};
+              (["name", "price_adjustment", "is_available"] as const).forEach((k) => {
+                if ((draftItem as any)[k] !== (baseItem as any)[k])
+                  itemChanges[k] = (draftItem as any)[k];
+              });
+              if (Object.keys(itemChanges).length > 0) {
+                await updateItem.mutateAsync({ id: draftItem.id, ...itemChanges } as any);
+                updated++;
+              }
+            }
+          }
+
+          // ---- Recipes diff ----
+          const draftRec = draftItem.recipes || [];
+          const baseOpt = baselineRef.current.find((o) => o.id === draftOpt.id);
+          const baseItem = baseOpt?.items.find((i) => i.id === draftItem.id);
+          const baseRec = baseItem?.recipes || [];
+          const draftKey = JSON.stringify(
+            draftRec.map((r) => ({ ing: r.ingredient_id, qty: r.quantity })).sort(),
+          );
+          const baseKey = JSON.stringify(
+            baseRec.map((r) => ({ ing: r.ingredient_id, qty: r.quantity })).sort(),
+          );
+          if (draftItem._isNew ? draftRec.length > 0 : draftKey !== baseKey) {
+            if (!draftItem._isNew) {
+              await removeByOptionItem(realItemId);
+            }
+            if (draftRec.length > 0) {
+              await Promise.all(
+                draftRec.map((r) =>
+                  upsertRecipe({
+                    optionItemId: realItemId,
+                    ingredientId: r.ingredient_id,
+                    quantity: Number(r.quantity) || 1,
+                    unit: r.unit || "un",
+                  }),
+                ),
+              );
+            }
+            updated++;
+          }
+        }
+      }
+
+      // Reset draft from server (invalidations will refetch); clear local state
+      // so the sync effect repopulates from the fresh server snapshot.
+      baselineRef.current = [];
+      setDraft([]);
+
+      const parts: string[] = [];
+      if (created) parts.push(`${created} criada${created > 1 ? "s" : ""}`);
+      if (updated) parts.push(`${updated} atualizada${updated > 1 ? "s" : ""}`);
+      if (removed) parts.push(`${removed} removida${removed > 1 ? "s" : ""}`);
       toast.success(
-        `Opções salvas${updatedCount > 1 ? ` (${updatedCount} alterações)` : ""}`,
+        parts.length > 0 ? `Alterações salvas (${parts.join(", ")})` : "Alterações salvas",
       );
     } catch (err) {
+      console.error("[PDVProductOptionsManager] save error", err);
       toast.error("Erro ao salvar algumas alterações");
     } finally {
       setIsSaving(false);
@@ -293,7 +450,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
         </Button>
       </div>
 
-      {draft.map((option) => (
+      {visibleDraft.map((option) => (
         <Card key={option.id}>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -324,7 +481,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 text-destructive"
-                  onClick={() => deleteOption.mutate(option.id)}
+                  onClick={() => handleDeleteOption(option.id)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
@@ -463,7 +620,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive"
-                      onClick={() => deleteItem.mutate(item.id)}
+                      onClick={() => handleDeleteItem(option.id, item.id)}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -525,7 +682,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
         </Card>
       ))}
 
-      {draft.length === 0 && (
+      {visibleDraft.length === 0 && (
         <p className="text-center text-muted-foreground text-sm py-4">
           Nenhuma opção cadastrada. Adicione opções como "Tamanho", "Adicionais", etc.
         </p>
