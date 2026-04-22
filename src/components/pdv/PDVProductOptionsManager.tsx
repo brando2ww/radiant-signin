@@ -445,7 +445,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
           onChange={(e) => setNewOptionName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddOption())}
         />
-        <Button onClick={handleAddOption}>
+        <Button type="button" onClick={handleAddOption}>
           <Plus className="h-4 w-4 mr-1" /> Adicionar
         </Button>
       </div>
@@ -478,6 +478,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                   />
                 </div>
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7 text-destructive"
@@ -551,6 +552,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                     >
                       <PopoverTrigger asChild>
                         <Button
+                          type="button"
                           variant={linkedRecipe ? "secondary" : "ghost"}
                           size="icon"
                           className="h-8 w-8"
@@ -578,6 +580,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                               {filteredIngredients.slice(0, 30).map((ing) => (
                                 <button
                                   key={ing.id}
+                                  type="button"
                                   onClick={() =>
                                     handleLinkIngredient(option.id, item.id, ing)
                                   }
@@ -601,6 +604,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                     </Popover>
                     {linkedRecipe && (
                       <Button
+                        type="button"
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-muted-foreground"
@@ -617,6 +621,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                       }
                     />
                     <Button
+                      type="button"
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive"
@@ -674,7 +679,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                 placeholder="+ R$"
                 className="w-28"
               />
-              <Button size="sm" onClick={() => handleAddItem(option.id)}>
+              <Button type="button" size="sm" onClick={() => handleAddItem(option.id)}>
                 <Plus className="h-3.5 w-3.5" />
               </Button>
             </div>
