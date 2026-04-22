@@ -4,7 +4,6 @@ import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
 
 export default function GarcomComandaDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -108,15 +107,7 @@ export default function GarcomComandaDetalhe() {
             <Button
               className="active:scale-95 h-11"
               onClick={() => {
-                const pendingItems = items.filter((i) => pendingIds.includes(i.id));
-                const missing = pendingItems.filter((i) => !i.production_center_id).length;
                 sendToKitchen(pendingIds);
-                toast.success("Comanda enviada para a cozinha");
-                if (missing > 0) {
-                  toast.warning(
-                    `${missing} produto(s) sem centro de produção — verifique o cadastro`,
-                  );
-                }
               }}
             >
               <Send className="h-4 w-4 mr-1" />
