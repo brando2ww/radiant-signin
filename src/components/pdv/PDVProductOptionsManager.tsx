@@ -157,7 +157,19 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
       toast.warning("Informe o nome da opção");
       return;
     }
-    createOption.mutate({ product_id: productId, name: newOptionName.trim() });
+    const newOpt: DraftOption = {
+      id: genId("opt"),
+      product_id: productId,
+      name: newOptionName.trim(),
+      type: "single",
+      is_required: false,
+      min_selections: 0,
+      max_selections: 1,
+      order_position: draft.length,
+      items: [],
+      _isNew: true,
+    };
+    setDraft((prev) => [...prev, newOpt]);
     setNewOptionName("");
   };
 
@@ -165,9 +177,57 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
     const name = newItemNames[optionId]?.trim();
     if (!name) return;
     const price = Number(newItemPrices[optionId] || 0);
-    createItem.mutate({ option_id: optionId, name, price_adjustment: price });
+    setDraft((prev) =>
+      prev.map((o) =>
+        o.id === optionId
+          ? {
+              ...o,
+              items: [
+                ...o.items,
+                {
+                  id: genId("item"),
+                  option_id: optionId,
+                  name,
+                  price_adjustment: price,
+                  is_available: true,
+                  order_position: o.items.length,
+                  recipes: [],
+                  _isNew: true,
+                } as DraftItem,
+              ],
+            }
+          : o,
+      ),
+    );
     setNewItemNames((prev) => ({ ...prev, [optionId]: "" }));
     setNewItemPrices((prev) => ({ ...prev, [optionId]: "" }));
+  };
+
+  const handleDeleteOption = (optionId: string) => {
+    setDraft((prev) => {
+      const target = prev.find((o) => o.id === optionId);
+      if (!target) return prev;
+      // brand-new local-only option: just drop it.
+      if (target._isNew) return prev.filter((o) => o.id !== optionId);
+      return prev.map((o) => (o.id === optionId ? { ...o, _deleted: true } : o));
+    });
+  };
+
+  const handleDeleteItem = (optionId: string, itemId: string) => {
+    setDraft((prev) =>
+      prev.map((o) => {
+        if (o.id !== optionId) return o;
+        const target = o.items.find((i) => i.id === itemId);
+        if (!target) return o;
+        if (target._isNew) {
+          return { ...o, items: o.items.filter((i) => i.id !== itemId) };
+        }
+        return {
+          ...o,
+          items: o.items.map((i) => (i.id === itemId ? { ...i, _deleted: true } : i)),
+        };
+      }),
+    );
   };
 
   const handleLinkIngredient = (
