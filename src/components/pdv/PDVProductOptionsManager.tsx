@@ -576,6 +576,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                       className="w-24 h-8"
                     />
                     <Popover
+                      modal
                       open={ingredientPopoverOpen === item.id}
                       onOpenChange={(open) => {
                         setIngredientPopoverOpen(open ? item.id : null);
@@ -712,6 +713,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                 className="w-28"
               />
               <Popover
+                modal
                 open={newItemPopoverOpen === option.id}
                 onOpenChange={(open) => {
                   setNewItemPopoverOpen(open ? option.id : null);
