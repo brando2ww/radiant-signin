@@ -1,52 +1,60 @@
 
 
-## Opções de produto não aparecem para o garçom
+## Bug: item adicionado a uma mesa aparece em todas as outras mesas
 
-### Causa
-As tabelas `pdv_product_options` e `pdv_product_option_items` têm RLS apenas para o dono (`p.user_id = auth.uid()`). Quando o garçom (Gabriel) abre um produto na tela `Adicionar Item`, o Supabase bloqueia a leitura das opções do produto do dono (Ederson) e o app mostra apenas Quantidade + Observações, sem os modificadores cadastrados.
+### Diagnóstico
 
-A consulta no código (`usePDVProductOptionsForOrder`) está correta — o problema é só a regra do banco.
+Quando o garçom abre uma comanda numa mesa "livre", a mesa não tem `current_order_id` (é `null`) e **nenhum `pdv_order` é criado**. A comanda é gravada com `order_id = null` (verificado no banco — todas as comandas-de-mesa estão com `order_id = NULL`).
+
+O filtro em `GarcomMesaDetalhe.tsx` é:
+
+```ts
+comandas.filter(c => c.order_id === table?.current_order_id && c.status === "aberta")
+```
+
+Como `table.current_order_id` também é `null` para mesas livres, a comparação `null === null` é `true` para **todas** as mesas livres simultaneamente. Resultado: qualquer comanda avulsa (ou aberta em outra mesa) aparece em **todas** as mesas livres ao mesmo tempo, parecendo "replicada".
+
+Comprovação no banco: o Negroni existe em apenas uma linha em `pdv_comanda_items` por comanda — não há duplicação real, é só efeito visual do filtro errado.
 
 ### Solução
 
-#### 1. Migration de RLS (Supabase)
-Adicionar policies de SELECT para staff (vinculado via `is_establishment_member`) nas tabelas:
+Garantir que toda comanda aberta a partir de uma mesa fique vinculada a um `pdv_order` daquela mesa, e blindar o filtro contra `null === null`.
 
-- `public.pdv_product_options` — staff pode ver opções de produtos cujo dono é o estabelecimento ao qual pertence.
-- `public.pdv_product_option_items` — staff pode ver itens das opções desses produtos (respeitando o vínculo via produto pai).
+**1. Criar order ao abrir comanda em mesa livre** (`GarcomMesaDetalhe.tsx`)
 
-A policy de `pdv_option_item_recipes` para staff já existe, então não precisa mexer.  
-As policies do dono continuam intactas.
+No `handleNewComanda`:
+- Se `table.current_order_id` existir → usar ele.
+- Se `null` → chamar `createOrder({ source: "salao", table_id: table.id })`, atualizar `pdv_tables` setando `status: "ocupada"` e `current_order_id: order.id`, e só então `createComanda({ orderId: order.id, ... })`.
 
-```sql
--- Esboço
-CREATE POLICY "Staff can view product options"
-  ON public.pdv_product_options FOR SELECT TO authenticated
-  USING (product_id IN (
-    SELECT id FROM pdv_products
-    WHERE user_id = auth.uid() OR is_establishment_member(user_id)
-  ));
+Isso replica o que `Salon.tsx` já faz no PDV web (linhas 325-328).
 
-CREATE POLICY "Staff can view product option items"
-  ON public.pdv_product_option_items FOR SELECT TO authenticated
-  USING (option_id IN (
-    SELECT po.id FROM pdv_product_options po
-    JOIN pdv_products p ON p.id = po.product_id
-    WHERE p.user_id = auth.uid() OR is_establishment_member(p.user_id)
-  ));
+**2. Blindar o filtro de comandas por mesa** (`GarcomMesaDetalhe.tsx` linhas 26-28)
+
+```ts
+const tableComandas = table?.current_order_id
+  ? comandas.filter(c => c.order_id === table.current_order_id && c.status === "aberta")
+  : [];
 ```
 
-#### 2. Sem mudanças de código frontend
-O hook e a tela já tratam o fluxo: assim que as opções voltarem populadas, o `MobileProductOptionSelector` será exibido antes da tela de quantidade.
+Sem `current_order_id`, a mesa nunca lista comandas — evita o vazamento mesmo se sobrar dado legado.
+
+**3. Migration de limpeza dos dados órfãos**
+
+Para as comandas atuais com `order_id = NULL` que vieram de mesas (`customer_name LIKE 'Mesa %'`), criar um `pdv_order` para cada mesa, vincular as comandas e atualizar `pdv_tables.current_order_id`. Comandas avulsas reais (sem prefixo "Mesa") permanecem com `order_id = null` (correto — elas são avulsas mesmo).
+
+**4. Atualizar status da mesa ao fechar/cancelar a última comanda**
+
+Em `GarcomComandaDetalhe.tsx` no `closeComanda`: se a comanda tinha `order_id` e for a última `aberta` daquele order, marcar a mesa como `livre` e `current_order_id: null` (consistência com o fluxo do Salon).
 
 ### Validação
-1. Logar como dono e cadastrar um produto com opções (ex: "Caipira Cremosa" com modificadores).
-2. Logar como garçom (Gabriel).
-3. Abrir uma comanda, tocar em "Adicionar Item", selecionar o produto.
-4. Deve aparecer primeiro a tela de seleção de opções, e só depois Quantidade/Observações.
-5. Confirmar que o item entra na comanda com as opções escolhidas registradas nas observações.
+
+1. Logar como garçom, abrir Mesa 5 (livre), criar comanda, adicionar Negroni.
+2. Voltar e abrir Mesa 6 (livre) → não deve mostrar o Negroni nem a comanda da Mesa 5.
+3. Abrir Mesa 5 novamente → Negroni continua lá.
+4. Conferir no banco: `pdv_comandas.order_id` preenchido e `pdv_tables.current_order_id` apontando para o mesmo order.
 
 ### Fora de escopo
-- Permitir staff editar/criar opções (continua restrito ao dono).
-- Mexer em policies de outras tabelas operacionais.
+
+- Refatorar a tela `Salon.tsx` (já funciona corretamente).
+- Mudar regras de comanda avulsa (continua sem `order_id`, é o esperado).
 
