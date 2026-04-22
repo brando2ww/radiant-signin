@@ -3994,6 +3994,48 @@ export type Database = {
         }
         Relationships: []
       }
+      pdv_option_item_recipes: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_id: string
+          option_item_id: string
+          quantity: number
+          unit: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          option_item_id: string
+          quantity?: number
+          unit?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          option_item_id?: string
+          quantity?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_option_item_recipes_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_option_item_recipes_option_item_id_fkey"
+            columns: ["option_item_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_product_option_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_order_items: {
         Row: {
           added_at: string | null
