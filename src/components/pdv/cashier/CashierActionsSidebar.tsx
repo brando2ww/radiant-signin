@@ -57,61 +57,66 @@ export function CashierActionsSidebar({
         </>
       ) : (
         <>
-          <Button
-            onClick={onAddReinforcement}
-            disabled={isLoading}
-            variant="outline"
-            className="h-16 flex-col gap-0.5 border-green-500/30 hover:bg-green-500/10 hover:border-green-500/50"
-          >
-            <TrendingUp className="h-5 w-5 text-green-600" />
-            <span className="text-xs font-medium">Reforço</span>
-            <kbd className="text-[10px] opacity-50 bg-muted px-1.5 py-0.5 rounded">F2</kbd>
-          </Button>
-
-          <Button
-            onClick={onAddWithdrawal}
-            disabled={isLoading}
-            variant="outline"
-            className="h-16 flex-col gap-0.5 border-orange-500/30 hover:bg-orange-500/10 hover:border-orange-500/50"
-          >
-            <TrendingDown className="h-5 w-5 text-orange-600" />
-            <span className="text-xs font-medium">Sangria</span>
-            <kbd className="text-[10px] opacity-50 bg-muted px-1.5 py-0.5 rounded">F3</kbd>
-          </Button>
-
-          <Button
-            onClick={onCharge}
-            disabled={isLoading}
-            variant="outline"
-            className="h-16 flex-col gap-0.5 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
-          >
-            <Receipt className="h-5 w-5 text-primary" />
-            <span className="text-xs font-medium">Cobrar</span>
-            <kbd className="text-[10px] opacity-50 bg-muted px-1.5 py-0.5 rounded">F5</kbd>
-          </Button>
-
-          {onEmployeeConsumption && (
+          {/* Grid 2x2 com ações secundárias compactas */}
+          <div className="grid grid-cols-2 gap-2">
             <Button
-              onClick={onEmployeeConsumption}
+              onClick={onAddReinforcement}
               disabled={isLoading}
               variant="outline"
-              className="h-14 flex-col gap-0.5 border-muted-foreground/30 hover:bg-muted"
+              className="h-14 flex-col gap-0.5 border-green-500/30 hover:bg-green-500/10 hover:border-green-500/50"
             >
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs font-medium">Consumo Func.</span>
+              <TrendingUp className="h-4 w-4 text-green-600" />
+              <span className="text-xs font-medium leading-none">Reforço</span>
+              <kbd className="text-[9px] opacity-50 bg-muted px-1 py-0 rounded">F2</kbd>
             </Button>
-          )}
+
+            <Button
+              onClick={onAddWithdrawal}
+              disabled={isLoading}
+              variant="outline"
+              className="h-14 flex-col gap-0.5 border-orange-500/30 hover:bg-orange-500/10 hover:border-orange-500/50"
+            >
+              <TrendingDown className="h-4 w-4 text-orange-600" />
+              <span className="text-xs font-medium leading-none">Sangria</span>
+              <kbd className="text-[9px] opacity-50 bg-muted px-1 py-0 rounded">F3</kbd>
+            </Button>
+
+            <Button
+              onClick={onCharge}
+              disabled={isLoading}
+              variant="outline"
+              className="h-14 flex-col gap-0.5 border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+            >
+              <Receipt className="h-4 w-4 text-primary" />
+              <span className="text-xs font-medium leading-none">Cobrar</span>
+              <kbd className="text-[9px] opacity-50 bg-muted px-1 py-0 rounded">F5</kbd>
+            </Button>
+
+            {onEmployeeConsumption && (
+              <Button
+                onClick={onEmployeeConsumption}
+                disabled={isLoading}
+                variant="outline"
+                className="h-14 flex-col gap-0.5 border-muted-foreground/30 hover:bg-muted"
+              >
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs font-medium leading-none">Consumo</span>
+                <span className="text-[9px] opacity-50">Func.</span>
+              </Button>
+            )}
+          </div>
 
           <div className="flex-1 min-h-2" />
 
+          {/* Fechar Caixa em destaque, full-width */}
           <Button
             onClick={onCloseCashier}
             disabled={isLoading}
             variant="destructive"
-            className="h-16 flex-col gap-0.5"
+            className="h-20 flex-col gap-1"
           >
-            <Lock className="h-5 w-5" />
-            <span className="text-xs font-medium">Fechar Caixa</span>
+            <Lock className="h-6 w-6" />
+            <span className="text-sm font-medium">Fechar Caixa</span>
             <kbd className="text-[10px] opacity-70 bg-black/20 px-1.5 py-0.5 rounded">F4</kbd>
           </Button>
         </>
