@@ -3,6 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { PDVProduct } from "@/hooks/use-pdv-products";
 
+export interface PDVOptionItemRecipeRef {
+  id: string;
+  ingredient_id: string;
+  quantity: number;
+  unit: string;
+  ingredient_name?: string;
+  ingredient_unit?: string;
+}
+
 export interface PDVProductOptionItem {
   id: string;
   option_id: string;
@@ -12,6 +21,7 @@ export interface PDVProductOptionItem {
   order_position: number;
   linked_product_id?: string | null;
   linked_product?: PDVProduct | null;
+  recipes?: PDVOptionItemRecipeRef[];
 }
 
 export interface PDVProductOption {
