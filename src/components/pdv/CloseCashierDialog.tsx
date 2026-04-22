@@ -327,17 +327,17 @@ export function CloseCashierDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] p-0 flex flex-col gap-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle>Fechar Caixa</DialogTitle>
           <DialogDescription>
             Confira os valores e informe o saldo final em dinheiro
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           <Card>
-            <CardContent className="pt-6 space-y-3">
+            <CardContent className="pt-4 pb-4 space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Saldo Inicial:</span>
                 <span className="font-medium">
@@ -516,11 +516,12 @@ export function CloseCashierDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-6 py-4 border-t flex-col-reverse sm:flex-row sm:justify-end gap-2">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isClosing}
+            className="w-full sm:w-auto"
           >
             Cancelar
           </Button>
@@ -528,6 +529,7 @@ export function CloseCashierDialog({
             onClick={handleClose}
             disabled={isClosing || !canClose}
             variant={isBlocked ? "destructive" : "default"}
+            className="w-full sm:w-auto"
           >
             {isClosing ? "Fechando..." : isBlocked ? "Bloqueado" : "Fechar Caixa"}
           </Button>
