@@ -72,7 +72,14 @@ export function OrderDetailsDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={(o) => {
+          if (!o) {
+            setAddItemOpen(false);
+            setCancelDialog(false);
+            setCancelReason("");
+          }
+          onOpenChange(o);
+        }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
