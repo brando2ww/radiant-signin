@@ -5,16 +5,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, Eye, EyeOff, ChevronDown, Save } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { ArrowLeft, Eye, EyeOff, ChevronDown, Save, KeyRound, Trash2 } from "lucide-react";
 import { roleConfig, RolePermissionsView } from "@/components/pdv/users/RolePermissionsView";
 import { usePDVUsers } from "@/hooks/use-pdv-users";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export default function UserForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
-  const { users, createUser, updateUser } = usePDVUsers();
+  const { users, createUser, updateUser, deleteUser } = usePDVUsers();
+  const { user: currentUser } = useAuth();
 
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -25,9 +28,11 @@ export default function UserForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [discountPassword, setDiscountPassword] = useState("");
   const [showDiscountPassword, setShowDiscountPassword] = useState(false);
   const [maxDiscountPercent, setMaxDiscountPercent] = useState(100);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isEditing && users.length > 0) {
@@ -39,9 +44,12 @@ export default function UserForm() {
         setRole(user.role || "garcom");
         setDiscountPassword(user.discount_password || "");
         setMaxDiscountPercent(user.max_discount_percent ?? 100);
+        setEditingUserId(user.user_id);
       }
     }
   }, [isEditing, id, users]);
+
+  const isSelf = isEditing && editingUserId === currentUser?.id;
 
   const handleSubmit = () => {
     if (!displayName.trim()) {
@@ -61,22 +69,52 @@ export default function UserForm() {
         toast.error("As senhas não conferem");
         return;
       }
+    } else if (password || confirmPassword) {
+      // Editing with password change requested
+      if (password.length < 6) {
+        toast.error("Nova senha deve ter no mínimo 6 caracteres");
+        return;
+      }
+      if (password !== confirmPassword) {
+        toast.error("As senhas não conferem");
+        return;
+      }
+      if (isSelf) {
+        toast.error("Você não pode alterar sua própria senha por aqui.");
+        return;
+      }
     }
 
-    const data = { display_name: displayName, email, phone, role, discount_password: discountPassword, max_discount_percent: maxDiscountPercent, ...(isEditing ? {} : { password }) };
+    const data: any = {
+      display_name: displayName,
+      email,
+      phone,
+      role,
+      discount_password: discountPassword,
+      max_discount_percent: maxDiscountPercent,
+    };
+    if (!isEditing) data.password = password;
+    if (isEditing && password) data.password = password;
 
     if (isEditing) {
-      updateUser.mutate({ id, ...data }, {
+      updateUser.mutate({ id: id!, ...data }, {
         onSuccess: () => navigate("/pdv/usuarios"),
       });
     } else {
-      createUser.mutate(data as any, {
+      createUser.mutate(data, {
         onSuccess: () => navigate("/pdv/usuarios"),
       });
     }
   };
 
-  const isPending = createUser.isPending || updateUser.isPending;
+  const handleDelete = () => {
+    if (!id) return;
+    deleteUser.mutate(id, {
+      onSuccess: () => navigate("/pdv/usuarios"),
+    });
+  };
+
+  const isPending = createUser.isPending || updateUser.isPending || deleteUser.isPending;
 
   return (
     <div className="p-4 md:p-6 max-w-5xl mx-auto space-y-6">
@@ -85,7 +123,7 @@ export default function UserForm() {
         <Button variant="ghost" size="icon" onClick={() => navigate("/pdv/usuarios")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-semibold">{isEditing ? "Editar Usuário" : "Novo Usuário"}</h1>
           <p className="text-sm text-muted-foreground">
             {isEditing ? "Atualize os dados do colaborador." : "Preencha os dados para criar um novo colaborador."}
@@ -156,6 +194,7 @@ export default function UserForm() {
             </div>
           </div>
 
+          {/* Password (create mode) */}
           {!isEditing && (
             <>
               <div className="space-y-2">
@@ -196,6 +235,62 @@ export default function UserForm() {
               </div>
             </>
           )}
+
+          {/* Reset password (edit mode) */}
+          {isEditing && !isSelf && (
+            <Collapsible open={resetPasswordOpen} onOpenChange={setResetPasswordOpen}>
+              <div className="pt-2 border-t" />
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm" className="w-full justify-between">
+                  <span className="flex items-center gap-2">
+                    <KeyRound className="h-4 w-4" />
+                    Redefinir senha de acesso
+                  </span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${resetPasswordOpen ? "rotate-180" : ""}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-3 space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">Nova senha</Label>
+                  <div className="relative">
+                    <Input
+                      id="newPassword"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Mínimo 6 caracteres"
+                      className="pr-10"
+                    />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newConfirm">Confirmar nova senha</Label>
+                  <div className="relative">
+                    <Input
+                      id="newConfirm"
+                      type={showConfirm ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repita a nova senha"
+                      className="pr-10"
+                    />
+                    <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                      {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {confirmPassword && password !== confirmPassword && (
+                    <p className="text-xs text-destructive">As senhas não conferem</p>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Deixe em branco para manter a senha atual. A nova senha entra em vigor no próximo login do usuário.
+                </p>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </div>
 
         {/* Right — Role selection */}
@@ -233,14 +328,42 @@ export default function UserForm() {
       </div>
 
       {/* Footer actions */}
-      <div className="flex justify-end gap-3 pt-2">
-        <Button variant="outline" onClick={() => navigate("/pdv/usuarios")} disabled={isPending}>
-          Cancelar
-        </Button>
-        <Button onClick={handleSubmit} disabled={isPending} className="gap-2">
-          <Save className="h-4 w-4" />
-          {isEditing ? "Salvar Alterações" : "Criar Usuário"}
-        </Button>
+      <div className="flex flex-col sm:flex-row sm:justify-between gap-3 pt-2">
+        <div>
+          {isEditing && !isSelf && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" className="gap-2 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/5" disabled={isPending}>
+                  <Trash2 className="h-4 w-4" />
+                  Excluir usuário
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir usuário?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação é <strong>permanente</strong>. {displayName || email} perderá o acesso ao sistema imediatamente e o vínculo com o estabelecimento será apagado. Histórico de vendas e comandas é preservado.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    Excluir
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
+        <div className="flex justify-end gap-3">
+          <Button variant="outline" onClick={() => navigate("/pdv/usuarios")} disabled={isPending}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSubmit} disabled={isPending} className="gap-2">
+            <Save className="h-4 w-4" />
+            {isEditing ? "Salvar Alterações" : "Criar Usuário"}
+          </Button>
+        </div>
       </div>
     </div>
   );
