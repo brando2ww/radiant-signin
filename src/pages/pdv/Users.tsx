@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Routes, Route } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ResponsivePageHeader } from "@/components/ui/responsive-page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,6 @@ import { UserPlus, Search, Users as UsersIcon } from "lucide-react";
 import { UserCard } from "@/components/pdv/users/UserCard";
 import { usePDVUsers } from "@/hooks/use-pdv-users";
 import { roleConfig } from "@/components/pdv/users/RolePermissionsView";
-import UserForm from "./UserForm";
 
 function UsersList() {
   const navigate = useNavigate();
@@ -99,11 +98,5 @@ function UsersList() {
 }
 
 export default function Users() {
-  return (
-    <Routes>
-      <Route index element={<UsersList />} />
-      <Route path="novo" element={<UserForm />} />
-      <Route path=":id/editar" element={<UserForm />} />
-    </Routes>
-  );
+  return <UsersList />;
 }
