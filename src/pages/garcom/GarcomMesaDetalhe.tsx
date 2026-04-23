@@ -100,21 +100,23 @@ export default function GarcomMesaDetalhe() {
           table.status !== "ocupada" ||
           table.current_order_id !== orderId
         ) {
-          await new Promise<void>((resolve) => {
-            updateTable(
-              {
-                id: table.id,
-                updates: { status: "ocupada", current_order_id: orderId },
-              },
-              { onSettled: () => resolve() },
-            );
+          // Fire-and-forget: não bloqueia a criação da comanda nem a navegação.
+          // Mesmo que o retorno do update falhe por RLS de SELECT, o UPDATE em si
+          // já foi para o banco.
+          updateTable({
+            id: table.id,
+            updates: { status: "ocupada", current_order_id: orderId },
           });
         }
         queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
 
         // Comanda padrão (sem customer_name). O hook é idempotente.
-        const comanda = await createComanda({ orderId });
-        navigate(`/garcom/comanda/${comanda.id}`, { replace: true });
+        try {
+          const comanda = await createComanda({ orderId });
+          navigate(`/garcom/comanda/${comanda.id}`, { replace: true });
+        } catch {
+          ensuringRef.current = false;
+        }
       } catch {
         ensuringRef.current = false;
       }
