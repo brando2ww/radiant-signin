@@ -6,7 +6,12 @@ import { resolveProductionCenterId } from "@/utils/resolveProductionCenter";
 import { expandComposition } from "@/utils/expandComposition";
 import { toast } from "sonner";
 
-export type ComandaStatus = "aberta" | "fechada" | "cancelada";
+export type ComandaStatus =
+  | "aberta"
+  | "aguardando_pagamento"
+  | "em_cobranca"
+  | "fechada"
+  | "cancelada";
 export type KitchenStatus = "pendente" | "preparando" | "pronto" | "entregue";
 
 export interface Comanda {
@@ -21,6 +26,7 @@ export interface Comanda {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  closed_by_waiter_at?: string | null;
 }
 
 export interface ComandaItem {
