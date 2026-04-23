@@ -617,7 +617,11 @@ export function PaymentDialog({
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden">
+      <DialogContent
+        className="sm:max-w-3xl max-h-[90vh] overflow-hidden"
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5 text-primary" />
