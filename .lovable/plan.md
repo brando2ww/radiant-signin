@@ -1,25 +1,43 @@
 
 
-## Card inteiro da comanda clicável
+## Card de comanda totalmente clicável (corrigir HTML inválido)
 
 ### Causa
 
-Em `src/pages/garcom/GarcomMesaDetalhe.tsx` (linhas 267-309), o card de cada comanda é um `<div>` e só o `<button>` com o número da comanda (linhas 272-280) navega. O resto do card (lista de itens, área vazia, espaços) não responde ao toque.
+Na minha última mudança, transformei o card da comanda em `<button>` envolvendo `<div>`s. Em HTML, `<button>` só pode conter conteúdo *phrasing* (inline) — ter `<div>` dentro é inválido. Navegadores "fecham" o botão prematuramente, deixando partes do card (lista de itens, espaços) sem responder ao toque, exatamente o sintoma que você está vendo.
 
 ### Mudança
 
-Trocar o `<div>` externo do card por `<button type="button">` com `onClick` navegando para `/garcom/comanda/:id`. O texto interno vira `<span>` (não pode ter `<button>` dentro de `<button>`). Estilo: `w-full text-left rounded-2xl border bg-card p-4 space-y-3 active:opacity-70 active:scale-[0.99] transition-transform`.
+Em `src/pages/garcom/GarcomMesaDetalhe.tsx` (linhas 266-319), refazer com HTML válido:
 
-O botão "Enviar (N)" para cozinha precisa continuar funcionando sem disparar a navegação. Como `<button>` aninhado é HTML inválido, ele será renderizado via `Button asChild` com um `<span role="button" tabIndex={0}>` interno que faz `e.stopPropagation()` no `onClick` (e `onKeyDown` para Enter/Espaço, mantendo acessibilidade).
+- Container externo volta a ser `<div>` com `role="button"`, `tabIndex={0}`, `cursor-pointer` e handlers `onClick` + `onKeyDown` (Enter/Espaço) — toda a área fica clicável e acessível por teclado.
+- Botão "Enviar (N)" interno volta a ser `<Button>` real (sem aninhamento ilegal) com `e.stopPropagation()` no `onClick` para não disparar a navegação do card.
+- Mantém os efeitos visuais (`active:opacity-70 active:scale-[0.99] transition-transform`).
 
-Comportamento idêntico:
-- Clicar em qualquer área do card → abre `/garcom/comanda/:id`.
-- Clicar em "Enviar (N)" → manda para cozinha sem navegar.
-- Botão "Nova comanda" abaixo da lista permanece igual.
+```tsx
+<div
+  role="button"
+  tabIndex={0}
+  onClick={() => navigate(`/garcom/comanda/${comanda.id}`)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      navigate(`/garcom/comanda/${comanda.id}`);
+    }
+  }}
+  className="cursor-pointer rounded-2xl border bg-card p-4 space-y-3 active:opacity-70 active:scale-[0.99] transition-transform"
+>
+  ...
+  <Button onClick={(e) => { e.stopPropagation(); sendToKitchen(pendingIds); }}>
+    Enviar ({pendingIds.length})
+  </Button>
+  ...
+</div>
+```
 
 ### Validação
 
-- Mesa 04: tocar em qualquer parte do card "20260423-039 — TESTE" (header, área "Sem itens", borda) → abre a comanda.
-- Mesa com itens pendentes: tocar no card → abre a comanda; tocar em "Enviar" → envia para cozinha e permanece na tela da mesa.
-- Acessibilidade: card é `<button>` nativo (foco/Enter funcionam); ação interna "Enviar" é alcançável por Tab e ativa com Enter/Espaço sem propagar.
+- Tocar em qualquer área do card da comanda (cabeçalho, "Sem itens", lista de itens, bordas, espaços vazios) → abre o detalhe da comanda.
+- Tocar em "Enviar (N)" → envia para a cozinha, sem navegar.
+- HTML válido elimina o comportamento errático de área de clique no iOS/Safari.
 
