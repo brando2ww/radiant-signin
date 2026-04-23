@@ -1,53 +1,54 @@
 
 
-## Corrigir "Cannot coerce the result to a single JSON object" ao abrir mesa
+## Bottom menu do garçom estilo "FloatingNav"
 
-### Diagnóstico
+Substituir a barra fixa atual por uma navegação flutuante em pílula, com indicador deslizante animado (igual ao componente fornecido), mantendo as 5 ações já existentes do app de garçom.
 
-O erro acontece em `usePDVTables.updateTable`. O Supabase JS retorna esse erro quando `.single()` recebe **0 ou >1 linhas**. O `UPDATE` em `pdv_tables` é executado pelo papel garçom — a policy de UPDATE provavelmente passa (via `is_establishment_member`), mas a cláusula `RETURNING` aplica a policy de **SELECT**, que pode não estar liberando a linha de volta para o garçom (ou está liberando mas a linha já foi modificada por outra requisição na corrida).
+### O que muda visualmente
 
-Resultado: o `UPDATE` na verdade funciona no banco, mas o cliente recebe um erro 406 (`PGRST116`), exibe o toast vermelho, faz rollback otimista da UI e o fluxo de "abrir comanda" trava em "Abrindo comanda...".
+- Some a barra de borda superior fixa colada ao rodapé.
+- No lugar entra uma **pílula flutuante centralizada**, com fundo `bg-white/80 dark:bg-gray-900/80`, `backdrop-blur`, sombra grande e bordas arredondadas (`rounded-full`).
+- Um **indicador animado** (faixa clara com sombra interna) desliza por baixo do item ativo conforme o usuário navega — usando `framer-motion` com `layout`/spring.
+- Cada item exibe ícone + label embaixo. Em telas muito pequenas as labels somem (`hidden sm:inline`), igual ao componente de referência.
+- Ativo fica em `text-primary`, inativos em `text-gray-600 dark:text-gray-300`.
+- Posicionamento: `fixed bottom-4 left-1/2 -translate-x-1/2 z-50`, respeitando `safe-area-inset-bottom`.
 
-### Correção
+### Itens da barra (preservados)
 
-**1. `src/hooks/use-pdv-tables.ts` — `updateTable`**
+Mantém exatamente as 5 entradas atuais, na mesma ordem, com o "Novo" no centro como destaque (botão circular sobressaindo da pílula, disparando `onNewComanda`):
 
-Trocar `.single()` por `.maybeSingle()` e devolver um fallback `{ id, ...updates }` quando o retorno vier vazio. Isso desacopla o sucesso do mutation da capacidade do cliente de reler a linha — o que importa é o `UPDATE` ter ido sem erro.
+1. Mesas → `/garcom`
+2. Comandas → `/garcom/comandas`
+3. **Novo** (FAB central, sem rota — abre o sheet)
+4. Itens → `/garcom/itens`
+5. Cozinha → `/garcom/cozinha`
 
-```ts
-const { data, error } = await supabase
-  .from("pdv_tables")
-  .update(updates)
-  .eq("id", id)
-  .select()
-  .maybeSingle();
+O indicador deslizante percorre apenas os 4 itens de navegação (pula o FAB central).
 
-if (error) throw error;
-return data ?? { id, ...updates };
-```
+### Arquivos
 
-**2. `GarcomMesaDetalhe.tsx` — não bloquear no resultado do updateTable**
+- **Editado** `src/components/garcom/BottomTabBar.tsx`
+  - Reescrito para o layout flutuante em pílula.
+  - Usa `framer-motion` (`motion.div` com `layoutId` para o indicador deslizante; alternativa equivalente: refs + `useEffect` medindo `getBoundingClientRect`, idêntico ao snippet de referência).
+  - Active state derivado de `useLocation()` (mesma lógica atual: `end` para `/garcom`, `startsWith` para os demais).
+  - Botão central "Novo" continua chamando `onNewComanda` recebido via props.
+  - Mantém `safe-area-bottom` para iPhone.
 
-Hoje o `useEffect` aguarda `updateTable` via `onSettled` antes de criar a comanda. Se o update der erro (mesmo que tenha funcionado no banco), `ensuringRef` fica travado e a tela fica em "Abrindo comanda…". Ajustes:
+- **Editado** `src/pages/Garcom.tsx`
+  - Adiciona `pb-28` (ou similar) ao container raiz para o conteúdo das páginas não ficar atrás da pílula flutuante.
 
-- Tornar o `updateTable` "fire-and-forget" no efeito (ou ignorar erro dele) — a criação da comanda + navegação não dependem do retorno da mesa.
-- Resetar `ensuringRef.current = false` também no caminho de erro do `createComanda`, para permitir nova tentativa quando o usuário voltar à tela.
+### Detalhes técnicos
 
-**3. (Opcional, defensivo) Verificar policies de SELECT em `pdv_tables`**
+- `framer-motion@^12` e `lucide-react` já estão no `package.json`, sem novas dependências.
+- O componente da biblioteca (`floating-nav.tsx`) traz ícones inexistentes para o nosso domínio (Home/Search/Bell/etc.) — vamos reusar **apenas o estilo/estrutura**, com nossos ícones já em uso (`LayoutGrid`, `ClipboardList`, `Plus`, `UtensilsCrossed`, `ChefHat`).
+- Não vamos criar `src/components/ui/floating-nav.tsx` separado, porque o BottomTabBar do garçom tem um requisito específico (FAB central + integração com rotas + callback `onNewComanda`) que tornaria um wrapper genérico mais frágil. A estética fica 1:1 com o exemplo.
+- `GarcomActionFab` (canto inferior direito, tema/sair/gerente) continua intacto e segue por cima da pílula com `z-50` próprio.
 
-Se a policy de SELECT do garçom não inclui `is_establishment_member(user_id)`, adicionar. Sem isso, garçom nunca consegue ler a mesa de volta após o update, mesmo com o fallback acima funcionando — o que afeta também o refresh da grid.
+### Como o usuário valida
 
-> Vou inspecionar as policies depois da aprovação. Se faltar a policy de SELECT, incluo numa migration curta. Se já estiver lá, só os passos 1 e 2 resolvem o erro visível.
-
-### Validação
-
-1. Logado como garçom, tocar em mesa livre → não aparece o toast vermelho → cai direto na comanda.
-2. Adicionar item → volta → mesma comanda aberta, mesa marcada como "Ocupada" na grid.
-3. Conferir banco: `pdv_tables.status = 'ocupada'` e `current_order_id` preenchido.
-4. Repetir com mesa que já tem comanda → redireciona direto, sem erro.
-
-### Fora de escopo
-
-- Realtime cross-device.
-- Refatoração do PDV web (`Salon.tsx`).
+1. Abrir `/garcom` em mobile e desktop: a pílula aparece flutuando no rodapé centralizada.
+2. Navegar entre Mesas/Comandas/Itens/Cozinha: o indicador desliza suavemente para o item ativo.
+3. Tocar "Novo" no centro: abre o sheet de novo pedido (comportamento atual preservado).
+4. Em telas estreitas as labels somem e ficam só os ícones.
+5. Em iPhone, a pílula fica acima do gesture bar.
 
