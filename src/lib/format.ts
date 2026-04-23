@@ -29,3 +29,25 @@ export function formatBRL(value: number | string | null | undefined): string {
 
 /** Alias compatível com código legado. */
 export const formatCurrency = formatBRL;
+
+/**
+ * Variante compacta sem casas decimais — útil para chips/badges curtos
+ * e ticks de gráfico. Ex.: 1234 -> "R$ 1.234".
+ */
+const brlCompactFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+export function formatBRLCompact(
+  value: number | string | null | undefined
+): string {
+  if (value === null || value === undefined || value === "") {
+    return brlCompactFormatter.format(0);
+  }
+  const n = typeof value === "string" ? Number(value) : value;
+  return brlCompactFormatter.format(Number.isFinite(n) ? n : 0);
+}
+
