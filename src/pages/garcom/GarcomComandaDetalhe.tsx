@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Send, X, CreditCard } from "lucide-react";
+import { ArrowLeft, Plus, Send, X, CreditCard, Utensils } from "lucide-react";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
+import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,12 +17,17 @@ export default function GarcomComandaDetalhe() {
     closeComanda,
     removeItem,
   } = usePDVComandas();
+  const { tables } = usePDVTables();
 
   const comanda = comandas.find((c) => c.id === id);
   const items = comandaItems.filter(
     (i) => i.comanda_id === id && !(i as any).is_composite_child,
   );
   const total = items.reduce((s, i) => s + i.subtotal, 0);
+
+  const tableOfComanda = comanda?.order_id
+    ? tables.find((t) => t.current_order_id === comanda.order_id)
+    : null;
 
   const pendingIds = items
     .filter((i) => i.kitchen_status === "pendente" && !i.sent_to_kitchen_at)
@@ -55,7 +61,21 @@ export default function GarcomComandaDetalhe() {
           <h1 className="text-base font-semibold truncate">
             {comanda.customer_name || comanda.comanda_number}
           </h1>
-          <p className="text-xs text-muted-foreground">{comanda.comanda_number}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-muted-foreground">{comanda.comanda_number}</p>
+            {tableOfComanda ? (
+              <button
+                type="button"
+                onClick={() => navigate(`/garcom/mesa/${tableOfComanda.id}`)}
+                className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary active:scale-95 transition-transform"
+              >
+                <Utensils className="h-3 w-3" />
+                Mesa {tableOfComanda.table_number}
+              </button>
+            ) : (
+              <span className="text-[10px] text-muted-foreground">· Avulsa</span>
+            )}
+          </div>
         </div>
       </header>
 
