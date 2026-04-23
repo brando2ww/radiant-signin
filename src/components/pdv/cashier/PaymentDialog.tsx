@@ -148,9 +148,25 @@ export function PaymentDialog({
   >({ kind: "idle" });
 
   const { registerPayment, isRegisteringPayment, registerTablePayment, isRegisteringTablePayment } = usePDVPayments();
-  const { markAsCharging, releaseFromCharging } = usePDVComandas();
+  const {
+    markAsCharging,
+    releaseFromCharging,
+    removeItem,
+    isRemovingItem,
+    addItem,
+    isAddingItem,
+  } = usePDVComandas();
+  const { products: productsList } = usePDVProducts() as any;
   const { emitNFCe, isEmitting } = useNFCeEmission();
   const { settings } = usePDVSettings();
+
+  // Edição do pedido (correção pelo caixa)
+  const [itemToRemove, setItemToRemove] = useState<ComandaItem | null>(null);
+  const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [addItemQty, setAddItemQty] = useState("1");
+  const [addItemNotes, setAddItemNotes] = useState("");
 
   // Comandas envolvidas neste pagamento (1 ou várias)
   const involvedComandas: Comanda[] = table
