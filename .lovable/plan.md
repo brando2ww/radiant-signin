@@ -1,35 +1,38 @@
 
 
-## Encostar a pílula à esquerda da tela
+## Aumentar a largura da pílula do bottom menu
 
-A pílula ainda fica visualmente "no meio" porque está com `flex justify-center` num espaço com margens iguais dos dois lados. O FAB então parece encavalar a borda direita. Vou ancorar a pílula de fato à esquerda e reservar mais espaço seguro à direita para o FAB.
+Hoje a pílula está em `left-3 right-20`, o que reserva 80px à direita para o FAB de 56px. A pílula fica curta e os ícones ficam apertados. Vou reduzir a folga reservada à direita e encolher levemente o FAB para a pílula esticar mais.
 
 ### Mudança
 
 **`src/components/garcom/BottomTabBar.tsx`**
 
-Trocar a `<nav>`:
-- De: `fixed left-[5.5rem] right-[5.5rem] z-50 flex justify-center pointer-events-none`
-- Para: `fixed left-3 right-20 z-50 flex justify-start pointer-events-none`
-  - `left-3` (12px) cola a pílula à esquerda da tela.
-  - `right-20` (80px) reserva folga para o FAB (56px + `right-4` 16px + 8px de respiro).
-  - `justify-start` posiciona a pílula no início, não mais centralizada.
+- Trocar `fixed left-3 right-20 z-50 ...` por `fixed left-2 right-[4.5rem] z-50 ...`.
+  - `left-2` (8px) gruda a pílula ainda mais à esquerda.
+  - `right-[4.5rem]` (72px) reserva o mínimo necessário ao FAB (48px + 16px de margem + 8px de respiro).
+- Aumentar o padding interno horizontal da pílula de `px-2` para `px-3` para os tabs respirarem melhor com a nova largura.
+- Aumentar o `gap-1` entre tabs para `gap-2`.
 
 **`src/components/garcom/GarcomActionFab.tsx`**
 
-- Subir o z-index do container do FAB de `z-40` para `z-50`, garantindo que ele sempre fique por cima caso o usuário gire o aparelho ou redimensione.
+- Reduzir o FAB principal de `h-14 w-14` para `h-12 w-12` (48px) para liberar espaço lateral.
+- Manter o FAB em `right-4` para preservar o respiro contra a borda direita.
 
-### Resultado
+### Resultado em mobile (390px)
 
 ```text
 ┌──────────────────────────────────────────────┐
-│                                              │
-│ ┌──────────────────────────────┐    ┌────┐   │
-│ │ Mesas Comandas + Itens Coz.  │    │FAB │   │
-│ └──────────────────────────────┘    └────┘   │
+│ ┌───────────────────────────────────┐ ┌────┐ │
+│ │ Mesas  Comandas  +  Itens  Coz.   │ │FAB │ │
+│ └───────────────────────────────────┘ └────┘ │
 └──────────────────────────────────────────────┘
-   ↑ encostada à esquerda          ↑ aparece inteiro
+   pílula bem mais larga              FAB completo
 ```
 
-A pílula fica bem à esquerda, o FAB fica completo no canto direito, e nenhum dos dois encosta no outro mesmo em telas estreitas.
+### Validação
+
+- Em 390px (viewport atual) a pílula ocupa ~310px de largura útil (antes ~290px) e os 5 itens + Plus ficam mais espaçados.
+- O FAB continua aparecendo por completo, sem encavalar a pílula.
+- Safe-area do iPhone preservada (sem alteração no `bottom`).
 
