@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { PDVTable } from "@/hooks/use-pdv-tables";
 import { cn } from "@/lib/utils";
 import { formatBRLCompact } from "@/lib/format";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -174,8 +175,8 @@ export function TableCard({ table, orderTotal, orderTime, onClick, isDragging, s
                 table.capacity <= 4 ? "w-20 h-20" : "w-24 h-20"
               )}
             >
-              <span className={cn("text-lg font-bold", statusConfig.textColor)}>
-                M{table.table_number}
+              <span className={cn("text-sm font-bold leading-tight px-1 text-center", statusConfig.textColor)}>
+                {formatTableLabel(table.table_number)}
               </span>
               {isOccupied && orderTotal !== undefined && (
                 <span className={cn("text-xs font-medium", statusConfig.textColor)}>
