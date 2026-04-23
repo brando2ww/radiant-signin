@@ -576,7 +576,46 @@ export function PaymentDialog({
     );
   }
 
+  // Produtos para o dialog de adicionar item
+  const targetComandaIdForAdd: string | null =
+    comanda?.id ?? (isTablePayment && tableComandas.length === 1 ? tableComandas[0].id : null);
+  const filteredProducts = (productsList || []).filter((p: any) => {
+    if (!p.is_available) return false;
+    if (!productSearch.trim()) return true;
+    const q = productSearch.trim().toLowerCase();
+    return (
+      p.name?.toLowerCase().includes(q) ||
+      p.ean?.toLowerCase?.().includes(q) ||
+      p.category?.toLowerCase?.().includes(q)
+    );
+  });
+  const selectedProduct = filteredProducts.find((p: any) => p.id === selectedProductId)
+    ?? (productsList || []).find((p: any) => p.id === selectedProductId);
+
+  const handleConfirmAddItem = async () => {
+    if (!targetComandaIdForAdd || !selectedProduct) return;
+    const qty = Math.max(1, parseInt(addItemQty) || 1);
+    try {
+      await addItem({
+        comandaId: targetComandaIdForAdd,
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        quantity: qty,
+        unitPrice: Number(selectedProduct.price_salon) || 0,
+        notes: addItemNotes.trim() || undefined,
+      });
+      setAddItemDialogOpen(false);
+      setSelectedProductId(null);
+      setProductSearch("");
+      setAddItemQty("1");
+      setAddItemNotes("");
+    } catch (e) {
+      // toast já é exibido pelo hook
+    }
+  };
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
