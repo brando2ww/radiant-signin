@@ -1,44 +1,66 @@
 
 
-## Mostrar a mesa na comanda + garantir que mesa fica ocupada
+## Mesa não fica "ocupada" porque RLS bloqueia o garçom
 
-### Estado atual
+### Causa raiz (confirmada via banco)
 
-- A mesa é marcada `ocupada` corretamente quando o garçom abre a mesa via dialog (já implementado).
-- Porém, na tela da comanda (`/garcom/comanda/:id`), não há nenhuma referência à mesa de origem — o garçom não sabe se está atendendo uma comanda de mesa ou avulsa.
-- Na lista geral de comandas (`/garcom/comandas`), também não aparece a mesa.
+A comanda **TESTE** foi criada com `order_id` válido apontando para a `pdv_orders` da Mesa 04. Porém na `pdv_tables`, **Mesa 04 está com `current_order_id = NULL` e `status = livre`**.
 
-### Mudanças
+Motivo: a policy RLS de UPDATE em `pdv_tables` exige `auth.uid() = user_id` (apenas o dono). O garçom é staff do estabelecimento, então o `update` em `pdv_tables` **falha silenciosamente** (0 rows afetadas, sem erro) quando ele tenta marcar a mesa como ocupada. Como o front mostra "Mesa X" com base em `tables.find(t => t.current_order_id === comanda.order_id)`, o vínculo não aparece e a comanda fica como **Avulsa**.
 
-**1. `src/pages/garcom/GarcomComandaDetalhe.tsx` — mostrar a mesa no header**
+Há também 2 comandas anteriores ("EDU TESTE" e "EDU TESTE 2") fechadas mas com order ainda `aberta` e mesa órfã — sintoma do mesmo problema.
 
-- Importar `usePDVTables`.
-- Resolver `tableOfComanda = tables.find(t => t.current_order_id === comanda.order_id)` (somente quando `comanda.order_id` existe).
-- No header, abaixo do `comanda_number`, exibir um badge/linha:
-  - Se houver mesa: `Mesa {table.table_number}` (com ícone `Table` ou `Utensils` do lucide-react), tocável → navega para `/garcom/mesa/{table.id}`.
-  - Se não houver: `Comanda avulsa` em texto secundário.
-- Layout: `comanda_number` à esquerda na linha pequena, e a indicação da mesa em chip ao lado (ou logo abaixo) com `text-xs` e cor primária quando clicável.
+### Mudança 1 — Migration de RLS em `pdv_tables`
 
-**2. `src/pages/garcom/GarcomComandas.tsx` — mostrar mesa na lista**
+Adicionar policy de UPDATE para staff do estabelecimento:
 
-- Importar `usePDVTables` e mapear `order_id → table_number`.
-- No subtítulo de cada card, junto com itens/total, prefixar com `Mesa X · ` quando a comanda pertencer a uma mesa, ou `Avulsa · ` quando não.
+```sql
+CREATE POLICY "Staff can update tables"
+  ON public.pdv_tables
+  FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = user_id OR public.is_establishment_member(user_id))
+  WITH CHECK (auth.uid() = user_id OR public.is_establishment_member(user_id));
+```
 
-**3. Garantir mesa ocupada quando criar comanda nominal extra (`splitOpen`) — verificação defensiva**
+A policy `"Owner can manage tables"` (FOR ALL) continua existindo para o dono. A nova só amplia UPDATE para staff — INSERT/DELETE seguem restritos ao dono.
 
-No `handleCreateNominal` em `GarcomMesaDetalhe.tsx`, se por algum motivo a mesa não estiver `ocupada` (caso de borda), atualizar para `ocupada` antes de criar a nova comanda. Já há um `current_order_id` exigido no fluxo, então o caso é raro, mas garantimos consistência.
+### Mudança 2 — Migration de RLS em `pdv_orders`
 
-**4. Liberar mesa ao fechar a última comanda (já era esperado, vou verificar)**
+Mesmo problema afeta `pdv_orders` (closeComanda atualiza `pdv_orders.status` quando a última comanda fecha). Verifico se existe policy de UPDATE para staff; se não, adicionar análoga:
 
-- Confirmar via leitura do `closeComandaMutation` em `use-pdv-comandas.ts` se a mesa volta para `livre` quando todas as comandas da mesma `order_id` são fechadas. Se não estiver implementado, adicionar lógica:
-  - Após fechar uma comanda com `order_id`, contar quantas comandas `aberta` ainda existem para esse `order_id`. Se for 0: marcar `pdv_orders.status = 'fechada'` e `pdv_tables.status = 'livre'`, `current_order_id = null` para a mesa correspondente.
+```sql
+CREATE POLICY "Staff can update orders"
+  ON public.pdv_orders
+  FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = user_id OR public.is_establishment_member(user_id))
+  WITH CHECK (auth.uid() = user_id OR public.is_establishment_member(user_id));
+```
+
+### Mudança 3 — Limpar dados órfãos (data fix)
+
+Mesa 04 está com `current_order_id = null` mas tem order TESTE aberta. Reapontar:
+
+```sql
+-- Reabrir mesa para a order da comanda TESTE
+UPDATE pdv_tables 
+SET status = 'ocupada', current_order_id = '5e2bb496-bfc9-4ce8-b5c0-4df76a97bd36'
+WHERE id = '64c11242-aba7-4c73-8a82-71284adc15db';
+
+-- Fechar order órfã da comanda EDU TESTE 2 (cuja única comanda já está fechada)
+UPDATE pdv_orders SET status = 'fechada' WHERE id = '9562e911-2d0d-4f97-94cb-a038ffc70ecd';
+UPDATE pdv_orders SET status = 'fechada' WHERE id = '9402e942-ffe1-4d26-9867-f114dce03df7';
+```
+
+### Mudança 4 — Detectar falha silenciosa no código
+
+Em `src/pages/garcom/GarcomMesaDetalhe.tsx` (função `handleConfirmOpen`), trocar o `update().eq()` por `update().eq().select()` e checar se retornou linha. Se 0 rows e sem erro (caso de RLS), mostrar `toast.error("Sem permissão para atualizar mesa")` em vez de seguir como se tivesse dado certo. Mesma proteção em `closeComandaMutation` (`use-pdv-comandas.ts`) ao atualizar `pdv_orders` e `pdv_tables`.
 
 ### Validação
 
-- Abrir Mesa 04 com comandas "João" e "Maria" → mesa fica ocupada (✓ já funciona).
-- Tocar em "João" → tela da comanda mostra no header: nome "João", número "20260423-038", e logo abaixo um chip clicável **"Mesa 04"** com ícone.
-- Tocar no chip "Mesa 04" → volta para `/garcom/mesa/{id}` mostrando ambas as comandas.
-- Em `/garcom/comandas`, cada item da lista mostra `"Mesa 04 · 0 itens · R$ 0,00"`.
-- Comanda avulsa (sem mesa) → header mostra "Comanda avulsa", lista mostra "Avulsa · ...".
-- Fechar a última comanda da mesa → mesa volta para `livre` no `/garcom`.
+- Garçom abre Mesa 5 com nome "Pedro" → mesa fica `ocupada` na lista, comanda do Pedro abre com chip **"Mesa 5"** no header.
+- Em `/garcom/comandas`, "Pedro" aparece como `Mesa 5 · 0 itens · R$ 0,00`.
+- Garçom fecha a única comanda → mesa volta para `livre`.
+- Mesa 04 atual recupera o vínculo com TESTE após o data fix.
 
