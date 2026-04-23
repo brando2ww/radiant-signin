@@ -317,7 +317,7 @@ export default function GarcomMesaDetalhe() {
             <p className="text-xs text-muted-foreground">
               Informe o nome de cada comanda. Você pode abrir várias comandas na mesma mesa.
             </p>
-            <div className="space-y-3 max-h-[50vh] overflow-y-auto px-1 -mx-1">
+            <div className="space-y-3 max-h-[40vh] overflow-y-auto px-2 -mx-2 py-1">
               {comandaNames.map((name, index) => (
                 <div key={index} className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">
