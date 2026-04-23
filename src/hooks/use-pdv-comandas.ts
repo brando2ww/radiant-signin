@@ -107,6 +107,21 @@ export function usePDVComandas() {
       if (!user) throw new Error("Usuário não autenticado");
       const ownerId = visibleUserId || user.id;
 
+      // Idempotência: se for comanda padrão (sem customerName) vinculada a um
+      // order, e já existir uma comanda padrão aberta, devolve a existente.
+      // Evita duplicação por clique repetido / race / dois dispositivos.
+      const isDefault = !data.customerName;
+      if (data.orderId && isDefault) {
+        const { data: existing } = await supabase
+          .from("pdv_comandas")
+          .select("*")
+          .eq("order_id", data.orderId)
+          .eq("status", "aberta")
+          .is("customer_name", null)
+          .maybeSingle();
+        if (existing) return existing as Comanda;
+      }
+
       const comandaNumber = await generateComandaNumber();
 
       const { data: newComanda, error } = await supabase
