@@ -1,65 +1,96 @@
 
 
-## Aplicar fonte Montserrat em toda a área do garçom (`/garcom/*`)
+## Liberar cliques nos ícones do BottomTabBar atrás do container do FAB
 
-Hoje a área do garçom usa a fonte padrão herdada do `body` (sem `font-family` definido). Vou padronizar tudo dentro do `/garcom` para usar **Montserrat**, sem afetar o restante do app (PDV, delivery, super admin etc.).
+### Problema
 
-### Mudanças
+O `GarcomActionFab` tem um wrapper `fixed right-4 bottom-5 flex flex-col items-end gap-3` que contém:
+1. O container dos mini-FABs (Sair, Chamar Gerente, Tema) — sempre montado, com `opacity-0` quando fechado, mas **continua ocupando espaço vertical** (~150px acima do FAB).
+2. O botão FAB principal.
 
-**1. Carregar a fonte Montserrat (`index.html`)**
+Esse wrapper, mesmo invisível, intercepta toques na faixa direita da tela — exatamente onde ficam os ícones **Itens** e **Cozinha** da pílula do BottomTabBar. O `pointer-events-none` aplicado hoje está no container interno dos mini-FABs, mas o wrapper externo e o espaço entre os filhos flex continuam capturando eventos.
 
-Adicionar no `<head>` o preconnect e o link do Google Fonts com os pesos usados (400, 500, 600, 700):
+### Mudança
 
-```html
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-```
+**`src/components/garcom/GarcomActionFab.tsx`**
 
-**2. Registrar `font-montserrat` no Tailwind (`tailwind.config.ts`)**
-
-Adicionar dentro de `theme.extend`:
-
-```ts
-fontFamily: {
-  montserrat: ['Montserrat', 'system-ui', 'sans-serif'],
-},
-```
-
-**3. Aplicar a fonte no escopo do garçom (`src/pages/Garcom.tsx`)**
-
-Adicionar a classe `font-montserrat` no wrapper raiz:
+1. Adicionar `pointer-events-none` no wrapper externo `fixed right-4 ...`, e reativar `pointer-events-auto` apenas nos elementos clicáveis (botão FAB principal e cada mini-FAB quando aberto).
+2. Quando o menu está fechado, usar `hidden` no container dos mini-FABs em vez de só `opacity-0`, para que ele não ocupe área vertical no DOM/layout. Aplicar `flex` apenas quando `open === true`.
 
 ```tsx
-<div className="min-h-screen bg-background pb-28 font-montserrat">
+<div
+  className="fixed right-4 z-50 flex flex-col items-end gap-3 pointer-events-none"
+  style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
+>
+  {open && (
+    <div className="pointer-events-auto flex flex-col items-end gap-3 ...">
+      {/* mini FABs */}
+    </div>
+  )}
+
+  <button
+    type="button"
+    onClick={() => setOpen(v => !v)}
+    className="pointer-events-auto flex h-12 w-12 ... bg-primary ..."
+  >
+    ...
+  </button>
+</div>
 ```
 
-Como o Tailwind herda `font-family` por CSS, todos os filhos (rotas, BottomTabBar, FAB, headers, sheets, dialogs renderizados dentro desse container, cards de mesa/comanda, formulários do garçom) passarão a usar Montserrat automaticamente.
-
-**4. Garantir Montserrat em portais (Sheets/Dialogs do Radix)**
-
-`NewOrderSheet`, `ComandaDialog`, `MobileProductOptionSelector` e dropdowns são renderizados via portal no `<body>`, fora do wrapper. Para que também usem Montserrat enquanto o usuário estiver em `/garcom`, vou adicionar uma regra simples em `src/index.css`:
-
-```css
-body:has([data-garcom-root]) [data-radix-portal],
-body:has([data-garcom-root]) [role="dialog"] {
-  font-family: 'Montserrat', system-ui, sans-serif;
-}
-```
-
-E marcar o wrapper do garçom com `data-garcom-root`:
+A animação de entrada continua via Tailwind transition no próprio container interno (mantém `transition-all duration-200`, `translate-y-2` → `translate-y-0`). Como a montagem só acontece quando `open`, usaremos um pequeno truque com `useState`/`requestAnimationFrame` para disparar a transição, **ou** manter a abordagem atual mas combinar `pointer-events-none` no wrapper externo + mini-FABs com `pointer-events-auto` quando abertos. Vou usar a segunda abordagem (mais simples e preserva a animação atual):
 
 ```tsx
-<div data-garcom-root className="min-h-screen bg-background pb-28 font-montserrat">
+<div className="fixed right-4 z-50 flex flex-col items-end gap-3 pointer-events-none ...">
+  <div
+    className={cn(
+      "flex flex-col items-end gap-3 transition-all duration-200",
+      open
+        ? "pointer-events-auto opacity-100 translate-y-0"
+        : "pointer-events-none opacity-0 translate-y-2 invisible h-0 overflow-hidden"
+    )}
+  >
+    {/* mini FABs */}
+  </div>
+
+  <button className="pointer-events-auto ...">FAB</button>
+</div>
 ```
 
-### Escopo
+A chave é o `h-0 overflow-hidden invisible` quando fechado: o container dos mini-FABs **deixa de ocupar altura** no layout do flex coluna, então o wrapper externo encolhe para o tamanho do FAB (48×48px). Combinado com `pointer-events-none` no wrapper e `pointer-events-auto` apenas no botão, nada mais bloqueia a pílula do BottomTabBar.
 
-- Afeta **somente** rotas `/garcom/*` (mesas, comandas, comanda detalhe, adicionar item, cozinha, itens, FAB, BottomTabBar, sheets/dialogs abertos a partir do garçom).
-- **Não afeta** PDV, Delivery, páginas públicas, Super Admin, login.
+### Diagrama
+
+Antes (área que bloqueia toques marcada com `▒`):
+
+```text
+┌──────────────────────────────────────────────┐
+│                                       ▒▒▒▒   │ ← container alto
+│                                       ▒▒▒▒   │   captura toques
+│                                       ▒▒▒▒   │
+│ ┌────────────────────────────┐        ▒▒▒▒   │
+│ │ Mesas  Comandas  +  Itens  Coz. │←  ▒FAB▒  │ ← Itens/Cozinha bloqueados
+│ └────────────────────────────┘        ▒▒▒▒   │
+└──────────────────────────────────────────────┘
+```
+
+Depois:
+
+```text
+┌──────────────────────────────────────────────┐
+│                                              │
+│                                              │
+│ ┌────────────────────────────────┐   ┌────┐  │
+│ │ Mesas Comandas + Itens  Coz.   │   │FAB │  │ ← cliques chegam normais
+│ └────────────────────────────────┘   └────┘  │
+└──────────────────────────────────────────────┘
+```
 
 ### Validação
 
-- Abrir `/garcom`, `/garcom/comandas`, `/garcom/cozinha`, abrir o FAB e o NewOrderSheet — todos os textos devem renderizar em Montserrat.
-- Abrir `/pdv` em outra aba — fonte permanece a padrão atual (sem alteração).
+- Em `/garcom/comandas` (390×844), tocar em **Itens** e **Cozinha** — devem navegar normalmente.
+- Tocar no FAB (`...`) — abre as 3 ações.
+- Com o FAB aberto, tocar em **Sair / Chamar Gerente / Tema** — funciona.
+- Tocar fora do FAB aberto — fecha (backdrop transparente já existente continua funcionando).
+- A animação de entrada/saída dos mini-FABs continua suave.
 
