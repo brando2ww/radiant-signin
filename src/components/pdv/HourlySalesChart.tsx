@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatBRL, formatBRLCompact } from "@/lib/format";
 
 interface HourlySalesChartProps {
   data: Array<{
@@ -69,7 +70,7 @@ export function HourlySalesChart({ data, isLoading }: HourlySalesChartProps) {
             <YAxis
               className="text-xs"
               tick={{ fill: "hsl(var(--muted-foreground))" }}
-              tickFormatter={(value) => `R$ ${value.toFixed(0)}`}
+              tickFormatter={(value) => formatBRLCompact(value)}
             />
             <Tooltip
               contentStyle={{
@@ -79,7 +80,7 @@ export function HourlySalesChart({ data, isLoading }: HourlySalesChartProps) {
               }}
               formatter={(value: number, name: string) => {
                 if (name === "sales") {
-                  return [`R$ ${value.toFixed(2)}`, "Vendas"];
+                  return [`${formatBRL(value)}`, "Vendas"];
                 }
                 return [value, "Pedidos"];
               }}

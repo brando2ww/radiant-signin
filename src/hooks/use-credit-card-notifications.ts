@@ -1,6 +1,7 @@
 import { useSettings } from "./use-settings";
 import { toast } from "sonner";
 import { useEffect, useRef } from "react";
+import { formatBRL } from "@/lib/format";
 
 interface CreditCard {
   id: string;
@@ -28,7 +29,7 @@ export function useCreditCardNotifications(cards: CreditCard[]) {
       if (usage >= threshold && !notifiedCards.current.has(card.id)) {
         notifiedCards.current.add(card.id);
         toast.warning(`⚠️ Cartão ${card.name} atingiu ${usage.toFixed(0)}% do limite`, {
-          description: `Limite: R$ ${card.credit_limit.toFixed(2)} | Usado: R$ ${card.current_balance.toFixed(2)}`,
+          description: `Limite: ${formatBRL(card.credit_limit)} | Usado: ${formatBRL(card.current_balance)}`,
         });
       }
     });
@@ -39,8 +40,8 @@ export function useCreditCardNotifications(cards: CreditCard[]) {
     if (settings?.notifications?.credit_cards?.invoice_closed) {
       toast.info(`💳 Nova transação no ${cardName}`, {
         description: description
-          ? `${description} - R$ ${amount.toFixed(2)}`
-          : `R$ ${amount.toFixed(2)}`,
+          ? `${description} - ${formatBRL(amount)}`
+          : `${formatBRL(amount)}`,
       });
     }
   };
@@ -48,7 +49,7 @@ export function useCreditCardNotifications(cards: CreditCard[]) {
   const notifyInvoiceDueSoon = (cardName: string, dueDate: string, amount: number) => {
     if (settings?.notifications?.credit_cards?.due_date_days) {
       toast.warning(`📅 Fatura do ${cardName} vence em breve`, {
-        description: `Vencimento: ${dueDate} | Valor: R$ ${amount.toFixed(2)}`,
+        description: `Vencimento: ${dueDate} | Valor: ${formatBRL(amount)}`,
       });
     }
   };
@@ -56,7 +57,7 @@ export function useCreditCardNotifications(cards: CreditCard[]) {
   const notifyInvoiceClosed = (cardName: string, amount: number) => {
     if (settings?.notifications?.credit_cards?.invoice_closed) {
       toast.info(`📋 Fatura do ${cardName} fechada`, {
-        description: `Valor total: R$ ${amount.toFixed(2)}`,
+        description: `Valor total: ${formatBRL(amount)}`,
       });
     }
   };

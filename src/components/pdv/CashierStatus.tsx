@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
+import { formatBRL } from "@/lib/format";
 
 export function CashierStatus() {
   const { activeSession, isLoading } = usePDVCashier();
@@ -37,7 +38,7 @@ export function CashierStatus() {
         <TooltipContent>
           <p>Caixa {isCashierOpen ? "aberto" : "fechado"}</p>
           <p className="text-xs text-muted-foreground">
-            Saldo atual: R$ {currentBalance.toFixed(2)}
+            Saldo atual: {formatBRL(currentBalance)}
           </p>
         </TooltipContent>
       </Tooltip>

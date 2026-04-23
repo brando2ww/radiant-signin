@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { Comanda, ComandaItem, KitchenStatus } from "@/hooks/use-pdv-comandas";
 import { cn } from "@/lib/utils";
+import { formatBRL } from "@/lib/format";
 
 interface ComandaDetailsDialogProps {
   open: boolean;
@@ -224,7 +225,7 @@ export function ComandaDetailsDialog({
 
                           <div className="flex items-center gap-2">
                             <span className="font-medium">
-                              R$ {item.subtotal.toFixed(2)}
+                              {formatBRL(item.subtotal)}
                             </span>
                             {isOpen && (
                               <div className="flex gap-1">
@@ -266,7 +267,7 @@ export function ComandaDetailsDialog({
           <div className="space-y-2">
             <div className="flex items-center justify-between text-lg font-bold">
               <span>Total</span>
-              <span>R$ {comanda.subtotal.toFixed(2)}</span>
+              <span>{formatBRL(comanda.subtotal)}</span>
             </div>
           </div>
 
@@ -313,7 +314,7 @@ export function ComandaDetailsDialog({
             <AlertDialogTitle>Fechar Comanda?</AlertDialogTitle>
             <AlertDialogDescription>
               Ao fechar a comanda, ela será finalizada e não poderá mais receber
-              itens. O valor total é R$ {comanda.subtotal.toFixed(2)}.
+              itens. O valor total é {formatBRL(comanda.subtotal)}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

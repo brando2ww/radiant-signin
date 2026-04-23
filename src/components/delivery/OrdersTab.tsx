@@ -7,6 +7,7 @@ import { useDeliveryRealtimeOrders } from "@/hooks/use-delivery-notifications";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { NotificationsPanel } from "./NotificationsPanel";
+import { formatBRL } from "@/lib/format";
 
 export const OrdersTab = () => {
   const { data: stats } = useOrderStats();
@@ -67,7 +68,7 @@ export const OrdersTab = () => {
                   Receita Hoje
                 </p>
                 <p className="text-2xl font-bold">
-                  R$ {(stats?.todayRevenue || 0).toFixed(2)}
+                  {formatBRL(stats?.todayRevenue || 0)}
                 </p>
               </div>
             </div>

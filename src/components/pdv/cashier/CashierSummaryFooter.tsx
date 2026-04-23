@@ -1,5 +1,6 @@
 import { Banknote, CreditCard, Smartphone, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { formatBRL } from "@/lib/format";
 
 interface CashierSummaryFooterProps {
   openingBalance: number;
@@ -78,7 +79,7 @@ export function CashierSummaryFooter({
               </div>
               <p className="text-sm font-semibold text-foreground">
                 {item.prefix && item.value > 0 ? item.prefix : ""}
-                R$ {item.value.toFixed(2)}
+                {formatBRL(item.value)}
               </p>
             </CardContent>
           </Card>
@@ -89,7 +90,7 @@ export function CashierSummaryFooter({
           <CardContent className="p-2">
             <p className="text-xs text-muted-foreground mb-1">Total Vendas</p>
             <p className="text-base font-bold text-foreground">
-              R$ {totalSales.toFixed(2)}
+              {formatBRL(totalSales)}
             </p>
           </CardContent>
         </Card>
@@ -103,7 +104,7 @@ export function CashierSummaryFooter({
           <CardContent className="p-2">
             <p className="text-xs text-muted-foreground mb-1">Saldo Atual</p>
             <p className="text-lg font-bold text-foreground">
-              R$ {currentBalance.toFixed(2)}
+              {formatBRL(currentBalance)}
             </p>
           </CardContent>
         </Card>

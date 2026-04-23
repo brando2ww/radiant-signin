@@ -38,6 +38,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { formatBRL } from "@/lib/format";
 
 interface OrderDetailDialogProps {
   open: boolean;
@@ -180,8 +181,7 @@ export const OrderDetailDialog = ({
                                 {opt.price_adjustment !== 0 && (
                                   <span>
                                     {" "}
-                                    ({opt.price_adjustment > 0 ? "+" : ""}R${" "}
-                                    {Number(opt.price_adjustment).toFixed(2)})
+                                    ({opt.price_adjustment > 0 ? "+" : ""}{formatBRL(Number(opt.price_adjustment))})
                                   </span>
                                 )}
                               </div>
@@ -195,7 +195,7 @@ export const OrderDetailDialog = ({
                       )}
                     </div>
                     <p className="font-semibold">
-                      R$ {Number(item.subtotal).toFixed(2)}
+                      {formatBRL(Number(item.subtotal))}
                     </p>
                   </div>
                 ))}
@@ -213,12 +213,12 @@ export const OrderDetailDialog = ({
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span>R$ {Number(order.subtotal).toFixed(2)}</span>
+                  <span>{formatBRL(Number(order.subtotal))}</span>
                 </div>
                 {order.delivery_fee > 0 && (
                   <div className="flex justify-between">
                     <span>Taxa de entrega:</span>
-                    <span>R$ {Number(order.delivery_fee).toFixed(2)}</span>
+                    <span>{formatBRL(Number(order.delivery_fee))}</span>
                   </div>
                 )}
                 {order.discount > 0 && (
@@ -226,13 +226,13 @@ export const OrderDetailDialog = ({
                     <span>
                       Desconto {order.coupon_code && `(${order.coupon_code})`}:
                     </span>
-                    <span>-R$ {Number(order.discount).toFixed(2)}</span>
+                    <span>-{formatBRL(Number(order.discount))}</span>
                   </div>
                 )}
                 <Separator />
                 <div className="flex justify-between font-bold text-base">
                   <span>Total:</span>
-                  <span>R$ {Number(order.total).toFixed(2)}</span>
+                  <span>{formatBRL(Number(order.total))}</span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
                   <span>Forma de pagamento:</span>
@@ -241,7 +241,7 @@ export const OrderDetailDialog = ({
                 {order.change_for && (
                   <div className="flex justify-between text-muted-foreground">
                     <span>Troco para:</span>
-                    <span>R$ {Number(order.change_for).toFixed(2)}</span>
+                    <span>{formatBRL(Number(order.change_for))}</span>
                   </div>
                 )}
               </div>

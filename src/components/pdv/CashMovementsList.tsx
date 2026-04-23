@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ArrowDown, ArrowUp, DollarSign, CreditCard, Smartphone } from "lucide-react";
+import { formatBRL } from "@/lib/format";
 
 interface Movement {
   id: string;
@@ -98,8 +99,7 @@ export function CashMovementsList({ movements }: CashMovementsListProps) {
                       : "text-success"
                   }`}
                 >
-                  {movement.type === "sangria" ? "-" : "+"} R${" "}
-                  {movement.amount.toFixed(2)}
+                  {movement.type === "sangria" ? "-" : "+"} {formatBRL(movement.amount)}
                 </TableCell>
               </TableRow>
             );

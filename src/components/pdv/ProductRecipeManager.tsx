@@ -23,6 +23,7 @@ import { usePDVRecipes } from "@/hooks/use-pdv-recipes";
 import { usePDVIngredients } from "@/hooks/use-pdv-ingredients";
 import { Trash2, Plus, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatBRL } from "@/lib/format";
 
 interface ProductRecipeManagerProps {
   productId: string;
@@ -80,7 +81,7 @@ export function ProductRecipeManager({ productId, productPrice }: ProductRecipeM
             <CardDescription>CMV Total</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ {cmv.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatBRL(cmv)}</div>
           </CardContent>
         </Card>
         
@@ -89,7 +90,7 @@ export function ProductRecipeManager({ productId, productPrice }: ProductRecipeM
             <CardDescription>Preço de Venda</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ {productPrice.toFixed(2)}</div>
+            <div className="text-2xl font-bold">{formatBRL(productPrice)}</div>
           </CardContent>
         </Card>
         
@@ -232,10 +233,10 @@ export function ProductRecipeManager({ productId, productPrice }: ProductRecipeM
                         <Badge variant="outline">{recipe.ingredient_unit}</Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        R$ {recipe.ingredient_unit_cost.toFixed(2)}
+                        {formatBRL(recipe.ingredient_unit_cost)}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        R$ {recipe.total_cost.toFixed(2)}
+                        {formatBRL(recipe.total_cost)}
                       </TableCell>
                       <TableCell>
                         <Button
@@ -253,7 +254,7 @@ export function ProductRecipeManager({ productId, productPrice }: ProductRecipeM
                       CMV Total:
                     </TableCell>
                     <TableCell className="text-right">
-                      R$ {cmv.toFixed(2)}
+                      {formatBRL(cmv)}
                     </TableCell>
                     <TableCell></TableCell>
                   </TableRow>

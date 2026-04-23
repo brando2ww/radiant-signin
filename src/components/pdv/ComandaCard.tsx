@@ -19,6 +19,7 @@ import { ptBR } from "date-fns/locale";
 import { Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
 import { cn } from "@/lib/utils";
 import { deferMenuAction } from "@/lib/ui/defer-menu-action";
+import { formatBRL } from "@/lib/format";
 
 interface ComandaCardProps {
   comanda: Comanda;
@@ -138,7 +139,7 @@ export function ComandaCard({
 
           <div className="text-right">
             <div className="text-xl font-bold">
-              R$ {comanda.subtotal.toFixed(2)}
+              {formatBRL(comanda.subtotal)}
             </div>
           </div>
         </div>

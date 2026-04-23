@@ -11,6 +11,7 @@ import { LoyaltyBanner } from "@/components/public-menu/LoyaltyBanner";
 import { LoyaltyRedeemSheet } from "@/components/public-menu/LoyaltyRedeemSheet";
 import { useState } from "react";
 import { toast } from "sonner";
+import { formatBRL } from "@/lib/format";
 
 interface OrderConfirmationProps {
   userId: string;
@@ -77,7 +78,7 @@ export const OrderConfirmation = ({
     const discountValue = pointsToUse * Number(loyaltySettings.cashback_value_per_point);
     setLoyaltyDiscount(discountValue);
     setRedeemedPointsAmount(pointsToUse);
-    toast.success(`Cashback de R$ ${discountValue.toFixed(2)} aplicado!`);
+    toast.success(`Cashback de ${formatBRL(discountValue)} aplicado!`);
   };
 
   const handlePrizeRedeem = (prize: any) => {
@@ -217,7 +218,7 @@ export const OrderConfirmation = ({
             </p>
             {changeFor && (
               <p className="text-sm text-muted-foreground">
-                Troco para: R$ {changeFor.toFixed(2)}
+                Troco para: {formatBRL(changeFor)}
               </p>
             )}
           </div>
@@ -247,7 +248,7 @@ export const OrderConfirmation = ({
                     {item.quantity}x {item.name}
                   </span>
                   <span className="font-medium">
-                    R$ {(itemPrice * item.quantity).toFixed(2)}
+                    {formatBRL(itemPrice * item.quantity)}
                   </span>
                 </div>
                 {item.selectedOptions.length > 0 && (
@@ -256,7 +257,7 @@ export const OrderConfirmation = ({
                       <div key={i}>
                         • {opt.itemName}
                         {opt.priceAdjustment !== 0 &&
-                          ` (+R$ ${opt.priceAdjustment.toFixed(2)})`}
+                          ` (+${formatBRL(opt.priceAdjustment)})`}
                       </div>
                     ))}
                   </div>
@@ -277,30 +278,30 @@ export const OrderConfirmation = ({
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span>Subtotal:</span>
-            <span>R$ {subtotal.toFixed(2)}</span>
+            <span>{formatBRL(subtotal)}</span>
           </div>
           {orderType === "delivery" && (
             <div className="flex justify-between">
               <span>Taxa de entrega:</span>
-              <span>R$ {deliveryFee.toFixed(2)}</span>
+              <span>{formatBRL(deliveryFee)}</span>
             </div>
           )}
           {discount > 0 && (
             <div className="flex justify-between text-green-600">
               <span>Desconto {couponCode && `(${couponCode})`}:</span>
-              <span>-R$ {discount.toFixed(2)}</span>
+              <span>-{formatBRL(discount)}</span>
             </div>
           )}
           {loyaltyDiscount > 0 && (
             <div className="flex justify-between text-green-600">
               <span>Cashback (pontos):</span>
-              <span>-R$ {loyaltyDiscount.toFixed(2)}</span>
+              <span>-{formatBRL(loyaltyDiscount)}</span>
             </div>
           )}
           <Separator />
           <div className="flex justify-between text-lg font-bold">
             <span>Total:</span>
-            <span>R$ {Math.max(0, effectiveTotal).toFixed(2)}</span>
+            <span>{formatBRL(Math.max(0, effectiveTotal))}</span>
           </div>
         </div>
 

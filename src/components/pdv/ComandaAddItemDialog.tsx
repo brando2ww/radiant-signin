@@ -14,6 +14,7 @@ import { usePDVProducts, PDVProduct } from "@/hooks/use-pdv-products";
 import { usePDVProductOptionsForOrder } from "@/hooks/use-pdv-product-options";
 import { ProductOptionSelector, SelectedOption } from "./ProductOptionSelector";
 import { cn } from "@/lib/utils";
+import { formatBRL } from "@/lib/format";
 
 interface ComandaAddItemDialogProps {
   open: boolean;
@@ -168,7 +169,7 @@ export function ComandaAddItemDialog({
                           )}
                         </div>
                         <span className="font-bold">
-                          R$ {getProductPrice(product).toFixed(2)}
+                          {formatBRL(getProductPrice(product))}
                         </span>
                       </div>
                     </button>
@@ -187,7 +188,7 @@ export function ComandaAddItemDialog({
                   <p className="font-bold text-lg">{selectedProduct.name}</p>
                 </div>
                 <span className="font-bold text-lg">
-                  R$ {getProductPrice(selectedProduct).toFixed(2)}
+                  {formatBRL(getProductPrice(selectedProduct))}
                 </span>
               </div>
             </div>
@@ -218,7 +219,7 @@ export function ComandaAddItemDialog({
                   )}
                 </div>
                 <span className="font-bold text-lg">
-                  R$ {(getProductPrice(selectedProduct) + optionsExtra).toFixed(2)}
+                  {formatBRL(getProductPrice(selectedProduct) + optionsExtra)}
                 </span>
               </div>
               {selectedOptions.length > 0 && (
@@ -265,7 +266,7 @@ export function ComandaAddItemDialog({
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between text-lg font-bold">
                 <span>Total</span>
-                <span>R$ {((getProductPrice(selectedProduct) + optionsExtra) * quantity).toFixed(2)}</span>
+                <span>{formatBRL((getProductPrice(selectedProduct) + optionsExtra) * quantity)}</span>
               </div>
 
               <div className="flex gap-2">

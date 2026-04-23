@@ -1,5 +1,6 @@
 import { useSettings } from "./use-settings";
 import { toast } from "sonner";
+import { formatBRL } from "@/lib/format";
 
 export function useTransactionNotifications() {
   const { settings } = useSettings();
@@ -8,8 +9,8 @@ export function useTransactionNotifications() {
     if (settings?.notifications?.transactions?.new_income) {
       toast.success("💰 Nova receita registrada!", {
         description: description
-          ? `${description} - R$ ${amount.toFixed(2)}`
-          : `R$ ${amount.toFixed(2)}`,
+          ? `${description} - ${formatBRL(amount)}`
+          : `${formatBRL(amount)}`,
       });
     }
   };
@@ -18,8 +19,8 @@ export function useTransactionNotifications() {
     if (settings?.notifications?.transactions?.new_expense) {
       toast.info("💸 Nova despesa registrada!", {
         description: description
-          ? `${description} - R$ ${amount.toFixed(2)}`
-          : `R$ ${amount.toFixed(2)}`,
+          ? `${description} - ${formatBRL(amount)}`
+          : `${formatBRL(amount)}`,
       });
     }
   };

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatBRL } from "@/lib/format";
 
 interface PaymentMethodChartProps {
   data: Array<{
@@ -83,7 +84,7 @@ export function PaymentMethodChart({ data, isLoading }: PaymentMethodChartProps)
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: number) => `R$ ${value.toFixed(2)}`}
+              formatter={(value: number) => `${formatBRL(value)}`}
               contentStyle={{
                 backgroundColor: "hsl(var(--popover))",
                 border: "1px solid hsl(var(--border))",

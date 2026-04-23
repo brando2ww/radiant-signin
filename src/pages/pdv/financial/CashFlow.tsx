@@ -106,7 +106,7 @@ export default function CashFlow() {
               <BarChart data={data!.monthlyChart}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="month" className="text-xs" />
-                <YAxis tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} className="text-xs" />
+                <YAxis tickFormatter={(v) => `R$ ${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}k`} className="text-xs" />
                 <Tooltip
                   formatter={(value: number) => fmt(value)}
                   contentStyle={{ borderRadius: 8, border: "1px solid hsl(var(--border))" }}

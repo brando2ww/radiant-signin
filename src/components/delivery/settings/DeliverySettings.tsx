@@ -18,6 +18,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { ExcludedZones, ExcludedCEP } from "./ExcludedZones";
 import { NeighborhoodCombobox } from "./NeighborhoodCombobox";
 import { NeighborhoodSelectorModal } from "./NeighborhoodSelectorModal";
+import { formatBRL } from "@/lib/format";
 
 export const DeliverySettings = () => {
   const { data: settings } = useDeliverySettings();
@@ -233,7 +234,7 @@ export const DeliverySettings = () => {
                     <div>
                       <p className="font-medium">{zone.neighborhood}</p>
                       <p className="text-sm text-muted-foreground">
-                        R$ {Number(zone.fee).toFixed(2)}
+                        {formatBRL(Number(zone.fee))}
                       </p>
                     </div>
                     <Button

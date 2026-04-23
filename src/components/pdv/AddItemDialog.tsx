@@ -16,6 +16,7 @@ import { usePDVProductOptionsForOrder } from "@/hooks/use-pdv-product-options";
 import { ProductOptionSelector, SelectedOption } from "./ProductOptionSelector";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { formatBRL } from "@/lib/format";
 
 interface AddItemDialogProps {
   open: boolean;
@@ -163,7 +164,7 @@ export function AddItemDialog({
                       <p className="font-medium">{product.name}</p>
                       <Badge variant="outline">{product.category}</Badge>
                       <p className="text-lg font-bold">
-                        R$ {getPrice(product).toFixed(2)}
+                        {formatBRL(getPrice(product))}
                       </p>
                     </div>
                   </button>
@@ -178,7 +179,7 @@ export function AddItemDialog({
             <div className="p-4 rounded-lg border bg-muted/50">
               <p className="font-semibold text-lg">{selectedProduct.name}</p>
               <p className="text-lg font-bold mt-1">
-                R$ {getPrice(selectedProduct).toFixed(2)}
+                {formatBRL(getPrice(selectedProduct))}
               </p>
             </div>
             <ProductOptionSelector
@@ -203,7 +204,7 @@ export function AddItemDialog({
                 {selectedProduct.category}
               </p>
               <p className="text-lg font-bold mt-2">
-                R$ {(getPrice(selectedProduct) + optionsExtra).toFixed(2)}
+                {formatBRL(getPrice(selectedProduct) + optionsExtra)}
               </p>
               {selectedOptions.length > 0 && (
                 <div className="mt-2 text-sm text-muted-foreground">
@@ -262,7 +263,7 @@ export function AddItemDialog({
               <div className="flex items-center justify-between">
                 <span className="font-medium">Subtotal</span>
                 <span className="text-xl font-bold">
-                  R$ {((getPrice(selectedProduct) + optionsExtra) * quantity).toFixed(2)}
+                  {formatBRL((getPrice(selectedProduct) + optionsExtra) * quantity)}
                 </span>
               </div>
             </div>

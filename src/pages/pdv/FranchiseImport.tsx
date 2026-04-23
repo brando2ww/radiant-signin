@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { Package, Armchair, Truck, RefreshCw, GitBranch, Info, Loader2, Send, Building2 } from "lucide-react";
 import { useFranchiseImport } from "@/hooks/use-franchise-import";
 import { formatTableLabel } from "@/utils/formatTableNumber";
+import { formatBRL } from "@/lib/format";
 
 export default function FranchiseImport() {
   const {
@@ -173,7 +174,7 @@ export default function FranchiseImport() {
                       <p className="text-xs text-muted-foreground">{product.category}</p>
                     </div>
                     {product.price_balcao && (
-                      <span className="text-xs text-muted-foreground">R$ {Number(product.price_balcao).toFixed(2)}</span>
+                      <span className="text-xs text-muted-foreground">{formatBRL(Number(product.price_balcao))}</span>
                     )}
                   </label>
                 ))}
@@ -440,7 +441,7 @@ function ParentView({
                       <p className="text-xs text-muted-foreground">{product.category}</p>
                     </div>
                     {product.price_balcao && (
-                      <span className="text-xs text-muted-foreground">R$ {Number(product.price_balcao).toFixed(2)}</span>
+                      <span className="text-xs text-muted-foreground">{formatBRL(Number(product.price_balcao))}</span>
                     )}
                   </label>
                 ))}

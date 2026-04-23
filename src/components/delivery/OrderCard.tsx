@@ -7,6 +7,7 @@ import { useState } from "react";
 import { OrderDetailDialog } from "./OrderDetailDialog";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatBRL } from "@/lib/format";
 
 interface OrderCardProps {
   order: DeliveryOrder;
@@ -81,7 +82,7 @@ export const OrderCard = ({ order }: OrderCardProps) => {
 
           {/* Total */}
           <div className="flex items-center justify-between pt-2 border-t">
-            <p className="font-bold">R$ {Number(order.total).toFixed(2)}</p>
+            <p className="font-bold">{formatBRL(Number(order.total))}</p>
             <div className="flex gap-1">
               <Button
                 size="icon"

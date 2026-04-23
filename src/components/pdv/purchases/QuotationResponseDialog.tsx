@@ -30,6 +30,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { QuotationRequest, usePDVQuotations } from "@/hooks/use-pdv-quotations";
 import { usePDVSuppliers } from "@/hooks/use-pdv-suppliers";
 import { cn } from "@/lib/utils";
+import { formatBRL } from "@/lib/format";
 
 interface QuotationResponseDialogProps {
   open: boolean;
@@ -159,7 +160,7 @@ export function QuotationResponseDialog({
               />
               {selectedItem && unitPrice && (
                 <p className="text-sm text-muted-foreground">
-                  Total: R$ {totalPrice.toFixed(2)} ({selectedItem.quantity_needed}{" "}
+                  Total: {formatBRL(totalPrice)} ({selectedItem.quantity_needed}{" "}
                   {selectedItem.unit})
                 </p>
               )}

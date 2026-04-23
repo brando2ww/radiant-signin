@@ -23,6 +23,7 @@ import { useDeliveryRecipes } from "@/hooks/use-delivery-recipes";
 import { usePDVIngredients } from "@/hooks/use-pdv-ingredients";
 import { Trash2, Plus, AlertTriangle, TrendingUp, TrendingDown } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatBRL } from "@/lib/format";
 
 interface DeliveryRecipeManagerProps {
   productId: string;
@@ -66,11 +67,11 @@ export function DeliveryRecipeManager({ productId, productPrice }: DeliveryRecip
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="pb-3"><CardDescription>CMV Total</CardDescription></CardHeader>
-          <CardContent><div className="text-2xl font-bold">R$ {cmv.toFixed(2)}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold">{formatBRL(cmv)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3"><CardDescription>Preço de Venda</CardDescription></CardHeader>
-          <CardContent><div className="text-2xl font-bold">R$ {productPrice.toFixed(2)}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold">{formatBRL(productPrice)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-3"><CardDescription>Margem de Lucro</CardDescription></CardHeader>
@@ -182,8 +183,8 @@ export function DeliveryRecipeManager({ productId, productPrice }: DeliveryRecip
                         />
                       </TableCell>
                       <TableCell><Badge variant="outline">{recipe.ingredient_unit}</Badge></TableCell>
-                      <TableCell className="text-right">R$ {recipe.ingredient_unit_cost.toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-medium">R$ {recipe.total_cost.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{formatBRL(recipe.ingredient_unit_cost)}</TableCell>
+                      <TableCell className="text-right font-medium">{formatBRL(recipe.total_cost)}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" onClick={() => removeIngredient({ id: recipe.id, productId })}>
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -193,7 +194,7 @@ export function DeliveryRecipeManager({ productId, productPrice }: DeliveryRecip
                   ))}
                   <TableRow className="font-bold bg-muted/50">
                     <TableCell colSpan={4} className="text-right">CMV Total:</TableCell>
-                    <TableCell className="text-right">R$ {cmv.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{formatBRL(cmv)}</TableCell>
                     <TableCell></TableCell>
                   </TableRow>
                 </TableBody>

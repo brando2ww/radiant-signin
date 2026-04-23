@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePDVProducts } from "@/hooks/use-pdv-products";
+import { formatBRL } from "@/lib/format";
 
 export default function GarcomItemDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -76,7 +77,7 @@ export default function GarcomItemDetalhe() {
             <div key={p.label} className="rounded-lg border bg-card px-4 py-2">
               <p className="text-xs text-muted-foreground">{p.label}</p>
               <p className="text-base font-bold text-primary">
-                R$ {p.value.toFixed(2)}
+                {formatBRL(p.value)}
               </p>
             </div>
           ))}

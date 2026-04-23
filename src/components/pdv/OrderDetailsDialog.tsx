@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AddItemDialog } from "./AddItemDialog";
+import { formatBRL } from "@/lib/format";
 
 interface OrderDetailsDialogProps {
   open: boolean;
@@ -136,7 +137,7 @@ export function OrderDetailsDialog({
                           <p className="text-sm text-muted-foreground">{item.notes}</p>
                         )}
                         <p className="text-sm text-muted-foreground">
-                          R$ {item.unit_price.toFixed(2)} x {item.quantity}
+                          {formatBRL(item.unit_price)} x {item.quantity}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -172,7 +173,7 @@ export function OrderDetailsDialog({
                           </>
                         )}
                         <span className="font-bold w-20 text-right">
-                          R$ {item.subtotal.toFixed(2)}
+                          {formatBRL(item.subtotal)}
                         </span>
                       </div>
                     </div>
@@ -187,26 +188,26 @@ export function OrderDetailsDialog({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>R$ {order.subtotal.toFixed(2)}</span>
+                <span>{formatBRL(order.subtotal)}</span>
               </div>
               {order.service_fee > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Taxa de serviço</span>
-                  <span>R$ {order.service_fee.toFixed(2)}</span>
+                  <span>{formatBRL(order.service_fee)}</span>
                 </div>
               )}
               {order.discount > 0 && (
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Desconto</span>
                   <span className="text-destructive">
-                    - R$ {order.discount.toFixed(2)}
+                    - {formatBRL(order.discount)}
                   </span>
                 </div>
               )}
               <Separator />
               <div className="flex items-center justify-between text-lg font-bold">
                 <span>Total</span>
-                <span>R$ {order.total.toFixed(2)}</span>
+                <span>{formatBRL(order.total)}</span>
               </div>
             </div>
 

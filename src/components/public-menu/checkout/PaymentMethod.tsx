@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { usePublicSettings } from "@/hooks/use-public-menu";
 import { ChevronLeft, CreditCard, Smartphone } from "lucide-react";
+import { formatBRL } from "@/lib/format";
 
 interface PaymentMethodProps {
   userId: string;
@@ -84,7 +85,7 @@ export const PaymentMethod = ({ userId, total, onConfirm, onBack }: PaymentMetho
               min={total}
               value={changeFor}
               onChange={(e) => setChangeFor(e.target.value)}
-              placeholder={`R$ ${total.toFixed(2)}`}
+              placeholder={`${formatBRL(total)}`}
             />
             <p className="text-xs text-muted-foreground">
               Informe o valor caso precise de troco

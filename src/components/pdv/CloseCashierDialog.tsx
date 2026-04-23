@@ -24,6 +24,7 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatBRL } from "@/lib/format";
 
 export interface CashMovement {
   id: string;
@@ -154,7 +155,7 @@ export function printCashierReport(params: PrintCashierReportParams) {
       <td style="padding:2px 6px;font-size:11px">${time}</td>
       <td style="padding:2px 6px;font-size:11px">${typeLabel}</td>
       <td style="padding:2px 6px;font-size:11px">${method}</td>
-      <td style="padding:2px 6px;font-size:11px;text-align:right">R$ ${m.amount.toFixed(2)}</td>
+      <td style="padding:2px 6px;font-size:11px;text-align:right">${formatBRL(m.amount)}</td>
       <td style="padding:2px 6px;font-size:11px">${m.description || ""}</td>
     </tr>`;
   }).join("");
@@ -169,7 +170,7 @@ export function printCashierReport(params: PrintCashierReportParams) {
         <td style="padding:2px 6px;font-size:11px">${time}</td>
         <td style="padding:2px 6px;font-size:11px">${m.discount_reason || ""}</td>
         <td style="padding:2px 6px;font-size:11px">${m.discount_authorized_by || ""}</td>
-        <td style="padding:2px 6px;font-size:11px;text-align:right">R$ ${m.amount.toFixed(2)}</td>
+        <td style="padding:2px 6px;font-size:11px;text-align:right">${formatBRL(m.amount)}</td>
       </tr>`;
     }).join("");
     discountSection = `<div class="divider"></div>
@@ -204,18 +205,18 @@ export function printCashierReport(params: PrintCashierReportParams) {
 <div class="divider"></div>
 <div class="section">
   <div class="section-title">RESUMO FINANCEIRO</div>
-  <div class="row"><span>Saldo Inicial:</span><span>R$ ${openingBal.toFixed(2)}</span></div>
-  <div class="row"><span>Vendas Dinheiro:</span><span style="color:green">+ R$ ${totalCash.toFixed(2)}</span></div>
-  <div class="row"><span>Vendas Cartão:</span><span>R$ ${totalCard.toFixed(2)}</span></div>
-  <div class="row"><span>Vendas PIX:</span><span>R$ ${totalPix.toFixed(2)}</span></div>
-  <div class="row"><span>Reforços:</span><span style="color:green">+ R$ ${totalReinforcements.toFixed(2)}</span></div>
-  <div class="row"><span>Sangrias:</span><span style="color:red">- R$ ${totalWithdrawals.toFixed(2)}</span></div>
+  <div class="row"><span>Saldo Inicial:</span><span>${formatBRL(openingBal)}</span></div>
+  <div class="row"><span>Vendas Dinheiro:</span><span style="color:green">+ ${formatBRL(totalCash)}</span></div>
+  <div class="row"><span>Vendas Cartão:</span><span>${formatBRL(totalCard)}</span></div>
+  <div class="row"><span>Vendas PIX:</span><span>${formatBRL(totalPix)}</span></div>
+  <div class="row"><span>Reforços:</span><span style="color:green">+ ${formatBRL(totalReinforcements)}</span></div>
+  <div class="row"><span>Sangrias:</span><span style="color:red">- ${formatBRL(totalWithdrawals)}</span></div>
   <div class="divider"></div>
-  <div class="row total"><span>Saldo Esperado:</span><span>R$ ${expectedBalance.toFixed(2)}</span></div>
-  <div class="row total"><span>Saldo Informado:</span><span>R$ ${finalBalance.toFixed(2)}</span></div>
-  <div class="row total"><span>Diferença:</span><span style="color:${diff >= 0 ? 'green' : 'red'}">${diff >= 0 ? '+' : ''}R$ ${diff.toFixed(2)}</span></div>
+  <div class="row total"><span>Saldo Esperado:</span><span>${formatBRL(expectedBalance)}</span></div>
+  <div class="row total"><span>Saldo Informado:</span><span>${formatBRL(finalBalance)}</span></div>
+  <div class="row total"><span>Diferença:</span><span style="color:${diff >= 0 ? 'green' : 'red'}">${diff >= 0 ? '+' : ''}${formatBRL(diff)}</span></div>
   <div class="divider"></div>
-  <div class="row total"><span>Total de Vendas:</span><span>R$ ${totalSales.toFixed(2)}</span></div>
+  <div class="row total"><span>Total de Vendas:</span><span>${formatBRL(totalSales)}</span></div>
 </div>
 ${movements.length > 0 ? `
 <div class="divider"></div>
@@ -341,7 +342,7 @@ export function CloseCashierDialog({
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Saldo Inicial:</span>
                 <span className="font-medium">
-                  R$ {(session?.opening_balance || 0).toFixed(2)}
+                  {formatBRL(session?.opening_balance || 0)}
                 </span>
               </div>
               
@@ -350,28 +351,28 @@ export function CloseCashierDialog({
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Vendas em Dinheiro:</span>
                 <span className="font-medium text-green-600">
-                  + R$ {(session?.total_cash || 0).toFixed(2)}
+                  + {formatBRL(session?.total_cash || 0)}
                 </span>
               </div>
               
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Vendas em Cartão:</span>
                 <span className="font-medium text-muted-foreground">
-                  R$ {(session?.total_card || 0).toFixed(2)}
+                  {formatBRL(session?.total_card || 0)}
                 </span>
               </div>
               
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Vendas em PIX:</span>
                 <span className="font-medium text-muted-foreground">
-                  R$ {(session?.total_pix || 0).toFixed(2)}
+                  {formatBRL(session?.total_pix || 0)}
                 </span>
               </div>
               
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Sangrias:</span>
                 <span className="font-medium text-red-600">
-                  - R$ {(session?.total_withdrawals || 0).toFixed(2)}
+                  - {formatBRL(session?.total_withdrawals || 0)}
                 </span>
               </div>
               
@@ -379,7 +380,7 @@ export function CloseCashierDialog({
               
               <div className="flex justify-between font-semibold">
                 <span>Saldo Esperado:</span>
-                <span>R$ {expectedBalance.toFixed(2)}</span>
+                <span>{formatBRL(expectedBalance)}</span>
               </div>
               
               <Separator />
@@ -387,7 +388,7 @@ export function CloseCashierDialog({
               <div className="flex justify-between font-semibold">
                 <span>Total de Vendas:</span>
                 <span className="text-green-600">
-                  R$ {(session?.total_sales || 0).toFixed(2)}
+                  {formatBRL(session?.total_sales || 0)}
                 </span>
               </div>
             </CardContent>
@@ -415,7 +416,7 @@ export function CloseCashierDialog({
                         {riskConfig.label}
                       </span>
                       <span className={cn("font-mono font-bold", riskConfig.color)}>
-                        {difference >= 0 ? "+" : ""}R$ {difference.toFixed(2)}
+                        {difference >= 0 ? "+" : ""}{formatBRL(difference)}
                       </span>
                     </div>
                     <p className="text-sm text-muted-foreground">
@@ -423,7 +424,7 @@ export function CloseCashierDialog({
                     </p>
                     {riskLevel !== "ok" && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        {difference > 0 ? "Sobra" : "Falta"} de R$ {Math.abs(difference).toFixed(2)}
+                        {difference > 0 ? "Sobra" : "Falta"} de {formatBRL(Math.abs(difference))}
                       </p>
                     )}
                   </div>
@@ -504,7 +505,7 @@ export function CloseCashierDialog({
                       Fechamento Bloqueado
                     </p>
                     <p className="text-sm text-red-600">
-                      A divergência detectada (R$ {Math.abs(difference).toFixed(2)}) excede o limite permitido para fechamento automático.
+                      A divergência detectada ({formatBRL(Math.abs(difference))}) excede o limite permitido para fechamento automático.
                     </p>
                     <p className="text-sm text-red-600">
                       Por favor, recontagem o caixa ou contate um supervisor para autorização especial.

@@ -12,6 +12,7 @@ import { PDVOrder } from "@/hooks/use-pdv-orders";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { deferMenuAction } from "@/lib/ui/defer-menu-action";
+import { formatBRL } from "@/lib/format";
 
 interface OrderCardProps {
   order: PDVOrder;
@@ -102,7 +103,7 @@ export function OrderCard({ order, itemCount, onView, onClose, onCancel }: Order
             </div>
             <div className="flex items-center justify-between text-lg font-bold mt-1">
               <span>Total</span>
-              <span>R$ {order.total.toFixed(2)}</span>
+              <span>{formatBRL(order.total)}</span>
             </div>
           </div>
         </div>

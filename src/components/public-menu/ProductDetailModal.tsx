@@ -16,6 +16,7 @@ import { useState, useEffect } from "react";
 import { CartItem } from "@/pages/PublicMenu";
 import { toast } from "sonner";
 import { useMarketingTracking } from "@/hooks/use-marketing-tracking";
+import { formatBRL } from "@/lib/format";
 
 interface ProductDetailModalProps {
   open: boolean;
@@ -215,7 +216,7 @@ export const ProductDetailModal = ({
                         {item.price_adjustment !== 0 && (
                           <span className="text-sm text-muted-foreground">
                             {item.price_adjustment > 0 ? "+" : ""}
-                            R$ {Number(item.price_adjustment).toFixed(2)}
+                            {formatBRL(Number(item.price_adjustment))}
                           </span>
                         )}
                       </div>
@@ -242,7 +243,7 @@ export const ProductDetailModal = ({
                         {item.price_adjustment !== 0 && (
                           <span className="text-sm text-muted-foreground">
                             {item.price_adjustment > 0 ? "+" : ""}
-                            R$ {Number(item.price_adjustment).toFixed(2)}
+                            {formatBRL(Number(item.price_adjustment))}
                           </span>
                         )}
                       </div>
@@ -285,7 +286,7 @@ export const ProductDetailModal = ({
             </div>
 
             <Button onClick={handleAddToCart} size="lg">
-              Adicionar • R$ {calculateTotal().toFixed(2)}
+              Adicionar • {formatBRL(calculateTotal())}
             </Button>
           </div>
         </div>

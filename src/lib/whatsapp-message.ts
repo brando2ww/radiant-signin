@@ -1,3 +1,4 @@
+import { formatBRL } from "@/lib/format";
 // Utilitário para geração de links e mensagens WhatsApp
 
 interface QuotationItem {
@@ -96,10 +97,10 @@ export function generateOrderMessage(
   
   items.forEach((item) => {
     const total = item.quantity * item.unitPrice;
-    message += `• ${item.ingredientName}: ${item.quantity} ${item.unit} x R$ ${item.unitPrice.toFixed(2)} = R$ ${total.toFixed(2)}\n`;
+    message += `• ${item.ingredientName}: ${item.quantity} ${item.unit} x ${formatBRL(item.unitPrice)} = ${formatBRL(total)}\n`;
   });
   
-  message += `\n💰 *Total: R$ ${order.total.toFixed(2)}*\n`;
+  message += `\n💰 *Total: ${formatBRL(order.total)}*\n`;
   
   if (order.expectedDelivery) {
     const formattedDelivery = order.expectedDelivery.toLocaleDateString('pt-BR');
@@ -121,11 +122,8 @@ export function openWhatsApp(phone: string, message: string): void {
 }
 
 /**
- * Formata valor em reais
+ * Formata valor em reais (padrão BR).
+ * @deprecated Importe `formatBRL` (ou `formatCurrency`) de `@/lib/format`.
  */
-export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
-}
+export { formatBRL as formatCurrency } from "./format";
+

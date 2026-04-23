@@ -1,6 +1,7 @@
 import { useBusinessSettings, usePublicSettings } from "@/hooks/use-public-menu";
 import { Star, Clock, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { formatBRL } from "@/lib/format";
 
 interface PublicMenuHeaderProps {
   userId: string;
@@ -63,13 +64,13 @@ export const PublicMenuHeader = ({ userId }: PublicMenuHeaderProps) => {
               {deliverySettings?.default_delivery_fee !== undefined && (
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <MapPin className="h-4 w-4" />
-                  <span>Taxa: R$ {Number(deliverySettings.default_delivery_fee).toFixed(2)}</span>
+                  <span>Taxa: {formatBRL(Number(deliverySettings.default_delivery_fee))}</span>
                 </div>
               )}
               {deliverySettings?.min_order_value !== undefined &&
                 deliverySettings.min_order_value > 0 && (
                   <span className="text-muted-foreground">
-                    Pedido mín: R$ {Number(deliverySettings.min_order_value).toFixed(2)}
+                    Pedido mín: {formatBRL(Number(deliverySettings.min_order_value))}
                   </span>
                 )}
               {deliverySettings?.is_open ? (

@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { formatBRLCompact } from "@/lib/format";
 import type { PDVTableStatus } from "@/hooks/use-pdv-tables";
 
 interface MesaCardProps {
@@ -152,7 +153,7 @@ export function MesaCard({
               </span>
               {isOccupied && orderTotal !== undefined && orderTotal > 0 && (
                 <span className={cn("text-xs font-medium", statusConfig.textColor)}>
-                  R$ {orderTotal.toFixed(0)}
+                  {formatBRLCompact(orderTotal)}
                 </span>
               )}
               {isOccupied && orderTime && (
