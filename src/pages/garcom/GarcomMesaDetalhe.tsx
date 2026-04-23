@@ -62,9 +62,6 @@ export default function GarcomMesaDetalhe() {
     }
     ensuringRef.current = true;
     setOpening(true);
-    if (names.length >= 2) {
-      justCreatedMultipleRef.current = true;
-    }
     try {
       let orderId = table.current_order_id;
 
