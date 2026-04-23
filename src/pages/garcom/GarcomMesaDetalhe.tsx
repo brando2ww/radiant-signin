@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, UserPlus, Send } from "lucide-react";
+import { ArrowLeft, UserPlus, Send, Plus, X } from "lucide-react";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
@@ -56,24 +56,31 @@ export default function GarcomMesaDetalhe() {
   const [splitOpen, setSplitOpen] = useState(false);
   const [splitName, setSplitName] = useState("");
   const [opening, setOpening] = useState(false);
+  const [comandaNames, setComandaNames] = useState<string[]>([""]);
   const ensuringRef = useRef(false);
 
-  const hasDefaultComanda = tableComandas.some((c) => !c.customer_name);
+  const hasOpenComandas = tableComandas.length > 0;
 
-  // Se já existe pelo menos uma comanda padrão, redireciona direto pra ela
-  // (continuação de atendimento, sem confirmação).
+  // Se já existe alguma comanda aberta, e há exatamente UMA, redireciona direto.
+  // (continuação de atendimento de mesa pré-existente)
   useEffect(() => {
     if (loadingTables || loadingComandas) return;
     if (!table) return;
     if (splitOpen) return;
+    if (opening) return;
     if (tableComandas.length === 1) {
       navigate(`/garcom/comanda/${tableComandas[0].id}`, { replace: true });
     }
-  }, [tableComandas, loadingTables, loadingComandas, table, splitOpen, navigate]);
+  }, [tableComandas, loadingTables, loadingComandas, table, splitOpen, opening, navigate]);
 
   const handleConfirmOpen = async () => {
     if (!table) return;
     if (ensuringRef.current) return;
+    const names = comandaNames.map((n) => n.trim()).filter(Boolean);
+    if (names.length === 0) {
+      toast.error("Informe ao menos um nome de comanda");
+      return;
+    }
     ensuringRef.current = true;
     setOpening(true);
     try {
@@ -112,7 +119,6 @@ export default function GarcomMesaDetalhe() {
         table.status !== "ocupada" ||
         table.current_order_id !== orderId
       ) {
-        // Fire-and-forget
         updateTable({
           id: table.id,
           updates: { status: "ocupada", current_order_id: orderId },
@@ -120,8 +126,20 @@ export default function GarcomMesaDetalhe() {
       }
       queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
 
-      const comanda = await createComanda({ orderId });
-      navigate(`/garcom/comanda/${comanda.id}`, { replace: true });
+      const created = [];
+      for (const name of names) {
+        const c = await createComanda({ orderId, customerName: name });
+        created.push(c);
+      }
+
+      setComandaNames([""]);
+      ensuringRef.current = false;
+      setOpening(false);
+
+      if (created.length === 1) {
+        navigate(`/garcom/comanda/${created[0].id}`, { replace: true });
+      }
+      // Se 2+, fica na tela da mesa mostrando a lista (já vai re-renderizar).
     } catch {
       ensuringRef.current = false;
       setOpening(false);
@@ -131,6 +149,20 @@ export default function GarcomMesaDetalhe() {
   const handleCancelOpen = () => {
     navigate(-1);
   };
+
+  const updateName = (index: number, value: string) => {
+    setComandaNames((prev) => prev.map((n, i) => (i === index ? value : n)));
+  };
+
+  const addNameField = () => {
+    setComandaNames((prev) => (prev.length >= 10 ? prev : [...prev, ""]));
+  };
+
+  const removeNameField = (index: number) => {
+    setComandaNames((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const allNamesFilled = comandaNames.every((n) => n.trim().length > 0);
 
   const handleCreateNominal = async () => {
     const name = splitName.trim();
