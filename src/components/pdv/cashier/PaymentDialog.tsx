@@ -156,7 +156,7 @@ export function PaymentDialog({
     addItem,
     isAddingItem,
   } = usePDVComandas();
-  const { products: productsList } = usePDVProducts() as any;
+  const { products: productsList } = usePDVProducts();
   const { emitNFCe, isEmitting } = useNFCeEmission();
   const { settings } = usePDVSettings();
 
