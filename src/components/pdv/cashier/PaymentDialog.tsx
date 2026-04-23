@@ -40,12 +40,31 @@ import {
   FileText,
   Printer,
   AlertTriangle,
+  Trash2,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Comanda, ComandaItem, usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { PDVTable } from "@/hooks/use-pdv-tables";
 import { usePDVPayments, PaymentMethod } from "@/hooks/use-pdv-payments";
+import { usePDVProducts } from "@/hooks/use-pdv-products";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNFCeEmission } from "@/hooks/use-nfce-emission";
 import { usePDVSettings } from "@/hooks/use-pdv-settings";
