@@ -1,36 +1,35 @@
 
 
-## Mover a pílula para a esquerda para liberar espaço ao FAB
+## Encostar a pílula à esquerda da tela
 
-Hoje a pílula do `BottomTabBar` está centralizada (`left-1/2 -translate-x-1/2`) e o FAB no canto direito acaba sendo cortado/encavalado pela borda da tela em viewports estreitos.
+A pílula ainda fica visualmente "no meio" porque está com `flex justify-center` num espaço com margens iguais dos dois lados. O FAB então parece encavalar a borda direita. Vou ancorar a pílula de fato à esquerda e reservar mais espaço seguro à direita para o FAB.
 
 ### Mudança
 
-Arquivo: `src/components/garcom/BottomTabBar.tsx`
+**`src/components/garcom/BottomTabBar.tsx`**
 
-- Trocar o posicionamento da `<nav>` de centralizado para ancorado à esquerda, com a mesma margem que o FAB tem da borda direita.
-- De: `fixed left-1/2 -translate-x-1/2 z-50`
-- Para: `fixed left-4 right-[5.5rem] z-50 flex justify-center`
-  - `right-[5.5rem]` reserva ~88px para o FAB (h-14 = 56px + `right-4` = 16px + folga de 16px).
-  - `flex justify-center` mantém a pílula centrada dentro do espaço restante (visualmente equilibrada à esquerda do FAB).
-- A pílula em si (div interna com `rounded-full`) continua se ajustando ao conteúdo (`inline-flex` por padrão via `flex items-center`), então não vira uma barra esticada.
+Trocar a `<nav>`:
+- De: `fixed left-[5.5rem] right-[5.5rem] z-50 flex justify-center pointer-events-none`
+- Para: `fixed left-3 right-20 z-50 flex justify-start pointer-events-none`
+  - `left-3` (12px) cola a pílula à esquerda da tela.
+  - `right-20` (80px) reserva folga para o FAB (56px + `right-4` 16px + 8px de respiro).
+  - `justify-start` posiciona a pílula no início, não mais centralizada.
+
+**`src/components/garcom/GarcomActionFab.tsx`**
+
+- Subir o z-index do container do FAB de `z-40` para `z-50`, garantindo que ele sempre fique por cima caso o usuário gire o aparelho ou redimensione.
 
 ### Resultado
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│                                                         │
-│        ┌──────────────────────────────┐    ┌────┐       │
-│        │ Mesas Comandas + Itens Coz.  │    │FAB │       │
-│        └──────────────────────────────┘    └────┘       │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│                                              │
+│ ┌──────────────────────────────┐    ┌────┐   │
+│ │ Mesas Comandas + Itens Coz.  │    │FAB │   │
+│ └──────────────────────────────┘    └────┘   │
+└──────────────────────────────────────────────┘
+   ↑ encostada à esquerda          ↑ aparece inteiro
 ```
 
-A pílula desloca um pouco para a esquerda em telas estreitas, e o FAB aparece inteiro à direita, sem sobreposição.
-
-### Validação
-
-- Em mobile estreito (375px) o FAB aparece completo, sem encostar na pílula.
-- Em telas largas, a pílula continua visualmente centrada (porque o espaço lateral à esquerda equilibra o reservado ao FAB à direita — para perfeição absoluta podemos usar `left-[5.5rem] right-[5.5rem]` para simetria; manter assim).
-- Revisão final: usar `left-[5.5rem] right-[5.5rem] flex justify-center` para a pílula ficar perfeitamente centrada entre as duas margens iguais.
+A pílula fica bem à esquerda, o FAB fica completo no canto direito, e nenhum dos dois encosta no outro mesmo em telas estreitas.
 
