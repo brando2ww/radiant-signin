@@ -243,6 +243,17 @@ export function usePDVComandas() {
       unitPrice: number;
       notes?: string;
     }) => {
+      // Bloqueia adicionar item em comanda que já foi enviada para o caixa
+      const { data: existing, error: fetchErr } = await supabase
+        .from("pdv_comandas")
+        .select("status")
+        .eq("id", data.comandaId)
+        .maybeSingle();
+      if (fetchErr) throw fetchErr;
+      if (existing && existing.status !== "aberta") {
+        throw new Error("Esta comanda já foi fechada e enviada para o caixa");
+      }
+
       const subtotal = data.quantity * data.unitPrice;
       const ownerId = visibleUserId || user?.id;
       const production_center_id = ownerId
