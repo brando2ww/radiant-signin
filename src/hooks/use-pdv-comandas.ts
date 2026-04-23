@@ -652,6 +652,7 @@ export function usePDVComandas() {
     // Pending states
     isCreating: createComandaMutation.isPending,
     isAddingItem: addItemMutation.isPending,
+    isRemovingItem: removeItemMutation.isPending,
 
     // Helpers
     getItemsByComanda,
