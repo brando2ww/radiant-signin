@@ -94,7 +94,7 @@ export function ChargeSelectionDialog({
   onCancelComanda,
   onCancelTable,
 }: ChargeSelectionDialogProps) {
-  const [tab, setTab] = useState<"pendentes" | "comandas" | "mesas">("pendentes");
+  const [tab, setTab] = useState<"comandas" | "mesas">("comandas");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("time");
   const [cancelTarget, setCancelTarget] = useState<{ type: "comanda" | "table"; id: string; orderId?: string; label: string } | null>(null);
