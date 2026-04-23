@@ -1,33 +1,65 @@
 
 
-## Habilitar arrastar com mouse/touch nas categorias do garçom
+## Aplicar o visual das mesas do PDV (Salão) na tela de mesas do garçom
 
-A barra de categorias na tela `/garcom/itens` rola via `overflow-x-auto`, mas com a scrollbar oculta e sem suporte a arrastar com o mouse, no desktop fica praticamente impossível navegar entre categorias. Touch funciona, mas mouse não.
+Hoje as mesas em `/garcom` aparecem como botões coloridos retangulares. Vou trocar por um card no **mesmo padrão visual do Salão do PDV**: card branco com borda do setor, etiqueta de setor no topo, ponto de status no canto, ilustração da mesa com cadeiras ao redor e label "X lugares" embaixo — como no print que você enviou.
 
-### Mudança
+### Mudanças
 
-**`src/components/garcom/ProductCategoryNav.tsx`**
+**1. `src/components/garcom/MesaCard.tsx` — substituir o card atual**
 
-Adicionar interação de **drag-to-scroll** no container horizontal:
+Reescrever para reproduzir o `TableCard.tsx` do PDV, simplificado para mobile:
 
-1. Capturar `pointerdown` para registrar posição inicial e `scrollLeft`.
-2. Em `pointermove` (com botão pressionado), atualizar `scrollLeft` proporcional ao deslocamento do ponteiro.
-3. Em `pointerup` / `pointerleave`, encerrar o arrasto.
-4. Se o usuário arrastou mais que ~4px, bloquear o `click` subsequente nos chips (via `onClickCapture`) para não disparar seleção de categoria acidental ao final do arrasto.
-5. Adicionar suporte a `wheel`: se a roda vertical do mouse for usada sobre a faixa, converter em scroll horizontal.
-6. Cursor: `cursor-grab` no estado normal, `cursor-grabbing` durante o arrasto. Adicionar `select-none` para não selecionar texto enquanto arrasta.
+- Card branco (`bg-card`) com sombra suave, cantos arredondados.
+- Borda colorida (2px) com a cor do setor; etiqueta com o nome do setor flutuante no topo-esquerdo.
+- Ponto de status (verde/laranja/vermelho/etc) no canto superior direito.
+- Ilustração central da mesa: forma `square` (retângulo arredondado) ou `round` (círculo), com cadeirinhas posicionadas em cima/embaixo/lados conforme a capacidade — usando o mesmo helper `getChairLayout` do `TableCard`.
+- Dentro da mesa: label `M{numero}` em destaque; quando ocupada, exibe também `R$ total`, tempo e contagem de comandas (se vier).
+- Embaixo, label `{capacity} lugares` em texto suave.
+- Cores de mesa/cadeiras por status seguem a paleta do Salão do PDV (livre = muted, ocupada = laranja, conta = vermelho, pagamento = roxo, etc).
 
-### Comportamento resultante
+Aceitar novos props opcionais para enriquecer o visual:
+- `shape?: "square" | "round"`
+- `sectorColor?: string`
+- `sectorName?: string`
+- `orderTotal?: number`
+- `orderTime?: string`
+- `comandaCount?: number`
 
-- **Desktop**: clique-segure-arraste lateralmente para rolar entre Todos / A la carte / Bebidas / Drinks. Roda do mouse vertical também rola lateralmente.
-- **Mobile**: arrasto com dedo continua funcionando (já funcionava nativamente).
-- Clique simples num chip continua selecionando a categoria.
-- Scrollbar permanece oculta (já está globalmente em `index.css`).
+**2. `src/pages/garcom/GarcomMesas.tsx` — passar setor + dados de pedido**
+
+- Carregar setores do `usePDVSectors()` e pedidos ativos do `usePDVOrders()` (já usados no PDV).
+- Para cada mesa, resolver `sectorColor`/`sectorName` pelo `sector_id` e calcular `orderTotal` / `orderTime` do pedido ativo associado.
+- Aumentar a altura mínima dos cards (mesas com cadeiras precisam de ~150px) e ajustar o grid para `grid-cols-2` em mobile (ficou apertado em 3 colunas com cadeiras visíveis); manter `grid-cols-3` em telas maiores via `sm:grid-cols-3`.
+- Skeleton com nova altura.
+
+### Resultado visual
+
+```text
+┌────────────────────┐  ┌────────────────────┐
+│ ▮ SALÃO PRINCIPAL  │  │ ▮ SALÃO PRINCIPAL  │
+│                  ● │  │                  ● │
+│   ▭ ▭              │  │     ▭ ▭            │
+│ ▯ ░░░░░ ▯          │  │   ░░░░░░░          │
+│ ▯  M2  ▯           │  │   ░ M4  ░          │
+│ ▯ ░░░░░ ▯          │  │   ░░░░░░░          │
+│   ▭ ▭              │  │     ▭ ▭            │
+│   12 lugares       │  │   8 lugares        │
+└────────────────────┘  └────────────────────┘
+```
+
+Mesmo desenho de mesa + cadeiras + badge de setor + status dot que aparece no PDV (Salão), idêntico ao print de referência.
+
+### Escopo
+
+- Afeta somente a tela `/garcom` (lista de mesas do garçom).
+- Não muda o comportamento de navegação (clique continua abrindo `/garcom/mesa/:id`).
+- Não altera o Salão do PDV nem o mapa.
 
 ### Validação
 
-- Em `/garcom/itens` no desktop: clicar e arrastar a faixa de categorias rola horizontalmente.
-- Soltar sobre um chip após arrastar **não** seleciona ele (evita falso clique).
-- Clique curto sobre "Bebidas" muda a categoria normalmente.
-- Em 390×844 (mobile), o swipe de toque continua rolando.
+- Em 390×844, abrir `/garcom`: cards aparecem com mesa desenhada, cadeiras ao redor, badge "SALÃO PRINCIPAL" no topo, ponto verde quando livre, label "X lugares" embaixo.
+- Mesa ocupada: cor da mesa muda, ponto fica laranja/vermelho conforme status, valor da comanda e tempo aparecem dentro da forma da mesa.
+- Mesa redonda (`shape: round`): forma circular com cadeiras distribuídas em volta.
+- Tocar no card continua navegando para `/garcom/mesa/:id`.
 
