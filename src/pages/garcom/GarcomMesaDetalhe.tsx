@@ -144,12 +144,10 @@ export default function GarcomMesaDetalhe() {
       if (created.length === 1) {
         navigate(`/garcom/comanda/${created[0].id}`, { replace: true });
       }
-      // Se 2+, fica na tela da mesa mostrando a lista (justCreatedMultipleRef
-      // continua true, então o auto-redirect não dispara).
+      // Se 2+, fica na tela da mesa mostrando a lista de comandas.
     } catch {
       ensuringRef.current = false;
       setOpening(false);
-      justCreatedMultipleRef.current = false;
     }
   };
 
