@@ -1,31 +1,36 @@
 
 
-## Mover FAB para o lado do bottom menu
+## Mover a pílula para a esquerda para liberar espaço ao FAB
 
-Hoje o `GarcomActionFab` está flutuando bem acima da pílula de navegação (a ~5rem do rodapé). A ideia é trazê-lo para baixo, alinhado à mesma linha horizontal da pílula flutuante, mas no canto direito da tela.
+Hoje a pílula do `BottomTabBar` está centralizada (`left-1/2 -translate-x-1/2`) e o FAB no canto direito acaba sendo cortado/encavalado pela borda da tela em viewports estreitos.
 
 ### Mudança
 
-Arquivo: `src/components/garcom/GarcomActionFab.tsx`
+Arquivo: `src/components/garcom/BottomTabBar.tsx`
 
-- Trocar a posição vertical do container do FAB de `bottom-[calc(5rem+env(safe-area-inset-bottom))]` para `bottom: calc(1.25rem + env(safe-area-inset-bottom))`.
-  - Isso faz o centro do FAB (h-14 = 56px) coincidir com o centro da pílula do `BottomTabBar` (que está em `bottom: 1rem` e tem ~64px de altura útil).
-- Manter `right-4` (canto direito) e `z-40`.
-- O menu expandido continua subindo a partir do FAB (mini FABs empilhados verticalmente), sem colidir com a pílula porque ela é central e o FAB fica na lateral direita.
+- Trocar o posicionamento da `<nav>` de centralizado para ancorado à esquerda, com a mesma margem que o FAB tem da borda direita.
+- De: `fixed left-1/2 -translate-x-1/2 z-50`
+- Para: `fixed left-4 right-[5.5rem] z-50 flex justify-center`
+  - `right-[5.5rem]` reserva ~88px para o FAB (h-14 = 56px + `right-4` = 16px + folga de 16px).
+  - `flex justify-center` mantém a pílula centrada dentro do espaço restante (visualmente equilibrada à esquerda do FAB).
+- A pílula em si (div interna com `rounded-full`) continua se ajustando ao conteúdo (`inline-flex` por padrão via `flex items-center`), então não vira uma barra esticada.
 
-### Resultado visual
+### Resultado
 
 ```text
-                                                     ┌──────┐
-   ┌──────────────────────────────────┐              │ FAB  │
-   │  Mesas  Comandas  +  Itens  ...  │              │  ⋯   │
-   └──────────────────────────────────┘              └──────┘
-   (pílula flutuante centralizada)              (mesma altura, à direita)
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│        ┌──────────────────────────────┐    ┌────┐       │
+│        │ Mesas Comandas + Itens Coz.  │    │FAB │       │
+│        └──────────────────────────────┘    └────┘       │
+└─────────────────────────────────────────────────────────┘
 ```
+
+A pílula desloca um pouco para a esquerda em telas estreitas, e o FAB aparece inteiro à direita, sem sobreposição.
 
 ### Validação
 
-- Em mobile e desktop, o botão circular do FAB aparece na mesma faixa horizontal da pílula, encostado à direita.
-- Ao tocar, o menu de ações (Tema, Gerente, Sair) ainda expande para cima, sem sobrepor a pílula.
-- Safe-area do iPhone preservada.
+- Em mobile estreito (375px) o FAB aparece completo, sem encostar na pílula.
+- Em telas largas, a pílula continua visualmente centrada (porque o espaço lateral à esquerda equilibra o reservado ao FAB à direita — para perfeição absoluta podemos usar `left-[5.5rem] right-[5.5rem]` para simetria; manter assim).
+- Revisão final: usar `left-[5.5rem] right-[5.5rem] flex justify-center` para a pílula ficar perfeitamente centrada entre as duas margens iguais.
 
