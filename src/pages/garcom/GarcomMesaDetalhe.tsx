@@ -202,8 +202,8 @@ export default function GarcomMesaDetalhe() {
   }
 
   const blockedNoCashier = !activeSession && !isLoadingSession;
-  const showConfirmDialog =
-    !hasDefaultComanda && !blockedNoCashier && !opening && !!activeSession;
+  const showOpenDialog =
+    !hasOpenComandas && !blockedNoCashier && !opening && !!activeSession;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -311,31 +311,80 @@ export default function GarcomMesaDetalhe() {
               className="w-full active:scale-95"
             >
               <UserPlus className="h-4 w-4 mr-2" />
-              Dividir em comanda nominal
+              Nova comanda
             </Button>
           </>
         )}
       </div>
 
-      {/* Confirmação de abertura de mesa livre */}
-      <AlertDialog open={showConfirmDialog}>
-        <AlertDialogContent className="max-w-[min(22rem,calc(100vw-2rem))] rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Abrir Mesa {table.table_number}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Isso vai iniciar uma nova comanda nesta mesa.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelOpen}>
+      {/* Abertura de mesa livre — pede nome(s) da(s) comanda(s) */}
+      <Dialog open={showOpenDialog}>
+        <DialogContent className="max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Abrir Mesa {table.table_number}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Informe o nome de cada comanda. Você pode abrir várias comandas na mesma mesa.
+            </p>
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+              {comandaNames.map((name, index) => (
+                <div key={index} className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Comanda {index + 1}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      autoFocus={index === comandaNames.length - 1}
+                      value={name}
+                      onChange={(e) => updateName(index, e.target.value)}
+                      placeholder="Ex: João, Casal, Mesa frente..."
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && allNamesFilled) {
+                          e.preventDefault();
+                          handleConfirmOpen();
+                        }
+                      }}
+                    />
+                    {comandaNames.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeNameField(index)}
+                        className="h-9 w-9 flex items-center justify-center rounded-md border text-muted-foreground active:scale-95"
+                        aria-label="Remover comanda"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addNameField}
+              disabled={comandaNames.length >= 10}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar comanda
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelOpen}>
               Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmOpen} disabled={opening}>
+            </Button>
+            <Button
+              onClick={handleConfirmOpen}
+              disabled={opening || !allNamesFilled}
+            >
               Abrir mesa
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={splitOpen} onOpenChange={setSplitOpen}>
         <DialogContent>
