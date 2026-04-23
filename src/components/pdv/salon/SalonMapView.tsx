@@ -123,7 +123,7 @@ export function SalonMapView({
       if (!mergeSourceTable) {
         // First table selected
         setMergeSourceTable(table);
-        toast.info(`Mesa M${table.table_number} selecionada. Shift+Click em outra mesa quadrada para unir.`);
+        toast.info(`Mesa ${String(table.table_number).replace(/^mesa\s*/i, "")} selecionada. Shift+Click em outra mesa quadrada para unir.`);
       } else if (mergeSourceTable.id !== table.id) {
         // Second table - perform merge
         onMergeTables(mergeSourceTable.id, table.id);

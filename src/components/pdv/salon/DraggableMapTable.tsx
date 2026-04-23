@@ -3,6 +3,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { PDVTable } from "@/hooks/use-pdv-tables";
 import { cn } from "@/lib/utils";
 import { formatBRLCompact } from "@/lib/format";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 
 interface DraggableMapTableProps {
   table: PDVTable;
@@ -141,10 +142,10 @@ export function DraggableMapTable({
   };
 
   const getTableLabel = () => {
-    if (isMerged) {
-      return `M${table.table_number}+${mergedTable.table_number}`;
+    if (isMerged && mergedTable) {
+      return `${formatTableLabel(table.table_number)} + ${formatTableLabel(mergedTable.table_number)}`;
     }
-    return `M${table.table_number}`;
+    return formatTableLabel(table.table_number);
   };
 
   return (
