@@ -93,7 +93,7 @@ export function GarcomActionFab() {
 
       <div
         className={cn(
-          "fixed right-4 z-50 flex flex-col items-end gap-3",
+          "fixed right-4 z-50 flex flex-col items-end gap-3 pointer-events-none",
         )}
         style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
       >
@@ -103,7 +103,7 @@ export function GarcomActionFab() {
             "flex flex-col items-end gap-3 transition-all duration-200",
             open
               ? "pointer-events-auto opacity-100 translate-y-0"
-              : "pointer-events-none opacity-0 translate-y-2",
+              : "pointer-events-none opacity-0 translate-y-2 invisible h-0 overflow-hidden",
           )}
         >
           {actions.map((action, index) => {
@@ -151,7 +151,7 @@ export function GarcomActionFab() {
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Fechar ações" : "Abrir ações"}
           aria-expanded={open}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-transform"
+          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-transform"
         >
           {open ? (
             <X className="h-5 w-5" />
