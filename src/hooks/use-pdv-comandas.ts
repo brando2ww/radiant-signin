@@ -181,51 +181,30 @@ export function usePDVComandas() {
     },
   });
 
-  // Close comanda — também libera a mesa se for a última comanda aberta da order
+  // Close comanda — envia para a fila de cobrança do caixa.
+  // A mesa NÃO é liberada aqui: isso só acontece depois do pagamento.
   const closeComandaMutation = useMutation({
     mutationFn: async (id: string) => {
       const { data, error } = await supabase
         .from("pdv_comandas")
-        .update({ status: "fechada", updated_at: new Date().toISOString() })
+        .update({
+          status: "aguardando_pagamento",
+          closed_by_waiter_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", id)
+        .eq("status", "aberta")
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      const closed = data as Comanda;
-
-      // Se a comanda pertencia a uma order de mesa, verificar se foi a última
-      if (closed.order_id) {
-        const { count } = await supabase
-          .from("pdv_comandas")
-          .select("*", { count: "exact", head: true })
-          .eq("order_id", closed.order_id)
-          .eq("status", "aberta");
-
-        if ((count ?? 0) === 0) {
-          // Fecha a order e libera a mesa associada
-          await supabase
-            .from("pdv_orders")
-            .update({ status: "fechada", updated_at: new Date().toISOString() })
-            .eq("id", closed.order_id);
-
-          await supabase
-            .from("pdv_tables")
-            .update({
-              status: "livre",
-              current_order_id: null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("current_order_id", closed.order_id);
-        }
-      }
-
-      return closed;
+      if (!data) throw new Error("Comanda não pôde ser fechada (já foi enviada ao caixa ou cancelada).");
+      return data as Comanda;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pdv-comandas"] });
       queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
-      toast.success("Comanda fechada!");
+      toast.success("Comanda enviada para o caixa");
     },
     onError: (error) => {
       toast.error("Erro ao fechar comanda: " + error.message);
