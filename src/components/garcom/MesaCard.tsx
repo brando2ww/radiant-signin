@@ -147,8 +147,8 @@ export function MesaCard({
                 capacity <= 4 ? "w-20 h-20" : "w-24 h-20"
               )}
             >
-              <span className={cn("text-lg font-bold", statusConfig.textColor)}>
-                M{tableNumber}
+              <span className={cn("text-base font-bold text-center px-1 leading-tight", statusConfig.textColor)}>
+                {tableNumber}
               </span>
               {isOccupied && orderTotal !== undefined && orderTotal > 0 && (
                 <span className={cn("text-xs font-medium", statusConfig.textColor)}>
