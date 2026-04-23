@@ -907,9 +907,15 @@ onClick={() => {
                 <Separator className="my-2" />
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-lg">TOTAL</span>
-                  <span className="font-bold text-2xl text-primary">
+                  <motion.span
+                    key={total}
+                    initial={{ opacity: 0.4 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.25 }}
+                    className="font-bold text-2xl text-primary"
+                  >
                     {formatCurrency(total)}
-                  </span>
+                  </motion.span>
                 </div>
               </CardContent>
             </Card>
