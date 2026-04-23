@@ -76,7 +76,7 @@ export function StandaloneComandaCard({ comanda, onClick, index = 0 }: Standalon
           {/* Valor */}
           <div className="pt-1 border-t">
             <span className="text-lg font-bold text-card-foreground">
-              R$ {comanda.subtotal.toFixed(2).replace(".", ",")}
+              {formatBRL(comanda.subtotal)}
             </span>
           </div>
         </div>
