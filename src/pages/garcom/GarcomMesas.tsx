@@ -7,6 +7,7 @@ import { usePDVOrders } from "@/hooks/use-pdv-orders";
 import { useEstablishmentId } from "@/hooks/use-establishment-id";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 
 interface SectorLite {
   id: string;
@@ -73,7 +74,7 @@ export default function GarcomMesas() {
               return (
                 <MesaCard
                   key={table.id}
-                  tableNumber={table.table_number}
+                  tableNumber={formatTableLabel(table.table_number)}
                   status={table.status}
                   capacity={table.capacity}
                   shape={table.shape}
