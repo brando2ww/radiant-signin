@@ -94,7 +94,7 @@ export function ChargeSelectionDialog({
   onCancelComanda,
   onCancelTable,
 }: ChargeSelectionDialogProps) {
-  const [tab, setTab] = useState<"pendentes" | "comandas" | "mesas">("pendentes");
+  const [tab, setTab] = useState<"comandas" | "mesas">("comandas");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("time");
   const [cancelTarget, setCancelTarget] = useState<{ type: "comanda" | "table"; id: string; orderId?: string; label: string } | null>(null);
@@ -104,25 +104,15 @@ export function ChargeSelectionDialog({
     comandas,
     getItemsByComanda,
     getStandaloneComandas,
-    getPendingPaymentComandas,
   } = usePDVComandas();
   const { tables } = usePDVTables();
 
-  const pendingComandas = getPendingPaymentComandas();
   const standaloneComandas = getStandaloneComandas();
   const occupiedTables = tables.filter(
     (t) => t.status !== "livre" && t.current_order_id,
   );
 
-  const tablesByOrderId = useMemo(() => {
-    const m = new Map<string, PDVTable>();
-    tables.forEach((t) => {
-      if (t.current_order_id) m.set(t.current_order_id, t);
-    });
-    return m;
-  }, [tables]);
-
-  // Get comandas for a table (somente abertas pelo caixa; comandas pendentes ficam na aba "Aguardando")
+  // Get comandas for a table (somente abertas pelo caixa; pendentes ficam no painel lateral)
   const getComandasForTable = (table: PDVTable) => {
     if (!table.current_order_id) return [];
     return comandas.filter(
@@ -140,67 +130,6 @@ export function ChargeSelectionDialog({
     if (minutes < 60) return "bg-yellow-500";
     return "bg-red-500";
   };
-
-  // ---------- Aba "Aguardando" ----------
-  // Agrupa por order_id (mesa) + grupo "avulsa" para comandas sem order
-  type PendingGroup = {
-    key: string;
-    table: PDVTable | null;
-    label: string;
-    comandas: Comanda[];
-    total: number;
-    oldestAt: number;
-    color: string;
-  };
-
-  const pendingGroups = useMemo<PendingGroup[]>(() => {
-    const filtered = pendingComandas.filter((c) => {
-      if (!search) return true;
-      const s = search.toLowerCase();
-      const t = c.order_id ? tablesByOrderId.get(c.order_id) : null;
-      return (
-        c.comanda_number.toLowerCase().includes(s) ||
-        (c.customer_name ?? "").toLowerCase().includes(s) ||
-        (t ? formatTableLabel(t.table_number).toLowerCase().includes(s) : false)
-      );
-    });
-
-    const map = new Map<string, PendingGroup>();
-    filtered.forEach((c) => {
-      const key = c.order_id ?? `__avulsa__${c.id}`;
-      const t = c.order_id ? tablesByOrderId.get(c.order_id) ?? null : null;
-      const ts = new Date(c.closed_by_waiter_at ?? c.updated_at).getTime();
-      const existing = map.get(key);
-      if (existing) {
-        existing.comandas.push(c);
-        existing.total += c.subtotal;
-        existing.oldestAt = Math.min(existing.oldestAt, ts);
-      } else {
-        map.set(key, {
-          key,
-          table: t,
-          label: t ? formatTableLabel(t.table_number) : "Avulsa",
-          comandas: [c],
-          total: c.subtotal,
-          oldestAt: ts,
-          color: getGroupColor(c.order_id),
-        });
-      }
-    });
-
-    const groups = Array.from(map.values());
-    // Ordena comandas dentro do grupo por tempo de espera (mais antigas primeiro)
-    groups.forEach((g) => g.comandas.sort((a, b) => {
-      const av = new Date(a.closed_by_waiter_at ?? a.updated_at).getTime();
-      const bv = new Date(b.closed_by_waiter_at ?? b.updated_at).getTime();
-      return av - bv;
-    }));
-    // Ordena grupos
-    groups.sort((a, b) => a.oldestAt - b.oldestAt);
-    return groups;
-  }, [pendingComandas, search, tablesByOrderId]);
-
-  const totalPending = pendingComandas.length;
 
   // Filtros das demais abas
   const filteredComandas = useMemo(() => {
@@ -244,19 +173,7 @@ export function ChargeSelectionDialog({
     return result;
   }, [occupiedTables, search, sortBy]);
 
-  const handleSelectPendingComanda = (comanda: Comanda) => {
-    onSelectComanda(comanda, getItemsByComanda(comanda.id));
-  };
-
-  const handleSelectPendingGroup = (group: PendingGroup) => {
-    if (!group.table) return;
-    const items = group.comandas.flatMap((c) => getItemsByComanda(c.id));
-    if (onSelectTablePending) {
-      onSelectTablePending(group.table, group.comandas, items);
-    } else {
-      onSelectTable(group.table, group.comandas, items);
-    }
-  };
+  // (Pending comandas agora são tratadas no painel lateral SalonQueuePanel)
 
   const handleSelectComandaCard = (comanda: Comanda) => {
     onSelectComanda(comanda, getItemsByComanda(comanda.id));
@@ -286,10 +203,10 @@ export function ChargeSelectionDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5 text-primary" />
-            Cobranças do Salão
+            Cobrar comanda avulsa / mesa
           </DialogTitle>
           <DialogDescription>
-            Comandas enviadas pelo garçom ficam em "Aguardando".
+            Para comandas vindas do garçom, use o painel "Salão" à direita.
           </DialogDescription>
         </DialogHeader>
 
@@ -304,36 +221,21 @@ export function ChargeSelectionDialog({
               className="pl-9"
             />
           </div>
-          {tab !== "pendentes" && (
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-              <SelectTrigger className="w-[140px]">
-                <ArrowUpDown className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="time">Mais recente</SelectItem>
-                <SelectItem value="value">Maior valor</SelectItem>
-                <SelectItem value="number">Número</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+            <SelectTrigger className="w-[140px]">
+              <ArrowUpDown className="h-4 w-4 mr-2" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="time">Mais recente</SelectItem>
+              <SelectItem value="value">Maior valor</SelectItem>
+              <SelectItem value="number">Número</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="pendentes" className="gap-2">
-              <Hourglass className="h-4 w-4" />
-              Aguardando
-              {totalPending > 0 && (
-                <Badge
-                  className={cn(
-                    "ml-1 bg-orange-500 text-white hover:bg-orange-500",
-                  )}
-                >
-                  {totalPending}
-                </Badge>
-              )}
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="comandas" className="gap-2">
               <Receipt className="h-4 w-4" />
               Comandas
@@ -353,149 +255,6 @@ export function ChargeSelectionDialog({
               )}
             </TabsTrigger>
           </TabsList>
-
-          {/* ============== Aguardando ============== */}
-          <TabsContent value="pendentes" className="mt-4">
-            <ScrollArea className="h-[400px] pr-4">
-              {pendingGroups.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground py-8">
-                  <Hourglass className="h-12 w-12 mb-3 opacity-50" />
-                  <p className="text-sm">
-                    {search ? "Nada encontrado" : "Nenhuma comanda aguardando cobrança"}
-                  </p>
-                  <p className="text-xs mt-1">
-                    Comandas fechadas pelo garçom aparecem aqui automaticamente.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {pendingGroups.map((group) => {
-                    const isMulti = !!group.table && group.comandas.length > 1;
-                    const minutes = Math.floor((Date.now() - group.oldestAt) / 60000);
-                    return (
-                      <div key={group.key} className="space-y-2">
-                        {/* Cabeçalho do grupo (mesa) */}
-                        <div className="flex items-center justify-between gap-2 px-1">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className={cn("w-1.5 h-5 rounded-sm", group.color.replace("border-l-", "bg-"))} />
-                            <span className="font-semibold text-sm truncate">
-                              {group.label}
-                            </span>
-                            <Badge variant="outline" className="text-[10px]">
-                              {group.comandas.length}{" "}
-                              {group.comandas.length === 1 ? "comanda" : "comandas"}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {formatBRL(group.total)}
-                            </span>
-                          </div>
-                          {isMulti && (
-                            <Button
-                              size="sm"
-                              variant="default"
-                              className="h-7 text-xs gap-1"
-                              onClick={() => handleSelectPendingGroup(group)}
-                            >
-                              <Users className="h-3 w-3" />
-                              Cobrar tudo
-                            </Button>
-                          )}
-                        </div>
-
-                        {/* Cards das comandas pendentes */}
-                        <div className="space-y-2">
-                          {group.comandas.map((comanda) => {
-                            const items = getItemsByComanda(comanda.id);
-                            const waitedAt = comanda.closed_by_waiter_at ?? comanda.updated_at;
-                            const isCharging = comanda.status === "em_cobranca";
-                            return (
-                              <HoverCard key={comanda.id} openDelay={300}>
-                                <HoverCardTrigger asChild>
-                                  <Card
-                                    className={cn(
-                                      "cursor-pointer hover:bg-accent/50 transition-colors group border-l-4",
-                                      group.color,
-                                      isCharging && "opacity-70",
-                                    )}
-                                    onClick={() => handleSelectPendingComanda(comanda)}
-                                    aria-busy={isCharging}
-                                  >
-                                    <CardContent className="p-3">
-                                      <div className="flex items-start justify-between gap-3">
-                                        <div className="space-y-1 min-w-0">
-                                          <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-semibold text-sm truncate">
-                                              {comanda.customer_name ?? `#${comanda.comanda_number}`}
-                                            </span>
-                                            <Badge variant="outline" className="text-[10px]">
-                                              {items.length}{" "}
-                                              {items.length === 1 ? "item" : "itens"}
-                                            </Badge>
-                                            {isCharging ? (
-                                              <Badge className="bg-blue-500 text-white hover:bg-blue-500 gap-1 text-[10px]">
-                                                <Loader2 className="h-2.5 w-2.5 animate-spin" />
-                                                Em cobrança
-                                              </Badge>
-                                            ) : (
-                                              <Badge className="bg-orange-500 text-white hover:bg-orange-500 text-[10px]">
-                                                Aguardando
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                            <Clock className="h-3 w-3" />
-                                            Aguardando há{" "}
-                                            {formatDistanceToNow(new Date(waitedAt), {
-                                              locale: ptBR,
-                                            })}
-                                          </div>
-                                        </div>
-                                        <div className="text-right shrink-0">
-                                          <span className="text-base font-bold text-primary">
-                                            {formatBRL(comanda.subtotal)}
-                                          </span>
-                                        </div>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                </HoverCardTrigger>
-                                <HoverCardContent side="right" className="w-64">
-                                  <div className="space-y-2">
-                                    <h4 className="font-semibold flex items-center gap-2">
-                                      <ShoppingBag className="h-4 w-4" />
-                                      Itens — {comanda.customer_name ?? `#${comanda.comanda_number}`}
-                                    </h4>
-                                    <div className="space-y-1 text-sm">
-                                      {items.slice(0, 5).map((item) => (
-                                        <div
-                                          key={item.id}
-                                          className="flex justify-between text-muted-foreground"
-                                        >
-                                          <span>
-                                            {item.quantity}x {item.product_name}
-                                          </span>
-                                          <span>{formatBRL(item.subtotal)}</span>
-                                        </div>
-                                      ))}
-                                      {items.length > 5 && (
-                                        <p className="text-xs text-muted-foreground">
-                                          +{items.length - 5} mais itens...
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                </HoverCardContent>
-                              </HoverCard>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </ScrollArea>
-          </TabsContent>
 
           {/* ============== Comandas avulsas ============== */}
           <TabsContent value="comandas" className="mt-4">

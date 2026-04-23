@@ -17,6 +17,7 @@ import { KeyboardShortcutsDialog } from "@/components/pdv/cashier/KeyboardShortc
 import { ChargeSelectionDialog } from "@/components/pdv/cashier/ChargeSelectionDialog";
 import { PaymentDialog } from "@/components/pdv/cashier/PaymentDialog";
 import { EmployeeConsumptionDialog } from "@/components/pdv/cashier/EmployeeConsumptionDialog";
+import { SalonQueuePanel } from "@/components/pdv/cashier/SalonQueuePanel";
 import { usePDVComandasRealtime } from "@/hooks/use-pdv-comandas-realtime";
 
 export default function PDVCashier() {
@@ -37,7 +38,7 @@ export default function PDVCashier() {
     lastClosedMovements,
   } = usePDVCashier();
 
-  const { comandas, cancelComanda } = usePDVComandas();
+  const { comandas, cancelComanda, getPendingPaymentComandas, getItemsByComanda } = usePDVComandas();
   const { updateTable } = usePDVTables();
 
   const [openDialog, setOpenDialog] = useState(false);
@@ -212,7 +213,22 @@ export default function PDVCashier() {
           break;
         case "F5":
           e.preventDefault();
-          if (activeSession) setChargeDialog(true);
+          if (activeSession) {
+            // Atalho rápido: cobra a comanda mais antiga da fila do salão.
+            // Se a fila estiver vazia, abre o dialog de cobrança avulsa/mesa direta.
+            const pending = getPendingPaymentComandas();
+            if (pending.length > 0) {
+              const sorted = [...pending].sort((a, b) => {
+                const at = new Date(a.closed_by_waiter_at ?? a.updated_at).getTime();
+                const bt = new Date(b.closed_by_waiter_at ?? b.updated_at).getTime();
+                return at - bt;
+              });
+              const first = sorted[0];
+              handleSelectComanda(first, getItemsByComanda(first.id));
+            } else {
+              setChargeDialog(true);
+            }
+          }
           break;
         case "F12":
           e.preventDefault();
@@ -246,10 +262,10 @@ export default function PDVCashier() {
         openedAt={activeSession?.opened_at || null}
       />
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0">
+      {/* Main Content — grid 12 cols: 6 movimentações | 3 ações | 3 painel salão */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0">
         {/* Tabela de Movimentações */}
-        <Card className="lg:col-span-3 flex flex-col min-h-0">
+        <Card className="lg:col-span-6 flex flex-col min-h-0">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Movimentações</CardTitle>
             <CardDescription>
@@ -280,7 +296,7 @@ export default function PDVCashier() {
         </Card>
 
         {/* Sidebar de Ações */}
-        <Card className="flex flex-col min-h-0 overflow-hidden">
+        <Card className="lg:col-span-3 flex flex-col min-h-0 overflow-hidden">
           <CardContent className="p-3 flex-1 min-h-0 overflow-hidden">
             <CashierActionsSidebar
               isOpen={!!activeSession}
@@ -295,6 +311,16 @@ export default function PDVCashier() {
               onEmployeeConsumption={() => setEmployeeDialog(true)}
             />
           </CardContent>
+        </Card>
+
+        {/* Painel lateral: fila do Salão (sempre visível) */}
+        <Card className="lg:col-span-3 flex flex-col min-h-0 overflow-hidden p-0">
+          <SalonQueuePanel
+            isOpen={!!activeSession}
+            onSelectComanda={handleSelectComanda}
+            onSelectTablePending={handleSelectTablePending}
+            onOpenDirectCharge={() => setChargeDialog(true)}
+          />
         </Card>
       </div>
 
