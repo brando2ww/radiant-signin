@@ -81,7 +81,7 @@ export default function GarcomComandaDetalhe() {
       </header>
 
       {/* Items */}
-      <div className="flex-1 p-4 pb-48 space-y-2">
+      <div className="flex-1 p-4 pb-56 space-y-2">
         {items.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center">
             <p className="text-muted-foreground mb-4">Sem itens na comanda</p>
@@ -110,7 +110,7 @@ export default function GarcomComandaDetalhe() {
       </div>
 
       {/* Bottom Action Bar */}
-      <div className="fixed bottom-16 inset-x-0 z-40 border-t bg-background p-4 safe-area-bottom space-y-2">
+      <div className="fixed bottom-20 inset-x-0 z-40 border-t bg-background p-4 safe-area-bottom space-y-2">
         <div className="flex items-center justify-between text-sm font-semibold">
           <span>Total</span>
           <span className="tabular-nums">R$ {total.toFixed(2)}</span>
