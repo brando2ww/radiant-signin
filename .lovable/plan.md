@@ -1,89 +1,62 @@
 
 
-## Reformulação UX: "Cobranças do Salão" como painel lateral fixo
+## Bug: reforço aparenta criar uma sangria do mesmo valor
 
-### Direção
+### Causa-raiz (confirmada no banco)
 
-Sair do modal bloqueante e transformar a fila do salão em um **painel lateral direito fixo** (drawer permanente) na Frente de Caixa, com cards informativos, urgência visual por tempo e ações inline.
+Em `src/hooks/use-pdv-cashier.ts`, a mutation `addMovement` (linhas 181–194) atualiza `total_withdrawals` para os **dois tipos** de movimento:
 
-### 1. Novo layout da Frente de Caixa (`src/pages/pdv/Cashier.tsx`)
-
-Grid passa de `grid-cols-4` para `grid-cols-12`:
-
-```text
-┌────────────────────┬──────────────┬───────────────────┐
-│ Movimentações (6) │ Ações (3)   │ Salão — fila (3) │
-└────────────────────┴──────────────┴───────────────────┘
+```ts
+const newWithdrawals =
+  type === "sangria"
+    ? activeSession.total_withdrawals + amount   // ✅
+    : activeSession.total_withdrawals - amount;  // ❌ reforço subtrai withdrawals
 ```
 
-- Coluna 1 (`col-span-6`): Movimentações (igual a hoje, só mais estreita).
-- Coluna 2 (`col-span-3`): `CashierActionsSidebar` (mantém Reforço/Sangria/Cobrar/Consumo/Fechar).
-- Coluna 3 (`col-span-3`): novo `<SalonQueuePanel />` — painel da fila do salão, sempre visível quando o caixa está aberto.
-- Em telas `< lg`: o painel cai abaixo das ações como uma seção (mantém visível, só empilha).
-- O `ChargeSelectionDialog` (modal) é **removido** do fluxo de cobrar do salão. F5 continua funcionando, mas em vez de abrir o modal, dá foco/scroll no `SalonQueuePanel` e abre o primeiro card pendente automaticamente. As abas "Comandas avulsas" e "Mesas (cobrar antecipado)" passam para um `Sheet` lateral acionado por um botão "Cobrar avulsa/mesa direta" no rodapé do painel — uso menos frequente, fora do fluxo principal.
+Verifiquei no banco: a tabela `pdv_cashier_movements` contém **apenas a linha de reforço** (não há sangria duplicada criada). O que acontece é:
 
-### 2. Novo componente `SalonQueuePanel`
+- Reforço de R$ 200 → cria 1 linha `reforco` na tabela ✅
+- Mas também faz `total_withdrawals -= 200` na sessão → fica `-200`
+- O card "Sangrias" no rodapé exibe `total_withdrawals` cru → mostra **"−R$ 200,00"**, que parece uma sangria fantasma do mesmo valor do reforço
+- Confirmado na sessão atual: `total_withdrawals = -300.00` após dois reforços (R$ 200 + R$ 100)
+- Isso também infla o "Saldo Atual": a fórmula `opening + cash + reforços − withdrawals` vira `500 + 0 + 300 − (−300) = 1100`, contando o reforço duas vezes
 
-Arquivo: `src/components/pdv/cashier/SalonQueuePanel.tsx`.
+### Correção
 
-**Cabeçalho fixo:**
-- Título "Salão" + ícone.
-- Linha 1: contador grande "**3** comandas aguardando" (em tempo real, vem do hook).
-- Linha 2: "Total aguardando: **R$ 312,00**" (soma dos `subtotal`).
-- Linha 3: "Tempo médio: 6 min" (média de `now - closed_by_waiter_at`).
-- Botão refresh discreto (invalida `pdv-comandas`).
-- Select compacto de ordenação: Mais antiga (default) | Maior valor | Mesa | Nome.
-- Comandas com >10 min são **fixadas no topo** independente do sort.
+`src/hooks/use-pdv-cashier.ts`, dentro de `addMovement.mutationFn` (linhas 181–194):
 
-**Lista (scroll interno):**
-- Agrupada por mesa quando >1 comanda no mesmo `order_id`.
-- Cabeçalho de grupo: "Mesa 5 — 2 comandas — R$ 122,00" + botão "**Cobrar tudo da Mesa 5**" (chama `onSelectTablePending`).
-- Estado vazio: ícone amigável + "Nenhuma comanda aguardando cobrança" (sem abas, sem search).
+- **Manter** o `INSERT` em `pdv_cashier_movements` para os dois tipos (histórico e contagem de reforços no front continuam funcionando).
+- **Só atualizar `total_withdrawals` quando `type === "sangria"`.** Reforço não mexe em nenhum total da sessão; o `Cashier.tsx` já calcula `totalReinforcements` somando os movimentos.
 
-### 3. Novo card `SalonQueueCard`
+```ts
+if (type === "sangria") {
+  await supabase
+    .from("pdv_cashier_sessions")
+    .update({ total_withdrawals: activeSession.total_withdrawals + amount })
+    .eq("id", activeSession.id);
+}
+// reforço: nada a atualizar na sessão
+```
 
-Arquivo: `src/components/pdv/cashier/SalonQueueCard.tsx`.
+### Migração de saneamento (sessões já corrompidas)
 
-Estrutura hierárquica:
-- **Linha 1:** "Mesa 5 — Eduardo" (ou "Avulsa — TESTE") em `text-base font-semibold`.
-- **Linha 2:** "3 itens · **R$ 77,00**" — valor em `text-xl font-bold`.
-- **Linha 3:** "Aguardando há X min" com cor progressiva:
-  - <5 min → `text-muted-foreground`
-  - 5–10 min → `text-yellow-600` + ícone Clock amarelo
-  - >10 min → `text-red-600 font-semibold` + borda do card `border-red-500 ring-1 ring-red-200` + sufixo "— atenção"
-- **Linha 4:** prévia de itens `text-xs text-muted-foreground line-clamp-1`: "1x Temaki Salmão, 2x Refrigerante, 1x..."
-- **Badge de status:** Aguardando (laranja) | Em cobrança (azul, com spinner) | borda esquerda colorida pelo `order_id` (mantém código de cores atual).
-- **Indicador "Mesa tem mais N comanda(s)"** quando o card está fora de um grupo (ex: outra comanda da mesma mesa ainda está aberta no garçom — usa `comandas` para contar `aberta`+`em_cobranca` no mesmo `order_id`).
+Sessões abertas que já tiveram reforços antes da correção têm `total_withdrawals` negativo. Vou incluir uma migração SQL única que recalcula o campo a partir das movimentações reais para todas as sessões (abertas e fechadas), mantendo a integridade do histórico:
 
-**Ações inline (sem modal):**
-- Botão primário grande **"Cobrar"** (full width, `h-11`) → chama `onSelectComanda`/`onSelectTablePending`, abre o `PaymentDialog` existente.
-- Botão secundário **"Ver itens"** → expande inline (`useState` local), lista todos os itens com qty/preço/notas dentro do próprio card, sem modal.
-- Botão discreto (link/ghost) **"Devolver ao garçom"** → abre `AlertDialog` com `<Textarea>` obrigatório de motivo. Confirma → muda status para `aberta`, limpa `closed_by_waiter_at`, salva o motivo em `notes` (append) e dispara toast no garçom via realtime. Nova mutation `returnToWaiter({comandaId, reason})` em `use-pdv-comandas.ts`.
+```sql
+UPDATE public.pdv_cashier_sessions s
+SET total_withdrawals = COALESCE((
+  SELECT SUM(amount)
+  FROM public.pdv_cashier_movements m
+  WHERE m.cashier_session_id = s.id
+    AND m.type = 'sangria'
+), 0);
+```
 
-### 4. Tempo real
-
-- Reaproveita `usePDVComandasRealtime` (já invalida na mudança).
-- Os contadores de tempo (X min) atualizam via `useEffect` com `setInterval(60000)` no `SalonQueuePanel` para re-render a cada minuto sem refetch.
-
-### 5. Hook helper
-
-`use-pdv-comandas.ts`:
-- `returnToWaiter`: UPDATE `status='aberta'`, `closed_by_waiter_at=null`, `notes` = `notes || ''` + `\n[Devolvido ao garçom: ${reason}]`. Filtro `.in('status', ['aguardando_pagamento','em_cobranca'])` para evitar regressão.
-
-### 6. Limpeza
-
-- `ChargeSelectionDialog` permanece, mas vira **somente para "Comandas avulsas/Mesas direto"** acessado via botão pequeno no rodapé do painel ("Cobrar comanda/mesa direta") — não é mais o caminho principal.
-- Tab "Aguardando" do dialog é removida (a função foi para o painel).
-- Atalho F5: se há pendentes no painel, abre o `PaymentDialog` da mais antiga; se não há, abre o `Sheet` de cobrança avulsa.
+Isso zera o `total_withdrawals` das sessões que só tiveram reforços e mantém o valor correto onde houve sangria real.
 
 ### Validação
 
-- Caixa aberto: painel lateral aparece à direita, sempre visível.
-- 1 comanda pendente: card único, "Cobrar" abre PaymentDialog direto.
-- Mesa 5 com 2 comandas: aparecem agrupadas com header e botão "Cobrar tudo" (modo split-por-comanda do PaymentDialog).
-- Comanda há 12 min: borda vermelha + texto vermelho + sobe pro topo.
-- "Ver itens" expande sem abrir modal; "Devolver ao garçom" exige motivo, devolve para `aberta` e some do painel.
-- Caixa continua usável em paralelo (movimentações, sangria, etc.) — nada bloqueia.
-- Lista vazia: mensagem amigável, sem abas.
-- Tablet (1024–1280): painel mantém legibilidade; abaixo disso empilha.
+- Sessão atual após a migração: card "Sangrias" mostra **R$ 0,00**, "Reforços" mostra **+R$ 300,00**, "Saldo Atual" = **R$ 800,00** (500 abertura + 300 reforços).
+- Novo reforço de R$ 50 → só cria a linha em `pdv_cashier_movements`, nada em sangrias, saldo sobe para R$ 850.
+- Sangria de R$ 100 → cria linha `sangria` e `total_withdrawals` vira 100, card "Sangrias" mostra **R$ 100,00**, saldo cai para R$ 750.
 
