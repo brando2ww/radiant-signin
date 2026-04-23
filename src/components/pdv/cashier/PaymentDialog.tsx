@@ -40,12 +40,31 @@ import {
   FileText,
   Printer,
   AlertTriangle,
+  Trash2,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Comanda, ComandaItem, usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { PDVTable } from "@/hooks/use-pdv-tables";
 import { usePDVPayments, PaymentMethod } from "@/hooks/use-pdv-payments";
+import { usePDVProducts } from "@/hooks/use-pdv-products";
 import { CurrencyInput } from "@/components/ui/currency-input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNFCeEmission } from "@/hooks/use-nfce-emission";
 import { usePDVSettings } from "@/hooks/use-pdv-settings";
@@ -129,9 +148,25 @@ export function PaymentDialog({
   >({ kind: "idle" });
 
   const { registerPayment, isRegisteringPayment, registerTablePayment, isRegisteringTablePayment } = usePDVPayments();
-  const { markAsCharging, releaseFromCharging } = usePDVComandas();
+  const {
+    markAsCharging,
+    releaseFromCharging,
+    removeItem,
+    isRemovingItem,
+    addItem,
+    isAddingItem,
+  } = usePDVComandas();
+  const { products: productsList } = usePDVProducts();
   const { emitNFCe, isEmitting } = useNFCeEmission();
   const { settings } = usePDVSettings();
+
+  // Edição do pedido (correção pelo caixa)
+  const [itemToRemove, setItemToRemove] = useState<ComandaItem | null>(null);
+  const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
+  const [productSearch, setProductSearch] = useState("");
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [addItemQty, setAddItemQty] = useState("1");
+  const [addItemNotes, setAddItemNotes] = useState("");
 
   // Comandas envolvidas neste pagamento (1 ou várias)
   const involvedComandas: Comanda[] = table
@@ -541,7 +576,46 @@ export function PaymentDialog({
     );
   }
 
+  // Produtos para o dialog de adicionar item
+  const targetComandaIdForAdd: string | null =
+    comanda?.id ?? (isTablePayment && tableComandas.length === 1 ? tableComandas[0].id : null);
+  const filteredProducts = (productsList || []).filter((p: any) => {
+    if (!p.is_available) return false;
+    if (!productSearch.trim()) return true;
+    const q = productSearch.trim().toLowerCase();
+    return (
+      p.name?.toLowerCase().includes(q) ||
+      p.ean?.toLowerCase?.().includes(q) ||
+      p.category?.toLowerCase?.().includes(q)
+    );
+  });
+  const selectedProduct = filteredProducts.find((p: any) => p.id === selectedProductId)
+    ?? (productsList || []).find((p: any) => p.id === selectedProductId);
+
+  const handleConfirmAddItem = async () => {
+    if (!targetComandaIdForAdd || !selectedProduct) return;
+    const qty = Math.max(1, parseInt(addItemQty) || 1);
+    try {
+      await addItem({
+        comandaId: targetComandaIdForAdd,
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        quantity: qty,
+        unitPrice: Number(selectedProduct.price_salon) || 0,
+        notes: addItemNotes.trim() || undefined,
+      });
+      setAddItemDialogOpen(false);
+      setSelectedProductId(null);
+      setProductSearch("");
+      setAddItemQty("1");
+      setAddItemNotes("");
+    } catch (e) {
+      // toast já é exibido pelo hook
+    }
+  };
+
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
@@ -565,18 +639,95 @@ export function PaymentDialog({
                   <Receipt className="h-4 w-4" />
                   Resumo do Pedido
                 </h4>
-                <ScrollArea className="h-[120px]">
-                  <div className="space-y-2">
-                    {displayItems.map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {item.quantity}x {item.product_name}
-                        </span>
-                        <span className="font-medium">{formatCurrency(item.subtotal)}</span>
-                      </div>
-                    ))}
+                <ScrollArea className="h-[160px]">
+                  <div className="space-y-1">
+                    <AnimatePresence initial={false}>
+                      {displayItems.map((item) => {
+                        const canRemove =
+                          item.kitchen_status === "pendente" ||
+                          item.kitchen_status === "preparando";
+                        return (
+                          <motion.div
+                            key={item.id}
+                            layout
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="flex items-center justify-between gap-2 text-sm py-1"
+                          >
+                            <span className="text-muted-foreground flex-1 min-w-0 truncate">
+                              {item.quantity}x {item.product_name}
+                            </span>
+                            <span className="font-medium tabular-nums">
+                              {formatCurrency(item.subtotal)}
+                            </span>
+                            {canRemove ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setItemToRemove(item)}
+                                disabled={isRemovingItem}
+                                aria-label="Remover item"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-flex">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 shrink-0 text-muted-foreground/40 cursor-not-allowed"
+                                      disabled
+                                      aria-label="Item não pode ser removido"
+                                      tabIndex={-1}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                  Item já preparado pela cozinha — não pode ser removido
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
                   </div>
                 </ScrollArea>
+
+                {/* Add item / multi-comanda hint */}
+                <div className="mt-3 pt-3 border-t">
+                  {isTablePayment && tableComandas.length > 1 ? (
+                    <p className="text-xs text-muted-foreground italic">
+                      Para adicionar itens, acesse a comanda específica.
+                    </p>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => {
+                        setProductSearch("");
+                        setSelectedProductId(null);
+                        setAddItemQty("1");
+                        setAddItemNotes("");
+                        setAddItemDialogOpen(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar item
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
@@ -795,9 +946,15 @@ onClick={() => {
                 <Separator className="my-2" />
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-lg">TOTAL</span>
-                  <span className="font-bold text-2xl text-primary">
+                  <motion.span
+                    key={total}
+                    initial={{ opacity: 0.4 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.25 }}
+                    className="font-bold text-2xl text-primary"
+                  >
                     {formatCurrency(total)}
-                  </span>
+                  </motion.span>
                 </div>
               </CardContent>
             </Card>
@@ -1142,5 +1299,176 @@ onClick={() => {
         </div>
       </DialogContent>
     </Dialog>
+
+    {/* Confirmação de remoção de item */}
+    <AlertDialog open={!!itemToRemove} onOpenChange={(o) => { if (!o) setItemToRemove(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remover item?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {itemToRemove && (
+              <>
+                <span className="font-medium text-foreground">
+                  {itemToRemove.quantity}x {itemToRemove.product_name}
+                </span>{" "}
+                — {formatCurrency(itemToRemove.subtotal)} será removido da conta.
+                <br />
+                Esta ação não pode ser desfeita.
+              </>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isRemovingItem}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={isRemovingItem}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={(e) => {
+              e.preventDefault();
+              if (!itemToRemove) return;
+              removeItem(itemToRemove.id);
+              setItemToRemove(null);
+            }}
+          >
+            {isRemovingItem ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Removendo...
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Remover
+              </>
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    {/* Dialog para adicionar item */}
+    <Dialog open={addItemDialogOpen} onOpenChange={setAddItemDialogOpen}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Plus className="h-5 w-5 text-primary" />
+            Adicionar item à comanda
+          </DialogTitle>
+          <DialogDescription>
+            Busque um produto para incluir no pedido.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              autoFocus
+              placeholder="Buscar por nome, código ou categoria..."
+              value={productSearch}
+              onChange={(e) => setProductSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
+          <ScrollArea className="h-[260px] border rounded-md">
+            <div className="p-1">
+              {filteredProducts.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Nenhum produto encontrado.
+                </p>
+              ) : (
+                filteredProducts.slice(0, 200).map((p: any) => {
+                  const isSelected = p.id === selectedProductId;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setSelectedProductId(p.id)}
+                      className={cn(
+                        "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md text-left text-sm transition-colors",
+                        isSelected
+                          ? "bg-primary/10 text-foreground"
+                          : "hover:bg-muted"
+                      )}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{p.name}</p>
+                        {p.category && (
+                          <p className="text-xs text-muted-foreground truncate">{p.category}</p>
+                        )}
+                      </div>
+                      <span className="font-semibold tabular-nums">
+                        {formatCurrency(Number(p.price_salon) || 0)}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+
+          {selectedProduct && (
+            <div className="border-t pt-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm">
+                  Selecionado: <span className="font-medium">{selectedProduct.name}</span>
+                </p>
+                <span className="font-semibold tabular-nums">
+                  {formatCurrency(Number(selectedProduct.price_salon) || 0)}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Quantidade</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={addItemQty}
+                    onChange={(e) => setAddItemQty(e.target.value)}
+                  />
+                </div>
+                <div className="col-span-2 space-y-1">
+                  <Label className="text-xs">Observações (opcional)</Label>
+                  <Input
+                    type="text"
+                    placeholder="Ex: sem cebola"
+                    value={addItemNotes}
+                    onChange={(e) => setAddItemNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button
+            variant="outline"
+            onClick={() => setAddItemDialogOpen(false)}
+            disabled={isAddingItem}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmAddItem}
+            disabled={!selectedProduct || !targetComandaIdForAdd || isAddingItem}
+          >
+            {isAddingItem ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Adicionando...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar
+              </>
+            )}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
