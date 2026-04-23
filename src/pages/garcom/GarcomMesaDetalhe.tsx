@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, UserPlus, Send } from "lucide-react";
+import { ArrowLeft, UserPlus, Send, Plus, X } from "lucide-react";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
@@ -15,16 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -56,24 +46,31 @@ export default function GarcomMesaDetalhe() {
   const [splitOpen, setSplitOpen] = useState(false);
   const [splitName, setSplitName] = useState("");
   const [opening, setOpening] = useState(false);
+  const [comandaNames, setComandaNames] = useState<string[]>([""]);
   const ensuringRef = useRef(false);
 
-  const hasDefaultComanda = tableComandas.some((c) => !c.customer_name);
+  const hasOpenComandas = tableComandas.length > 0;
 
-  // Se já existe pelo menos uma comanda padrão, redireciona direto pra ela
-  // (continuação de atendimento, sem confirmação).
+  // Se já existe alguma comanda aberta, e há exatamente UMA, redireciona direto.
+  // (continuação de atendimento de mesa pré-existente)
   useEffect(() => {
     if (loadingTables || loadingComandas) return;
     if (!table) return;
     if (splitOpen) return;
+    if (opening) return;
     if (tableComandas.length === 1) {
       navigate(`/garcom/comanda/${tableComandas[0].id}`, { replace: true });
     }
-  }, [tableComandas, loadingTables, loadingComandas, table, splitOpen, navigate]);
+  }, [tableComandas, loadingTables, loadingComandas, table, splitOpen, opening, navigate]);
 
   const handleConfirmOpen = async () => {
     if (!table) return;
     if (ensuringRef.current) return;
+    const names = comandaNames.map((n) => n.trim()).filter(Boolean);
+    if (names.length === 0) {
+      toast.error("Informe ao menos um nome de comanda");
+      return;
+    }
     ensuringRef.current = true;
     setOpening(true);
     try {
@@ -112,7 +109,6 @@ export default function GarcomMesaDetalhe() {
         table.status !== "ocupada" ||
         table.current_order_id !== orderId
       ) {
-        // Fire-and-forget
         updateTable({
           id: table.id,
           updates: { status: "ocupada", current_order_id: orderId },
@@ -120,8 +116,20 @@ export default function GarcomMesaDetalhe() {
       }
       queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
 
-      const comanda = await createComanda({ orderId });
-      navigate(`/garcom/comanda/${comanda.id}`, { replace: true });
+      const created = [];
+      for (const name of names) {
+        const c = await createComanda({ orderId, customerName: name });
+        created.push(c);
+      }
+
+      setComandaNames([""]);
+      ensuringRef.current = false;
+      setOpening(false);
+
+      if (created.length === 1) {
+        navigate(`/garcom/comanda/${created[0].id}`, { replace: true });
+      }
+      // Se 2+, fica na tela da mesa mostrando a lista (já vai re-renderizar).
     } catch {
       ensuringRef.current = false;
       setOpening(false);
@@ -131,6 +139,20 @@ export default function GarcomMesaDetalhe() {
   const handleCancelOpen = () => {
     navigate(-1);
   };
+
+  const updateName = (index: number, value: string) => {
+    setComandaNames((prev) => prev.map((n, i) => (i === index ? value : n)));
+  };
+
+  const addNameField = () => {
+    setComandaNames((prev) => (prev.length >= 10 ? prev : [...prev, ""]));
+  };
+
+  const removeNameField = (index: number) => {
+    setComandaNames((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const allNamesFilled = comandaNames.every((n) => n.trim().length > 0);
 
   const handleCreateNominal = async () => {
     const name = splitName.trim();
@@ -170,8 +192,8 @@ export default function GarcomMesaDetalhe() {
   }
 
   const blockedNoCashier = !activeSession && !isLoadingSession;
-  const showConfirmDialog =
-    !hasDefaultComanda && !blockedNoCashier && !opening && !!activeSession;
+  const showOpenDialog =
+    !hasOpenComandas && !blockedNoCashier && !opening && !!activeSession;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -279,31 +301,80 @@ export default function GarcomMesaDetalhe() {
               className="w-full active:scale-95"
             >
               <UserPlus className="h-4 w-4 mr-2" />
-              Dividir em comanda nominal
+              Nova comanda
             </Button>
           </>
         )}
       </div>
 
-      {/* Confirmação de abertura de mesa livre */}
-      <AlertDialog open={showConfirmDialog}>
-        <AlertDialogContent className="max-w-[min(22rem,calc(100vw-2rem))] rounded-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Abrir Mesa {table.table_number}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Isso vai iniciar uma nova comanda nesta mesa.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelOpen}>
+      {/* Abertura de mesa livre — pede nome(s) da(s) comanda(s) */}
+      <Dialog open={showOpenDialog}>
+        <DialogContent className="max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Abrir Mesa {table.table_number}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Informe o nome de cada comanda. Você pode abrir várias comandas na mesma mesa.
+            </p>
+            <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+              {comandaNames.map((name, index) => (
+                <div key={index} className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Comanda {index + 1}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      autoFocus={index === comandaNames.length - 1}
+                      value={name}
+                      onChange={(e) => updateName(index, e.target.value)}
+                      placeholder="Ex: João, Casal, Mesa frente..."
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && allNamesFilled) {
+                          e.preventDefault();
+                          handleConfirmOpen();
+                        }
+                      }}
+                    />
+                    {comandaNames.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeNameField(index)}
+                        className="h-9 w-9 flex items-center justify-center rounded-md border text-muted-foreground active:scale-95"
+                        aria-label="Remover comanda"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addNameField}
+              disabled={comandaNames.length >= 10}
+              className="w-full"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Adicionar comanda
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCancelOpen}>
               Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmOpen} disabled={opening}>
+            </Button>
+            <Button
+              onClick={handleConfirmOpen}
+              disabled={opening || !allNamesFilled}
+            >
               Abrir mesa
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={splitOpen} onOpenChange={setSplitOpen}>
         <DialogContent>
