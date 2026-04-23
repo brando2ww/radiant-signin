@@ -1,38 +1,65 @@
 
 
-## Aumentar a largura da pílula do bottom menu
+## Aplicar fonte Montserrat em toda a área do garçom (`/garcom/*`)
 
-Hoje a pílula está em `left-3 right-20`, o que reserva 80px à direita para o FAB de 56px. A pílula fica curta e os ícones ficam apertados. Vou reduzir a folga reservada à direita e encolher levemente o FAB para a pílula esticar mais.
+Hoje a área do garçom usa a fonte padrão herdada do `body` (sem `font-family` definido). Vou padronizar tudo dentro do `/garcom` para usar **Montserrat**, sem afetar o restante do app (PDV, delivery, super admin etc.).
 
-### Mudança
+### Mudanças
 
-**`src/components/garcom/BottomTabBar.tsx`**
+**1. Carregar a fonte Montserrat (`index.html`)**
 
-- Trocar `fixed left-3 right-20 z-50 ...` por `fixed left-2 right-[4.5rem] z-50 ...`.
-  - `left-2` (8px) gruda a pílula ainda mais à esquerda.
-  - `right-[4.5rem]` (72px) reserva o mínimo necessário ao FAB (48px + 16px de margem + 8px de respiro).
-- Aumentar o padding interno horizontal da pílula de `px-2` para `px-3` para os tabs respirarem melhor com a nova largura.
-- Aumentar o `gap-1` entre tabs para `gap-2`.
+Adicionar no `<head>` o preconnect e o link do Google Fonts com os pesos usados (400, 500, 600, 700):
 
-**`src/components/garcom/GarcomActionFab.tsx`**
-
-- Reduzir o FAB principal de `h-14 w-14` para `h-12 w-12` (48px) para liberar espaço lateral.
-- Manter o FAB em `right-4` para preservar o respiro contra a borda direita.
-
-### Resultado em mobile (390px)
-
-```text
-┌──────────────────────────────────────────────┐
-│ ┌───────────────────────────────────┐ ┌────┐ │
-│ │ Mesas  Comandas  +  Itens  Coz.   │ │FAB │ │
-│ └───────────────────────────────────┘ └────┘ │
-└──────────────────────────────────────────────┘
-   pílula bem mais larga              FAB completo
+```html
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 ```
+
+**2. Registrar `font-montserrat` no Tailwind (`tailwind.config.ts`)**
+
+Adicionar dentro de `theme.extend`:
+
+```ts
+fontFamily: {
+  montserrat: ['Montserrat', 'system-ui', 'sans-serif'],
+},
+```
+
+**3. Aplicar a fonte no escopo do garçom (`src/pages/Garcom.tsx`)**
+
+Adicionar a classe `font-montserrat` no wrapper raiz:
+
+```tsx
+<div className="min-h-screen bg-background pb-28 font-montserrat">
+```
+
+Como o Tailwind herda `font-family` por CSS, todos os filhos (rotas, BottomTabBar, FAB, headers, sheets, dialogs renderizados dentro desse container, cards de mesa/comanda, formulários do garçom) passarão a usar Montserrat automaticamente.
+
+**4. Garantir Montserrat em portais (Sheets/Dialogs do Radix)**
+
+`NewOrderSheet`, `ComandaDialog`, `MobileProductOptionSelector` e dropdowns são renderizados via portal no `<body>`, fora do wrapper. Para que também usem Montserrat enquanto o usuário estiver em `/garcom`, vou adicionar uma regra simples em `src/index.css`:
+
+```css
+body:has([data-garcom-root]) [data-radix-portal],
+body:has([data-garcom-root]) [role="dialog"] {
+  font-family: 'Montserrat', system-ui, sans-serif;
+}
+```
+
+E marcar o wrapper do garçom com `data-garcom-root`:
+
+```tsx
+<div data-garcom-root className="min-h-screen bg-background pb-28 font-montserrat">
+```
+
+### Escopo
+
+- Afeta **somente** rotas `/garcom/*` (mesas, comandas, comanda detalhe, adicionar item, cozinha, itens, FAB, BottomTabBar, sheets/dialogs abertos a partir do garçom).
+- **Não afeta** PDV, Delivery, páginas públicas, Super Admin, login.
 
 ### Validação
 
-- Em 390px (viewport atual) a pílula ocupa ~310px de largura útil (antes ~290px) e os 5 itens + Plus ficam mais espaçados.
-- O FAB continua aparecendo por completo, sem encavalar a pílula.
-- Safe-area do iPhone preservada (sem alteração no `bottom`).
+- Abrir `/garcom`, `/garcom/comandas`, `/garcom/cozinha`, abrir o FAB e o NewOrderSheet — todos os textos devem renderizar em Montserrat.
+- Abrir `/pdv` em outra aba — fonte permanece a padrão atual (sem alteração).
 
