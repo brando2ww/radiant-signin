@@ -38,7 +38,7 @@ export default function PDVCashier() {
     lastClosedMovements,
   } = usePDVCashier();
 
-  const { comandas, cancelComanda } = usePDVComandas();
+  const { comandas, cancelComanda, getPendingPaymentComandas, getItemsByComanda } = usePDVComandas();
   const { updateTable } = usePDVTables();
 
   const [openDialog, setOpenDialog] = useState(false);
@@ -213,7 +213,22 @@ export default function PDVCashier() {
           break;
         case "F5":
           e.preventDefault();
-          if (activeSession) setChargeDialog(true);
+          if (activeSession) {
+            // Atalho rápido: cobra a comanda mais antiga da fila do salão.
+            // Se a fila estiver vazia, abre o dialog de cobrança avulsa/mesa direta.
+            const pending = getPendingPaymentComandas();
+            if (pending.length > 0) {
+              const sorted = [...pending].sort((a, b) => {
+                const at = new Date(a.closed_by_waiter_at ?? a.updated_at).getTime();
+                const bt = new Date(b.closed_by_waiter_at ?? b.updated_at).getTime();
+                return at - bt;
+              });
+              const first = sorted[0];
+              handleSelectComanda(first, getItemsByComanda(first.id));
+            } else {
+              setChargeDialog(true);
+            }
+          }
           break;
         case "F12":
           e.preventDefault();
