@@ -1,36 +1,23 @@
 
 
-## Corrigir prefixo duplicado "Mesa Mesa 04"
+## Subir a barra de ações da comanda
 
-### Causa
+### Problema
 
-A coluna `pdv_tables.table_number` armazena valores inconsistentes — alguns só com número (`"4"`, `"5"`), outros já com o prefixo (`"Mesa 04"`, `"mesa 02"`). Em todas as telas, o front renderiza ``Mesa ${table.table_number}``, gerando "Mesa Mesa 04" para os que já vêm prefixados.
+Na tela `/garcom/comanda/:id`, a barra "Total · Item · Fechar" (linha 113 de `GarcomComandaDetalhe.tsx`) está posicionada com `fixed bottom-16`, encostando direto na BottomTabBar (h-16). O FAB redondo central da BottomTabBar fica colado à barra e o botão "Fechar" parece "abaixado" demais perto da navegação inferior.
 
-### Solução: helper de formatação único
+### Mudança
 
-Criar `src/utils/formatTableNumber.ts` exportando `formatTableLabel(tableNumber)`:
-- Se vazio → `"Mesa"`.
-- Se começa com `"mesa"` (case-insensitive) → normaliza para `"Mesa <resto>"`.
-- Caso contrário → `"Mesa <valor>"`.
+Em `src/pages/garcom/GarcomComandaDetalhe.tsx`:
 
-Substituir em todos os lugares onde aparece `` `Mesa ${X.table_number}` ``:
+- Linha 113: trocar `fixed bottom-16` por `fixed bottom-20` (de 64px para 80px) — sobe a barra ~16px, criando respiro entre ela e a BottomTabBar e tirando-a de baixo do FAB.
+- Linha 84: ajustar o padding de baixo da lista de itens de `pb-48` para `pb-56`, garantindo que o último item ainda role acima da nova posição da barra (sem ficar escondido pelo "Total/Item/Fechar").
 
-- `src/pages/garcom/GarcomMesaDetalhe.tsx` — header (linha 245), título do dialog "Abrir Mesa ..." (linha 350), e qualquer outro `Mesa {table.table_number}` no arquivo (label de comanda na linha ~249 e textos de cards).
-- `src/pages/garcom/GarcomComandaDetalhe.tsx` — chip "Mesa X" (linha 73).
-- `src/pages/garcom/GarcomComandas.tsx` — `Mesa ${t.table_number}` no subtítulo da lista.
-- `src/components/pdv/TableDetailsDialog.tsx` — DialogTitle (linha 92) e AlertDialogDescription (linha 231).
-- `src/components/pdv/ComandaDialog.tsx` — `- Mesa {tableNumber}` (linha 67).
-- `src/components/pdv/cashier/ChargeSelectionDialog.tsx` — linha 398.
-- `src/pages/pdv/FranchiseImport.tsx` — linhas 227 e 494.
-- `src/components/super-admin/FranchiseSection.tsx` — linha 345.
-
-Em todos: trocar ``Mesa ${x.table_number}`` por `{formatTableLabel(x.table_number)}` (e o "Abrir Mesa X" para `Abrir {formatTableLabel(table.table_number)}`).
+Nenhum outro arquivo precisa mudar. Comportamento e funcionalidade permanecem idênticos — só posicionamento.
 
 ### Validação
 
-- Mesa cuja `table_number = "Mesa 04"` → exibe **"Mesa 04"**.
-- Mesa cuja `table_number = "mesa 02"` → exibe **"Mesa 02"** (case normalizado).
-- Mesa cuja `table_number = "5"` → exibe **"Mesa 5"**.
-- Header da gestão da mesa, dialog de abertura, chip na comanda, lista de comandas, dialogs do PDV — todos consistentes, sem "Mesa Mesa".
-- Não altera dados no banco — só corrige a exibição. Cadastrar novas mesas continua aceitando qualquer formato; o helper normaliza.
+- Abrir `/garcom/comanda/<id>` em viewport mobile (390x844): a barra "Total / Item / Fechar" aparece mais acima, com folga visível em relação à BottomTabBar e sem o FAB sobrepondo o "Fechar".
+- Adicionar vários itens à comanda: o último item ainda fica totalmente visível ao rolar até o fim, sem ficar coberto pela barra.
+- A safe-area inferior (iOS) continua respeitada via `safe-area-bottom`.
 
