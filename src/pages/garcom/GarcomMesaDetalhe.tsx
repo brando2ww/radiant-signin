@@ -31,7 +31,7 @@ export default function GarcomMesaDetalhe() {
     isLoading: loadingComandas,
     createComanda,
     isCreating,
-    sendToKitchen,
+    sendToKitchenAsync,
   } = usePDVComandas();
   const { activeSession, isLoadingSession } = usePDVCashier();
 
@@ -307,9 +307,10 @@ export default function GarcomMesaDetalhe() {
                           size="sm"
                           variant="outline"
                           className="h-8 text-xs active:scale-95"
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            sendToKitchen(pendingIds);
+                            await sendToKitchenAsync(pendingIds);
+                            navigate("/garcom");
                           }}
                         >
                           <Send className="h-3 w-3 mr-1" />
@@ -330,6 +331,7 @@ export default function GarcomMesaDetalhe() {
                           unitPrice={item.unit_price}
                           notes={item.notes}
                           kitchenStatus={item.kitchen_status}
+                          sentToKitchenAt={item.sent_to_kitchen_at}
                         />
                       ))}
                     </div>

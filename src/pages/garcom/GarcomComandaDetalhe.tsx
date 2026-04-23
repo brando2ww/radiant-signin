@@ -15,7 +15,7 @@ export default function GarcomComandaDetalhe() {
     comandas,
     comandaItems,
     isLoading,
-    sendToKitchen,
+    sendToKitchenAsync,
     closeComanda,
     removeItem,
   } = usePDVComandas();
@@ -145,6 +145,7 @@ export default function GarcomComandaDetalhe() {
               unitPrice={item.unit_price}
               notes={item.notes}
               kitchenStatus={item.kitchen_status}
+              sentToKitchenAt={item.sent_to_kitchen_at}
               onRemove={canEdit ? () => removeItem(item.id) : undefined}
             />
           ))
@@ -172,7 +173,10 @@ export default function GarcomComandaDetalhe() {
                 {pendingIds.length > 0 ? (
                   <Button
                     className="active:scale-95 h-11"
-                    onClick={() => sendToKitchen(pendingIds)}
+                    onClick={async () => {
+                      await sendToKitchenAsync(pendingIds);
+                      navigate("/garcom");
+                    }}
                   >
                     <Send className="h-4 w-4 mr-1" />
                     Cozinha

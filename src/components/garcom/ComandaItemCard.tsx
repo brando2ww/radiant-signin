@@ -9,12 +9,18 @@ const kitchenStatusConfig: Record<KitchenStatus, { color: string; label: string 
   entregue: { color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400", label: "Entregue" },
 };
 
+const sentToKitchenConfig = {
+  color: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400",
+  label: "Enviado",
+};
+
 interface ComandaItemCardProps {
   productName: string;
   quantity: number;
   unitPrice: number;
   notes?: string | null;
   kitchenStatus: KitchenStatus;
+  sentToKitchenAt?: string | null;
   onRemove?: () => void;
 }
 
@@ -24,8 +30,12 @@ export function ComandaItemCard({
   unitPrice,
   notes,
   kitchenStatus,
+  sentToKitchenAt,
 }: ComandaItemCardProps) {
-  const config = kitchenStatusConfig[kitchenStatus];
+  const config =
+    kitchenStatus === "pendente" && sentToKitchenAt
+      ? sentToKitchenConfig
+      : kitchenStatusConfig[kitchenStatus];
   const subtotal = quantity * unitPrice;
 
   return (

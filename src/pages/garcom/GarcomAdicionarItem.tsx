@@ -25,7 +25,7 @@ export default function GarcomAdicionarItem() {
   const { id: comandaId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { products, isLoading } = usePDVProducts();
-  const { addItem, isAddingItem, getItemsByComanda, sendToKitchen } = usePDVComandas();
+  const { addItem, isAddingItem, getItemsByComanda, sendToKitchenAsync } = usePDVComandas();
 
   const items = comandaId ? getItemsByComanda(comandaId) : [];
   const pendingItems = items.filter(
@@ -33,9 +33,10 @@ export default function GarcomAdicionarItem() {
   );
   const pendingTotal = pendingItems.reduce((sum, i) => sum + Number(i.subtotal), 0);
 
-  const handleSendToKitchen = () => {
+  const handleSendToKitchen = async () => {
     if (pendingItems.length === 0) return;
-    sendToKitchen(pendingItems.map((i) => i.id));
+    await sendToKitchenAsync(pendingItems.map((i) => i.id));
+    navigate("/garcom");
   };
 
   const [search, setSearch] = useState("");
