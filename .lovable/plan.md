@@ -1,43 +1,44 @@
 
 
-## Card de comanda totalmente clicável (corrigir HTML inválido)
+## Toasts compactos e no topo da página
 
 ### Causa
 
-Na minha última mudança, transformei o card da comanda em `<button>` envolvendo `<div>`s. Em HTML, `<button>` só pode conter conteúdo *phrasing* (inline) — ter `<div>` dentro é inválido. Navegadores "fecham" o botão prematuramente, deixando partes do card (lista de itens, espaços) sem responder ao toque, exatamente o sintoma que você está vendo.
+Em `src/components/ui/sonner.tsx`, o `<Sonner />` é renderizado sem `position` (default `bottom-right`) e sem limites de tamanho — em mobile ele expande quase 100% da largura e fica embaixo.
 
 ### Mudança
 
-Em `src/pages/garcom/GarcomMesaDetalhe.tsx` (linhas 266-319), refazer com HTML válido:
+Em `src/components/ui/sonner.tsx`, ajustar o `<Sonner />`:
 
-- Container externo volta a ser `<div>` com `role="button"`, `tabIndex={0}`, `cursor-pointer` e handlers `onClick` + `onKeyDown` (Enter/Espaço) — toda a área fica clicável e acessível por teclado.
-- Botão "Enviar (N)" interno volta a ser `<Button>` real (sem aninhamento ilegal) com `e.stopPropagation()` no `onClick` para não disparar a navegação do card.
-- Mantém os efeitos visuais (`active:opacity-70 active:scale-[0.99] transition-transform`).
+- `position="top-center"` — toasts aparecem no topo.
+- `expand={false}` e `richColors={false}` — visual mais discreto.
+- `duration={2500}` — desaparece rápido.
+- Em `toastOptions.classNames.toast`: adicionar `min-h-0 py-2 px-3 text-sm w-auto max-w-[90vw] mx-auto rounded-lg` para um toast pequeno, com largura ajustada ao conteúdo (não ocupa a tela toda).
+- Em `toastOptions.classNames.description`: `text-xs` para descrição compacta.
 
 ```tsx
-<div
-  role="button"
-  tabIndex={0}
-  onClick={() => navigate(`/garcom/comanda/${comanda.id}`)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      navigate(`/garcom/comanda/${comanda.id}`);
-    }
+<Sonner
+  theme={theme as ToasterProps["theme"]}
+  className="toaster group"
+  position="top-center"
+  expand={false}
+  duration={2500}
+  toastOptions={{
+    classNames: {
+      toast:
+        "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg min-h-0 py-2 px-3 text-sm w-auto max-w-[90vw] mx-auto rounded-lg",
+      description: "group-[.toast]:text-muted-foreground text-xs",
+      actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+      cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+    },
   }}
-  className="cursor-pointer rounded-2xl border bg-card p-4 space-y-3 active:opacity-70 active:scale-[0.99] transition-transform"
->
-  ...
-  <Button onClick={(e) => { e.stopPropagation(); sendToKitchen(pendingIds); }}>
-    Enviar ({pendingIds.length})
-  </Button>
-  ...
-</div>
+  {...props}
+/>
 ```
 
 ### Validação
 
-- Tocar em qualquer área do card da comanda (cabeçalho, "Sem itens", lista de itens, bordas, espaços vazios) → abre o detalhe da comanda.
-- Tocar em "Enviar (N)" → envia para a cozinha, sem navegar.
-- HTML válido elimina o comportamento errático de área de clique no iOS/Safari.
+- Adicionar item à comanda em `/garcom/comanda/:id/adicionar` → toast "Item adicionado!" aparece no topo, pequeno, com largura ajustada ao texto, e some em ~2,5s.
+- Criar comanda nova / sucesso/erro em outras telas → mesmo comportamento (topo, compacto).
+- Mobile (390px) e desktop: toast nunca ocupa a tela toda; fica centralizado no topo.
 
