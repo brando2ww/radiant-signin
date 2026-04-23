@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, UserPlus, Send, Plus, X } from "lucide-react";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
@@ -49,22 +49,8 @@ export default function GarcomMesaDetalhe() {
   const [opening, setOpening] = useState(false);
   const [comandaNames, setComandaNames] = useState<string[]>([""]);
   const ensuringRef = useRef(false);
-  const justCreatedMultipleRef = useRef(false);
 
   const hasOpenComandas = tableComandas.length > 0;
-
-  // Se já existe alguma comanda aberta, e há exatamente UMA, redireciona direto.
-  // (continuação de atendimento de mesa pré-existente)
-  useEffect(() => {
-    if (loadingTables || loadingComandas) return;
-    if (!table) return;
-    if (splitOpen) return;
-    if (opening) return;
-    if (justCreatedMultipleRef.current) return;
-    if (tableComandas.length === 1) {
-      navigate(`/garcom/comanda/${tableComandas[0].id}`, { replace: true });
-    }
-  }, [tableComandas, loadingTables, loadingComandas, table, splitOpen, opening, navigate]);
 
   const handleConfirmOpen = async () => {
     if (!table) return;
@@ -76,9 +62,6 @@ export default function GarcomMesaDetalhe() {
     }
     ensuringRef.current = true;
     setOpening(true);
-    if (names.length >= 2) {
-      justCreatedMultipleRef.current = true;
-    }
     try {
       let orderId = table.current_order_id;
 
@@ -106,7 +89,6 @@ export default function GarcomMesaDetalhe() {
           );
           ensuringRef.current = false;
           setOpening(false);
-          justCreatedMultipleRef.current = false;
           return;
         }
         orderId = newOrder.id;
@@ -131,7 +113,6 @@ export default function GarcomMesaDetalhe() {
           toast.error("Erro ao atualizar mesa: " + updErr.message);
           ensuringRef.current = false;
           setOpening(false);
-          justCreatedMultipleRef.current = false;
           return;
         }
         if (!updRows || updRows.length === 0) {
@@ -139,7 +120,6 @@ export default function GarcomMesaDetalhe() {
           toast.error("Sem permissão para abrir esta mesa.");
           ensuringRef.current = false;
           setOpening(false);
-          justCreatedMultipleRef.current = false;
           return;
         }
       }
@@ -164,12 +144,10 @@ export default function GarcomMesaDetalhe() {
       if (created.length === 1) {
         navigate(`/garcom/comanda/${created[0].id}`, { replace: true });
       }
-      // Se 2+, fica na tela da mesa mostrando a lista (justCreatedMultipleRef
-      // continua true, então o auto-redirect não dispara).
+      // Se 2+, fica na tela da mesa mostrando a lista de comandas.
     } catch {
       ensuringRef.current = false;
       setOpening(false);
-      justCreatedMultipleRef.current = false;
     }
   };
 
