@@ -80,7 +80,7 @@ export function BottomTabBar({ onNewComanda }: { onNewComanda?: () => void }) {
 
   return (
     <nav
-      className="fixed left-[5.5rem] right-[5.5rem] z-50 flex justify-center pointer-events-none"
+      className="fixed left-3 right-20 z-50 flex justify-start pointer-events-none"
       style={{ bottom: "calc(1rem + env(safe-area-inset-bottom))" }}
     >
       <div
