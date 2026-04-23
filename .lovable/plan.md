@@ -1,66 +1,36 @@
 
 
-## Mesa não fica "ocupada" porque RLS bloqueia o garçom
+## Corrigir prefixo duplicado "Mesa Mesa 04"
 
-### Causa raiz (confirmada via banco)
+### Causa
 
-A comanda **TESTE** foi criada com `order_id` válido apontando para a `pdv_orders` da Mesa 04. Porém na `pdv_tables`, **Mesa 04 está com `current_order_id = NULL` e `status = livre`**.
+A coluna `pdv_tables.table_number` armazena valores inconsistentes — alguns só com número (`"4"`, `"5"`), outros já com o prefixo (`"Mesa 04"`, `"mesa 02"`). Em todas as telas, o front renderiza ``Mesa ${table.table_number}``, gerando "Mesa Mesa 04" para os que já vêm prefixados.
 
-Motivo: a policy RLS de UPDATE em `pdv_tables` exige `auth.uid() = user_id` (apenas o dono). O garçom é staff do estabelecimento, então o `update` em `pdv_tables` **falha silenciosamente** (0 rows afetadas, sem erro) quando ele tenta marcar a mesa como ocupada. Como o front mostra "Mesa X" com base em `tables.find(t => t.current_order_id === comanda.order_id)`, o vínculo não aparece e a comanda fica como **Avulsa**.
+### Solução: helper de formatação único
 
-Há também 2 comandas anteriores ("EDU TESTE" e "EDU TESTE 2") fechadas mas com order ainda `aberta` e mesa órfã — sintoma do mesmo problema.
+Criar `src/utils/formatTableNumber.ts` exportando `formatTableLabel(tableNumber)`:
+- Se vazio → `"Mesa"`.
+- Se começa com `"mesa"` (case-insensitive) → normaliza para `"Mesa <resto>"`.
+- Caso contrário → `"Mesa <valor>"`.
 
-### Mudança 1 — Migration de RLS em `pdv_tables`
+Substituir em todos os lugares onde aparece `` `Mesa ${X.table_number}` ``:
 
-Adicionar policy de UPDATE para staff do estabelecimento:
+- `src/pages/garcom/GarcomMesaDetalhe.tsx` — header (linha 245), título do dialog "Abrir Mesa ..." (linha 350), e qualquer outro `Mesa {table.table_number}` no arquivo (label de comanda na linha ~249 e textos de cards).
+- `src/pages/garcom/GarcomComandaDetalhe.tsx` — chip "Mesa X" (linha 73).
+- `src/pages/garcom/GarcomComandas.tsx` — `Mesa ${t.table_number}` no subtítulo da lista.
+- `src/components/pdv/TableDetailsDialog.tsx` — DialogTitle (linha 92) e AlertDialogDescription (linha 231).
+- `src/components/pdv/ComandaDialog.tsx` — `- Mesa {tableNumber}` (linha 67).
+- `src/components/pdv/cashier/ChargeSelectionDialog.tsx` — linha 398.
+- `src/pages/pdv/FranchiseImport.tsx` — linhas 227 e 494.
+- `src/components/super-admin/FranchiseSection.tsx` — linha 345.
 
-```sql
-CREATE POLICY "Staff can update tables"
-  ON public.pdv_tables
-  FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = user_id OR public.is_establishment_member(user_id))
-  WITH CHECK (auth.uid() = user_id OR public.is_establishment_member(user_id));
-```
-
-A policy `"Owner can manage tables"` (FOR ALL) continua existindo para o dono. A nova só amplia UPDATE para staff — INSERT/DELETE seguem restritos ao dono.
-
-### Mudança 2 — Migration de RLS em `pdv_orders`
-
-Mesmo problema afeta `pdv_orders` (closeComanda atualiza `pdv_orders.status` quando a última comanda fecha). Verifico se existe policy de UPDATE para staff; se não, adicionar análoga:
-
-```sql
-CREATE POLICY "Staff can update orders"
-  ON public.pdv_orders
-  FOR UPDATE
-  TO authenticated
-  USING (auth.uid() = user_id OR public.is_establishment_member(user_id))
-  WITH CHECK (auth.uid() = user_id OR public.is_establishment_member(user_id));
-```
-
-### Mudança 3 — Limpar dados órfãos (data fix)
-
-Mesa 04 está com `current_order_id = null` mas tem order TESTE aberta. Reapontar:
-
-```sql
--- Reabrir mesa para a order da comanda TESTE
-UPDATE pdv_tables 
-SET status = 'ocupada', current_order_id = '5e2bb496-bfc9-4ce8-b5c0-4df76a97bd36'
-WHERE id = '64c11242-aba7-4c73-8a82-71284adc15db';
-
--- Fechar order órfã da comanda EDU TESTE 2 (cuja única comanda já está fechada)
-UPDATE pdv_orders SET status = 'fechada' WHERE id = '9562e911-2d0d-4f97-94cb-a038ffc70ecd';
-UPDATE pdv_orders SET status = 'fechada' WHERE id = '9402e942-ffe1-4d26-9867-f114dce03df7';
-```
-
-### Mudança 4 — Detectar falha silenciosa no código
-
-Em `src/pages/garcom/GarcomMesaDetalhe.tsx` (função `handleConfirmOpen`), trocar o `update().eq()` por `update().eq().select()` e checar se retornou linha. Se 0 rows e sem erro (caso de RLS), mostrar `toast.error("Sem permissão para atualizar mesa")` em vez de seguir como se tivesse dado certo. Mesma proteção em `closeComandaMutation` (`use-pdv-comandas.ts`) ao atualizar `pdv_orders` e `pdv_tables`.
+Em todos: trocar ``Mesa ${x.table_number}`` por `{formatTableLabel(x.table_number)}` (e o "Abrir Mesa X" para `Abrir {formatTableLabel(table.table_number)}`).
 
 ### Validação
 
-- Garçom abre Mesa 5 com nome "Pedro" → mesa fica `ocupada` na lista, comanda do Pedro abre com chip **"Mesa 5"** no header.
-- Em `/garcom/comandas`, "Pedro" aparece como `Mesa 5 · 0 itens · R$ 0,00`.
-- Garçom fecha a única comanda → mesa volta para `livre`.
-- Mesa 04 atual recupera o vínculo com TESTE após o data fix.
+- Mesa cuja `table_number = "Mesa 04"` → exibe **"Mesa 04"**.
+- Mesa cuja `table_number = "mesa 02"` → exibe **"Mesa 02"** (case normalizado).
+- Mesa cuja `table_number = "5"` → exibe **"Mesa 5"**.
+- Header da gestão da mesa, dialog de abertura, chip na comanda, lista de comandas, dialogs do PDV — todos consistentes, sem "Mesa Mesa".
+- Não altera dados no banco — só corrige a exibição. Cadastrar novas mesas continua aceitando qualquer formato; o helper normaliza.
 
