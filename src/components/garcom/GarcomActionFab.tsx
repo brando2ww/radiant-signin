@@ -93,7 +93,7 @@ export function GarcomActionFab() {
 
       <div
         className={cn(
-          "fixed right-4 z-50 flex flex-col items-end gap-3",
+          "fixed right-4 z-50 flex flex-col items-end gap-3 pointer-events-none",
         )}
         style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
       >
@@ -103,7 +103,7 @@ export function GarcomActionFab() {
             "flex flex-col items-end gap-3 transition-all duration-200",
             open
               ? "pointer-events-auto opacity-100 translate-y-0"
-              : "pointer-events-none opacity-0 translate-y-2",
+              : "pointer-events-none opacity-0 translate-y-2 invisible h-0 overflow-hidden",
           )}
         >
           {actions.map((action, index) => {
