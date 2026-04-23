@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Package, Armchair, Truck, RefreshCw, GitBranch, Info, Loader2, Send, Building2 } from "lucide-react";
 import { useFranchiseImport } from "@/hooks/use-franchise-import";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 
 export default function FranchiseImport() {
   const {
@@ -224,7 +225,7 @@ export default function FranchiseImport() {
                   <label key={table.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent/50 cursor-pointer">
                     <Checkbox checked={selectedTables.includes(table.id)} onCheckedChange={() => toggleTable(table.id)} />
                     <div>
-                      <p className="text-sm font-medium">Mesa {table.table_number}</p>
+                      <p className="text-sm font-medium">{formatTableLabel(table.table_number)}</p>
                       <p className="text-xs text-muted-foreground">{table.capacity} lugares</p>
                     </div>
                   </label>
@@ -491,7 +492,7 @@ function ParentView({
                   <label key={table.id} className="flex items-center gap-3 p-2 rounded-md hover:bg-accent/50 cursor-pointer">
                     <Checkbox checked={selectedTables.includes(table.id)} onCheckedChange={() => toggleTable(table.id)} />
                     <div>
-                      <p className="text-sm font-medium">Mesa {table.table_number}</p>
+                      <p className="text-sm font-medium">{formatTableLabel(table.table_number)}</p>
                       <p className="text-xs text-muted-foreground">{table.capacity} lugares</p>
                     </div>
                   </label>

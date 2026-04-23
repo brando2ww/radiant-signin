@@ -6,6 +6,7 @@ import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Search, ChevronRight } from "lucide-react";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 
 export default function GarcomComandas() {
   const { comandas, comandaItems, isLoading } = usePDVComandas();
@@ -56,7 +57,7 @@ export default function GarcomComandas() {
               const items = comandaItems.filter((i) => i.comanda_id === comanda.id);
               const total = items.reduce((s, i) => s + i.subtotal, 0);
               const t = comanda.order_id ? tableByOrderId.get(comanda.order_id) : null;
-              const origin = t ? `Mesa ${t.table_number}` : "Avulsa";
+              const origin = t ? formatTableLabel(t.table_number) : "Avulsa";
 
               return (
                 <button

@@ -23,6 +23,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 import {
   Select,
   SelectContent,
@@ -395,7 +396,7 @@ export function ChargeSelectionDialog({
                                       )}
                                     />
                                     <span className="font-semibold">
-                                      Mesa {table.table_number}
+                                      {formatTableLabel(table.table_number)}
                                     </span>
                                     <Badge variant="outline" className="text-xs">
                                       {tableComandas.length}{" "}

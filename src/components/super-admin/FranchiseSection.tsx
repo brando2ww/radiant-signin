@@ -22,6 +22,7 @@ import { ExternalLink, Link2Off, Plus, RefreshCw, Send, Copy } from "lucide-reac
 import { useNavigate } from "react-router-dom";
 import { Tenant, useTenants } from "@/hooks/use-tenants";
 import { toast } from "sonner";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 
 interface FranchiseSectionProps {
   tenantId: string;
@@ -342,7 +343,7 @@ export function FranchiseSection({ tenantId, allTenants }: FranchiseSectionProps
                         checked={selectedTableIds.includes(t.id)}
                         onCheckedChange={() => toggleTable(t.id)}
                       />
-                      <span className="text-sm">Mesa {t.table_number}</span>
+                      <span className="text-sm">{formatTableLabel(t.table_number)}</span>
                     </label>
                   ))}
                 </div>

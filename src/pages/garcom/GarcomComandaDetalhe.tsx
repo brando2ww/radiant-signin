@@ -5,6 +5,7 @@ import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 
 export default function GarcomComandaDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -70,7 +71,7 @@ export default function GarcomComandaDetalhe() {
                 className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary active:scale-95 transition-transform"
               >
                 <Utensils className="h-3 w-3" />
-                Mesa {tableOfComanda.table_number}
+                {formatTableLabel(tableOfComanda.table_number)}
               </button>
             ) : (
               <span className="text-[10px] text-muted-foreground">· Avulsa</span>

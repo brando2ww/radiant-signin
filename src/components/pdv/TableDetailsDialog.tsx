@@ -10,6 +10,7 @@ import { PDVTable } from "@/hooks/use-pdv-tables";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Users, Clock, DollarSign, Plus, Edit, Trash2, Unlink } from "lucide-react";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -89,7 +90,7 @@ export function TableDetailsDialog({
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle>Mesa {table.table_number}</DialogTitle>
+              <DialogTitle>{formatTableLabel(table.table_number)}</DialogTitle>
               <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
             </div>
           </DialogHeader>
@@ -228,7 +229,7 @@ export function TableDetailsDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Mover para a lixeira</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir a Mesa {table.table_number}?
+              Tem certeza que deseja excluir a {formatTableLabel(table.table_number)}?
               A mesa será movida para a lixeira e poderá ser restaurada posteriormente.
             </AlertDialogDescription>
           </AlertDialogHeader>
