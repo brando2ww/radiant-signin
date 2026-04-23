@@ -395,7 +395,7 @@ export function ChargeSelectionDialog({
                                       )}
                                     />
                                     <span className="font-semibold">
-                                      Mesa {table.table_number}
+                                      {formatTableLabel(table.table_number)}
                                     </span>
                                     <Badge variant="outline" className="text-xs">
                                       {tableComandas.length}{" "}

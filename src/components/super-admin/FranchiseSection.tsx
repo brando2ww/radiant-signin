@@ -342,7 +342,7 @@ export function FranchiseSection({ tenantId, allTenants }: FranchiseSectionProps
                         checked={selectedTableIds.includes(t.id)}
                         onCheckedChange={() => toggleTable(t.id)}
                       />
-                      <span className="text-sm">Mesa {t.table_number}</span>
+                      <span className="text-sm">{formatTableLabel(t.table_number)}</span>
                     </label>
                   ))}
                 </div>

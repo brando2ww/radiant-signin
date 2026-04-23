@@ -242,7 +242,7 @@ export default function GarcomMesaDetalhe() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div>
-          <h1 className="text-base font-semibold">Mesa {table.table_number}</h1>
+          <h1 className="text-base font-semibold">{formatTableLabel(table.table_number)}</h1>
           <p className="text-xs text-muted-foreground capitalize">
             {table.status.replace(/_/g, " ")}
           </p>
@@ -347,7 +347,7 @@ export default function GarcomMesaDetalhe() {
       <Dialog open={showOpenDialog}>
         <DialogContent className="max-w-[min(24rem,calc(100vw-2rem))] rounded-2xl">
           <DialogHeader>
-            <DialogTitle>Abrir Mesa {table.table_number}</DialogTitle>
+            <DialogTitle>Abrir {formatTableLabel(table.table_number)}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">

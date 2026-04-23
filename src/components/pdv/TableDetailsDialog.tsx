@@ -89,7 +89,7 @@ export function TableDetailsDialog({
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center justify-between">
-              <DialogTitle>Mesa {table.table_number}</DialogTitle>
+              <DialogTitle>{formatTableLabel(table.table_number)}</DialogTitle>
               <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
             </div>
           </DialogHeader>
@@ -228,7 +228,7 @@ export function TableDetailsDialog({
           <AlertDialogHeader>
             <AlertDialogTitle>Mover para a lixeira</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir a Mesa {table.table_number}?
+              Tem certeza que deseja excluir a {formatTableLabel(table.table_number)}?
               A mesa será movida para a lixeira e poderá ser restaurada posteriormente.
             </AlertDialogDescription>
           </AlertDialogHeader>

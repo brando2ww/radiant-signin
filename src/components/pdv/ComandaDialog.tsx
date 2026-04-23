@@ -64,7 +64,7 @@ export function ComandaDialog({
             Nova Comanda
             {tableNumber && (
               <span className="text-muted-foreground font-normal ml-2">
-                - Mesa {tableNumber}
+                - {formatTableLabel(tableNumber)}
               </span>
             )}
           </DialogTitle>

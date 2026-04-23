@@ -70,7 +70,7 @@ export default function GarcomComandaDetalhe() {
                 className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary active:scale-95 transition-transform"
               >
                 <Utensils className="h-3 w-3" />
-                Mesa {tableOfComanda.table_number}
+                {formatTableLabel(tableOfComanda.table_number)}
               </button>
             ) : (
               <span className="text-[10px] text-muted-foreground">· Avulsa</span>
