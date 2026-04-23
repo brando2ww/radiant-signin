@@ -155,6 +155,7 @@ export function PaymentDialog({
     isRemovingItem,
     addItem,
     isAddingItem,
+    comandaItems: liveComandaItems,
   } = usePDVComandas();
   const { products: productsList } = usePDVProducts();
   const { emitNFCe, isEmitting } = useNFCeEmission();
