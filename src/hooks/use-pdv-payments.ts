@@ -184,7 +184,7 @@ export function usePDVPayments() {
     }) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
-      // 1. Close all comandas for this table (only if still open)
+      // 1. Close all comandas for this table (open OR awaiting payment)
       const { data: updatedComandas, error: comandaError } = await supabase
         .from("pdv_comandas")
         .update({
@@ -192,7 +192,7 @@ export function usePDVPayments() {
           updated_at: new Date().toISOString(),
         })
         .in("id", comandaIds)
-        .eq("status", "aberta")
+        .in("status", ["aberta", "aguardando_pagamento", "em_cobranca"])
         .select();
 
       if (comandaError) throw comandaError;
@@ -200,16 +200,28 @@ export function usePDVPayments() {
         throw new Error("Comandas já finalizadas");
       }
 
-      // 2. Free the table
+      // 2. Free the table and close the order
       const { error: tableError } = await supabase
         .from("pdv_tables")
         .update({
           status: "livre",
           current_order_id: null,
+          updated_at: new Date().toISOString(),
         })
         .eq("id", tableId);
 
       if (tableError) throw tableError;
+
+      // Also close the underlying order(s) for this table
+      const orderIds = Array.from(
+        new Set(updatedComandas.map((c: any) => c.order_id).filter(Boolean)),
+      ) as string[];
+      if (orderIds.length > 0) {
+        await supabase
+          .from("pdv_orders")
+          .update({ status: "fechada", updated_at: new Date().toISOString() })
+          .in("id", orderIds);
+      }
 
       // 3. Register sale in cashier
       const ownerId = visibleUserId || user.id;
