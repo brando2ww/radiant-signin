@@ -104,25 +104,15 @@ export function ChargeSelectionDialog({
     comandas,
     getItemsByComanda,
     getStandaloneComandas,
-    getPendingPaymentComandas,
   } = usePDVComandas();
   const { tables } = usePDVTables();
 
-  const pendingComandas = getPendingPaymentComandas();
   const standaloneComandas = getStandaloneComandas();
   const occupiedTables = tables.filter(
     (t) => t.status !== "livre" && t.current_order_id,
   );
 
-  const tablesByOrderId = useMemo(() => {
-    const m = new Map<string, PDVTable>();
-    tables.forEach((t) => {
-      if (t.current_order_id) m.set(t.current_order_id, t);
-    });
-    return m;
-  }, [tables]);
-
-  // Get comandas for a table (somente abertas pelo caixa; comandas pendentes ficam na aba "Aguardando")
+  // Get comandas for a table (somente abertas pelo caixa; pendentes ficam no painel lateral)
   const getComandasForTable = (table: PDVTable) => {
     if (!table.current_order_id) return [];
     return comandas.filter(
@@ -140,67 +130,6 @@ export function ChargeSelectionDialog({
     if (minutes < 60) return "bg-yellow-500";
     return "bg-red-500";
   };
-
-  // ---------- Aba "Aguardando" ----------
-  // Agrupa por order_id (mesa) + grupo "avulsa" para comandas sem order
-  type PendingGroup = {
-    key: string;
-    table: PDVTable | null;
-    label: string;
-    comandas: Comanda[];
-    total: number;
-    oldestAt: number;
-    color: string;
-  };
-
-  const pendingGroups = useMemo<PendingGroup[]>(() => {
-    const filtered = pendingComandas.filter((c) => {
-      if (!search) return true;
-      const s = search.toLowerCase();
-      const t = c.order_id ? tablesByOrderId.get(c.order_id) : null;
-      return (
-        c.comanda_number.toLowerCase().includes(s) ||
-        (c.customer_name ?? "").toLowerCase().includes(s) ||
-        (t ? formatTableLabel(t.table_number).toLowerCase().includes(s) : false)
-      );
-    });
-
-    const map = new Map<string, PendingGroup>();
-    filtered.forEach((c) => {
-      const key = c.order_id ?? `__avulsa__${c.id}`;
-      const t = c.order_id ? tablesByOrderId.get(c.order_id) ?? null : null;
-      const ts = new Date(c.closed_by_waiter_at ?? c.updated_at).getTime();
-      const existing = map.get(key);
-      if (existing) {
-        existing.comandas.push(c);
-        existing.total += c.subtotal;
-        existing.oldestAt = Math.min(existing.oldestAt, ts);
-      } else {
-        map.set(key, {
-          key,
-          table: t,
-          label: t ? formatTableLabel(t.table_number) : "Avulsa",
-          comandas: [c],
-          total: c.subtotal,
-          oldestAt: ts,
-          color: getGroupColor(c.order_id),
-        });
-      }
-    });
-
-    const groups = Array.from(map.values());
-    // Ordena comandas dentro do grupo por tempo de espera (mais antigas primeiro)
-    groups.forEach((g) => g.comandas.sort((a, b) => {
-      const av = new Date(a.closed_by_waiter_at ?? a.updated_at).getTime();
-      const bv = new Date(b.closed_by_waiter_at ?? b.updated_at).getTime();
-      return av - bv;
-    }));
-    // Ordena grupos
-    groups.sort((a, b) => a.oldestAt - b.oldestAt);
-    return groups;
-  }, [pendingComandas, search, tablesByOrderId]);
-
-  const totalPending = pendingComandas.length;
 
   // Filtros das demais abas
   const filteredComandas = useMemo(() => {
