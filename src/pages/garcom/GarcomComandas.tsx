@@ -2,13 +2,14 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { GarcomHeader } from "@/components/garcom/GarcomHeader";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
+import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Search, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export default function GarcomComandas() {
   const { comandas, comandaItems, isLoading } = usePDVComandas();
+  const { tables } = usePDVTables();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
 
@@ -17,6 +18,12 @@ export default function GarcomComandas() {
     (c) =>
       c.comanda_number.toLowerCase().includes(search.toLowerCase()) ||
       c.customer_name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const tableByOrderId = new Map(
+    tables
+      .filter((t) => t.current_order_id)
+      .map((t) => [t.current_order_id as string, t]),
   );
 
   return (
@@ -48,6 +55,8 @@ export default function GarcomComandas() {
             {filtered.map((comanda) => {
               const items = comandaItems.filter((i) => i.comanda_id === comanda.id);
               const total = items.reduce((s, i) => s + i.subtotal, 0);
+              const t = comanda.order_id ? tableByOrderId.get(comanda.order_id) : null;
+              const origin = t ? `Mesa ${t.table_number}` : "Avulsa";
 
               return (
                 <button
@@ -64,7 +73,7 @@ export default function GarcomComandas() {
                       {comanda.customer_name || comanda.comanda_number}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {items.length} {items.length === 1 ? "item" : "itens"} · R$ {total.toFixed(2)}
+                      {origin} · {items.length} {items.length === 1 ? "item" : "itens"} · R$ {total.toFixed(2)}
                     </p>
                   </div>
                   <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
