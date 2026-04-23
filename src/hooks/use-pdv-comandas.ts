@@ -243,15 +243,17 @@ export function usePDVComandas() {
       unitPrice: number;
       notes?: string;
     }) => {
-      // Bloqueia adicionar item em comanda que já foi enviada para o caixa
+      // Bloqueia adicionar item em comanda finalizada/cancelada.
+      // Permitido: 'aberta' (garçom) e 'aguardando_pagamento'/'em_cobranca' (correção pelo caixa).
       const { data: existing, error: fetchErr } = await supabase
         .from("pdv_comandas")
         .select("status")
         .eq("id", data.comandaId)
         .maybeSingle();
       if (fetchErr) throw fetchErr;
-      if (existing && existing.status !== "aberta") {
-        throw new Error("Esta comanda já foi fechada e enviada para o caixa");
+      const allowedStatuses = ["aberta", "aguardando_pagamento", "em_cobranca"];
+      if (existing && !allowedStatuses.includes(existing.status)) {
+        throw new Error("Esta comanda já foi finalizada e não pode mais receber itens");
       }
 
       const subtotal = data.quantity * data.unitPrice;
