@@ -178,20 +178,18 @@ export function usePDVCashier() {
 
       if (movError) throw movError;
 
-      // Atualizar totais da sessão
-      const newWithdrawals =
-        type === "sangria"
-          ? activeSession.total_withdrawals + amount
-          : activeSession.total_withdrawals - amount;
+      // Atualizar totais da sessão APENAS para sangria.
+      // Reforço é contabilizado separadamente no frontend a partir da lista de movements.
+      if (type === "sangria") {
+        const { error: updateError } = await supabase
+          .from("pdv_cashier_sessions")
+          .update({
+            total_withdrawals: activeSession.total_withdrawals + amount,
+          })
+          .eq("id", activeSession.id);
 
-      const { error: updateError } = await supabase
-        .from("pdv_cashier_sessions")
-        .update({
-          total_withdrawals: newWithdrawals,
-        })
-        .eq("id", activeSession.id);
-
-      if (updateError) throw updateError;
+        if (updateError) throw updateError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pdv-cashier-active"] });
