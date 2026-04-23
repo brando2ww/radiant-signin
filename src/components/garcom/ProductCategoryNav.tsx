@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface ProductCategoryNavProps {
   categories: string[];
@@ -9,7 +8,7 @@ interface ProductCategoryNavProps {
 
 export function ProductCategoryNav({ categories, selected, onSelect }: ProductCategoryNavProps) {
   return (
-    <ScrollArea className="w-full">
+    <div className="w-full overflow-x-auto">
       <div className="flex gap-2 px-4 py-2">
         <button
           type="button"
@@ -39,7 +38,6 @@ export function ProductCategoryNav({ categories, selected, onSelect }: ProductCa
           </button>
         ))}
       </div>
-      <ScrollBar orientation="horizontal" />
-    </ScrollArea>
+    </div>
   );
 }
