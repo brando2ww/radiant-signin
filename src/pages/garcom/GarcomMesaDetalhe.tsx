@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, UserPlus, Send, Plus, X } from "lucide-react";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
