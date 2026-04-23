@@ -173,19 +173,7 @@ export function ChargeSelectionDialog({
     return result;
   }, [occupiedTables, search, sortBy]);
 
-  const handleSelectPendingComanda = (comanda: Comanda) => {
-    onSelectComanda(comanda, getItemsByComanda(comanda.id));
-  };
-
-  const handleSelectPendingGroup = (group: PendingGroup) => {
-    if (!group.table) return;
-    const items = group.comandas.flatMap((c) => getItemsByComanda(c.id));
-    if (onSelectTablePending) {
-      onSelectTablePending(group.table, group.comandas, items);
-    } else {
-      onSelectTable(group.table, group.comandas, items);
-    }
-  };
+  // (Pending comandas agora são tratadas no painel lateral SalonQueuePanel)
 
   const handleSelectComandaCard = (comanda: Comanda) => {
     onSelectComanda(comanda, getItemsByComanda(comanda.id));
