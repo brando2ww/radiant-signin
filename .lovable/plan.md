@@ -1,53 +1,44 @@
 
 
-## Corrigir tela após abrir mesa com múltiplas comandas
+## Mostrar a mesa na comanda + garantir que mesa fica ocupada
 
-Após criar 2 comandas, o dialog "Abrir Mesa" reabre vazio em vez de mostrar a tela de gestão da mesa com as 2 comandas listadas.
+### Estado atual
 
-### Causa
+- A mesa é marcada `ocupada` corretamente quando o garçom abre a mesa via dialog (já implementado).
+- Porém, na tela da comanda (`/garcom/comanda/:id`), não há nenhuma referência à mesa de origem — o garçom não sabe se está atendendo uma comanda de mesa ou avulsa.
+- Na lista geral de comandas (`/garcom/comandas`), também não aparece a mesa.
 
-`tableComandas` é calculado por `comandas.filter(c => c.order_id === table.current_order_id)`. Após criar as comandas:
+### Mudanças
 
-1. O `updateTable` que seta `current_order_id` na mesa é fire-and-forget — ainda não refletiu na query de tables quando a tela re-renderiza.
-2. Enquanto `current_order_id` permanece `null`, o filtro retorna vazio, `hasOpenComandas` continua `false` e o dialog `showOpenDialog` reabre.
-3. O `useEffect` de auto-redirect ainda pode disparar com `length === 1` se uma das comandas chegar no cache antes da outra, levando para uma comanda em vez da gestão da mesa.
+**1. `src/pages/garcom/GarcomComandaDetalhe.tsx` — mostrar a mesa no header**
 
-### Mudanças em `src/pages/garcom/GarcomMesaDetalhe.tsx`
+- Importar `usePDVTables`.
+- Resolver `tableOfComanda = tables.find(t => t.current_order_id === comanda.order_id)` (somente quando `comanda.order_id` existe).
+- No header, abaixo do `comanda_number`, exibir um badge/linha:
+  - Se houver mesa: `Mesa {table.table_number}` (com ícone `Table` ou `Utensils` do lucide-react), tocável → navega para `/garcom/mesa/{table.id}`.
+  - Se não houver: `Comanda avulsa` em texto secundário.
+- Layout: `comanda_number` à esquerda na linha pequena, e a indicação da mesa em chip ao lado (ou logo abaixo) com `text-xs` e cor primária quando clicável.
 
-**1. Atualizar a mesa de forma síncrona (await direto no Supabase)**
+**2. `src/pages/garcom/GarcomComandas.tsx` — mostrar mesa na lista**
 
-Substituir o `updateTable` fire-and-forget por um update awaited:
-```ts
-await supabase.from("pdv_tables")
-  .update({ status: "ocupada", current_order_id: orderId, updated_at: new Date().toISOString() })
-  .eq("id", table.id);
-```
+- Importar `usePDVTables` e mapear `order_id → table_number`.
+- No subtítulo de cada card, junto com itens/total, prefixar com `Mesa X · ` quando a comanda pertencer a uma mesa, ou `Avulsa · ` quando não.
 
-**2. Refetch awaited das duas queries após criar comandas**
-```ts
-await Promise.all([
-  queryClient.refetchQueries({ queryKey: ["pdv-tables"] }),
-  queryClient.refetchQueries({ queryKey: ["pdv-comandas"] }),
-]);
-```
-Só então `setOpening(false)`. Isso garante que quando o estado `opening` voltar a `false`, a tela já tem as comandas e o `current_order_id` da mesa atualizado, fechando o dialog naturalmente e renderizando a lista.
+**3. Garantir mesa ocupada quando criar comanda nominal extra (`splitOpen`) — verificação defensiva**
 
-**3. Travar auto-redirect quando garçom criou múltiplas comandas**
+No `handleCreateNominal` em `GarcomMesaDetalhe.tsx`, se por algum motivo a mesa não estiver `ocupada` (caso de borda), atualizar para `ocupada` antes de criar a nova comanda. Já há um `current_order_id` exigido no fluxo, então o caso é raro, mas garantimos consistência.
 
-Adicionar `const justCreatedMultipleRef = useRef(false);`. Setar `true` em `handleConfirmOpen` quando `names.length >= 2`. No `useEffect` de redirect (length === 1), retornar cedo se a ref for true — assim, mesmo se houver um intervalo onde apenas 1 comanda chegou no cache, não redireciona indevidamente.
+**4. Liberar mesa ao fechar a última comanda (já era esperado, vou verificar)**
 
-### Comportamento final
-
-- Mesa livre + 1 nome → cria 1 comanda → redireciona direto para `/garcom/comanda/{id}`.
-- Mesa livre + 2+ nomes → cria N comandas → **fica na tela da mesa** mostrando 1 card por comanda, com nome e número.
-- Tocar num card → abre `/garcom/comanda/{id}` para adicionar pedidos àquela comanda específica.
-- Botão "+ Nova comanda" continua disponível para criar comandas adicionais.
-- Voltar → volta para `/garcom`.
+- Confirmar via leitura do `closeComandaMutation` em `use-pdv-comandas.ts` se a mesa volta para `livre` quando todas as comandas da mesma `order_id` são fechadas. Se não estiver implementado, adicionar lógica:
+  - Após fechar uma comanda com `order_id`, contar quantas comandas `aberta` ainda existem para esse `order_id`. Se for 0: marcar `pdv_orders.status = 'fechada'` e `pdv_tables.status = 'livre'`, `current_order_id = null` para a mesa correspondente.
 
 ### Validação
 
-- Adicionar "João" + "Maria" → tela mostra 2 cards "Comanda XXX-001 — João" e "Comanda XXX-002 — Maria", sem reabrir o dialog.
-- Tocar em "João" → vai para a tela de pedidos da comanda do João.
-- Voltar → continua mostrando as 2 comandas na mesa, ambas com os pedidos preservados.
-- Mesa pré-existente com 1 comanda aberta → continua redirecionando direto (continuação de atendimento).
+- Abrir Mesa 04 com comandas "João" e "Maria" → mesa fica ocupada (✓ já funciona).
+- Tocar em "João" → tela da comanda mostra no header: nome "João", número "20260423-038", e logo abaixo um chip clicável **"Mesa 04"** com ícone.
+- Tocar no chip "Mesa 04" → volta para `/garcom/mesa/{id}` mostrando ambas as comandas.
+- Em `/garcom/comandas`, cada item da lista mostra `"Mesa 04 · 0 itens · R$ 0,00"`.
+- Comanda avulsa (sem mesa) → header mostra "Comanda avulsa", lista mostra "Avulsa · ...".
+- Fechar a última comanda da mesa → mesa volta para `livre` no `/garcom`.
 
