@@ -315,7 +315,23 @@ export function PaymentDialog({
         discountAuthorizedBy: hasDiscount ? discountAuthorizedBy : undefined,
       };
 
-      if (isTablePayment && table) {
+      // Modo split-por-comanda: 1 pagamento por comanda nominal (cada um com seu método)
+      const isSplitByComanda = splitEnabled && splitPayments.some((p) => p.comandaId);
+      if (isSplitByComanda && isTablePayment) {
+        for (const line of splitPayments) {
+          if (!line.comandaId) continue;
+          const c = tableComandas.find((x) => x.id === line.comandaId);
+          if (!c) continue;
+          await registerPayment({
+            comandaId: c.id,
+            orderId: c.order_id,
+            amount: parseFloat(line.amount) || c.subtotal,
+            paymentMethod: line.method,
+            installments: line.method === "cartao" ? parseInt(line.installments) : undefined,
+            cashReceived: line.method === "dinheiro" ? parseFloat(line.amount) : undefined,
+          });
+        }
+      } else if (isTablePayment && table) {
         await registerTablePayment({
           tableId: table.id,
           comandaIds: tableComandas.map((c) => c.id),
@@ -329,7 +345,7 @@ export function PaymentDialog({
         });
       }
 
-      // Show success screen (manual close: user pode emitir NFC-e ou imprimir)
+      paymentDoneRef.current = true;
       setSuccessData({ change: changeAmount });
       setShowSuccess(true);
     } catch (error) {
