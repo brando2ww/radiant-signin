@@ -54,7 +54,7 @@ export default function Garcom() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-28">
+    <div data-garcom-root className="min-h-screen bg-background pb-28 font-montserrat">
       <Routes>
         <Route index element={<GarcomMesas />} />
         <Route path="comandas" element={<GarcomComandas />} />

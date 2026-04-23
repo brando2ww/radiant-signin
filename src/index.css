@@ -116,6 +116,13 @@ All colors MUST be HSL.
   }
 }
 
+/* Aplica Montserrat em portais (Sheets, Dialogs, Dropdowns) abertos a partir da área do garçom */
+body:has([data-garcom-root]) [data-radix-popper-content-wrapper],
+body:has([data-garcom-root]) [role="dialog"],
+body:has([data-garcom-root]) [data-sonner-toaster] {
+  font-family: 'Montserrat', system-ui, sans-serif;
+}
+
 /* Density Classes */
 .density-compact {
   --card-padding: 0.75rem;
