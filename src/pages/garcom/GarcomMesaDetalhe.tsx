@@ -48,6 +48,7 @@ export default function GarcomMesaDetalhe() {
   const [opening, setOpening] = useState(false);
   const [comandaNames, setComandaNames] = useState<string[]>([""]);
   const ensuringRef = useRef(false);
+  const justCreatedMultipleRef = useRef(false);
 
   const hasOpenComandas = tableComandas.length > 0;
 
@@ -58,6 +59,7 @@ export default function GarcomMesaDetalhe() {
     if (!table) return;
     if (splitOpen) return;
     if (opening) return;
+    if (justCreatedMultipleRef.current) return;
     if (tableComandas.length === 1) {
       navigate(`/garcom/comanda/${tableComandas[0].id}`, { replace: true });
     }
