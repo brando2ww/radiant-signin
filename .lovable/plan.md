@@ -1,76 +1,29 @@
 
 
-## Abertura de mesa com nome obrigatório + múltiplas comandas
+## Ajustar layout do dialog "Abrir Mesa"
 
-Hoje, ao abrir uma mesa livre, o sistema só pergunta "Abrir Mesa X?" e cria automaticamente **uma comanda sem nome** (`customer_name = null`). Para criar comandas adicionais, o garçom precisa entrar na mesa e tocar em "Dividir em comanda nominal". Isso gera o efeito feio de várias entradas "— Mesa Mesa 12" no histórico e força um passo extra para dividir.
+Na captura, o dialog está com dois problemas visuais:
 
-A proposta: **toda comanda da mesa tem nome obrigatório**, e dá pra abrir várias comandas de uma vez no momento da abertura.
+1. **Input cortado / com aparência de underline azul** — o container de scroll usa `pr-1` que corta a borda direita do input pelo `overflow-y-auto`, fazendo a borda parecer um traço.
+2. **Footer empilhado** — `Cancelar` e `Abrir mesa` estão um sobre o outro porque o `DialogFooter` do shadcn é `flex-col` no mobile.
 
-### Mudanças
+### Mudanças em `src/pages/garcom/GarcomMesaDetalhe.tsx`
 
-**1. `src/pages/garcom/GarcomMesaDetalhe.tsx` — novo dialog de abertura**
+**Container dos inputs**
+- Trocar `space-y-2 max-h-[50vh] overflow-y-auto pr-1` por `space-y-3 max-h-[50vh] overflow-y-auto px-1 -mx-1` para dar respiro lateral sem cortar a borda do input.
 
-Substituir o `AlertDialog` "Abrir Mesa X?" por um `Dialog` chamado **"Abrir Mesa X"** com:
+**Input + botão remover**
+- Adicionar `className="flex-1 min-w-0"` no `Input` para garantir que ele se ajuste ao container e não estoure.
+- Mudar o botão `×` de `h-9 w-9` para `h-10 w-10 shrink-0` (combinando com a altura do Input e impedindo que ele encolha).
+- Encurtar placeholder para `Ex: João, Casal...` (cabe melhor em 390px).
 
-- Lista dinâmica de inputs "Comanda N" (uma linha por comanda).
-- Começa com **1 input** focado, placeholder `Ex: João, Casal, Mesa frente...`.
-- Botão `+ Adicionar comanda` para acrescentar mais inputs (limite 10).
-- Botão `×` em cada input extra para removê-lo (o primeiro não pode ser removido).
-- Botão primário **"Abrir mesa"** desabilitado enquanto qualquer input estiver vazio.
-- Botão secundário **"Cancelar"** volta para a tela anterior.
-
-Ao confirmar:
-1. Cria/garante o `pdv_orders` da mesa (lógica atual já faz isso).
-2. Marca a mesa como `ocupada` com `current_order_id`.
-3. Para cada nome digitado, chama `createComanda({ orderId, customerName: nome })` em sequência.
-4. Se houver **1 só** → navega direto para `/garcom/comanda/{id}`.
-5. Se houver **2+** → fica na tela da mesa mostrando a lista das comandas criadas.
-
-**2. Auto-redirect mantido só para continuação de atendimento**
-
-O `useEffect` atual redireciona quando `tableComandas.length === 1`. Mantenho o comportamento — só dispara quando o dialog não está aberto. Mesa que já tinha 1 comanda aberta continua sendo aberta direto.
-
-**3. Botão "Dividir em comanda nominal" → "+ Nova comanda"**
-
-Renomear o botão da tela detalhe da mesa para `+ Nova comanda` (já que agora toda comanda é nominal). O `Dialog` `splitOpen` existente continua funcionando — pede um nome e cria mais 1 comanda no mesmo `order_id`.
-
-### Diagrama do novo dialog
-
-```text
-Mesa livre → toca no card
-   ↓
-┌──────────────────────────────────┐
-│ Abrir Mesa 5                     │
-│                                  │
-│ Comanda 1                        │
-│ ┌────────────────────────┐       │
-│ │ João                   │       │
-│ └────────────────────────┘       │
-│ Comanda 2                        │
-│ ┌────────────────────────┐  ┌─┐  │
-│ │ Maria                  │  │×│  │
-│ └────────────────────────┘  └─┘  │
-│                                  │
-│   + Adicionar comanda            │
-│                                  │
-│       [Cancelar]   [Abrir mesa]  │
-└──────────────────────────────────┘
-   ↓
-Mesa ocupada → lista as 2 comandas com seus nomes
-```
-
-### Compatibilidade
-
-- Não muda o schema do banco.
-- Mesas já abertas sem nome continuam funcionando (fallback exibe "Mesa X").
-- Criação via FAB → "Comanda avulsa" (`NewOrderSheet`) já pede nome — sem alteração.
+**Footer**
+- Adicionar `className="flex-row gap-2 sm:gap-2"` no `DialogFooter` para forçar layout horizontal mesmo no mobile.
+- Adicionar `className="flex-1"` em ambos os botões para dividirem a largura igualmente.
 
 ### Validação
 
-- `/garcom` → tocar em mesa livre → modal "Abrir Mesa X" com 1 input vazio e botão "Abrir mesa" desabilitado.
-- Digitar "João" → botão habilita → "Abrir mesa" → mesa ocupada, redireciona pra comanda do João.
-- Repetir com 2 nomes (João + Maria) → mesa fica ocupada listando 2 comandas, cada uma com seu nome.
-- Botão `+ Nova comanda` na tela da mesa → dialog de nome → cria 3ª comanda.
-- Mesa já aberta com 1 comanda → continua redirecionando direto, sem dialog.
-- Cancelar no dialog → volta sem criar nada.
+- Em 390×844: o input aparece completo com borda íntegra, sem o traço azul cortado.
+- Cancelar e Abrir mesa ficam lado a lado no rodapé, ocupando metade da largura cada.
+- Adicionar 2ª comanda → input + botão `×` ficam alinhados sem quebrar.
 
