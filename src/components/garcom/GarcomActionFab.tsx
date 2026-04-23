@@ -151,7 +151,7 @@ export function GarcomActionFab() {
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? "Fechar ações" : "Abrir ações"}
           aria-expanded={open}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-transform"
+          className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-transform"
         >
           {open ? (
             <X className="h-5 w-5" />
