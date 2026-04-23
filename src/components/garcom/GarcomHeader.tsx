@@ -8,7 +8,7 @@ export function GarcomHeader({ title }: { title?: string }) {
 
   return (
     <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-3 border-b bg-background px-4 safe-area-top">
-      <Logo size="sm" className="shrink-0" />
+      <Logo size="sm" className="!h-12 shrink-0" />
       <div className="min-w-0 text-right">
         <p className="text-xs text-muted-foreground truncate">
           Olá, {displayName}
