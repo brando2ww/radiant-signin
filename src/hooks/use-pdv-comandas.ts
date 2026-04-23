@@ -175,7 +175,7 @@ export function usePDVComandas() {
     },
   });
 
-  // Close comanda
+  // Close comanda — também libera a mesa se for a última comanda aberta da order
   const closeComandaMutation = useMutation({
     mutationFn: async (id: string) => {
       const { data, error } = await supabase
@@ -186,10 +186,39 @@ export function usePDVComandas() {
         .single();
 
       if (error) throw error;
-      return data as Comanda;
+      const closed = data as Comanda;
+
+      // Se a comanda pertencia a uma order de mesa, verificar se foi a última
+      if (closed.order_id) {
+        const { count } = await supabase
+          .from("pdv_comandas")
+          .select("*", { count: "exact", head: true })
+          .eq("order_id", closed.order_id)
+          .eq("status", "aberta");
+
+        if ((count ?? 0) === 0) {
+          // Fecha a order e libera a mesa associada
+          await supabase
+            .from("pdv_orders")
+            .update({ status: "fechada", updated_at: new Date().toISOString() })
+            .eq("id", closed.order_id);
+
+          await supabase
+            .from("pdv_tables")
+            .update({
+              status: "livre",
+              current_order_id: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("current_order_id", closed.order_id);
+        }
+      }
+
+      return closed;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pdv-comandas"] });
+      queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
       toast.success("Comanda fechada!");
     },
     onError: (error) => {
