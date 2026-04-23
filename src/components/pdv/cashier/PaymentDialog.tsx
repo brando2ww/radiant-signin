@@ -153,7 +153,7 @@ export function PaymentDialog({
     : comanda?.subtotal || 0;
 
   const title = isTablePayment
-    ? `Mesa ${table?.table_number}`
+    ? formatTableLabel(table?.table_number)
     : `Comanda #${comanda?.comanda_number}`;
 
   // Calculate discount
@@ -181,11 +181,13 @@ export function PaymentDialog({
   const discountNeedsReason = hasDiscount && !discountReason.trim();
 
   // Validation
+  // No modo splitByComanda, cada linha JÁ vem com valor travado da comanda;
+  // basta garantir que existe uma linha por comanda e que somam o subtotal.
   const canSubmit = !discountNeedsAuth && !discountNeedsReason && (splitEnabled
     ? Math.abs(splitRemaining) < 0.01 && splitPayments.length > 0
     : selectedMethod !== "dinheiro" || cashReceivedNum >= total);
 
-  // Reset state when dialog opens
+  // Reset state + adquirir lock em_cobranca quando o dialog abre.
   useEffect(() => {
     if (open) {
       setSelectedMethod("dinheiro");
@@ -199,12 +201,64 @@ export function PaymentDialog({
       setDiscountAuthorizedBy("");
       setDiscountReason("");
       setServiceFeeEnabled(true);
-      setSplitEnabled(false);
-      setSplitPayments([]);
       setShowSuccess(false);
       setSuccessData(null);
       setNfceState({ kind: "idle" });
+      paymentDoneRef.current = false;
+      lockedIdsRef.current = [];
+
+      // Pré-popular split-por-comanda quando vier de "Cobrar tudo da mesa"
+      if (splitByComanda && tableComandas.length > 1) {
+        setSplitEnabled(true);
+        setSplitPayments(
+          tableComandas.map((c) => ({
+            id: crypto.randomUUID(),
+            method: "dinheiro" as PaymentMethod,
+            amount: c.subtotal.toFixed(2),
+            installments: "1",
+            comandaId: c.id,
+            comandaLabel: c.customer_name ?? `#${c.comanda_number}`,
+          })),
+        );
+      } else {
+        setSplitEnabled(false);
+        setSplitPayments([]);
+      }
+
+      // Adquire lock em_cobranca para comandas vindas do garçom
+      const candidateIds = involvedComandas
+        .filter((c) => c.status === "aguardando_pagamento")
+        .map((c) => c.id);
+      if (candidateIds.length > 0) {
+        markAsCharging(candidateIds)
+          .then((lockedIds) => {
+            lockedIdsRef.current = lockedIds;
+            // Se algum candidato não pôde ser travado (outro caixa pegou antes),
+            // fechamos o dialog para evitar conflito.
+            if (lockedIds.length < candidateIds.length) {
+              const stolen = candidateIds.length - lockedIds.length;
+              toast.error(
+                stolen === candidateIds.length
+                  ? "Outro operador já está cobrando esta(s) comanda(s)."
+                  : `${stolen} comanda(s) já está(ão) sendo cobrada(s) por outro operador.`,
+              );
+              if (lockedIds.length === 0) {
+                onOpenChange(false);
+              }
+            }
+          })
+          .catch(() => {
+            // Erro de rede: não bloqueia o pagamento (mutation final usa filtro tolerante).
+          });
+      }
+    } else {
+      // Dialog fechando: liberar lock se o pagamento não foi concluído
+      if (!paymentDoneRef.current && lockedIdsRef.current.length > 0) {
+        releaseFromCharging(lockedIdsRef.current).catch(() => {});
+        lockedIdsRef.current = [];
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const formatCurrency = (value: number) => {
