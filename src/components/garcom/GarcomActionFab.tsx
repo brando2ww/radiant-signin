@@ -94,8 +94,8 @@ export function GarcomActionFab() {
       <div
         className={cn(
           "fixed right-4 z-40 flex flex-col items-end gap-3",
-          "bottom-[calc(5rem+env(safe-area-inset-bottom))]",
         )}
+        style={{ bottom: "calc(1.25rem + env(safe-area-inset-bottom))" }}
       >
         {/* Mini FABs */}
         <div
