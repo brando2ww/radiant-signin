@@ -15,6 +15,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -45,101 +55,82 @@ export default function GarcomMesaDetalhe() {
 
   const [splitOpen, setSplitOpen] = useState(false);
   const [splitName, setSplitName] = useState("");
+  const [opening, setOpening] = useState(false);
   const ensuringRef = useRef(false);
 
-  // Garante que sempre exista UMA comanda padrão (sem customer_name) na mesa.
-  // Cria order + comanda automaticamente quando a mesa está livre.
+  const hasDefaultComanda = tableComandas.some((c) => !c.customer_name);
+
+  // Se já existe pelo menos uma comanda padrão, redireciona direto pra ela
+  // (continuação de atendimento, sem confirmação).
   useEffect(() => {
-    if (loadingTables || loadingComandas || isLoadingSession) return;
+    if (loadingTables || loadingComandas) return;
     if (!table) return;
-    if (ensuringRef.current) return;
-
-    const hasDefault = tableComandas.some((c) => !c.customer_name);
-    if (hasDefault) return;
-
-    if (!activeSession) {
-      // Sem caixa não dá pra criar nada — só mostra mensagem se a mesa
-      // estiver realmente vazia.
-      return;
-    }
-
-    ensuringRef.current = true;
-    (async () => {
-      try {
-        let orderId = table.current_order_id;
-
-        if (!orderId) {
-          const orderNumber = `PDV${Date.now().toString().slice(-6)}`;
-          const { data: newOrder, error: orderError } = await supabase
-            .from("pdv_orders")
-            .insert({
-              user_id: table.user_id,
-              order_number: orderNumber,
-              source: "salao",
-              table_id: table.id,
-              status: "aberta",
-              subtotal: 0,
-              service_fee: 0,
-              discount: 0,
-              total: 0,
-            })
-            .select()
-            .single();
-
-          if (orderError || !newOrder) {
-            toast.error(
-              "Erro ao abrir mesa: " + (orderError?.message ?? "desconhecido"),
-            );
-            ensuringRef.current = false;
-            return;
-          }
-          orderId = newOrder.id;
-        }
-
-        if (
-          table.status !== "ocupada" ||
-          table.current_order_id !== orderId
-        ) {
-          // Fire-and-forget: não bloqueia a criação da comanda nem a navegação.
-          // Mesmo que o retorno do update falhe por RLS de SELECT, o UPDATE em si
-          // já foi para o banco.
-          updateTable({
-            id: table.id,
-            updates: { status: "ocupada", current_order_id: orderId },
-          });
-        }
-        queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
-
-        // Comanda padrão (sem customer_name). O hook é idempotente.
-        try {
-          const comanda = await createComanda({ orderId });
-          navigate(`/garcom/comanda/${comanda.id}`, { replace: true });
-        } catch {
-          ensuringRef.current = false;
-        }
-      } catch {
-        ensuringRef.current = false;
-      }
-    })();
-  }, [
-    table,
-    tableComandas,
-    loadingTables,
-    loadingComandas,
-    isLoadingSession,
-    activeSession,
-    updateTable,
-    createComanda,
-    queryClient,
-    navigate,
-  ]);
-
-  // Se há exatamente 1 comanda (a padrão) e nenhuma nominal, redireciona.
-  useEffect(() => {
-    if (tableComandas.length === 1 && !splitOpen) {
+    if (splitOpen) return;
+    if (tableComandas.length === 1) {
       navigate(`/garcom/comanda/${tableComandas[0].id}`, { replace: true });
     }
-  }, [tableComandas, splitOpen, navigate]);
+  }, [tableComandas, loadingTables, loadingComandas, table, splitOpen, navigate]);
+
+  const handleConfirmOpen = async () => {
+    if (!table) return;
+    if (ensuringRef.current) return;
+    ensuringRef.current = true;
+    setOpening(true);
+    try {
+      let orderId = table.current_order_id;
+
+      if (!orderId) {
+        const orderNumber = `PDV${Date.now().toString().slice(-6)}`;
+        const { data: newOrder, error: orderError } = await supabase
+          .from("pdv_orders")
+          .insert({
+            user_id: table.user_id,
+            order_number: orderNumber,
+            source: "salao",
+            table_id: table.id,
+            status: "aberta",
+            subtotal: 0,
+            service_fee: 0,
+            discount: 0,
+            total: 0,
+          })
+          .select()
+          .single();
+
+        if (orderError || !newOrder) {
+          toast.error(
+            "Erro ao abrir mesa: " + (orderError?.message ?? "desconhecido"),
+          );
+          ensuringRef.current = false;
+          setOpening(false);
+          return;
+        }
+        orderId = newOrder.id;
+      }
+
+      if (
+        table.status !== "ocupada" ||
+        table.current_order_id !== orderId
+      ) {
+        // Fire-and-forget
+        updateTable({
+          id: table.id,
+          updates: { status: "ocupada", current_order_id: orderId },
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
+
+      const comanda = await createComanda({ orderId });
+      navigate(`/garcom/comanda/${comanda.id}`, { replace: true });
+    } catch {
+      ensuringRef.current = false;
+      setOpening(false);
+    }
+  };
+
+  const handleCancelOpen = () => {
+    navigate(-1);
+  };
 
   const handleCreateNominal = async () => {
     const name = splitName.trim();
@@ -179,6 +170,8 @@ export default function GarcomMesaDetalhe() {
   }
 
   const blockedNoCashier = !activeSession && !isLoadingSession;
+  const showConfirmDialog =
+    !hasDefaultComanda && !blockedNoCashier && !opening && !!activeSession;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -208,7 +201,13 @@ export default function GarcomMesaDetalhe() {
           </div>
         ) : tableComandas.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <p className="text-muted-foreground">Abrindo comanda...</p>
+            {opening ? (
+              <p className="text-muted-foreground">Abrindo comanda...</p>
+            ) : (
+              <p className="text-muted-foreground text-sm">
+                Mesa livre
+              </p>
+            )}
           </div>
         ) : (
           <>
@@ -285,6 +284,26 @@ export default function GarcomMesaDetalhe() {
           </>
         )}
       </div>
+
+      {/* Confirmação de abertura de mesa livre */}
+      <AlertDialog open={showConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Abrir Mesa {table.table_number}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Isso vai iniciar uma nova comanda nesta mesa.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelOpen}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmOpen} disabled={opening}>
+              Abrir mesa
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={splitOpen} onOpenChange={setSplitOpen}>
         <DialogContent>
