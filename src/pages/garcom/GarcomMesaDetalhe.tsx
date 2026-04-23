@@ -89,7 +89,6 @@ export default function GarcomMesaDetalhe() {
           );
           ensuringRef.current = false;
           setOpening(false);
-          justCreatedMultipleRef.current = false;
           return;
         }
         orderId = newOrder.id;
