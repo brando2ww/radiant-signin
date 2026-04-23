@@ -94,7 +94,10 @@ export default function GarcomItemDetalhe() {
         )}
       </div>
 
-      <div className="fixed bottom-20 inset-x-0 px-4 pb-2">
+      <div
+        className="fixed inset-x-0 px-4 pb-2"
+        style={{ bottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+      >
         <Button
           className="w-full h-12 text-base gap-2"
           onClick={() => {
