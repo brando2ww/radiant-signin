@@ -110,7 +110,7 @@ export default function GarcomComandaDetalhe() {
       </div>
 
       {/* Bottom Action Bar */}
-      <div className="fixed bottom-16 inset-x-0 z-40 border-t bg-background p-4 safe-area-bottom space-y-2">
+      <div className="fixed bottom-20 inset-x-0 z-40 border-t bg-background p-4 safe-area-bottom space-y-2">
         <div className="flex items-center justify-between text-sm font-semibold">
           <span>Total</span>
           <span className="tabular-nums">R$ {total.toFixed(2)}</span>
