@@ -79,6 +79,11 @@ export default function GarcomMesaDetalhe() {
         }
 
         orderId = newOrder.id;
+      }
+
+      // Sempre garantir que a mesa fica marcada como ocupada ao abrir
+      // uma comanda nela — mesmo que o order_id já existisse.
+      if (table.status !== "ocupada" || table.current_order_id !== orderId) {
         await new Promise<void>((resolve) => {
           updateTable(
             {
@@ -88,8 +93,8 @@ export default function GarcomMesaDetalhe() {
             { onSettled: () => resolve() },
           );
         });
-        queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
       }
+      queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
 
       const comanda = await createComanda({
         orderId,

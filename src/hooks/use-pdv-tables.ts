@@ -52,6 +52,8 @@ export function usePDVTables() {
       return data as PDVTable[];
     },
     enabled: !!visibleUserId,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
   });
 
   // Query para mesas deletadas (lixeira)
@@ -109,25 +111,26 @@ export function usePDVTables() {
     },
     onMutate: async ({ id, updates }) => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ["pdv-tables", user?.id] });
-      
+      await queryClient.cancelQueries({ queryKey: ["pdv-tables", visibleUserId] });
+
       // Snapshot previous value for rollback
-      const previousTables = queryClient.getQueryData<PDVTable[]>(["pdv-tables", user?.id]);
-      
-      // Optimistically update the cache
+      const previousTables = queryClient.getQueryData<PDVTable[]>(["pdv-tables", visibleUserId]);
+
+      // Optimistically update the cache (use visibleUserId — garçons compartilham
+      // o cache do dono do estabelecimento, não o do próprio usuário)
       queryClient.setQueryData<PDVTable[]>(
-        ["pdv-tables", user?.id],
-        (old) => old?.map(table => 
+        ["pdv-tables", visibleUserId],
+        (old) => old?.map(table =>
           table.id === id ? { ...table, ...updates } : table
         ) ?? []
       );
-      
+
       return { previousTables };
     },
     onError: (error: any, _variables, context) => {
       // Rollback on error
       if (context?.previousTables) {
-        queryClient.setQueryData(["pdv-tables", user?.id], context.previousTables);
+        queryClient.setQueryData(["pdv-tables", visibleUserId], context.previousTables);
       }
       toast.error("Erro ao atualizar mesa: " + error.message);
     },
