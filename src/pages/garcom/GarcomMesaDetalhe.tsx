@@ -113,7 +113,6 @@ export default function GarcomMesaDetalhe() {
           toast.error("Erro ao atualizar mesa: " + updErr.message);
           ensuringRef.current = false;
           setOpening(false);
-          justCreatedMultipleRef.current = false;
           return;
         }
         if (!updRows || updRows.length === 0) {
@@ -121,7 +120,6 @@ export default function GarcomMesaDetalhe() {
           toast.error("Sem permissão para abrir esta mesa.");
           ensuringRef.current = false;
           setOpening(false);
-          justCreatedMultipleRef.current = false;
           return;
         }
       }
