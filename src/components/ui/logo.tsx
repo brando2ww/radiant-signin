@@ -19,7 +19,7 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
     <img 
       src={logo} 
       alt="Velara" 
-      className={cn(sizeClasses[size], className)} 
+      className={cn(sizeClasses[size], "dark:invert", className)} 
     />
   );
 }
