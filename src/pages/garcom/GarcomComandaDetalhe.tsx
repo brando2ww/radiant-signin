@@ -81,7 +81,7 @@ export default function GarcomComandaDetalhe() {
       </header>
 
       {/* Items */}
-      <div className="flex-1 p-4 pb-48 space-y-2">
+      <div className="flex-1 p-4 pb-56 space-y-2">
         {items.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center">
             <p className="text-muted-foreground mb-4">Sem itens na comanda</p>
