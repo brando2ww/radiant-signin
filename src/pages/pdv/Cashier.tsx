@@ -47,6 +47,7 @@ export default function PDVCashier() {
   const [shortcutsDialog, setShortcutsDialog] = useState(false);
   const [chargeDialog, setChargeDialog] = useState(false);
   const [paymentDialog, setPaymentDialog] = useState(false);
+  const [paymentSplitByComanda, setPaymentSplitByComanda] = useState(false);
   const [employeeDialog, setEmployeeDialog] = useState(false);
 
   // Payment state
@@ -107,6 +108,7 @@ export default function PDVCashier() {
     setSelectedTable(null);
     setSelectedTableComandas([]);
     setSelectedTableItems([]);
+    setPaymentSplitByComanda(false);
     setChargeDialog(false);
     setPaymentDialog(true);
   };
@@ -117,6 +119,18 @@ export default function PDVCashier() {
     setSelectedTableItems(items);
     setSelectedComanda(null);
     setSelectedComandaItems([]);
+    setPaymentSplitByComanda(false);
+    setChargeDialog(false);
+    setPaymentDialog(true);
+  };
+
+  const handleSelectTablePending = (table: PDVTable, comandas: Comanda[], items: ComandaItem[]) => {
+    setSelectedTable(table);
+    setSelectedTableComandas(comandas);
+    setSelectedTableItems(items);
+    setSelectedComanda(null);
+    setSelectedComandaItems([]);
+    setPaymentSplitByComanda(comandas.length > 1);
     setChargeDialog(false);
     setPaymentDialog(true);
   };
@@ -332,6 +346,7 @@ export default function PDVCashier() {
         onOpenChange={setChargeDialog}
         onSelectComanda={handleSelectComanda}
         onSelectTable={handleSelectTable}
+        onSelectTablePending={handleSelectTablePending}
         onCancelComanda={(comandaId) => {
           cancelComanda(comandaId);
           setChargeDialog(false);
@@ -354,6 +369,7 @@ export default function PDVCashier() {
         table={selectedTable}
         tableComandas={selectedTableComandas}
         tableItems={selectedTableItems}
+        splitByComanda={paymentSplitByComanda}
         onSuccess={handlePaymentSuccess}
       />
 

@@ -504,6 +504,45 @@ export function usePDVComandas() {
     },
   });
 
+  // Lock comandas para o caixa atual (transição aguardando_pagamento -> em_cobranca).
+  // Retorna a lista de IDs efetivamente travados (apenas os que estavam aguardando).
+  const markAsChargingMutation = useMutation({
+    mutationFn: async (ids: string[]): Promise<string[]> => {
+      if (!ids.length) return [];
+      const { data, error } = await supabase
+        .from("pdv_comandas")
+        .update({ status: "em_cobranca", updated_at: new Date().toISOString() })
+        .in("id", ids)
+        .eq("status", "aguardando_pagamento")
+        .select("id");
+      if (error) throw error;
+      return ((data ?? []) as Array<{ id: string }>).map((r) => r.id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-comandas"] });
+    },
+  });
+
+  // Liberar comandas travadas (em_cobranca -> aguardando_pagamento) quando o
+  // caixa fecha o dialog sem concluir o pagamento.
+  const releaseFromChargingMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (!ids.length) return;
+      const { error } = await supabase
+        .from("pdv_comandas")
+        .update({
+          status: "aguardando_pagamento",
+          updated_at: new Date().toISOString(),
+        })
+        .in("id", ids)
+        .eq("status", "em_cobranca");
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-comandas"] });
+    },
+  });
+
   // Helper to get items for a specific comanda (only visible/parent items)
   const getItemsByComanda = (comandaId: string) => {
     return comandaItems.filter(
@@ -528,6 +567,16 @@ export function usePDVComandas() {
     );
   };
 
+  // Helper: comandas pendentes de pagamento de uma mesa específica
+  const getPendingComandasByOrderId = (orderId: string | null | undefined) => {
+    if (!orderId) return [];
+    return comandas.filter(
+      (c) =>
+        c.order_id === orderId &&
+        (c.status === "aguardando_pagamento" || c.status === "em_cobranca"),
+    );
+  };
+
   return {
     comandas,
     comandaItems,
@@ -543,6 +592,8 @@ export function usePDVComandas() {
     removeItem: removeItemMutation.mutate,
     transferItem: transferItemMutation.mutate,
     sendToKitchen: sendToKitchenMutation.mutate,
+    markAsCharging: markAsChargingMutation.mutateAsync,
+    releaseFromCharging: releaseFromChargingMutation.mutateAsync,
 
     // Pending states
     isCreating: createComandaMutation.isPending,
@@ -553,5 +604,6 @@ export function usePDVComandas() {
     getComandasByOrder,
     getStandaloneComandas,
     getPendingPaymentComandas,
+    getPendingComandasByOrderId,
   };
 }

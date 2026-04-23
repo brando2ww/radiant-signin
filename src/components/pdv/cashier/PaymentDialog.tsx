@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,7 +42,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
+import { Comanda, ComandaItem, usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { PDVTable } from "@/hooks/use-pdv-tables";
 import { usePDVPayments, PaymentMethod } from "@/hooks/use-pdv-payments";
 import { CurrencyInput } from "@/components/ui/currency-input";
@@ -50,6 +50,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNFCeEmission } from "@/hooks/use-nfce-emission";
 import { usePDVSettings } from "@/hooks/use-pdv-settings";
 import { printNonFiscalReceipt, printDanfeFromUrl } from "@/lib/print-fiscal-receipt";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 
 interface PaymentDialogProps {
   open: boolean;
@@ -59,6 +60,8 @@ interface PaymentDialogProps {
   table?: PDVTable | null;
   tableComandas?: Comanda[];
   tableItems?: ComandaItem[];
+  /** Quando true, força split com 1 linha por comanda nominal (cobrar tudo da mesa) */
+  splitByComanda?: boolean;
   onSuccess?: () => void;
 }
 
@@ -71,6 +74,9 @@ interface SplitPayment {
   cardType?: CardType;
   amount: string;
   installments: string;
+  /** Quando preenchido, esta linha cobra uma comanda nominal específica */
+  comandaId?: string;
+  comandaLabel?: string;
 }
 
 const paymentMethods = [
@@ -89,6 +95,7 @@ export function PaymentDialog({
   table,
   tableComandas = [],
   tableItems = [],
+  splitByComanda = false,
   onSuccess,
 }: PaymentDialogProps) {
   const { user } = useAuth();
@@ -122,8 +129,21 @@ export function PaymentDialog({
   >({ kind: "idle" });
 
   const { registerPayment, isRegisteringPayment, registerTablePayment, isRegisteringTablePayment } = usePDVPayments();
+  const { markAsCharging, releaseFromCharging } = usePDVComandas();
   const { emitNFCe, isEmitting } = useNFCeEmission();
   const { settings } = usePDVSettings();
+
+  // Comandas envolvidas neste pagamento (1 ou várias)
+  const involvedComandas: Comanda[] = table
+    ? tableComandas
+    : comanda
+      ? [comanda]
+      : [];
+
+  // Travamos `em_cobranca` quando o dialog abre. Guardamos os IDs
+  // efetivamente travados (por nós) para liberar caso o operador cancele.
+  const lockedIdsRef = useRef<string[]>([]);
+  const paymentDoneRef = useRef(false);
 
   // Determine payment context
   const isTablePayment = !!table;
@@ -133,7 +153,7 @@ export function PaymentDialog({
     : comanda?.subtotal || 0;
 
   const title = isTablePayment
-    ? `Mesa ${table?.table_number}`
+    ? formatTableLabel(table?.table_number)
     : `Comanda #${comanda?.comanda_number}`;
 
   // Calculate discount
@@ -161,11 +181,13 @@ export function PaymentDialog({
   const discountNeedsReason = hasDiscount && !discountReason.trim();
 
   // Validation
+  // No modo splitByComanda, cada linha JÁ vem com valor travado da comanda;
+  // basta garantir que existe uma linha por comanda e que somam o subtotal.
   const canSubmit = !discountNeedsAuth && !discountNeedsReason && (splitEnabled
     ? Math.abs(splitRemaining) < 0.01 && splitPayments.length > 0
     : selectedMethod !== "dinheiro" || cashReceivedNum >= total);
 
-  // Reset state when dialog opens
+  // Reset state + adquirir lock em_cobranca quando o dialog abre.
   useEffect(() => {
     if (open) {
       setSelectedMethod("dinheiro");
@@ -179,12 +201,64 @@ export function PaymentDialog({
       setDiscountAuthorizedBy("");
       setDiscountReason("");
       setServiceFeeEnabled(true);
-      setSplitEnabled(false);
-      setSplitPayments([]);
       setShowSuccess(false);
       setSuccessData(null);
       setNfceState({ kind: "idle" });
+      paymentDoneRef.current = false;
+      lockedIdsRef.current = [];
+
+      // Pré-popular split-por-comanda quando vier de "Cobrar tudo da mesa"
+      if (splitByComanda && tableComandas.length > 1) {
+        setSplitEnabled(true);
+        setSplitPayments(
+          tableComandas.map((c) => ({
+            id: crypto.randomUUID(),
+            method: "dinheiro" as PaymentMethod,
+            amount: c.subtotal.toFixed(2),
+            installments: "1",
+            comandaId: c.id,
+            comandaLabel: c.customer_name ?? `#${c.comanda_number}`,
+          })),
+        );
+      } else {
+        setSplitEnabled(false);
+        setSplitPayments([]);
+      }
+
+      // Adquire lock em_cobranca para comandas vindas do garçom
+      const candidateIds = involvedComandas
+        .filter((c) => c.status === "aguardando_pagamento")
+        .map((c) => c.id);
+      if (candidateIds.length > 0) {
+        markAsCharging(candidateIds)
+          .then((lockedIds) => {
+            lockedIdsRef.current = lockedIds;
+            // Se algum candidato não pôde ser travado (outro caixa pegou antes),
+            // fechamos o dialog para evitar conflito.
+            if (lockedIds.length < candidateIds.length) {
+              const stolen = candidateIds.length - lockedIds.length;
+              toast.error(
+                stolen === candidateIds.length
+                  ? "Outro operador já está cobrando esta(s) comanda(s)."
+                  : `${stolen} comanda(s) já está(ão) sendo cobrada(s) por outro operador.`,
+              );
+              if (lockedIds.length === 0) {
+                onOpenChange(false);
+              }
+            }
+          })
+          .catch(() => {
+            // Erro de rede: não bloqueia o pagamento (mutation final usa filtro tolerante).
+          });
+      }
+    } else {
+      // Dialog fechando: liberar lock se o pagamento não foi concluído
+      if (!paymentDoneRef.current && lockedIdsRef.current.length > 0) {
+        releaseFromCharging(lockedIdsRef.current).catch(() => {});
+        lockedIdsRef.current = [];
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const formatCurrency = (value: number) => {
@@ -241,7 +315,23 @@ export function PaymentDialog({
         discountAuthorizedBy: hasDiscount ? discountAuthorizedBy : undefined,
       };
 
-      if (isTablePayment && table) {
+      // Modo split-por-comanda: 1 pagamento por comanda nominal (cada um com seu método)
+      const isSplitByComanda = splitEnabled && splitPayments.some((p) => p.comandaId);
+      if (isSplitByComanda && isTablePayment) {
+        for (const line of splitPayments) {
+          if (!line.comandaId) continue;
+          const c = tableComandas.find((x) => x.id === line.comandaId);
+          if (!c) continue;
+          await registerPayment({
+            comandaId: c.id,
+            orderId: c.order_id,
+            amount: parseFloat(line.amount) || c.subtotal,
+            paymentMethod: line.method,
+            installments: line.method === "cartao" ? parseInt(line.installments) : undefined,
+            cashReceived: line.method === "dinheiro" ? parseFloat(line.amount) : undefined,
+          });
+        }
+      } else if (isTablePayment && table) {
         await registerTablePayment({
           tableId: table.id,
           comandaIds: tableComandas.map((c) => c.id),
@@ -255,7 +345,7 @@ export function PaymentDialog({
         });
       }
 
-      // Show success screen (manual close: user pode emitir NFC-e ou imprimir)
+      paymentDoneRef.current = true;
       setSuccessData({ change: changeAmount });
       setShowSuccess(true);
     } catch (error) {
