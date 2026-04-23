@@ -600,18 +600,95 @@ export function PaymentDialog({
                   <Receipt className="h-4 w-4" />
                   Resumo do Pedido
                 </h4>
-                <ScrollArea className="h-[120px]">
-                  <div className="space-y-2">
-                    {displayItems.map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {item.quantity}x {item.product_name}
-                        </span>
-                        <span className="font-medium">{formatCurrency(item.subtotal)}</span>
-                      </div>
-                    ))}
+                <ScrollArea className="h-[160px]">
+                  <div className="space-y-1">
+                    <AnimatePresence initial={false}>
+                      {displayItems.map((item) => {
+                        const canRemove =
+                          item.kitchen_status === "pendente" ||
+                          item.kitchen_status === "preparando";
+                        return (
+                          <motion.div
+                            key={item.id}
+                            layout
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="flex items-center justify-between gap-2 text-sm py-1"
+                          >
+                            <span className="text-muted-foreground flex-1 min-w-0 truncate">
+                              {item.quantity}x {item.product_name}
+                            </span>
+                            <span className="font-medium tabular-nums">
+                              {formatCurrency(item.subtotal)}
+                            </span>
+                            {canRemove ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => setItemToRemove(item)}
+                                disabled={isRemovingItem}
+                                aria-label="Remover item"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            ) : (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="inline-flex">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 shrink-0 text-muted-foreground/40 cursor-not-allowed"
+                                      disabled
+                                      aria-label="Item não pode ser removido"
+                                      tabIndex={-1}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                  Item já preparado pela cozinha — não pode ser removido
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
                   </div>
                 </ScrollArea>
+
+                {/* Add item / multi-comanda hint */}
+                <div className="mt-3 pt-3 border-t">
+                  {isTablePayment && tableComandas.length > 1 ? (
+                    <p className="text-xs text-muted-foreground italic">
+                      Para adicionar itens, acesse a comanda específica.
+                    </p>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => {
+                        setProductSearch("");
+                        setSelectedProductId(null);
+                        setAddItemQty("1");
+                        setAddItemNotes("");
+                        setAddItemDialogOpen(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar item
+                    </Button>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
