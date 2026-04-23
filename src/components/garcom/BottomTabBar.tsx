@@ -80,12 +80,12 @@ export function BottomTabBar({ onNewComanda }: { onNewComanda?: () => void }) {
 
   return (
     <nav
-      className="fixed left-3 right-20 z-50 flex justify-start pointer-events-none"
+      className="fixed left-2 right-[4.5rem] z-50 flex justify-start pointer-events-none"
       style={{ bottom: "calc(1rem + env(safe-area-inset-bottom))" }}
     >
       <div
         ref={containerRef}
-        className="pointer-events-auto relative flex items-center gap-1 rounded-full border border-white/40 dark:border-white/10 bg-white/80 dark:bg-gray-900/80 px-2 py-2 shadow-2xl backdrop-blur-md"
+        className="pointer-events-auto relative flex w-full items-center gap-2 rounded-full border border-white/40 dark:border-white/10 bg-white/80 dark:bg-gray-900/80 px-3 py-2 shadow-2xl backdrop-blur-md"
       >
         {/* Sliding active indicator */}
         <motion.div
