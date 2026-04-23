@@ -3046,6 +3046,7 @@ export type Database = {
       }
       pdv_comandas: {
         Row: {
+          closed_by_waiter_at: string | null
           comanda_number: string
           created_at: string
           customer_name: string | null
@@ -3059,6 +3060,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          closed_by_waiter_at?: string | null
           comanda_number: string
           created_at?: string
           customer_name?: string | null
@@ -3072,6 +3074,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          closed_by_waiter_at?: string | null
           comanda_number?: string
           created_at?: string
           customer_name?: string | null
