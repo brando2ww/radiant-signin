@@ -99,15 +99,18 @@ export function usePDVTables() {
 
   const updateTable = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<PDVTable> }) => {
+      // Não usamos .single() porque, em alguns papéis (garçom), o RLS pode
+      // permitir o UPDATE mas restringir o retorno do SELECT pós-update,
+      // gerando "Cannot coerce the result to a single JSON object".
       const { data, error } = await supabase
         .from("pdv_tables")
         .update(updates)
         .eq("id", id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      return data;
+      return data ?? ({ id, ...updates } as PDVTable);
     },
     onMutate: async ({ id, updates }) => {
       // Cancel any outgoing refetches
