@@ -1,71 +1,53 @@
 
 
-## Mesa = 1 comanda principal por padrão, com nominais opcionais
+## Corrigir "Cannot coerce the result to a single JSON object" ao abrir mesa
 
 ### Diagnóstico
 
-Na verdade, **nenhum item está criando comanda nova**. O fluxo `GarcomAdicionarItem` apenas faz `addItem({ comandaId, ... })` na comanda já existente — está correto. O que confunde é o botão **"Nova Comanda"** dentro da `GarcomMesaDetalhe`: o garçom toca achando que é "adicionar item" e o sistema de fato cria outra comanda na mesma mesa. Some a isso o fato de que a tela cai direto na lista de comandas (quando já existe uma) em vez de abrir a única comanda existente, e o garçom precisa de cliques extras para chegar nos itens.
+O erro acontece em `usePDVTables.updateTable`. O Supabase JS retorna esse erro quando `.single()` recebe **0 ou >1 linhas**. O `UPDATE` em `pdv_tables` é executado pelo papel garçom — a policy de UPDATE provavelmente passa (via `is_establishment_member`), mas a cláusula `RETURNING` aplica a policy de **SELECT**, que pode não estar liberando a linha de volta para o garçom (ou está liberando mas a linha já foi modificada por outra requisição na corrida).
 
-A regra escolhida (1 mesa = 1 comanda padrão, com possibilidade de criar nominais) resolve essas duas dores.
+Resultado: o `UPDATE` na verdade funciona no banco, mas o cliente recebe um erro 406 (`PGRST116`), exibe o toast vermelho, faz rollback otimista da UI e o fluxo de "abrir comanda" trava em "Abrindo comanda...".
 
-### Mudanças
+### Correção
 
-**1. `GarcomMesaDetalhe.tsx` — comportamento "1 comanda padrão"**
+**1. `src/hooks/use-pdv-tables.ts` — `updateTable`**
 
-- Quando o garçom toca numa mesa **livre**: criar `pdv_order` + 1 comanda padrão (nome `Mesa N`) automaticamente e navegar direto para `/garcom/comanda/:id`. Sem tela intermediária.
-- Quando a mesa **tem exatamente 1 comanda aberta**: redirecionar direto para essa comanda (`useEffect` com `navigate(..., { replace: true })`).
-- Quando a mesa tem **2+ comandas** (caso a divisão nominal já tenha sido criada): mostrar a lista atual.
-- Trocar o botão **"Nova Comanda"** por **"Dividir em comanda nominal"** (ícone `UserPlus`), com um diálogo simples pedindo nome do cliente. Só esse botão cria comandas adicionais — não há mais como criar comanda "anônima" duplicada por engano.
+Trocar `.single()` por `.maybeSingle()` e devolver um fallback `{ id, ...updates }` quando o retorno vier vazio. Isso desacopla o sucesso do mutation da capacidade do cliente de reler a linha — o que importa é o `UPDATE` ter ido sem erro.
 
-**2. `use-pdv-comandas.ts` — guard contra duplicata acidental**
+```ts
+const { data, error } = await supabase
+  .from("pdv_tables")
+  .update(updates)
+  .eq("id", id)
+  .select()
+  .maybeSingle();
 
-Em `createComandaMutation`, antes do `INSERT`, fazer `SELECT` por `(order_id, status='aberta')`:
-- Se `orderId` foi passado e já existe comanda aberta para esse order **sem** `customerName` explicitamente diferente do padrão `Mesa N`, retornar a existente em vez de criar (idempotência leve).
-- O caminho "nominal" (com `customerName` informado pelo usuário no diálogo) sempre cria.
-
-Isso evita race condition: dois cliques rápidos no mesmo botão geram no máximo uma comanda padrão.
-
-**3. Constraint no banco — bloqueio definitivo de duplicata padrão**
-
-Índice único parcial garantindo no máximo 1 comanda **sem nome de cliente** por order:
-
-```sql
-CREATE UNIQUE INDEX uniq_default_comanda_per_order
-ON pdv_comandas (order_id)
-WHERE status = 'aberta' AND customer_name IS NULL;
+if (error) throw error;
+return data ?? { id, ...updates };
 ```
 
-Comandas nominais (com `customer_name` preenchido) continuam podendo ser várias por order — é o caso da divisão de conta.
+**2. `GarcomMesaDetalhe.tsx` — não bloquear no resultado do updateTable**
 
-> Observação: hoje a tela passa `customerName: "Mesa N"` para a comanda padrão. Vou trocar para `null` na comanda padrão e usar `Mesa N` apenas como label de exibição (fallback no front), para o índice acima funcionar como diferenciador semântico (NULL = padrão, preenchido = nominal).
+Hoje o `useEffect` aguarda `updateTable` via `onSettled` antes de criar a comanda. Se o update der erro (mesmo que tenha funcionado no banco), `ensuringRef` fica travado e a tela fica em "Abrindo comanda…". Ajustes:
 
-**4. Limpeza de dados (sua escolha: excluir todas as abertas)**
+- Tornar o `updateTable` "fire-and-forget" no efeito (ou ignorar erro dele) — a criação da comanda + navegação não dependem do retorno da mesa.
+- Resetar `ensuringRef.current = false` também no caminho de erro do `createComanda`, para permitir nova tentativa quando o usuário voltar à tela.
 
-Migration única que cancela todas as comandas hoje com `status = 'aberta'` e libera as mesas:
+**3. (Opcional, defensivo) Verificar policies de SELECT em `pdv_tables`**
 
-```sql
-UPDATE pdv_comandas SET status = 'cancelada', updated_at = now()
-WHERE status = 'aberta';
+Se a policy de SELECT do garçom não inclui `is_establishment_member(user_id)`, adicionar. Sem isso, garçom nunca consegue ler a mesa de volta após o update, mesmo com o fallback acima funcionando — o que afeta também o refresh da grid.
 
-UPDATE pdv_orders SET status = 'cancelada', updated_at = now()
-WHERE status = 'aberta';
-
-UPDATE pdv_tables SET status = 'livre', current_order_id = NULL
-WHERE status <> 'livre';
-```
-
-Isso zera o estado operacional. O usuário precisa estar ciente: **qualquer atendimento em andamento agora será descartado**. Se houver caixa aberto com vendas em curso, melhor rodar essa limpeza fora do horário de movimento.
+> Vou inspecionar as policies depois da aprovação. Se faltar a policy de SELECT, incluo numa migration curta. Se já estiver lá, só os passos 1 e 2 resolvem o erro visível.
 
 ### Validação
 
-1. Mesa livre → tocar → cai direto na tela da comanda (sem passo intermediário).
-2. Adicionar 3 itens → todos aparecem na MESMA comanda. Voltar e abrir a mesa de novo → continua na mesma comanda.
-3. Tocar duas vezes muito rápido em "Abrir Comanda" (rede lenta) → só uma comanda criada (constraint + guard).
-4. Na comanda, tocar em "Dividir em comanda nominal", informar "João" → nova comanda nominal aparece. A mesa agora mostra a lista com as 2 comandas (padrão + João).
-5. Banco: `SELECT order_id, count(*) FROM pdv_comandas WHERE status='aberta' AND customer_name IS NULL GROUP BY 1 HAVING count(*) > 1;` → 0 linhas, sempre.
+1. Logado como garçom, tocar em mesa livre → não aparece o toast vermelho → cai direto na comanda.
+2. Adicionar item → volta → mesma comanda aberta, mesa marcada como "Ocupada" na grid.
+3. Conferir banco: `pdv_tables.status = 'ocupada'` e `current_order_id` preenchido.
+4. Repetir com mesa que já tem comanda → redireciona direto, sem erro.
 
 ### Fora de escopo
 
-- Refatorar a tela do PDV web (`Salon.tsx`) — ela continua suportando multi-comanda como hoje, sem mudança.
-- Mover itens entre comandas nominais (transferência de itens) — pode entrar depois se necessário.
+- Realtime cross-device.
+- Refatoração do PDV web (`Salon.tsx`).
 
