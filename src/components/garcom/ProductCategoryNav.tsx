@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface ProductCategoryNavProps {
   categories: string[];
