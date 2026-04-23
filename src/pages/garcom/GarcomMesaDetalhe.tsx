@@ -49,22 +49,8 @@ export default function GarcomMesaDetalhe() {
   const [opening, setOpening] = useState(false);
   const [comandaNames, setComandaNames] = useState<string[]>([""]);
   const ensuringRef = useRef(false);
-  const justCreatedMultipleRef = useRef(false);
 
   const hasOpenComandas = tableComandas.length > 0;
-
-  // Se já existe alguma comanda aberta, e há exatamente UMA, redireciona direto.
-  // (continuação de atendimento de mesa pré-existente)
-  useEffect(() => {
-    if (loadingTables || loadingComandas) return;
-    if (!table) return;
-    if (splitOpen) return;
-    if (opening) return;
-    if (justCreatedMultipleRef.current) return;
-    if (tableComandas.length === 1) {
-      navigate(`/garcom/comanda/${tableComandas[0].id}`, { replace: true });
-    }
-  }, [tableComandas, loadingTables, loadingComandas, table, splitOpen, opening, navigate]);
 
   const handleConfirmOpen = async () => {
     if (!table) return;
