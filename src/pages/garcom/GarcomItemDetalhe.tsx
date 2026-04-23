@@ -94,20 +94,19 @@ export default function GarcomItemDetalhe() {
         )}
       </div>
 
-      <div
-        className="fixed inset-x-0 px-4 pb-2"
-        style={{ bottom: "calc(6rem + env(safe-area-inset-bottom))" }}
-      >
-        <Button
-          className="w-full h-12 text-base gap-2"
-          onClick={() => {
-            // Navigate back to itens list; user can add from comanda flow
-            navigate("/garcom/comandas");
-          }}
-        >
-          <Plus className="h-5 w-5" />
-          Adicionar em Comanda
-        </Button>
+      <div className="fixed bottom-0 inset-x-0 border-t bg-background">
+        <div className="px-4 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom))]">
+          <Button
+            className="w-full h-12 text-base gap-2"
+            onClick={() => {
+              // Navigate back to itens list; user can add from comanda flow
+              navigate("/garcom/comandas");
+            }}
+          >
+            <Plus className="h-5 w-5" />
+            Adicionar em Comanda
+          </Button>
+        </div>
       </div>
     </div>
   );
