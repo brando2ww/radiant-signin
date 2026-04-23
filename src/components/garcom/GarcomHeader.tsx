@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, LogOut } from "lucide-react";
+import { Bell, LogOut, Moon, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   AlertDialog,
@@ -16,12 +17,19 @@ import {
 export function GarcomHeader({ title }: { title?: string }) {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { resolvedTheme, setTheme } = useTheme();
   const [showLogout, setShowLogout] = useState(false);
   const displayName =
     user?.user_metadata?.name?.split(" ")[0] || "Garçom";
 
+  const isDark = resolvedTheme === "dark";
+
   const handleCallManager = () => {
     // feedback de toast removido a pedido — botão segue funcional
+  };
+
+  const handleToggleTheme = () => {
+    setTheme(isDark ? "light" : "dark");
   };
 
   const handleSignOut = async () => {
@@ -37,6 +45,14 @@ export function GarcomHeader({ title }: { title?: string }) {
           {title && <h1 className="text-base font-semibold leading-tight truncate">{title}</h1>}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleToggleTheme}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground active:scale-95 transition-transform"
+            aria-label={isDark ? "Mudar para tema claro" : "Mudar para tema escuro"}
+          >
+            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
           <button
             type="button"
             onClick={handleCallManager}
