@@ -1,33 +1,34 @@
 
 
-## "Reimprimir Último Caixa" mostra o penúltimo
+## Envio para cozinha: redirecionar para mesas + badge "Enviado"
 
-### Causa-raiz
+### Mudanças
 
-`closeCashier.onSuccess` em `src/hooks/use-pdv-cashier.ts` (linhas 145–149) invalida apenas `pdv-cashier-active` e `pdv-cashier-movements`, mas **não invalida** as queries `pdv-cashier-last-closed` e `pdv-cashier-last-closed-movements`.
+**1. `src/components/garcom/ComandaItemCard.tsx`** — badge passa a refletir se o item já foi para cozinha
+- Aceitar nova prop opcional `sentToKitchenAt: string | null`.
+- Se `kitchen_status === "pendente"` **e** `sent_to_kitchen_at != null`, exibir badge **"Enviado"** (cor azul claro, ex: `bg-sky-100 text-sky-800`) em vez de "Pendente" cinza.
+- Demais status (`preparando`, `pronto`, `entregue`) continuam iguais.
 
-Resultado: ao fechar o caixa atual, o React Query continua servindo do cache a "última sessão fechada" anterior. Por isso o botão "Reimprimir Último Caixa" imprime o penúltimo (no seu caso, o de R$ 577 / sessão `7b3ea139`) em vez do que acabou de ser fechado (R$ 800 / sessão `0f9afb94`).
+**2. `src/pages/garcom/GarcomComandaDetalhe.tsx`** — passa o novo prop e redireciona após envio
+- No `<ComandaItemCard>` (linha ~163), adicionar `sentToKitchenAt={item.sent_to_kitchen_at}`.
+- No botão "Cozinha" (linha ~189), envolver `sendToKitchen` em handler async que aguarda a mutation e em seguida `navigate("/garcom")`.
+  - Como `sendToKitchen` hoje é `mutate` (fire-and-forget), expor também `sendToKitchenAsync` em `usePDVComandas` e usá-lo aqui para garantir ordem (toast → redirect).
 
-A query SQL em si está correta (`order by closed_at desc limit 1`) — confirmei no banco que ela retorna a sessão certa quando re-executada. O bug é puramente de invalidação de cache.
+**3. `src/pages/garcom/GarcomAdicionarItem.tsx`** — mesmo redirect ao usar a barra "Enviar para Cozinha"
+- Em `handleSendToKitchen` (linha 36), trocar para `await sendToKitchenAsync(...)` seguido de `navigate("/garcom")`.
 
-### Correção
+**4. `src/hooks/use-pdv-comandas.ts`** — exportar versão async da mutation
+- No retorno do hook, adicionar `sendToKitchenAsync: sendToKitchenMutation.mutateAsync` ao lado do `sendToKitchen` existente. Sem alterar a lógica do mutation (status no banco continua `"pendente"` + `sent_to_kitchen_at` preenchido — coerente com o fluxo da cozinha).
 
-`src/hooks/use-pdv-cashier.ts`, no `onSuccess` da mutation `closeCashier`:
+### Por que não mudar `kitchen_status` no banco
 
-```ts
-onSuccess: () => {
-  queryClient.invalidateQueries({ queryKey: ["pdv-cashier-active"] });
-  queryClient.invalidateQueries({ queryKey: ["pdv-cashier-movements"] });
-  queryClient.invalidateQueries({ queryKey: ["pdv-cashier-last-closed"] });
-  queryClient.invalidateQueries({ queryKey: ["pdv-cashier-last-closed-movements"] });
-  toast.success("Caixa fechado com sucesso!");
-},
-```
+Manter `kitchen_status = "pendente"` preserva o significado para a tela da Cozinha (`KitchenItemCard`, `usePDVKitchen`): o cozinheiro ainda precisa clicar "Iniciar Preparo" para virar `preparando`. A diferença "recebido pela cozinha" vs. "ainda no garçom sem enviar" continua representada pelo timestamp `sent_to_kitchen_at`, que já é populado pelo `sendToKitchenMutation`. A mudança é puramente visual no app do garçom.
 
 ### Validação
 
-- Abrir caixa, fazer movimentos, fechar com saldo X.
-- Abrir novamente, fechar com saldo Y.
-- Clicar "Reimprimir Último Caixa": demonstrativo deve mostrar saldo Y (o mais recente), não X.
-- Histórico/extrato em outras telas continua intacto (a invalidação só refaz o fetch).
+- Adicionar item numa comanda → badge mostra **"Pendente"** (cinza).
+- Clicar "Cozinha" → toast "Itens enviados para cozinha!" → redireciona para `/garcom` (lista de mesas).
+- Reabrir a comanda → itens recém-enviados aparecem com badge **"Enviado"** (azul).
+- Tela `/pdv/cozinha` continua mostrando o item como "Pendente" até o cozinheiro iniciar o preparo (sem regressão).
+- Funciona tanto pelo botão "Cozinha" do detalhe da comanda quanto pela barra inferior em "Adicionar Item".
 
