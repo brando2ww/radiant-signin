@@ -287,7 +287,7 @@ export default function GarcomMesaDetalhe() {
 
       {/* Confirmação de abertura de mesa livre */}
       <AlertDialog open={showConfirmDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[min(22rem,calc(100vw-2rem))] rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Abrir Mesa {table.table_number}?</AlertDialogTitle>
             <AlertDialogDescription>
