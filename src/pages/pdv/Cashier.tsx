@@ -17,6 +17,7 @@ import { KeyboardShortcutsDialog } from "@/components/pdv/cashier/KeyboardShortc
 import { ChargeSelectionDialog } from "@/components/pdv/cashier/ChargeSelectionDialog";
 import { PaymentDialog } from "@/components/pdv/cashier/PaymentDialog";
 import { EmployeeConsumptionDialog } from "@/components/pdv/cashier/EmployeeConsumptionDialog";
+import { SalonQueuePanel } from "@/components/pdv/cashier/SalonQueuePanel";
 import { usePDVComandasRealtime } from "@/hooks/use-pdv-comandas-realtime";
 
 export default function PDVCashier() {
