@@ -641,6 +641,7 @@ export function usePDVComandas() {
     removeItem: removeItemMutation.mutate,
     transferItem: transferItemMutation.mutate,
     sendToKitchen: sendToKitchenMutation.mutate,
+    sendToKitchenAsync: sendToKitchenMutation.mutateAsync,
     markAsCharging: markAsChargingMutation.mutateAsync,
     releaseFromCharging: releaseFromChargingMutation.mutateAsync,
     returnToWaiter: returnToWaiterMutation.mutateAsync,
