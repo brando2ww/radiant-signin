@@ -317,7 +317,7 @@ export default function GarcomMesaDetalhe() {
             <p className="text-xs text-muted-foreground">
               Informe o nome de cada comanda. Você pode abrir várias comandas na mesma mesa.
             </p>
-            <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto px-1 -mx-1">
               {comandaNames.map((name, index) => (
                 <div key={index} className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">
@@ -328,7 +328,8 @@ export default function GarcomMesaDetalhe() {
                       autoFocus={index === comandaNames.length - 1}
                       value={name}
                       onChange={(e) => updateName(index, e.target.value)}
-                      placeholder="Ex: João, Casal, Mesa frente..."
+                      placeholder="Ex: João, Casal..."
+                      className="flex-1 min-w-0"
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && allNamesFilled) {
                           e.preventDefault();
@@ -340,7 +341,7 @@ export default function GarcomMesaDetalhe() {
                       <button
                         type="button"
                         onClick={() => removeNameField(index)}
-                        className="h-9 w-9 flex items-center justify-center rounded-md border text-muted-foreground active:scale-95"
+                        className="h-10 w-10 shrink-0 flex items-center justify-center rounded-md border text-muted-foreground active:scale-95"
                         aria-label="Remover comanda"
                       >
                         <X className="h-4 w-4" />
@@ -362,13 +363,18 @@ export default function GarcomMesaDetalhe() {
               Adicionar comanda
             </Button>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCancelOpen}>
+          <DialogFooter className="flex-row gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={handleCancelOpen}
+              className="flex-1"
+            >
               Cancelar
             </Button>
             <Button
               onClick={handleConfirmOpen}
               disabled={opening || !allNamesFilled}
+              className="flex-1"
             >
               Abrir mesa
             </Button>
