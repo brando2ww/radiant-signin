@@ -110,45 +110,44 @@ export default function GarcomComandaDetalhe() {
       </div>
 
       {/* Bottom Action Bar */}
-      <div
-        className="fixed inset-x-0 z-40 border-t bg-background p-4 space-y-2"
-        style={{ bottom: "calc(6rem + env(safe-area-inset-bottom))" }}
-      >
-        <div className="flex items-center justify-between text-sm font-semibold">
-          <span>Total</span>
-          <span className="tabular-nums">R$ {total.toFixed(2)}</span>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <Button
-            variant="outline"
-            className="active:scale-95 h-11"
-            onClick={() => navigate(`/garcom/comanda/${id}/adicionar`)}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Item
-          </Button>
-          {pendingIds.length > 0 && (
+      <div className="fixed bottom-0 inset-x-0 z-40 border-t bg-background">
+        <div className="p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] space-y-2">
+          <div className="flex items-center justify-between text-sm font-semibold">
+            <span>Total</span>
+            <span className="tabular-nums">R$ {total.toFixed(2)}</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
             <Button
+              variant="outline"
+              className="active:scale-95 h-11"
+              onClick={() => navigate(`/garcom/comanda/${id}/adicionar`)}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Item
+            </Button>
+            {pendingIds.length > 0 && (
+              <Button
+                className="active:scale-95 h-11"
+                onClick={() => {
+                  sendToKitchen(pendingIds);
+                }}
+              >
+                <Send className="h-4 w-4 mr-1" />
+                Cozinha
+              </Button>
+            )}
+            <Button
+              variant="secondary"
               className="active:scale-95 h-11"
               onClick={() => {
-                sendToKitchen(pendingIds);
+                closeComanda(comanda.id);
+                navigate(-1);
               }}
             >
-              <Send className="h-4 w-4 mr-1" />
-              Cozinha
+              <CreditCard className="h-4 w-4 mr-1" />
+              Fechar
             </Button>
-          )}
-          <Button
-            variant="secondary"
-            className="active:scale-95 h-11"
-            onClick={() => {
-              closeComanda(comanda.id);
-              navigate(-1);
-            }}
-          >
-            <CreditCard className="h-4 w-4 mr-1" />
-            Fechar
-          </Button>
+          </div>
         </div>
       </div>
     </div>
