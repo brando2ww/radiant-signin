@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Routes, Route, useNavigate } from "react-router-dom";
 import { BottomTabBar } from "@/components/garcom/BottomTabBar";
+import { GarcomActionFab } from "@/components/garcom/GarcomActionFab";
 import { NewOrderSheet } from "@/components/garcom/NewOrderSheet";
 import { ComandaDialog } from "@/components/pdv/ComandaDialog";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
@@ -65,6 +66,7 @@ export default function Garcom() {
         <Route path="cozinha" element={<GarcomCozinha />} />
       </Routes>
       <BottomTabBar onNewComanda={() => setSheetOpen(true)} />
+      <GarcomActionFab />
       <NewOrderSheet
         open={sheetOpen}
         onOpenChange={setSheetOpen}
