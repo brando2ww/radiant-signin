@@ -137,10 +137,11 @@ export function printCashierReport(params: PrintCashierReportParams) {
   const totalPix = session?.total_pix || 0;
   const totalWithdrawals = session?.total_withdrawals || 0;
   const totalSales = session?.total_sales || 0;
-  const expectedBalance = openingBal + totalCash - totalWithdrawals;
   const totalReinforcements = movements
     .filter((m) => m.type === "reforco")
     .reduce((acc, m) => acc + m.amount, 0);
+  // Saldo Esperado = Abertura + Vendas em dinheiro (líquido de troco) + Reforços − Sangrias
+  const expectedBalance = openingBal + totalCash + totalReinforcements - totalWithdrawals;
   const diff = finalBalance - expectedBalance;
   
   const riskLabels: Record<RiskLevel, string> = {
@@ -271,9 +272,19 @@ export function CloseCashierDialog({
   const [notes, setNotes] = useState("");
   const [confirmed, setConfirmed] = useState(false);
 
+  const totalReinforcements = useMemo(
+    () =>
+      movements
+        .filter((m) => m.type === "reforco")
+        .reduce((acc, m) => acc + m.amount, 0),
+    [movements]
+  );
+
+  // Saldo Esperado = Abertura + Vendas em dinheiro (líquido de troco) + Reforços − Sangrias
   const expectedBalance =
     (session?.opening_balance || 0) +
-    (session?.total_cash || 0) -
+    (session?.total_cash || 0) +
+    totalReinforcements -
     (session?.total_withdrawals || 0);
 
   const difference = useMemo(() => {
@@ -369,6 +380,13 @@ export function CloseCashierDialog({
                 </span>
               </div>
               
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Reforços:</span>
+                <span className="font-medium text-green-600">
+                  + {formatBRL(totalReinforcements)}
+                </span>
+              </div>
+
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Sangrias:</span>
                 <span className="font-medium text-red-600">
