@@ -1,31 +1,33 @@
 
 
-## Ocultar a barra de scroll das categorias na tela `/garcom/itens`
+## Habilitar arrastar com mouse/touch nas categorias do garçom
 
-A faixa horizontal de categorias (Todos · A la carte · Bebidas · Drinks) está mostrando uma scrollbar visível embaixo. Vou ocultá-la mantendo o scroll horizontal funcional (touch e arrastar).
+A barra de categorias na tela `/garcom/itens` rola via `overflow-x-auto`, mas com a scrollbar oculta e sem suporte a arrastar com o mouse, no desktop fica praticamente impossível navegar entre categorias. Touch funciona, mas mouse não.
 
 ### Mudança
 
 **`src/components/garcom/ProductCategoryNav.tsx`**
 
-Adicionar a classe utilitária `scrollbar-hide` (ou inline style com `scrollbarWidth: 'none'` + `::-webkit-scrollbar { display: none }`) no container que faz `overflow-x-auto`.
+Adicionar interação de **drag-to-scroll** no container horizontal:
 
-Como o projeto usa Tailwind v3 sem o plugin `tailwind-scrollbar-hide`, vou aplicar a solução via CSS global em `src/index.css`:
+1. Capturar `pointerdown` para registrar posição inicial e `scrollLeft`.
+2. Em `pointermove` (com botão pressionado), atualizar `scrollLeft` proporcional ao deslocamento do ponteiro.
+3. Em `pointerup` / `pointerleave`, encerrar o arrasto.
+4. Se o usuário arrastou mais que ~4px, bloquear o `click` subsequente nos chips (via `onClickCapture`) para não disparar seleção de categoria acidental ao final do arrasto.
+5. Adicionar suporte a `wheel`: se a roda vertical do mouse for usada sobre a faixa, converter em scroll horizontal.
+6. Cursor: `cursor-grab` no estado normal, `cursor-grabbing` durante o arrasto. Adicionar `select-none` para não selecionar texto enquanto arrasta.
 
-```css
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-```
+### Comportamento resultante
 
-E aplicar `no-scrollbar` no wrapper de `overflow-x-auto` do `ProductCategoryNav`.
-
-### Escopo
-
-- Afeta somente a navegação horizontal de categorias do garçom (`/garcom/itens` e `/garcom/comanda/:id/adicionar`).
-- Não afeta scroll vertical da página nem outras listas.
+- **Desktop**: clique-segure-arraste lateralmente para rolar entre Todos / A la carte / Bebidas / Drinks. Roda do mouse vertical também rola lateralmente.
+- **Mobile**: arrasto com dedo continua funcionando (já funcionava nativamente).
+- Clique simples num chip continua selecionando a categoria.
+- Scrollbar permanece oculta (já está globalmente em `index.css`).
 
 ### Validação
 
-- Abrir `/garcom/itens` em 390×844 — chips de categoria aparecem sem barra cinza embaixo.
-- Arrastar lateralmente continua rolando entre as categorias.
+- Em `/garcom/itens` no desktop: clicar e arrastar a faixa de categorias rola horizontalmente.
+- Soltar sobre um chip após arrastar **não** seleciona ele (evita falso clique).
+- Clique curto sobre "Bebidas" muda a categoria normalmente.
+- Em 390×844 (mobile), o swipe de toque continua rolando.
 
