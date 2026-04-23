@@ -40,7 +40,7 @@ export function usePDVPayments() {
     }: RegisterPaymentParams) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
 
-      // 1. Close the comanda (only if still open)
+      // 1. Close the comanda (only if still open OR awaiting payment from waiter)
       const { data: updatedComandas, error: comandaError } = await supabase
         .from("pdv_comandas")
         .update({
@@ -48,12 +48,37 @@ export function usePDVPayments() {
           updated_at: new Date().toISOString(),
         })
         .eq("id", comandaId)
-        .eq("status", "aberta")
+        .in("status", ["aberta", "aguardando_pagamento", "em_cobranca"])
         .select();
 
       if (comandaError) throw comandaError;
       if (!updatedComandas || updatedComandas.length === 0) {
         throw new Error("Comanda já finalizada");
+      }
+
+      // 1b. If comanda was tied to a table-order, free the table when it was the last open one
+      if (orderId) {
+        const { count } = await supabase
+          .from("pdv_comandas")
+          .select("*", { count: "exact", head: true })
+          .eq("order_id", orderId)
+          .in("status", ["aberta", "aguardando_pagamento", "em_cobranca"]);
+
+        if ((count ?? 0) === 0) {
+          await supabase
+            .from("pdv_orders")
+            .update({ status: "fechada", updated_at: new Date().toISOString() })
+            .eq("id", orderId);
+
+          await supabase
+            .from("pdv_tables")
+            .update({
+              status: "livre",
+              current_order_id: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("current_order_id", orderId);
+        }
       }
 
       // 2. If there's an order_id, insert payment record
