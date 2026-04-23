@@ -177,7 +177,10 @@ export default function GarcomAdicionarItem() {
 
       {/* Send to Kitchen Bar */}
       {pendingItems.length > 0 && (
-        <div className="fixed bottom-16 left-0 right-0 z-30 border-t bg-background px-4 py-3 safe-area-bottom">
+        <div
+          className="fixed left-0 right-0 z-30 border-t bg-background px-4 py-3"
+          style={{ bottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+        >
           <div className="mb-2 flex items-center justify-between text-sm">
             <span className="text-muted-foreground">
               {pendingItems.length} {pendingItems.length === 1 ? "item pendente" : "itens pendentes"}
