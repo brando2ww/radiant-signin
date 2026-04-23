@@ -145,6 +145,8 @@ export function usePDVCashier() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pdv-cashier-active"] });
       queryClient.invalidateQueries({ queryKey: ["pdv-cashier-movements"] });
+      queryClient.invalidateQueries({ queryKey: ["pdv-cashier-last-closed"] });
+      queryClient.invalidateQueries({ queryKey: ["pdv-cashier-last-closed-movements"] });
       toast.success("Caixa fechado com sucesso!");
     },
     onError: (error) => {
