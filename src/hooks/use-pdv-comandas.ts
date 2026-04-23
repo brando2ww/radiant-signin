@@ -516,9 +516,16 @@ export function usePDVComandas() {
     return comandas.filter((c) => c.order_id === orderId);
   };
 
-  // Helper to get standalone comandas (no order)
+  // Helper to get standalone comandas (no order) — only "aberta"
   const getStandaloneComandas = () => {
     return comandas.filter((c) => !c.order_id && c.status === "aberta");
+  };
+
+  // Helper: comandas aguardando cobrança (qualquer origem) — fila do caixa
+  const getPendingPaymentComandas = () => {
+    return comandas.filter(
+      (c) => c.status === "aguardando_pagamento" || c.status === "em_cobranca",
+    );
   };
 
   return {
@@ -545,5 +552,6 @@ export function usePDVComandas() {
     getItemsByComanda,
     getComandasByOrder,
     getStandaloneComandas,
+    getPendingPaymentComandas,
   };
 }
