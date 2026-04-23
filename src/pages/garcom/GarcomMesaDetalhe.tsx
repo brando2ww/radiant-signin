@@ -264,11 +264,18 @@ export default function GarcomMesaDetalhe() {
                 : `Mesa ${table.table_number}`;
 
               return (
-                <button
+                <div
                   key={comanda.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => navigate(`/garcom/comanda/${comanda.id}`)}
-                  className="w-full text-left rounded-2xl border bg-card p-4 space-y-3 active:opacity-70 active:scale-[0.99] transition-transform"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      navigate(`/garcom/comanda/${comanda.id}`);
+                    }
+                  }}
+                  className="cursor-pointer rounded-2xl border bg-card p-4 space-y-3 active:opacity-70 active:scale-[0.99] transition-transform"
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-sm">
@@ -278,25 +285,18 @@ export default function GarcomMesaDetalhe() {
                       </span>
                     </span>
                     {pendingIds.length > 0 && (
-                      <span
-                        role="button"
-                        tabIndex={0}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs active:scale-95"
                         onClick={(e) => {
                           e.stopPropagation();
                           sendToKitchen(pendingIds);
                         }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            sendToKitchen(pendingIds);
-                          }
-                        }}
-                        className="inline-flex items-center justify-center h-8 px-3 rounded-md border border-input bg-background text-xs font-medium hover:bg-accent hover:text-accent-foreground active:scale-95 transition-transform"
                       >
                         <Send className="h-3 w-3 mr-1" />
                         Enviar ({pendingIds.length})
-                      </span>
+                      </Button>
                     )}
                   </div>
                   {items.length === 0 ? (
@@ -315,7 +315,7 @@ export default function GarcomMesaDetalhe() {
                       ))}
                     </div>
                   )}
-                </button>
+                </div>
               );
             })}
             <Button
