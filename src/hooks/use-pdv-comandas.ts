@@ -523,6 +523,55 @@ export function usePDVComandas() {
     },
   });
 
+  // Devolver comanda ao garçom (aguardando_pagamento|em_cobranca -> aberta)
+  // com motivo obrigatório. Usado quando o caixa identifica que o cliente
+  // pediu mais itens ou a comanda não está pronta para cobrança.
+  const returnToWaiterMutation = useMutation({
+    mutationFn: async ({ comandaId, reason }: { comandaId: string; reason: string }) => {
+      const trimmed = reason.trim();
+      if (!trimmed) throw new Error("Motivo obrigatório para devolver ao garçom");
+
+      // Busca notes atual para fazer append
+      const { data: current, error: fetchErr } = await supabase
+        .from("pdv_comandas")
+        .select("notes, status")
+        .eq("id", comandaId)
+        .maybeSingle();
+      if (fetchErr) throw fetchErr;
+      if (!current) throw new Error("Comanda não encontrada");
+      if (current.status !== "aguardando_pagamento" && current.status !== "em_cobranca") {
+        throw new Error("Esta comanda não está mais aguardando cobrança");
+      }
+
+      const stamp = new Date().toLocaleString("pt-BR");
+      const noteLine = `[${stamp}] Devolvida ao garçom: ${trimmed}`;
+      const newNotes = current.notes ? `${current.notes}\n${noteLine}` : noteLine;
+
+      const { data, error } = await supabase
+        .from("pdv_comandas")
+        .update({
+          status: "aberta",
+          closed_by_waiter_at: null,
+          notes: newNotes,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", comandaId)
+        .in("status", ["aguardando_pagamento", "em_cobranca"])
+        .select()
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error("Comanda não pôde ser devolvida (status mudou)");
+      return data as Comanda;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-comandas"] });
+      toast.success("Comanda devolvida ao garçom");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
   // Liberar comandas travadas (em_cobranca -> aguardando_pagamento) quando o
   // caixa fecha o dialog sem concluir o pagamento.
   const releaseFromChargingMutation = useMutation({
@@ -594,6 +643,8 @@ export function usePDVComandas() {
     sendToKitchen: sendToKitchenMutation.mutate,
     markAsCharging: markAsChargingMutation.mutateAsync,
     releaseFromCharging: releaseFromChargingMutation.mutateAsync,
+    returnToWaiter: returnToWaiterMutation.mutateAsync,
+    isReturningToWaiter: returnToWaiterMutation.isPending,
 
     // Pending states
     isCreating: createComandaMutation.isPending,
