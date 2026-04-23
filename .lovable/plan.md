@@ -1,45 +1,28 @@
 
 
-## Logo Velara à esquerda + textos à direita no header do garçom
+## Logo Velara branco no dark mode
 
 ### Causa
 
-`src/components/garcom/GarcomHeader.tsx` tem só um bloco de texto à esquerda (`Olá, X` + título). Não há logo e o conteúdo está alinhado à esquerda.
+`src/components/ui/logo.tsx` sempre renderiza `logo_velara_preto.png`. No dark mode, o logo preto fica quase invisível sobre o fundo escuro. Existe apenas o asset preto em `src/assets/`.
 
 ### Mudança
 
-Em `src/components/garcom/GarcomHeader.tsx`:
+Como o logo é monocromático preto sobre fundo transparente, invertê-lo via CSS em dark mode produz exatamente o branco desejado. Em `src/components/ui/logo.tsx`:
 
-- Importar `Logo` de `@/components/ui/logo` (já existe, usa `logo_velara_preto.png`).
-- Trocar o flex container para `justify-between`.
-- Logo `size="sm"` (h-8) à esquerda, com `shrink-0`.
-- Bloco de texto (`Olá, X` + `title`) movido para a direita com `text-right`.
+- Adicionar a classe `dark:invert` na `<img>`. Tailwind aplica `filter: invert(1)` apenas quando o documento tem a classe `dark`, transformando o preto em branco e mantendo a transparência.
 
 ```tsx
-import { useAuth } from "@/contexts/AuthContext";
-import { Logo } from "@/components/ui/logo";
-
-export function GarcomHeader({ title }: { title?: string }) {
-  const { user } = useAuth();
-  const displayName = user?.user_metadata?.name?.split(" ")[0] || "Garçom";
-
-  return (
-    <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b bg-background px-4 safe-area-top">
-      <Logo size="sm" className="shrink-0" />
-      <div className="min-w-0 text-right">
-        <p className="text-xs text-muted-foreground truncate">Olá, {displayName}</p>
-        {title && (
-          <h1 className="text-base font-semibold leading-tight truncate">{title}</h1>
-        )}
-      </div>
-    </header>
-  );
-}
+<img 
+  src={logo} 
+  alt="Velara" 
+  className={cn(sizeClasses[size], "dark:invert", className)} 
+/>
 ```
 
 ### Validação
 
-- iPhone 390×844 em qualquer tela `/garcom/*`: logo Velara à esquerda do header (h-8), nome do garçom + título ("Mesa 04", etc.) alinhados à direita.
-- Sem quebra em telas com título longo (truncate).
-- Header continua sticky no topo respeitando safe-area.
+- Tema claro: logo preto (igual hoje).
+- Tema escuro: logo branco no header do garçom e em qualquer outro lugar que use `<Logo />`.
+- Sem necessidade de asset novo, sem mudança em quem consome `<Logo />`.
 
