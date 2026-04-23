@@ -155,6 +155,7 @@ export function PaymentDialog({
     isRemovingItem,
     addItem,
     isAddingItem,
+    comandaItems: liveComandaItems,
   } = usePDVComandas();
   const { products: productsList } = usePDVProducts();
   const { emitNFCe, isEmitting } = useNFCeEmission();
@@ -182,10 +183,28 @@ export function PaymentDialog({
 
   // Determine payment context
   const isTablePayment = !!table;
-  const displayItems = isTablePayment ? tableItems : items;
-  const subtotal = isTablePayment
-    ? tableComandas.reduce((sum, c) => sum + c.subtotal, 0)
-    : comanda?.subtotal || 0;
+
+  // Itens vivos via React Query (atualizam em tempo real após add/remove)
+  const liveItemsForPayment: ComandaItem[] = isTablePayment
+    ? liveComandaItems.filter((it) => tableComandas.some((c) => c.id === it.comanda_id))
+    : comanda
+      ? liveComandaItems.filter((it) => it.comanda_id === comanda.id)
+      : [];
+
+  // Fallback para Balcão (comanda virtual sem registro real em pdv_comandas)
+  const displayItems: ComandaItem[] = liveItemsForPayment.length > 0
+    ? liveItemsForPayment
+    : (isTablePayment ? tableItems : items);
+
+  const liveSubtotal = displayItems.reduce(
+    (sum, it) => sum + Number(it.subtotal || 0),
+    0,
+  );
+  const subtotal = liveItemsForPayment.length > 0
+    ? liveSubtotal
+    : (isTablePayment
+        ? tableComandas.reduce((sum, c) => sum + c.subtotal, 0)
+        : (comanda?.subtotal || 0));
 
   const title = isTablePayment
     ? formatTableLabel(table?.table_number)
