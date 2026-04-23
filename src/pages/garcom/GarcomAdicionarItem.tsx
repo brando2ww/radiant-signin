@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatBRL } from "@/lib/format";
 import {
   Sheet,
   SheetContent,
@@ -168,7 +169,7 @@ export default function GarcomAdicionarItem() {
                 <p className="text-xs text-muted-foreground">{product.category}</p>
               </div>
               <span className="shrink-0 font-semibold text-sm tabular-nums">
-                R$ {product.price_salon.toFixed(2)}
+                {formatBRL(product.price_salon)}
               </span>
             </button>
           ))
@@ -183,7 +184,7 @@ export default function GarcomAdicionarItem() {
               <span className="text-muted-foreground">
                 {pendingItems.length} {pendingItems.length === 1 ? "item pendente" : "itens pendentes"}
               </span>
-              <span className="font-semibold tabular-nums">R$ {pendingTotal.toFixed(2)}</span>
+              <span className="font-semibold tabular-nums">{formatBRL(pendingTotal)}</span>
             </div>
             <Button
               onClick={handleSendToKitchen}

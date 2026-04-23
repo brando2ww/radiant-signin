@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Download, Loader2 } from "lucide-react";
 import { useExpiryHistory } from "@/hooks/use-product-expiry";
 import type { ExpiryItem } from "@/hooks/use-product-expiry";
+import { formatBRL } from "@/lib/format";
 
 export function ExpiryLossHistory() {
   const [from, setFrom] = useState("");
@@ -51,7 +52,7 @@ export function ExpiryLossHistory() {
         </div>
         {items.length > 0 && (
           <p className="text-xs text-muted-foreground mt-1">
-            {items.length} itens descartados · Perda total: <span className="font-semibold text-destructive">R$ {totalValue.toFixed(2)}</span>
+            {items.length} itens descartados · Perda total: <span className="font-semibold text-destructive">{formatBRL(totalValue)}</span>
           </p>
         )}
       </CardHeader>
@@ -81,7 +82,7 @@ export function ExpiryLossHistory() {
                     <TableCell className="text-sm">{i.expiry_date}</TableCell>
                     <TableCell className="text-sm">{(i as any).discarded_at ? new Date((i as any).discarded_at).toLocaleDateString("pt-BR") : "—"}</TableCell>
                     <TableCell className="text-sm capitalize">{(i as any).discard_reason || "—"}</TableCell>
-                    <TableCell className="text-sm">R$ {(qty * cost).toFixed(2)}</TableCell>
+                    <TableCell className="text-sm">{formatBRL(qty * cost)}</TableCell>
                   </TableRow>
                 );
               })}

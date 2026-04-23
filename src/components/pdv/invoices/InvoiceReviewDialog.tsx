@@ -16,6 +16,7 @@ import { usePDVFinancialTransactions } from "@/hooks/use-pdv-financial-transacti
 import { Check, AlertCircle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { formatBRL } from "@/lib/format";
 
 interface InvoiceReviewDialogProps {
   open: boolean;
@@ -251,7 +252,7 @@ export function InvoiceReviewDialog({
                       <div className="flex-1">
                         <p className="font-medium">{item.productName}</p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {item.quantity} {item.unit} × R$ {item.unitValue.toFixed(2)} = R$ {item.totalValue.toFixed(2)}
+                          {item.quantity} {item.unit} × {formatBRL(item.unitValue)} = {formatBRL(item.totalValue)}
                         </p>
                       </div>
                       {matchedItems.has(index) ? (
@@ -275,15 +276,15 @@ export function InvoiceReviewDialog({
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <Label>Produtos</Label>
-                  <p className="mt-1">R$ {invoice.totals.products.toFixed(2)}</p>
+                  <p className="mt-1">{formatBRL(invoice.totals.products)}</p>
                 </div>
                 <div>
                   <Label>Impostos</Label>
-                  <p className="mt-1">R$ {invoice.totals.tax.toFixed(2)}</p>
+                  <p className="mt-1">{formatBRL(invoice.totals.tax)}</p>
                 </div>
                 <div className="col-span-2">
                   <Label>Total da Nota</Label>
-                  <p className="text-lg font-semibold mt-1">R$ {invoice.totals.invoice.toFixed(2)}</p>
+                  <p className="text-lg font-semibold mt-1">{formatBRL(invoice.totals.invoice)}</p>
                 </div>
               </div>
             </div>

@@ -13,6 +13,7 @@ import { format, parseISO, differenceInDays } from "date-fns";
 import { deferMenuAction } from "@/lib/ui/defer-menu-action";
 import { ptBR } from "date-fns/locale";
 import { Progress } from "@/components/ui/progress";
+import { formatBRL } from "@/lib/format";
 
 interface IngredientCardProps {
   ingredient: PDVIngredient;
@@ -111,11 +112,11 @@ export function IngredientCard({ ingredient, onEdit, onDelete, onAdjustStock }: 
             
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Mínimo: {ingredient.min_stock} {ingredient.unit}</span>
-              <span>Custo Médio: R$ {ingredient.average_cost.toFixed(2)}</span>
+              <span>Custo Médio: {formatBRL(ingredient.average_cost)}</span>
             </div>
             {ingredient.current_balance > 0 && (
               <div className="text-xs text-muted-foreground">
-                Saldo: R$ {ingredient.current_balance.toFixed(2)}
+                Saldo: {formatBRL(ingredient.current_balance)}
               </div>
             )}
           </div>

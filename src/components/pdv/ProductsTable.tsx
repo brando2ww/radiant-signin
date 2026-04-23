@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatBRL } from "@/lib/format";
 
 interface ProductsTableProps {
   data: Array<{
@@ -82,7 +83,7 @@ export function ProductsTable({ data, isLoading }: ProductsTableProps) {
                   </TableCell>
                   <TableCell className="text-right">{product.orders}</TableCell>
                   <TableCell className="text-right font-medium text-success">
-                    R$ {product.revenue.toFixed(2)}
+                    {formatBRL(product.revenue)}
                   </TableCell>
                 </TableRow>
               ))}

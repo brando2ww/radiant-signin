@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { KitchenStatus } from "@/hooks/use-pdv-comandas";
+import { formatBRL } from "@/lib/format";
 
 const kitchenStatusConfig: Record<KitchenStatus, { color: string; label: string }> = {
   pendente: { color: "bg-muted text-muted-foreground", label: "Pendente" },
@@ -44,7 +45,7 @@ export function ComandaItemCard({
         </div>
       </div>
       <span className="shrink-0 text-sm font-semibold tabular-nums">
-        R$ {subtotal.toFixed(2)}
+        {formatBRL(subtotal)}
       </span>
     </div>
   );

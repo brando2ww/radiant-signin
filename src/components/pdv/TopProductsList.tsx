@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Trophy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatBRL } from "@/lib/format";
 
 interface TopProductsListProps {
   products: Array<{
@@ -85,7 +86,7 @@ export function TopProductsList({ products, isLoading }: TopProductsListProps) {
                   <span>{product.total_quantity} vendidos</span>
                   <span>•</span>
                   <span className="text-success font-medium">
-                    R$ {product.total_revenue.toFixed(2)}
+                    {formatBRL(product.total_revenue)}
                   </span>
                 </div>
               </div>

@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TopProduct } from "@/hooks/use-delivery-reports";
 import { TrendingUp } from "lucide-react";
+import { formatBRL } from "@/lib/format";
 
 interface TopProductsProps {
   products: TopProduct[];
@@ -38,7 +39,7 @@ export const TopProducts = ({ products }: TopProductsProps) => {
                   <TableCell>{product.productName}</TableCell>
                   <TableCell className="text-right">{product.quantity}</TableCell>
                   <TableCell className="text-right">
-                    R$ {product.revenue.toFixed(2)}
+                    {formatBRL(product.revenue)}
                   </TableCell>
                 </TableRow>
               ))}

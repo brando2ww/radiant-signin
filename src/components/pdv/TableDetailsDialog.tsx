@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { TableComandasSection } from "./TableComandasSection";
+import { formatBRL } from "@/lib/format";
 
 interface Comanda {
   id: string;
@@ -120,7 +121,7 @@ export function TableDetailsDialog({
                         <span className="text-sm">Total</span>
                       </div>
                       <span className="text-lg font-bold">
-                        R$ {orderTotal.toFixed(2)}
+                        {formatBRL(orderTotal)}
                       </span>
                     </div>
                   )}

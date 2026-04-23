@@ -10,6 +10,7 @@ import { usePDVInvoices, useDeleteInvoice, useFetchNFeAutomatica, PDVInvoice } f
 import { ParsedInvoice } from "@/lib/invoice/xml-parser";
 import { EditableInvoiceData } from "@/types/invoice";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatBRL } from "@/lib/format";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -184,7 +185,7 @@ export default function Invoices() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Valor Total</p>
-              <p className="text-2xl font-bold">R$ {stats.totalValue.toFixed(2)}</p>
+              <p className="text-2xl font-bold">{formatBRL(stats.totalValue)}</p>
             </div>
           </div>
         </Card>

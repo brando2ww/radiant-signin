@@ -12,6 +12,7 @@ import { PDVProduct } from "@/hooks/use-pdv-products";
 import { usePDVRecipes } from "@/hooks/use-pdv-recipes";
 import { CMVBadge } from "./CMVBadge";
 import { deferMenuAction } from "@/lib/ui/defer-menu-action";
+import { formatBRL } from "@/lib/format";
 
 interface ProductCardProps {
   product: PDVProduct;
@@ -112,14 +113,14 @@ export function ProductCard({ product, onEdit, onDelete, onDuplicate, isSharedTo
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Salão:</span>
             <span className="font-bold text-lg">
-              R$ {product.price_salon.toFixed(2)}
+              {formatBRL(product.price_salon)}
             </span>
           </div>
           {product.price_balcao && (
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Balcão:</span>
               <span className="text-sm font-medium">
-                R$ {product.price_balcao.toFixed(2)}
+                {formatBRL(product.price_balcao)}
               </span>
             </div>
           )}

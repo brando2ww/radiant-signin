@@ -35,6 +35,7 @@ import { Plus, Trash2, Search, Package, Check } from "lucide-react";
 import { ProductOption, ProductOptionItem } from "@/hooks/use-product-options";
 import { usePDVIngredients } from "@/hooks/use-pdv-ingredients";
 import { cn } from "@/lib/utils";
+import { formatBRL } from "@/lib/format";
 
 export interface OptionItemWithIngredient {
   name: string;
@@ -341,7 +342,7 @@ export const ProductOptionDialog = ({
                                     <div className="flex-1">
                                       <span>{ing.name}</span>
                                       <span className="text-xs text-muted-foreground ml-2">
-                                        ({ing.unit}) - R$ {Number(ing.unit_cost).toFixed(2)}
+                                        ({ing.unit}) - {formatBRL(Number(ing.unit_cost))}
                                       </span>
                                     </div>
                                   </CommandItem>

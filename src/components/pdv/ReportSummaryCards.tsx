@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, ShoppingCart, TrendingUp, XCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatBRL } from "@/lib/format";
 
 interface ReportSummaryCardsProps {
   data: {
@@ -42,7 +43,7 @@ export function ReportSummaryCards({ data, isLoading }: ReportSummaryCardsProps)
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            R$ {(data?.totalSales || 0).toFixed(2)}
+            {formatBRL(data?.totalSales || 0)}
           </div>
           <p className="text-xs text-muted-foreground">
             {data?.totalOrders || 0} pedidos
@@ -68,7 +69,7 @@ export function ReportSummaryCards({ data, isLoading }: ReportSummaryCardsProps)
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            R$ {(data?.averageTicket || 0).toFixed(2)}
+            {formatBRL(data?.averageTicket || 0)}
           </div>
           <p className="text-xs text-muted-foreground">Por pedido</p>
         </CardContent>
@@ -82,7 +83,7 @@ export function ReportSummaryCards({ data, isLoading }: ReportSummaryCardsProps)
         <CardContent>
           <div className="text-2xl font-bold">{data?.cancelledOrders || 0}</div>
           <p className="text-xs text-muted-foreground">
-            R$ {(data?.cancelledValue || 0).toFixed(2)}
+            {formatBRL(data?.cancelledValue || 0)}
           </p>
         </CardContent>
       </Card>

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { PDVProductOption } from "@/hooks/use-pdv-product-options";
 import type { SelectedOption } from "@/components/pdv/ProductOptionSelector";
+import { formatBRL } from "@/lib/format";
 
 interface Props {
   options: PDVProductOption[];
@@ -112,10 +113,10 @@ export function MobileProductOptionSelector({
       <div className="mb-4 flex items-baseline justify-between rounded-xl bg-muted/50 px-3 py-2">
         <span className="text-xs text-muted-foreground">Total</span>
         <span className="text-base font-semibold tabular-nums">
-          R$ {total.toFixed(2)}
+          {formatBRL(total)}
           {extras > 0 && (
             <span className="ml-1 text-xs font-normal text-muted-foreground">
-              (+R$ {extras.toFixed(2)})
+              (+{formatBRL(extras)})
             </span>
           )}
         </span>
@@ -238,7 +239,7 @@ export function MobileProductOptionSelector({
                         {/* Preço */}
                         {price > 0 && (
                           <span className="shrink-0 text-sm tabular-nums text-muted-foreground">
-                            + R$ {price.toFixed(2)}
+                            + {formatBRL(price)}
                           </span>
                         )}
                       </button>
@@ -268,7 +269,7 @@ export function MobileProductOptionSelector({
             onClick={handleConfirm}
             disabled={!isValid}
           >
-            Continuar · R$ {total.toFixed(2)}
+            Continuar · {formatBRL(total)}
           </Button>
         </div>
       </div>

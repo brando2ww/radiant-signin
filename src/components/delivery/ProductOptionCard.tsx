@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Edit, Trash2, CheckCircle2, Circle, Package } from "lucide-react";
 import { ProductOption } from "@/hooks/use-product-options";
+import { formatBRL } from "@/lib/format";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,7 +58,7 @@ export const ProductOptionCard = ({ option, onEdit, onDelete }: ProductOptionCar
                 {item.price_adjustment !== 0 && (
                   <span className="text-muted-foreground">
                     {item.price_adjustment > 0 ? "+" : ""}
-                    R$ {item.price_adjustment.toFixed(2)}
+                    {formatBRL(item.price_adjustment)}
                   </span>
                 )}
                 {item.ingredient_id && (

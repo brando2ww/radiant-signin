@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { DeliveryCoupon } from "@/hooks/use-delivery-coupons";
+import { formatBRL } from "@/lib/format";
 
 export const CouponsTab = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -124,12 +125,12 @@ export const CouponsTab = () => {
                     </p>
                     {coupon.min_order_value > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        Pedido mínimo: R$ {Number(coupon.min_order_value).toFixed(2)}
+                        Pedido mínimo: {formatBRL(Number(coupon.min_order_value))}
                       </p>
                     )}
                     {coupon.max_discount && (
                       <p className="text-xs text-muted-foreground">
-                        Desconto máximo: R$ {Number(coupon.max_discount).toFixed(2)}
+                        Desconto máximo: {formatBRL(Number(coupon.max_discount))}
                       </p>
                     )}
                   </div>

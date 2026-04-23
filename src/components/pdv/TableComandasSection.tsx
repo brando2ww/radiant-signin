@@ -3,6 +3,7 @@ import { Separator } from "@/components/ui/separator";
 import { Plus, Receipt, User } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatBRL } from "@/lib/format";
 
 interface Comanda {
   id: string;
@@ -69,7 +70,7 @@ export function TableComandasSection({
                 </div>
               </div>
               <span className="font-semibold text-sm">
-                R$ {comanda.subtotal.toFixed(2)}
+                {formatBRL(comanda.subtotal)}
               </span>
             </div>
           ))}

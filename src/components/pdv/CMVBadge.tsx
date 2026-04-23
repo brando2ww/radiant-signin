@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, TrendingDown, TrendingUp } from "lucide-react";
+import { formatBRL } from "@/lib/format";
 
 interface CMVBadgeProps {
   cmv: number;
@@ -18,7 +19,7 @@ export function CMVBadge({ cmv, price, showMargin = false, variant = "default" }
     return (
       <div className="flex items-center gap-2">
         <Badge variant="outline" className="font-mono">
-          CMV: R$ {cmv.toFixed(2)}
+          CMV: {formatBRL(cmv)}
         </Badge>
         <Badge 
           variant={isNegativeMargin ? "destructive" : isLowMargin ? "secondary" : "default"}
@@ -38,7 +39,7 @@ export function CMVBadge({ cmv, price, showMargin = false, variant = "default" }
       variant={isNegativeMargin ? "destructive" : isLowMargin ? "secondary" : "outline"}
       className="font-mono"
     >
-      CMV: R$ {cmv.toFixed(2)}
+      CMV: {formatBRL(cmv)}
       {showMargin && ` (${margin.toFixed(0)}%)`}
     </Badge>
   );

@@ -20,6 +20,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatBRL } from "@/lib/format";
 import {
   AlertTriangle,
   Info,
@@ -150,7 +151,7 @@ export function ProductCompositionManager({
                             </div>
                           </div>
                           <span className="text-sm text-muted-foreground">
-                            R$ {p.price_salon.toFixed(2)}
+                            {formatBRL(p.price_salon)}
                           </span>
                         </CommandItem>
                       ))}
@@ -238,10 +239,10 @@ export function ProductCompositionManager({
 
                     <div className="text-right shrink-0 w-24">
                       <p className="text-xs text-muted-foreground">
-                        R$ {unitPrice.toFixed(2)}/un
+                        {formatBRL(unitPrice)}/un
                       </p>
                       <p className="text-sm font-medium">
-                        R$ {totalPrice.toFixed(2)}
+                        {formatBRL(totalPrice)}
                       </p>
                     </div>
 
@@ -268,13 +269,13 @@ export function ProductCompositionManager({
                   Custo da composição
                 </span>
                 <span className="font-medium">
-                  R$ {compositionCost.toFixed(2)}
+                  {formatBRL(compositionCost)}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Preço de venda</span>
                 <span className="font-medium">
-                  R$ {productPrice.toFixed(2)}
+                  {formatBRL(productPrice)}
                 </span>
               </div>
               <div className="border-t pt-2 flex justify-between text-sm">
@@ -282,7 +283,7 @@ export function ProductCompositionManager({
                 <span
                   className={`font-bold ${margin >= 0 ? "text-emerald-600" : "text-destructive"}`}
                 >
-                  R$ {margin.toFixed(2)} ({marginPercent.toFixed(1)}%)
+                  {formatBRL(margin)} ({marginPercent.toFixed(1)}%)
                 </span>
               </div>
             </div>

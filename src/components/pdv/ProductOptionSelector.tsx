@@ -5,6 +5,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import type { PDVProductOption } from "@/hooks/use-pdv-product-options";
+import { formatBRL } from "@/lib/format";
 
 export interface SelectedOption {
   optionId: string;
@@ -126,7 +127,7 @@ export function ProductOptionSelector({ options, onConfirm, onBack }: Props) {
                     </div>
                     {price > 0 && (
                       <span className="text-sm text-muted-foreground">
-                        +R$ {price.toFixed(2)}
+                        +{formatBRL(price)}
                       </span>
                     )}
                   </div>
@@ -153,7 +154,7 @@ export function ProductOptionSelector({ options, onConfirm, onBack }: Props) {
                     </div>
                     {price > 0 && (
                       <span className="text-sm text-muted-foreground">
-                        +R$ {price.toFixed(2)}
+                        +{formatBRL(price)}
                       </span>
                     )}
                   </div>
@@ -166,7 +167,7 @@ export function ProductOptionSelector({ options, onConfirm, onBack }: Props) {
 
       {totalExtra > 0 && (
         <div className="text-sm text-right text-muted-foreground">
-          Adicionais: +R$ {totalExtra.toFixed(2)}
+          Adicionais: +{formatBRL(totalExtra)}
         </div>
       )}
 

@@ -15,6 +15,7 @@ import { useState } from "react";
 import { ProductDialog } from "./ProductDialog";
 import { useDeliveryCategories } from "@/hooks/use-delivery-categories";
 import { deferMenuAction } from "@/lib/ui/defer-menu-action";
+import { formatBRL } from "@/lib/format";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -105,15 +106,15 @@ const ProductListItem = ({ product, onEdit, onDuplicate, onDelete }: { product: 
             {product.promotional_price ? (
               <>
                 <span className="text-sm line-through text-muted-foreground">
-                  R$ {Number(product.base_price).toFixed(2)}
+                  {formatBRL(Number(product.base_price))}
                 </span>
                 <span className="text-lg font-bold text-primary">
-                  R$ {Number(product.promotional_price).toFixed(2)}
+                  {formatBRL(Number(product.promotional_price))}
                 </span>
               </>
             ) : (
               <span className="text-lg font-bold">
-                R$ {Number(product.base_price).toFixed(2)}
+                {formatBRL(Number(product.base_price))}
               </span>
             )}
             {!product.is_available && (

@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { GarcomHeader } from "@/components/garcom/GarcomHeader";
 import { ProductCategoryNav } from "@/components/garcom/ProductCategoryNav";
 import { usePDVProducts } from "@/hooks/use-pdv-products";
+import { formatBRL } from "@/lib/format";
 
 export default function GarcomItens() {
   const navigate = useNavigate();
@@ -76,7 +77,7 @@ export default function GarcomItens() {
                 </p>
                 <p className="text-xs text-muted-foreground">{product.category}</p>
                 <p className="text-sm font-bold text-primary">
-                  R$ {product.price_salon.toFixed(2)}
+                  {formatBRL(product.price_salon)}
                 </p>
               </div>
             </button>

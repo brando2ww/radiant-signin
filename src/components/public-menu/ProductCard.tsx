@@ -6,6 +6,7 @@ import { PublicProduct } from "@/hooks/use-public-menu";
 import { useState } from "react";
 import { ProductDetailModal } from "./ProductDetailModal";
 import { CartItem } from "@/pages/PublicMenu";
+import { formatBRL } from "@/lib/format";
 
 interface ProductCardProps {
   product: PublicProduct;
@@ -81,15 +82,15 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
               {product.promotional_price ? (
                 <div>
                   <p className="text-xs line-through text-muted-foreground">
-                    R$ {Number(product.base_price).toFixed(2)}
+                    {formatBRL(Number(product.base_price))}
                   </p>
                   <p className="text-lg font-bold text-primary">
-                    R$ {Number(product.promotional_price).toFixed(2)}
+                    {formatBRL(Number(product.promotional_price))}
                   </p>
                 </div>
               ) : (
                 <p className="text-lg font-bold">
-                  R$ {Number(product.base_price).toFixed(2)}
+                  {formatBRL(Number(product.base_price))}
                 </p>
               )}
             </div>

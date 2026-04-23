@@ -11,6 +11,7 @@ import { usePublicSettings } from "@/hooks/use-public-menu";
 import { useValidateCoupon } from "@/hooks/use-delivery-coupons";
 import { CheckoutFlow } from "./CheckoutFlow";
 import { useMarketingTracking } from "@/hooks/use-marketing-tracking";
+import { formatBRL } from "@/lib/format";
 import {
   Sheet,
   SheetContent,
@@ -197,7 +198,7 @@ export const ShoppingCart = ({
                             </Button>
                           </div>
                           <span className="font-semibold">
-                            R$ {(itemPrice * item.quantity).toFixed(2)}
+                            {formatBRL(itemPrice * item.quantity)}
                           </span>
                         </div>
                       </CardContent>
@@ -251,21 +252,21 @@ export const ShoppingCart = ({
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
-                  <span>R$ {subtotal.toFixed(2)}</span>
+                  <span>{formatBRL(subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Taxa de entrega:</span>
-                  <span>R$ {deliveryFee.toFixed(2)}</span>
+                  <span>{formatBRL(deliveryFee)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Desconto:</span>
-                    <span>-R$ {discount.toFixed(2)}</span>
+                    <span>-{formatBRL(discount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold pt-2 border-t">
                   <span>Total:</span>
-                  <span>R$ {total.toFixed(2)}</span>
+                  <span>{formatBRL(total)}</span>
                 </div>
               </div>
 

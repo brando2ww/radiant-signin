@@ -6,6 +6,7 @@ import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTableLabel } from "@/utils/formatTableNumber";
+import { formatBRL } from "@/lib/format";
 
 export default function GarcomComandaDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -114,7 +115,7 @@ export default function GarcomComandaDetalhe() {
         <div className="p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] space-y-2">
           <div className="flex items-center justify-between text-sm font-semibold">
             <span>Total</span>
-            <span className="tabular-nums">R$ {total.toFixed(2)}</span>
+            <span className="tabular-nums">{formatBRL(total)}</span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             <Button

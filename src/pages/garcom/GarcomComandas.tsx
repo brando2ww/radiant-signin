@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Search, ChevronRight } from "lucide-react";
 import { formatTableLabel } from "@/utils/formatTableNumber";
+import { formatBRL } from "@/lib/format";
 
 export default function GarcomComandas() {
   const { comandas, comandaItems, isLoading } = usePDVComandas();
@@ -74,7 +75,7 @@ export default function GarcomComandas() {
                       {comanda.customer_name || comanda.comanda_number}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {origin} · {items.length} {items.length === 1 ? "item" : "itens"} · R$ {total.toFixed(2)}
+                      {origin} · {items.length} {items.length === 1 ? "item" : "itens"} · {formatBRL(total)}
                     </p>
                   </div>
                   <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />

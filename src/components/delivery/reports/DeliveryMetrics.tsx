@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeliveryMetrics } from "@/hooks/use-delivery-reports";
 import { TrendingUp, ShoppingBag, DollarSign, Package, XCircle, Truck, Home } from "lucide-react";
+import { formatBRL } from "@/lib/format";
 
 interface DeliveryMetricsProps {
   metrics: DeliveryMetrics;
@@ -29,10 +30,10 @@ export const DeliveryMetricsCards = ({ metrics }: DeliveryMetricsProps) => {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            R$ {metrics.totalRevenue.toFixed(2)}
+            {formatBRL(metrics.totalRevenue)}
           </div>
           <p className="text-xs text-muted-foreground">
-            Ticket médio: R$ {metrics.averageTicket.toFixed(2)}
+            Ticket médio: {formatBRL(metrics.averageTicket)}
           </p>
         </CardContent>
       </Card>
