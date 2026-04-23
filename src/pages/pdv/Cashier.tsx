@@ -262,10 +262,10 @@ export default function PDVCashier() {
         openedAt={activeSession?.opened_at || null}
       />
 
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0">
+      {/* Main Content — grid 12 cols: 6 movimentações | 3 ações | 3 painel salão */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-0">
         {/* Tabela de Movimentações */}
-        <Card className="lg:col-span-3 flex flex-col min-h-0">
+        <Card className="lg:col-span-6 flex flex-col min-h-0">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Movimentações</CardTitle>
             <CardDescription>
@@ -296,7 +296,7 @@ export default function PDVCashier() {
         </Card>
 
         {/* Sidebar de Ações */}
-        <Card className="flex flex-col min-h-0 overflow-hidden">
+        <Card className="lg:col-span-3 flex flex-col min-h-0 overflow-hidden">
           <CardContent className="p-3 flex-1 min-h-0 overflow-hidden">
             <CashierActionsSidebar
               isOpen={!!activeSession}
@@ -311,6 +311,16 @@ export default function PDVCashier() {
               onEmployeeConsumption={() => setEmployeeDialog(true)}
             />
           </CardContent>
+        </Card>
+
+        {/* Painel lateral: fila do Salão (sempre visível) */}
+        <Card className="lg:col-span-3 flex flex-col min-h-0 overflow-hidden p-0">
+          <SalonQueuePanel
+            isOpen={!!activeSession}
+            onSelectComanda={handleSelectComanda}
+            onSelectTablePending={handleSelectTablePending}
+            onOpenDirectCharge={() => setChargeDialog(true)}
+          />
         </Card>
       </div>
 
