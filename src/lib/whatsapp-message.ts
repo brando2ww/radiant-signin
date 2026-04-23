@@ -121,11 +121,8 @@ export function openWhatsApp(phone: string, message: string): void {
 }
 
 /**
- * Formata valor em reais
+ * Formata valor em reais (padrão BR).
+ * @deprecated Importe `formatBRL` (ou `formatCurrency`) de `@/lib/format`.
  */
-export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(value);
-}
+export { formatBRL as formatCurrency } from "./format";
+
