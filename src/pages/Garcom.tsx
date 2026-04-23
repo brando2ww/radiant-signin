@@ -6,6 +6,7 @@ import { NewOrderSheet } from "@/components/garcom/NewOrderSheet";
 import { ComandaDialog } from "@/components/pdv/ComandaDialog";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
+import { usePDVComandasRealtime } from "@/hooks/use-pdv-comandas-realtime";
 import { toast } from "sonner";
 import GarcomMesas from "./garcom/GarcomMesas";
 import GarcomComandas from "./garcom/GarcomComandas";
@@ -22,6 +23,9 @@ export default function Garcom() {
   const { activeSession, isLoadingSession } = usePDVCashier();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [comandaDialogOpen, setComandaDialogOpen] = useState(false);
+
+  // Realtime: mantém mesas/comandas em sincronia com o caixa
+  usePDVComandasRealtime();
 
   const handleSelectMesa = () => {
     setSheetOpen(false);

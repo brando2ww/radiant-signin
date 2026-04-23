@@ -6,7 +6,12 @@ import { resolveProductionCenterId } from "@/utils/resolveProductionCenter";
 import { expandComposition } from "@/utils/expandComposition";
 import { toast } from "sonner";
 
-export type ComandaStatus = "aberta" | "fechada" | "cancelada";
+export type ComandaStatus =
+  | "aberta"
+  | "aguardando_pagamento"
+  | "em_cobranca"
+  | "fechada"
+  | "cancelada";
 export type KitchenStatus = "pendente" | "preparando" | "pronto" | "entregue";
 
 export interface Comanda {
@@ -21,6 +26,7 @@ export interface Comanda {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  closed_by_waiter_at?: string | null;
 }
 
 export interface ComandaItem {
@@ -175,51 +181,30 @@ export function usePDVComandas() {
     },
   });
 
-  // Close comanda — também libera a mesa se for a última comanda aberta da order
+  // Close comanda — envia para a fila de cobrança do caixa.
+  // A mesa NÃO é liberada aqui: isso só acontece depois do pagamento.
   const closeComandaMutation = useMutation({
     mutationFn: async (id: string) => {
       const { data, error } = await supabase
         .from("pdv_comandas")
-        .update({ status: "fechada", updated_at: new Date().toISOString() })
+        .update({
+          status: "aguardando_pagamento",
+          closed_by_waiter_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", id)
+        .eq("status", "aberta")
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      const closed = data as Comanda;
-
-      // Se a comanda pertencia a uma order de mesa, verificar se foi a última
-      if (closed.order_id) {
-        const { count } = await supabase
-          .from("pdv_comandas")
-          .select("*", { count: "exact", head: true })
-          .eq("order_id", closed.order_id)
-          .eq("status", "aberta");
-
-        if ((count ?? 0) === 0) {
-          // Fecha a order e libera a mesa associada
-          await supabase
-            .from("pdv_orders")
-            .update({ status: "fechada", updated_at: new Date().toISOString() })
-            .eq("id", closed.order_id);
-
-          await supabase
-            .from("pdv_tables")
-            .update({
-              status: "livre",
-              current_order_id: null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("current_order_id", closed.order_id);
-        }
-      }
-
-      return closed;
+      if (!data) throw new Error("Comanda não pôde ser fechada (já foi enviada ao caixa ou cancelada).");
+      return data as Comanda;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pdv-comandas"] });
       queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
-      toast.success("Comanda fechada!");
+      toast.success("Comanda enviada para o caixa");
     },
     onError: (error) => {
       toast.error("Erro ao fechar comanda: " + error.message);
@@ -258,6 +243,17 @@ export function usePDVComandas() {
       unitPrice: number;
       notes?: string;
     }) => {
+      // Bloqueia adicionar item em comanda que já foi enviada para o caixa
+      const { data: existing, error: fetchErr } = await supabase
+        .from("pdv_comandas")
+        .select("status")
+        .eq("id", data.comandaId)
+        .maybeSingle();
+      if (fetchErr) throw fetchErr;
+      if (existing && existing.status !== "aberta") {
+        throw new Error("Esta comanda já foi fechada e enviada para o caixa");
+      }
+
       const subtotal = data.quantity * data.unitPrice;
       const ownerId = visibleUserId || user?.id;
       const production_center_id = ownerId
@@ -520,9 +516,16 @@ export function usePDVComandas() {
     return comandas.filter((c) => c.order_id === orderId);
   };
 
-  // Helper to get standalone comandas (no order)
+  // Helper to get standalone comandas (no order) — only "aberta"
   const getStandaloneComandas = () => {
     return comandas.filter((c) => !c.order_id && c.status === "aberta");
+  };
+
+  // Helper: comandas aguardando cobrança (qualquer origem) — fila do caixa
+  const getPendingPaymentComandas = () => {
+    return comandas.filter(
+      (c) => c.status === "aguardando_pagamento" || c.status === "em_cobranca",
+    );
   };
 
   return {
@@ -549,5 +552,6 @@ export function usePDVComandas() {
     getItemsByComanda,
     getComandasByOrder,
     getStandaloneComandas,
+    getPendingPaymentComandas,
   };
 }

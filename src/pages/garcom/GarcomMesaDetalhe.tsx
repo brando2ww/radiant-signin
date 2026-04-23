@@ -40,7 +40,10 @@ export default function GarcomMesaDetalhe() {
   const tableComandas = table?.current_order_id
     ? comandas.filter(
         (c) =>
-          c.order_id === table.current_order_id && c.status === "aberta",
+          c.order_id === table.current_order_id &&
+          (c.status === "aberta" ||
+            c.status === "aguardando_pagamento" ||
+            c.status === "em_cobranca"),
       )
     : [];
 
@@ -263,6 +266,10 @@ export default function GarcomMesaDetalhe() {
                 ? comanda.customer_name
                 : `Mesa ${table.table_number}`;
 
+              const isWaiting = comanda.status === "aguardando_pagamento";
+              const isCharging = comanda.status === "em_cobranca";
+              const canEdit = comanda.status === "aberta";
+
               return (
                 <div
                   key={comanda.id}
@@ -277,27 +284,39 @@ export default function GarcomMesaDetalhe() {
                   }}
                   className="cursor-pointer rounded-2xl border bg-card p-4 space-y-3 active:opacity-70 active:scale-[0.99] transition-transform"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="font-semibold text-sm min-w-0 truncate">
                       {comanda.comanda_number}
                       <span className="ml-2 text-muted-foreground font-normal">
                         — {label}
                       </span>
                     </span>
-                    {pendingIds.length > 0 && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 text-xs active:scale-95"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          sendToKitchen(pendingIds);
-                        }}
-                      >
-                        <Send className="h-3 w-3 mr-1" />
-                        Enviar ({pendingIds.length})
-                      </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {isWaiting && (
+                        <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold text-orange-600 dark:text-orange-400">
+                          Aguardando caixa
+                        </span>
+                      )}
+                      {isCharging && (
+                        <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+                          Em cobrança
+                        </span>
+                      )}
+                      {canEdit && pendingIds.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs active:scale-95"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            sendToKitchen(pendingIds);
+                          }}
+                        >
+                          <Send className="h-3 w-3 mr-1" />
+                          Enviar ({pendingIds.length})
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   {items.length === 0 ? (
                     <p className="text-xs text-muted-foreground">Sem itens</p>

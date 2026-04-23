@@ -71,16 +71,19 @@ export function ChargeSelectionDialog({
   onCancelComanda,
   onCancelTable,
 }: ChargeSelectionDialogProps) {
-  const [tab, setTab] = useState<"comandas" | "mesas">("comandas");
+  const [tab, setTab] = useState<"pendentes" | "comandas" | "mesas">("pendentes");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("time");
   const [cancelTarget, setCancelTarget] = useState<{ type: "comanda" | "table"; id: string; orderId?: string; label: string } | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   
-  const { comandas, getItemsByComanda, getStandaloneComandas } = usePDVComandas();
+  const { comandas, getItemsByComanda, getStandaloneComandas, getPendingPaymentComandas } = usePDVComandas();
   const { tables } = usePDVTables();
 
-  // Get standalone comandas (no table/order)
+  // Comandas vindas do garçom aguardando cobrança (mesa ou avulsas)
+  const pendingComandas = getPendingPaymentComandas();
+
+  // Get standalone comandas (no table/order) - apenas abertas pelo caixa
   const standaloneComandas = getStandaloneComandas();
 
   // Get occupied tables with comandas
