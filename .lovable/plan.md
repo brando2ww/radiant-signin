@@ -1,101 +1,89 @@
 
 
-## Complemento: múltiplas comandas na mesma mesa — fila do caixa, agrupamento e split por pessoa
+## Reformulação UX: "Cobranças do Salão" como painel lateral fixo
 
-### Estado atual (já implementado)
+### Direção
 
-- Status `aguardando_pagamento` e `em_cobranca` já existem em `pdv_comandas`.
-- `closeComanda` no garçom envia para `aguardando_pagamento` sem liberar a mesa.
-- `registerPayment` em `usePDVPayments` libera a mesa apenas quando não há mais comandas `aberta`/`aguardando_pagamento`/`em_cobranca` no mesmo `order_id`.
-- `getPendingPaymentComandas()` retorna a fila do caixa.
-- `ChargeSelectionDialog` tem o estado `tab="pendentes"` mas a `TabsList` só renderiza `comandas` e `mesas` — a aba "Aguardando cobrança" não aparece.
+Sair do modal bloqueante e transformar a fila do salão em um **painel lateral direito fixo** (drawer permanente) na Frente de Caixa, com cards informativos, urgência visual por tempo e ações inline.
 
-### O que falta — plano
+### 1. Novo layout da Frente de Caixa (`src/pages/pdv/Cashier.tsx`)
 
-#### 1. Aba "Aguardando cobrança" no caixa, com agrupamento por mesa
+Grid passa de `grid-cols-4` para `grid-cols-12`:
 
-`src/components/pdv/cashier/ChargeSelectionDialog.tsx`:
+```text
+┌────────────────────┬──────────────┬───────────────────┐
+│ Movimentações (6) │ Ações (3)   │ Salão — fila (3) │
+└────────────────────┴──────────────┴───────────────────┘
+```
 
-- TabsList com 3 colunas: **Aguardando** (default), Comandas, Mesas. Badge com contador de pendentes em destaque (cor laranja se > 0).
-- Conteúdo da aba "Aguardando":
-  - Listar `pendingComandas` agrupadas por `order_id` (grupo "mesa") + um grupo "Avulsas" (sem `order_id`).
-  - Cada grupo de mesa: cabeçalho com `formatTableLabel(table.table_number)`, badge `N comandas`, total agregado e botão **"Cobrar tudo desta mesa"** (abre `PaymentDialog` em modo split-por-comanda, ver seção 3).
-  - Dentro do grupo, um card por comanda nominal mostrando: nome (`customer_name`), nº de itens, total, "Aguardando há X min" (calculado de `closed_by_waiter_at ?? updated_at`), badge laranja "Aguardando" ou azul "Em cobrança".
-  - Borda colorida única por mesa (hash do `order_id` → 1 entre 6 cores) para identificação visual mesmo se grupos forem reordenados.
-  - Cards com `aria-busy` e opacidade reduzida quando status `em_cobranca` (sinal de "outro caixa está cobrando"), mas continuam clicáveis (caso queiram retomar).
-  - Ordenação dentro do grupo: mais antigas primeiro (`closed_by_waiter_at` ascendente).
-  - Ordenação dos grupos: pelo card mais antigo de cada um.
-- Comportamento de clique:
-  - Card individual → `onSelectComanda(comanda, items)` (caixa cobra só essa pessoa).
-  - "Cobrar tudo desta mesa" → novo handler `onSelectTablePending(table, comandas, items)` que dispara `PaymentDialog` em modo agrupado.
+- Coluna 1 (`col-span-6`): Movimentações (igual a hoje, só mais estreita).
+- Coluna 2 (`col-span-3`): `CashierActionsSidebar` (mantém Reforço/Sangria/Cobrar/Consumo/Fechar).
+- Coluna 3 (`col-span-3`): novo `<SalonQueuePanel />` — painel da fila do salão, sempre visível quando o caixa está aberto.
+- Em telas `< lg`: o painel cai abaixo das ações como uma seção (mantém visível, só empilha).
+- O `ChargeSelectionDialog` (modal) é **removido** do fluxo de cobrar do salão. F5 continua funcionando, mas em vez de abrir o modal, dá foco/scroll no `SalonQueuePanel` e abre o primeiro card pendente automaticamente. As abas "Comandas avulsas" e "Mesas (cobrar antecipado)" passam para um `Sheet` lateral acionado por um botão "Cobrar avulsa/mesa direta" no rodapé do painel — uso menos frequente, fora do fluxo principal.
 
-#### 2. Status "em_cobranca" ao abrir PaymentDialog
+### 2. Novo componente `SalonQueuePanel`
 
-`src/components/pdv/cashier/PaymentDialog.tsx`:
+Arquivo: `src/components/pdv/cashier/SalonQueuePanel.tsx`.
 
-- Ao abrir (`useEffect [open]`), se `comanda?.status === "aguardando_pagamento"` (ou alguma de `tableComandas` estiver), fazer UPDATE `status=em_cobranca` para os IDs envolvidos. Guardar a lista `lockedIds` em ref.
-- Ao fechar SEM pagar (`onOpenChange(false)` antes de `showSuccess`), reverter `lockedIds` de `em_cobranca` → `aguardando_pagamento` (apenas se ainda estiverem em `em_cobranca`).
-- Ao pagar com sucesso (`registerPayment`/`registerTablePayment`), o próprio mutation já transiciona para `fechada` (já filtra `["aberta","aguardando_pagamento","em_cobranca"]`). Não precisa reverter.
-- Filtro `.in("status", […])` já permite cobrar comandas em `em_cobranca`, então não há regressão.
-- Race entre dois caixas: se o segundo abrir e o UPDATE retornar 0 linhas (porque o primeiro já está cobrando aquele subconjunto), exibir toast "Outro operador já está cobrando esta comanda" e fechar o dialog.
+**Cabeçalho fixo:**
+- Título "Salão" + ícone.
+- Linha 1: contador grande "**3** comandas aguardando" (em tempo real, vem do hook).
+- Linha 2: "Total aguardando: **R$ 312,00**" (soma dos `subtotal`).
+- Linha 3: "Tempo médio: 6 min" (média de `now - closed_by_waiter_at`).
+- Botão refresh discreto (invalida `pdv-comandas`).
+- Select compacto de ordenação: Mais antiga (default) | Maior valor | Mesa | Nome.
+- Comandas com >10 min são **fixadas no topo** independente do sort.
 
-#### 3. Modo split-por-pessoa (cobrar tudo da mesa)
+**Lista (scroll interno):**
+- Agrupada por mesa quando >1 comanda no mesmo `order_id`.
+- Cabeçalho de grupo: "Mesa 5 — 2 comandas — R$ 122,00" + botão "**Cobrar tudo da Mesa 5**" (chama `onSelectTablePending`).
+- Estado vazio: ícone amigável + "Nenhuma comanda aguardando cobrança" (sem abas, sem search).
 
-`PaymentDialog`:
+### 3. Novo card `SalonQueueCard`
 
-- Nova prop opcional `splitByComanda?: boolean` (true quando vem de "Cobrar tudo desta mesa" com 2+ comandas).
-- Quando ativa, painel de resumo lista cada comanda nominal: `Eduardo — R$ 67,00`, `João — R$ 45,00`, total geral abaixo.
-- Substitui o split atual (livre, por valor) por **split-por-comanda**: uma linha de pagamento pré-criada por comanda, valor fixo e travado igual ao subtotal daquela comanda. Cada linha permite escolher método (dinheiro/cartão/PIX) e parcelas independentes. Pode adicionar mais linhas se precisar quebrar uma comanda em formas diferentes.
-- Ao confirmar:
-  - Para cada linha, chamar `registerPayment` com a `comandaId` correspondente e o método/valor da linha.
-  - Sequencial (await em ordem) para garantir que apenas a última feche a mesa via `usePDVPayments` (que já checa pendências restantes).
-  - Em caso de erro no meio, abortar e mostrar quais foram pagas e quais não.
-- Se o usuário desativar `splitByComanda`, cai no fluxo atual (uma forma só, valor total).
+Arquivo: `src/components/pdv/cashier/SalonQueueCard.tsx`.
 
-#### 4. Resumo "X/Y pagas" no garçom
+Estrutura hierárquica:
+- **Linha 1:** "Mesa 5 — Eduardo" (ou "Avulsa — TESTE") em `text-base font-semibold`.
+- **Linha 2:** "3 itens · **R$ 77,00**" — valor em `text-xl font-bold`.
+- **Linha 3:** "Aguardando há X min" com cor progressiva:
+  - <5 min → `text-muted-foreground`
+  - 5–10 min → `text-yellow-600` + ícone Clock amarelo
+  - >10 min → `text-red-600 font-semibold` + borda do card `border-red-500 ring-1 ring-red-200` + sufixo "— atenção"
+- **Linha 4:** prévia de itens `text-xs text-muted-foreground line-clamp-1`: "1x Temaki Salmão, 2x Refrigerante, 1x..."
+- **Badge de status:** Aguardando (laranja) | Em cobrança (azul, com spinner) | borda esquerda colorida pelo `order_id` (mantém código de cores atual).
+- **Indicador "Mesa tem mais N comanda(s)"** quando o card está fora de um grupo (ex: outra comanda da mesma mesa ainda está aberta no garçom — usa `comandas` para contar `aberta`+`em_cobranca` no mesmo `order_id`).
 
-`src/pages/garcom/GarcomMesaDetalhe.tsx`:
+**Ações inline (sem modal):**
+- Botão primário grande **"Cobrar"** (full width, `h-11`) → chama `onSelectComanda`/`onSelectTablePending`, abre o `PaymentDialog` existente.
+- Botão secundário **"Ver itens"** → expande inline (`useState` local), lista todos os itens com qty/preço/notas dentro do próprio card, sem modal.
+- Botão discreto (link/ghost) **"Devolver ao garçom"** → abre `AlertDialog` com `<Textarea>` obrigatório de motivo. Confirma → muda status para `aberta`, limpa `closed_by_waiter_at`, salva o motivo em `notes` (append) e dispara toast no garçom via realtime. Nova mutation `returnToWaiter({comandaId, reason})` em `use-pdv-comandas.ts`.
 
-- No header da mesa, abaixo do status, mostrar contador: `2 abertas · 1 aguardando caixa · 0 pagas` (ocultar zeros). Quando todas em `aguardando_pagamento`/`em_cobranca`/`fechada`, exibir "Mesa liberando..." e quando o realtime atualizar para `livre`, navegar de volta para a lista.
-- Cada card de comanda já mostra o badge — adicionar "Sendo cobrada agora" para `em_cobranca` (texto + bullet azul).
+### 4. Tempo real
 
-`src/components/garcom/MesaCard.tsx`:
+- Reaproveita `usePDVComandasRealtime` (já invalida na mudança).
+- Os contadores de tempo (X min) atualizam via `useEffect` com `setInterval(60000)` no `SalonQueuePanel` para re-render a cada minuto sem refetch.
 
-- Aceitar nova prop opcional `pendingCount?: number` (comandas em `aguardando_pagamento`/`em_cobranca`).
-- Quando `> 0` e mesa ocupada, exibir um pequeno bullet laranja no canto superior esquerdo do card (oposto ao bullet de status), separado.
+### 5. Hook helper
 
-`src/pages/garcom/GarcomMesas.tsx`:
+`use-pdv-comandas.ts`:
+- `returnToWaiter`: UPDATE `status='aberta'`, `closed_by_waiter_at=null`, `notes` = `notes || ''` + `\n[Devolvido ao garçom: ${reason}]`. Filtro `.in('status', ['aguardando_pagamento','em_cobranca'])` para evitar regressão.
 
-- Calcular `pendingCount` por mesa via `usePDVComandas` (filtrar por `order_id` da mesa) e passar pro card.
+### 6. Limpeza
 
-#### 5. Indicador visual no Salão (PDV)
-
-`src/components/pdv/TableCard.tsx`:
-
-- Receber `pendingPaymentCount?: number` (calculado em `Salon.tsx` com `getPendingPaymentComandas` filtrado por `order_id` da mesa).
-- Quando `> 0`, exibir um badge laranja pequeno no canto superior esquerdo: `⏱ N` (lucide `Clock`), tooltip "N comanda(s) aguardando cobrança".
-
-`src/pages/pdv/Salon.tsx`:
-
-- Passar `pendingPaymentCount` para `TableCard`/`SortableTableCard`.
-
-#### 6. Detalhes técnicos
-
-- **Sem migração de banco**: enum não usado (coluna `status` é `text`); `closed_by_waiter_at` já existe.
-- **Helpers novos em `usePDVComandas`**:
-  - `getPendingComandasByOrderId(orderId)` → para o garçom.
-  - `markAsCharging(ids: string[])` e `releaseFromCharging(ids: string[])` → mutations usadas pelo `PaymentDialog` para o lock `em_cobranca` (UPDATE com `.in("status", ["aguardando_pagamento"])` no lock e `.in("status", ["em_cobranca"])` no release; retorna o nº de linhas afetadas para detectar conflito).
-- **Realtime**: `use-pdv-comandas-realtime` já invalida `pdv-comandas` em qualquer UPDATE → o garçom verá `em_cobranca` automaticamente; o caixa verá nova comanda na fila automaticamente. Sem mudanças aqui.
-- **Cores do agrupamento**: array `["border-blue-500","border-emerald-500","border-amber-500","border-pink-500","border-violet-500","border-cyan-500"]`, índice = `hashOrderId % 6`. Função pura, deterministic.
-- **Race do close-by-waiter já protegido** pelo filtro `.eq("status","aberta")` no `closeComanda`.
+- `ChargeSelectionDialog` permanece, mas vira **somente para "Comandas avulsas/Mesas direto"** acessado via botão pequeno no rodapé do painel ("Cobrar comanda/mesa direta") — não é mais o caminho principal.
+- Tab "Aguardando" do dialog é removida (a função foi para o painel).
+- Atalho F5: se há pendentes no painel, abre o `PaymentDialog` da mais antiga; se não há, abre o `Sheet` de cobrança avulsa.
 
 ### Validação
 
-- Mesa 5 com comandas Eduardo + João abertas. Garçom fecha a do João → vai para fila do caixa, mesa continua ocupada, badge laranja no card da mesa (no Salão e no garçom), header "1 aberta · 1 aguardando caixa".
-- Caixa abre o dialog "Cobrar (F5)" → vê aba "Aguardando" com grupo "Mesa 05" (1 comanda) com borda azul e card "João — R$ 45 — aguardando há 2min". Clica → vira `em_cobranca` no banco. No garçom o card de João muda para badge azul "Sendo cobrada no caixa".
-- Operador cancela o dialog → comanda volta para `aguardando_pagamento`, no garçom volta o badge laranja.
-- Operador finaliza pagamento PIX. Mesa continua ocupada (Eduardo ainda aberto). Badge laranja some.
-- Eduardo pede a conta. Garçom fecha. Aparece no caixa. Operador clica "Cobrar tudo desta mesa" (com ambas pagas/abertas, só mostra Eduardo). Cobra. Mesa libera, garçom vê "Mesa liberando..." e cai pra livre via realtime.
-- Cenário split: Mesa 5 com Eduardo (R$67) + João (R$45) ambos aguardando. Operador clica "Cobrar tudo da mesa" → dialog em modo split-por-comanda mostra duas linhas, total R$112. Define João=débito, Eduardo=PIX. Confirma → 2 inserts de pagamento, mesa libera, ambos viram `fechada`.
-- Race: dois caixas abrem a mesma comanda no mesmo segundo. O segundo recebe toast "Outro operador já está cobrando esta comanda" e o dialog fecha.
+- Caixa aberto: painel lateral aparece à direita, sempre visível.
+- 1 comanda pendente: card único, "Cobrar" abre PaymentDialog direto.
+- Mesa 5 com 2 comandas: aparecem agrupadas com header e botão "Cobrar tudo" (modo split-por-comanda do PaymentDialog).
+- Comanda há 12 min: borda vermelha + texto vermelho + sobe pro topo.
+- "Ver itens" expande sem abrir modal; "Devolver ao garçom" exige motivo, devolve para `aberta` e some do painel.
+- Caixa continua usável em paralelo (movimentações, sangria, etc.) — nada bloqueia.
+- Lista vazia: mensagem amigável, sem abas.
+- Tablet (1024–1280): painel mantém legibilidade; abaixo disso empilha.
 
