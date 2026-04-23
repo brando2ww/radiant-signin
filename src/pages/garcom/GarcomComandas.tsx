@@ -6,6 +6,7 @@ import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Search, ChevronRight } from "lucide-react";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 
 export default function GarcomComandas() {
   const { comandas, comandaItems, isLoading } = usePDVComandas();

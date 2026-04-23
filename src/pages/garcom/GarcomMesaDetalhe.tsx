@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 
 export default function GarcomMesaDetalhe() {
   const { id } = useParams<{ id: string }>();

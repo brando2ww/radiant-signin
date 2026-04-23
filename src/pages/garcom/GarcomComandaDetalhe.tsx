@@ -5,6 +5,7 @@ import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 
 export default function GarcomComandaDetalhe() {
   const { id } = useParams<{ id: string }>();
