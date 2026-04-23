@@ -17,8 +17,12 @@ import { KeyboardShortcutsDialog } from "@/components/pdv/cashier/KeyboardShortc
 import { ChargeSelectionDialog } from "@/components/pdv/cashier/ChargeSelectionDialog";
 import { PaymentDialog } from "@/components/pdv/cashier/PaymentDialog";
 import { EmployeeConsumptionDialog } from "@/components/pdv/cashier/EmployeeConsumptionDialog";
+import { usePDVComandasRealtime } from "@/hooks/use-pdv-comandas-realtime";
 
 export default function PDVCashier() {
+  // Realtime: nova comanda do garçom aparece na fila sem reload
+  usePDVComandasRealtime();
+
   const {
     activeSession,
     movements,
