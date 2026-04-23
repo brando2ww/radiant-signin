@@ -48,6 +48,7 @@ export default function GarcomMesaDetalhe() {
   const [opening, setOpening] = useState(false);
   const [comandaNames, setComandaNames] = useState<string[]>([""]);
   const ensuringRef = useRef(false);
+  const justCreatedMultipleRef = useRef(false);
 
   const hasOpenComandas = tableComandas.length > 0;
 
@@ -58,6 +59,7 @@ export default function GarcomMesaDetalhe() {
     if (!table) return;
     if (splitOpen) return;
     if (opening) return;
+    if (justCreatedMultipleRef.current) return;
     if (tableComandas.length === 1) {
       navigate(`/garcom/comanda/${tableComandas[0].id}`, { replace: true });
     }
@@ -73,6 +75,9 @@ export default function GarcomMesaDetalhe() {
     }
     ensuringRef.current = true;
     setOpening(true);
+    if (names.length >= 2) {
+      justCreatedMultipleRef.current = true;
+    }
     try {
       let orderId = table.current_order_id;
 
@@ -100,27 +105,47 @@ export default function GarcomMesaDetalhe() {
           );
           ensuringRef.current = false;
           setOpening(false);
+          justCreatedMultipleRef.current = false;
           return;
         }
         orderId = newOrder.id;
       }
 
+      // Atualiza a mesa de forma síncrona (await) para garantir que
+      // current_order_id esteja populado antes do próximo render.
       if (
         table.status !== "ocupada" ||
         table.current_order_id !== orderId
       ) {
-        updateTable({
-          id: table.id,
-          updates: { status: "ocupada", current_order_id: orderId },
-        });
+        const { error: updErr } = await supabase
+          .from("pdv_tables")
+          .update({
+            status: "ocupada",
+            current_order_id: orderId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", table.id);
+        if (updErr) {
+          toast.error("Erro ao atualizar mesa: " + updErr.message);
+          ensuringRef.current = false;
+          setOpening(false);
+          justCreatedMultipleRef.current = false;
+          return;
+        }
       }
-      queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
 
       const created = [];
       for (const name of names) {
         const c = await createComanda({ orderId, customerName: name });
         created.push(c);
       }
+
+      // Aguarda o cache local refletir a nova mesa + comandas antes de
+      // liberar `opening` (que controla a visibilidade do dialog).
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: ["pdv-tables"] }),
+        queryClient.refetchQueries({ queryKey: ["pdv-comandas"] }),
+      ]);
 
       setComandaNames([""]);
       ensuringRef.current = false;
@@ -129,10 +154,12 @@ export default function GarcomMesaDetalhe() {
       if (created.length === 1) {
         navigate(`/garcom/comanda/${created[0].id}`, { replace: true });
       }
-      // Se 2+, fica na tela da mesa mostrando a lista (já vai re-renderizar).
+      // Se 2+, fica na tela da mesa mostrando a lista (justCreatedMultipleRef
+      // continua true, então o auto-redirect não dispara).
     } catch {
       ensuringRef.current = false;
       setOpening(false);
+      justCreatedMultipleRef.current = false;
     }
   };
 
