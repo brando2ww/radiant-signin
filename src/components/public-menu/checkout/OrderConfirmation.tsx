@@ -78,7 +78,7 @@ export const OrderConfirmation = ({
     const discountValue = pointsToUse * Number(loyaltySettings.cashback_value_per_point);
     setLoyaltyDiscount(discountValue);
     setRedeemedPointsAmount(pointsToUse);
-    toast.success(`Cashback de R$ ${discountValue.toFixed(2)} aplicado!`);
+    toast.success(`Cashback de ${formatBRL(discountValue)} aplicado!`);
   };
 
   const handlePrizeRedeem = (prize: any) => {
@@ -257,7 +257,7 @@ export const OrderConfirmation = ({
                       <div key={i}>
                         • {opt.itemName}
                         {opt.priceAdjustment !== 0 &&
-                          ` (+R$ ${opt.priceAdjustment.toFixed(2)})`}
+                          ` (+${formatBRL(opt.priceAdjustment)})`}
                       </div>
                     ))}
                   </div>

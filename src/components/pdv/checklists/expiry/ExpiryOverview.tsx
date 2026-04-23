@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Package, AlertTriangle, XCircle, TrendingDown } from "lucide-react";
 import type { ExpiryItem } from "@/hooks/use-product-expiry";
+import { formatBRL } from "@/lib/format";
 
 interface Props {
   items: ExpiryItem[];
@@ -17,7 +18,7 @@ export function ExpiryOverview({ items, lossCount, lossValue }: Props) {
     { label: "Produtos ativos", value: total, icon: Package, color: "text-primary" },
     { label: "Em alerta (≤3 dias)", value: alert, icon: AlertTriangle, color: "text-yellow-500" },
     { label: "Vencidos", value: expired, icon: XCircle, color: "text-destructive" },
-    { label: "Perdas do mês", value: `${lossCount} itens · R$ ${lossValue.toFixed(2)}`, icon: TrendingDown, color: "text-orange-500" },
+    { label: "Perdas do mês", value: `${lossCount} itens · ${formatBRL(lossValue)}`, icon: TrendingDown, color: "text-orange-500" },
   ];
 
   return (

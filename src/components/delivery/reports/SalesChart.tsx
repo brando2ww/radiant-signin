@@ -3,6 +3,7 @@ import { DailySales } from "@/hooks/use-delivery-reports";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatBRL } from "@/lib/format";
 
 interface SalesChartProps {
   data: DailySales[];
@@ -31,7 +32,7 @@ export const SalesChart = ({ data }: SalesChartProps) => {
             <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} />
             <Tooltip 
               formatter={(value: number, name: string) => {
-                if (name === "revenue") return `R$ ${value.toFixed(2)}`;
+                if (name === "revenue") return `${formatBRL(value)}`;
                 return value;
               }}
               labelFormatter={(label) => `Data: ${label}`}

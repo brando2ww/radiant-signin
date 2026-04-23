@@ -155,7 +155,7 @@ export function printCashierReport(params: PrintCashierReportParams) {
       <td style="padding:2px 6px;font-size:11px">${time}</td>
       <td style="padding:2px 6px;font-size:11px">${typeLabel}</td>
       <td style="padding:2px 6px;font-size:11px">${method}</td>
-      <td style="padding:2px 6px;font-size:11px;text-align:right">R$ ${m.amount.toFixed(2)}</td>
+      <td style="padding:2px 6px;font-size:11px;text-align:right">${formatBRL(m.amount)}</td>
       <td style="padding:2px 6px;font-size:11px">${m.description || ""}</td>
     </tr>`;
   }).join("");
@@ -170,7 +170,7 @@ export function printCashierReport(params: PrintCashierReportParams) {
         <td style="padding:2px 6px;font-size:11px">${time}</td>
         <td style="padding:2px 6px;font-size:11px">${m.discount_reason || ""}</td>
         <td style="padding:2px 6px;font-size:11px">${m.discount_authorized_by || ""}</td>
-        <td style="padding:2px 6px;font-size:11px;text-align:right">R$ ${m.amount.toFixed(2)}</td>
+        <td style="padding:2px 6px;font-size:11px;text-align:right">${formatBRL(m.amount)}</td>
       </tr>`;
     }).join("");
     discountSection = `<div class="divider"></div>
@@ -205,18 +205,18 @@ export function printCashierReport(params: PrintCashierReportParams) {
 <div class="divider"></div>
 <div class="section">
   <div class="section-title">RESUMO FINANCEIRO</div>
-  <div class="row"><span>Saldo Inicial:</span><span>R$ ${openingBal.toFixed(2)}</span></div>
-  <div class="row"><span>Vendas Dinheiro:</span><span style="color:green">+ R$ ${totalCash.toFixed(2)}</span></div>
-  <div class="row"><span>Vendas Cartão:</span><span>R$ ${totalCard.toFixed(2)}</span></div>
-  <div class="row"><span>Vendas PIX:</span><span>R$ ${totalPix.toFixed(2)}</span></div>
-  <div class="row"><span>Reforços:</span><span style="color:green">+ R$ ${totalReinforcements.toFixed(2)}</span></div>
-  <div class="row"><span>Sangrias:</span><span style="color:red">- R$ ${totalWithdrawals.toFixed(2)}</span></div>
+  <div class="row"><span>Saldo Inicial:</span><span>${formatBRL(openingBal)}</span></div>
+  <div class="row"><span>Vendas Dinheiro:</span><span style="color:green">+ ${formatBRL(totalCash)}</span></div>
+  <div class="row"><span>Vendas Cartão:</span><span>${formatBRL(totalCard)}</span></div>
+  <div class="row"><span>Vendas PIX:</span><span>${formatBRL(totalPix)}</span></div>
+  <div class="row"><span>Reforços:</span><span style="color:green">+ ${formatBRL(totalReinforcements)}</span></div>
+  <div class="row"><span>Sangrias:</span><span style="color:red">- ${formatBRL(totalWithdrawals)}</span></div>
   <div class="divider"></div>
-  <div class="row total"><span>Saldo Esperado:</span><span>R$ ${expectedBalance.toFixed(2)}</span></div>
-  <div class="row total"><span>Saldo Informado:</span><span>R$ ${finalBalance.toFixed(2)}</span></div>
-  <div class="row total"><span>Diferença:</span><span style="color:${diff >= 0 ? 'green' : 'red'}">${diff >= 0 ? '+' : ''}R$ ${diff.toFixed(2)}</span></div>
+  <div class="row total"><span>Saldo Esperado:</span><span>${formatBRL(expectedBalance)}</span></div>
+  <div class="row total"><span>Saldo Informado:</span><span>${formatBRL(finalBalance)}</span></div>
+  <div class="row total"><span>Diferença:</span><span style="color:${diff >= 0 ? 'green' : 'red'}">${diff >= 0 ? '+' : ''}${formatBRL(diff)}</span></div>
   <div class="divider"></div>
-  <div class="row total"><span>Total de Vendas:</span><span>R$ ${totalSales.toFixed(2)}</span></div>
+  <div class="row total"><span>Total de Vendas:</span><span>${formatBRL(totalSales)}</span></div>
 </div>
 ${movements.length > 0 ? `
 <div class="divider"></div>

@@ -299,8 +299,7 @@ export default function GarcomAdicionarItem() {
                   onClick={handleAdd}
                   disabled={isAddingItem}
                 >
-                  Adicionar · R${" "}
-                  {(((selectedProduct?.price_salon ?? 0) + optionsExtra) * quantity).toFixed(2)}
+                  Adicionar · {formatBRL(((selectedProduct?.price_salon ?? 0) + optionsExtra) * quantity)}
                 </Button>
               </div>
             </div>

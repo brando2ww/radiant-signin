@@ -181,8 +181,7 @@ export const OrderDetailDialog = ({
                                 {opt.price_adjustment !== 0 && (
                                   <span>
                                     {" "}
-                                    ({opt.price_adjustment > 0 ? "+" : ""}R${" "}
-                                    {Number(opt.price_adjustment).toFixed(2)})
+                                    ({opt.price_adjustment > 0 ? "+" : ""}{formatBRL(Number(opt.price_adjustment))})
                                   </span>
                                 )}
                               </div>

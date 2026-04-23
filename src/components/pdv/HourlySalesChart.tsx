@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatBRL } from "@/lib/format";
 
 interface HourlySalesChartProps {
   data: Array<{
@@ -79,7 +80,7 @@ export function HourlySalesChart({ data, isLoading }: HourlySalesChartProps) {
               }}
               formatter={(value: number, name: string) => {
                 if (name === "sales") {
-                  return [`R$ ${value.toFixed(2)}`, "Vendas"];
+                  return [`${formatBRL(value)}`, "Vendas"];
                 }
                 return [value, "Pedidos"];
               }}

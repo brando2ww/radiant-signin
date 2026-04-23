@@ -4,6 +4,7 @@ import { SalesChart } from "@/components/pdv/SalesChart";
 import { TopProductsList } from "@/components/pdv/TopProductsList";
 import { OperationHealthWidget } from "@/components/pdv/checklists/OperationHealthWidget";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatBRL } from "@/lib/format";
 import {
   DollarSign,
   ShoppingCart,
@@ -38,7 +39,7 @@ export default function PDVDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <DashboardMetricCard
           title="Vendas Hoje"
-          value={`R$ ${(metrics?.todaySales || 0).toFixed(2)}`}
+          value={`${formatBRL(metrics?.todaySales || 0)}`}
           subtitle={`${metrics?.todayOrders || 0} pedidos finalizados`}
           icon={DollarSign}
           isLoading={isLoading}
@@ -54,7 +55,7 @@ export default function PDVDashboard() {
 
         <DashboardMetricCard
           title="Ticket Médio"
-          value={`R$ ${(metrics?.averageTicket || 0).toFixed(2)}`}
+          value={`${formatBRL(metrics?.averageTicket || 0)}`}
           subtitle="Por pedido hoje"
           icon={TrendingUp}
           isLoading={isLoading}
@@ -64,7 +65,7 @@ export default function PDVDashboard() {
           title={metrics?.cashierOpen ? "Saldo Caixa" : "Caixa Fechado"}
           value={
             metrics?.cashierOpen
-              ? `R$ ${(metrics?.cashierBalance || 0).toFixed(2)}`
+              ? `${formatBRL(metrics?.cashierBalance || 0)}`
               : "-"
           }
           subtitle={metrics?.cashierOpen ? "Dinheiro em caixa" : "Abra o caixa"}
@@ -76,7 +77,7 @@ export default function PDVDashboard() {
       <div className="grid gap-4 md:grid-cols-2">
         <DashboardMetricCard
           title="Vendas do Mês"
-          value={`R$ ${(metrics?.monthSales || 0).toFixed(2)}`}
+          value={`${formatBRL(metrics?.monthSales || 0)}`}
           subtitle={`${metrics?.monthOrders || 0} pedidos no mês`}
           icon={Calendar}
           isLoading={isLoading}

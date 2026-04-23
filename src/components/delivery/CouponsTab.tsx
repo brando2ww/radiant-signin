@@ -121,7 +121,7 @@ export const CouponsTab = () => {
                     <p className="text-2xl font-bold text-primary">
                       {coupon.type === "percentage"
                         ? `${coupon.value}% OFF`
-                        : `R$ ${Number(coupon.value).toFixed(2)} OFF`}
+                        : `${formatBRL(Number(coupon.value))} OFF`}
                     </p>
                     {coupon.min_order_value > 0 && (
                       <p className="text-xs text-muted-foreground">
@@ -214,7 +214,7 @@ export const CouponsTab = () => {
                     <p className="text-lg font-bold">
                       {coupon.type === "percentage"
                         ? `${coupon.value}% OFF`
-                        : `R$ ${Number(coupon.value).toFixed(2)} OFF`}
+                        : `${formatBRL(Number(coupon.value))} OFF`}
                     </p>
                     <div className="flex gap-2">
                       <Button

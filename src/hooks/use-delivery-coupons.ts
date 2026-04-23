@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { formatBRL } from "@/lib/format";
 
 export interface DeliveryCoupon {
   id: string;
@@ -163,7 +164,7 @@ export const useValidateCoupon = () => {
 
       if (orderValue < coupon.min_order_value) {
         throw new Error(
-          `Pedido mínimo de R$ ${coupon.min_order_value.toFixed(2)} para usar este cupom`
+          `Pedido mínimo de ${formatBRL(coupon.min_order_value)} para usar este cupom`
         );
       }
 

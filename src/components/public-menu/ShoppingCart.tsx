@@ -157,7 +157,7 @@ export const ShoppingCart = ({
                                 {item.selectedOptions.map((opt, i) => (
                                   <div key={i}>
                                     • {opt.itemName}
-                                    {opt.priceAdjustment !== 0 && ` (+R$ ${opt.priceAdjustment.toFixed(2)})`}
+                                    {opt.priceAdjustment !== 0 && ` (+${formatBRL(opt.priceAdjustment)})`}
                                   </div>
                                 ))}
                               </div>
