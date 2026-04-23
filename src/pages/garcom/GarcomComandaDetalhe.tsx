@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Send, X, CreditCard, Utensils } from "lucide-react";
+import { ArrowLeft, Plus, Send, CreditCard, Utensils, Clock } from "lucide-react";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
@@ -35,6 +35,12 @@ export default function GarcomComandaDetalhe() {
     .filter((i) => i.kitchen_status === "pendente" && !i.sent_to_kitchen_at)
     .map((i) => i.id);
 
+  const isLocked =
+    comanda?.status === "aguardando_pagamento" ||
+    comanda?.status === "em_cobranca";
+  const isClosed = comanda?.status === "fechada" || comanda?.status === "cancelada";
+  const canEdit = comanda?.status === "aberta";
+
   if (isLoading) {
     return (
       <div className="p-4 space-y-4">
@@ -52,6 +58,33 @@ export default function GarcomComandaDetalhe() {
     );
   }
 
+  const statusBadge = (() => {
+    if (comanda.status === "aguardando_pagamento") {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold text-orange-600 dark:text-orange-400">
+          <Clock className="h-3 w-3" />
+          Aguardando caixa
+        </span>
+      );
+    }
+    if (comanda.status === "em_cobranca") {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
+          <CreditCard className="h-3 w-3" />
+          Sendo cobrada no caixa
+        </span>
+      );
+    }
+    if (comanda.status === "fechada") {
+      return (
+        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+          Paga
+        </span>
+      );
+    }
+    return null;
+  })();
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Header */}
@@ -63,7 +96,7 @@ export default function GarcomComandaDetalhe() {
           <h1 className="text-base font-semibold truncate">
             {comanda.customer_name || comanda.comanda_number}
           </h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <p className="text-xs text-muted-foreground">{comanda.comanda_number}</p>
             {tableOfComanda ? (
               <button
@@ -77,23 +110,31 @@ export default function GarcomComandaDetalhe() {
             ) : (
               <span className="text-[10px] text-muted-foreground">· Avulsa</span>
             )}
+            {statusBadge}
           </div>
         </div>
       </header>
 
       {/* Items */}
       <div className="flex-1 p-4 pb-56 space-y-2">
+        {isLocked && (
+          <div className="rounded-2xl border border-orange-500/30 bg-orange-500/5 p-3 text-xs text-orange-700 dark:text-orange-300">
+            Esta comanda já foi enviada para o caixa. Não é possível adicionar ou remover itens.
+          </div>
+        )}
         {items.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center">
             <p className="text-muted-foreground mb-4">Sem itens na comanda</p>
-            <Button
-              onClick={() => navigate(`/garcom/comanda/${id}/adicionar`)}
-              size="lg"
-              className="active:scale-95"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Item
-            </Button>
+            {canEdit && (
+              <Button
+                onClick={() => navigate(`/garcom/comanda/${id}/adicionar`)}
+                size="lg"
+                className="active:scale-95"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Item
+              </Button>
+            )}
           </div>
         ) : (
           items.map((item) => (
@@ -104,53 +145,64 @@ export default function GarcomComandaDetalhe() {
               unitPrice={item.unit_price}
               notes={item.notes}
               kitchenStatus={item.kitchen_status}
-              onRemove={() => removeItem(item.id)}
+              onRemove={canEdit ? () => removeItem(item.id) : undefined}
             />
           ))
         )}
       </div>
 
       {/* Bottom Action Bar */}
-      <div className="fixed bottom-0 inset-x-0 z-40 border-t bg-background">
-        <div className="p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] space-y-2">
-          <div className="flex items-center justify-between text-sm font-semibold">
-            <span>Total</span>
-            <span className="tabular-nums">{formatBRL(total)}</span>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <Button
-              variant="outline"
-              className="active:scale-95 h-11"
-              onClick={() => navigate(`/garcom/comanda/${id}/adicionar`)}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Item
-            </Button>
-            {pendingIds.length > 0 && (
-              <Button
-                className="active:scale-95 h-11"
-                onClick={() => {
-                  sendToKitchen(pendingIds);
-                }}
-              >
-                <Send className="h-4 w-4 mr-1" />
-                Cozinha
-              </Button>
+      {!isClosed && (
+        <div className="fixed bottom-0 inset-x-0 z-40 border-t bg-background">
+          <div className="p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] space-y-2">
+            <div className="flex items-center justify-between text-sm font-semibold">
+              <span>Total</span>
+              <span className="tabular-nums">{formatBRL(total)}</span>
+            </div>
+            {canEdit ? (
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  variant="outline"
+                  className="active:scale-95 h-11"
+                  onClick={() => navigate(`/garcom/comanda/${id}/adicionar`)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Item
+                </Button>
+                {pendingIds.length > 0 ? (
+                  <Button
+                    className="active:scale-95 h-11"
+                    onClick={() => sendToKitchen(pendingIds)}
+                  >
+                    <Send className="h-4 w-4 mr-1" />
+                    Cozinha
+                  </Button>
+                ) : (
+                  <div />
+                )}
+                <Button
+                  variant="secondary"
+                  className="active:scale-95 h-11"
+                  disabled={items.length === 0}
+                  onClick={() => {
+                    closeComanda(comanda.id);
+                    navigate(-1);
+                  }}
+                >
+                  <CreditCard className="h-4 w-4 mr-1" />
+                  Fechar
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-center text-muted-foreground py-2">
+                {comanda.status === "em_cobranca"
+                  ? "O caixa está cobrando esta comanda."
+                  : "Aguardando o operador do caixa cobrar esta comanda."}
+              </p>
             )}
-            <Button
-              variant="secondary"
-              className="active:scale-95 h-11"
-              onClick={() => {
-                closeComanda(comanda.id);
-                navigate(-1);
-              }}
-            >
-              <CreditCard className="h-4 w-4 mr-1" />
-              Fechar
-            </Button>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

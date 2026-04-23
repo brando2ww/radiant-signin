@@ -40,7 +40,10 @@ export default function GarcomMesaDetalhe() {
   const tableComandas = table?.current_order_id
     ? comandas.filter(
         (c) =>
-          c.order_id === table.current_order_id && c.status === "aberta",
+          c.order_id === table.current_order_id &&
+          (c.status === "aberta" ||
+            c.status === "aguardando_pagamento" ||
+            c.status === "em_cobranca"),
       )
     : [];
 
