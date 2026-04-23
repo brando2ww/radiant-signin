@@ -10,6 +10,7 @@ import { PDVTable } from "@/hooks/use-pdv-tables";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Users, Clock, DollarSign, Plus, Edit, Trash2, Unlink } from "lucide-react";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 import {
   AlertDialog,
   AlertDialogAction,

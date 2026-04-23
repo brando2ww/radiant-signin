@@ -22,6 +22,7 @@ import { ExternalLink, Link2Off, Plus, RefreshCw, Send, Copy } from "lucide-reac
 import { useNavigate } from "react-router-dom";
 import { Tenant, useTenants } from "@/hooks/use-tenants";
 import { toast } from "sonner";
+import { formatTableLabel } from "@/utils/formatTableNumber";
 
 interface FranchiseSectionProps {
   tenantId: string;
