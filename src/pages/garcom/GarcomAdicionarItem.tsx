@@ -135,7 +135,7 @@ export default function GarcomAdicionarItem() {
       />
 
       {/* Product List */}
-      <div className="flex-1 px-4 pb-32 space-y-2">
+      <div className="flex-1 px-4 pb-48 space-y-2">
         {isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 6 }).map((_, i) => (
