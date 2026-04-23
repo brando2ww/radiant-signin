@@ -117,16 +117,25 @@ export default function GarcomMesaDetalhe() {
         table.status !== "ocupada" ||
         table.current_order_id !== orderId
       ) {
-        const { error: updErr } = await supabase
+        const { data: updRows, error: updErr } = await supabase
           .from("pdv_tables")
           .update({
             status: "ocupada",
             current_order_id: orderId,
             updated_at: new Date().toISOString(),
           })
-          .eq("id", table.id);
+          .eq("id", table.id)
+          .select("id");
         if (updErr) {
           toast.error("Erro ao atualizar mesa: " + updErr.message);
+          ensuringRef.current = false;
+          setOpening(false);
+          justCreatedMultipleRef.current = false;
+          return;
+        }
+        if (!updRows || updRows.length === 0) {
+          // RLS bloqueou a atualização sem erro explícito.
+          toast.error("Sem permissão para abrir esta mesa.");
           ensuringRef.current = false;
           setOpening(false);
           justCreatedMultipleRef.current = false;
