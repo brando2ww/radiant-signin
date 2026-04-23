@@ -2,6 +2,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { PDVTable } from "@/hooks/use-pdv-tables";
 import { cn } from "@/lib/utils";
+import { formatBRLCompact } from "@/lib/format";
 
 interface DraggableMapTableProps {
   table: PDVTable;
@@ -209,7 +210,7 @@ export function DraggableMapTable({
               </span>
               {orderTotal !== undefined && orderTotal > 0 && (
                 <span className={cn("text-[10px] font-medium", !hasSectorColor && config.text)} style={sectorStyles?.textStyle}>
-                  R$ {orderTotal.toFixed(0)}
+                  {formatBRLCompact(orderTotal)}
                 </span>
               )}
               {orderTime && (

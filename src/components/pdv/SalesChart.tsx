@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatBRL } from "@/lib/format";
+import { formatBRL, formatBRLCompact } from "@/lib/format";
 
 interface SalesChartProps {
   data: Array<{
@@ -69,7 +69,7 @@ export function SalesChart({ data, isLoading }: SalesChartProps) {
             <YAxis
               className="text-xs"
               tick={{ fill: "hsl(var(--muted-foreground))" }}
-              tickFormatter={(value) => `R$ ${value.toFixed(0)}`}
+              tickFormatter={(value) => formatBRLCompact(value)}
             />
             <Tooltip
               contentStyle={{
