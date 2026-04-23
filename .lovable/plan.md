@@ -1,26 +1,33 @@
 
 
-## Subir o "Enviar para Cozinha" acima da bottom nav
+## Estender barra "Enviar para Cozinha" até a base da tela
 
 ### Causa
 
-Em `src/pages/garcom/GarcomAdicionarItem.tsx` linha 180, a barra "Enviar para Cozinha" usa `bottom-16` (64px). A `BottomTabBar` flutua com `bottom: calc(1rem + safe-area)` + altura ~56px = ocupa até ~88-100px do rodapé. Resultado: a nav fica por cima da barra de envio (visível no print).
-
-Mesmo problema em `GarcomComandaDetalhe.tsx` (linha 113, `bottom-20` = 80px) e `GarcomItemDetalhe.tsx` (linha 97, `bottom-20`).
+Atualmente a barra está em `bottom: calc(6rem + safe-area)`, deixando um gap visível entre ela e o fim da tela. Você quer o oposto: a barra colada na base, com a bottom nav flutuando por cima do espaço inferior — visualmente igual a um footer real.
 
 ### Mudança
 
-Subir as três barras para ficarem claramente acima da pílula da nav (~110px do rodapé):
+Em `src/pages/garcom/GarcomAdicionarItem.tsx` (linha 180-194), `GarcomComandaDetalhe.tsx` (linha 113) e `GarcomItemDetalhe.tsx` (linha 97):
 
-1. **`src/pages/garcom/GarcomAdicionarItem.tsx`** linha 180: trocar `fixed bottom-16 ... safe-area-bottom` por `fixed left-0 right-0 z-30 border-t bg-background px-4 py-3` + `style={{ bottom: "calc(6rem + env(safe-area-inset-bottom))" }}`.
-2. **`src/pages/garcom/GarcomAdicionarItem.tsx`** linha 138: aumentar `pb-32` → `pb-48` para o último produto da lista não ficar atrás da barra.
-3. **`src/pages/garcom/GarcomComandaDetalhe.tsx`** linha 113: trocar `bottom-20` pelo mesmo `style={{ bottom: "calc(6rem + env(safe-area-inset-bottom))" }}`.
-4. **`src/pages/garcom/GarcomItemDetalhe.tsx`** linha 97: trocar `bottom-20` pelo mesmo `style`.
+- Trocar o `style={{ bottom: "calc(6rem + ...)" }}` por `bottom-0`.
+- Adicionar padding inferior generoso para o **conteúdo** do bar não ficar atrás da nav: `pb-[calc(6rem+env(safe-area-inset-bottom))]` no container interno (mantendo o botão "Enviar" e o texto "X itens pendentes" visíveis acima da nav).
+- O fundo (`bg-background border-t`) vai do conteúdo até a base da tela.
+- Ajustar `z-index`: a barra fica `z-30`, a `BottomTabBar` continua `z-50`, então a pílula da nav aparece flutuando por cima da extensão inferior da barra.
+
+```tsx
+<div className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background">
+  <div className="px-4 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom))]">
+    {/* texto "X itens pendentes" + botão Enviar */}
+  </div>
+</div>
+```
 
 ### Validação
 
-- iPhone 390×844, em `/garcom/comanda/.../adicionar` com itens pendentes: a barra "Enviar para Cozinha" aparece totalmente acima da pílula da bottom nav, sem sobreposição.
-- O botão "Enviar para Cozinha" fica clicável inteiro.
-- Lista de produtos rola até o último item sem ficar escondido pela barra.
-- Mesmo comportamento em `/garcom/comanda/:id` (barra Total/Cobrar) e na tela de item.
+- iPhone 390×844, em `/garcom/comanda/.../adicionar` com itens pendentes:
+  - Fundo da barra "Enviar para Cozinha" preenche desde o conteúdo até a base da tela.
+  - Botão "Enviar para Cozinha" e contagem ficam acima da pílula da nav (visíveis e clicáveis).
+  - Pílula da bottom nav aparece "flutuando" sobre a parte inferior da barra (sem gap).
+- Mesmo comportamento em `/garcom/comanda/:id` e tela de item.
 
