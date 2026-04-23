@@ -1,44 +1,26 @@
 
 
-## Toasts compactos e no topo da página
+## Subir o "Enviar para Cozinha" acima da bottom nav
 
 ### Causa
 
-Em `src/components/ui/sonner.tsx`, o `<Sonner />` é renderizado sem `position` (default `bottom-right`) e sem limites de tamanho — em mobile ele expande quase 100% da largura e fica embaixo.
+Em `src/pages/garcom/GarcomAdicionarItem.tsx` linha 180, a barra "Enviar para Cozinha" usa `bottom-16` (64px). A `BottomTabBar` flutua com `bottom: calc(1rem + safe-area)` + altura ~56px = ocupa até ~88-100px do rodapé. Resultado: a nav fica por cima da barra de envio (visível no print).
+
+Mesmo problema em `GarcomComandaDetalhe.tsx` (linha 113, `bottom-20` = 80px) e `GarcomItemDetalhe.tsx` (linha 97, `bottom-20`).
 
 ### Mudança
 
-Em `src/components/ui/sonner.tsx`, ajustar o `<Sonner />`:
+Subir as três barras para ficarem claramente acima da pílula da nav (~110px do rodapé):
 
-- `position="top-center"` — toasts aparecem no topo.
-- `expand={false}` e `richColors={false}` — visual mais discreto.
-- `duration={2500}` — desaparece rápido.
-- Em `toastOptions.classNames.toast`: adicionar `min-h-0 py-2 px-3 text-sm w-auto max-w-[90vw] mx-auto rounded-lg` para um toast pequeno, com largura ajustada ao conteúdo (não ocupa a tela toda).
-- Em `toastOptions.classNames.description`: `text-xs` para descrição compacta.
-
-```tsx
-<Sonner
-  theme={theme as ToasterProps["theme"]}
-  className="toaster group"
-  position="top-center"
-  expand={false}
-  duration={2500}
-  toastOptions={{
-    classNames: {
-      toast:
-        "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg min-h-0 py-2 px-3 text-sm w-auto max-w-[90vw] mx-auto rounded-lg",
-      description: "group-[.toast]:text-muted-foreground text-xs",
-      actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
-      cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
-    },
-  }}
-  {...props}
-/>
-```
+1. **`src/pages/garcom/GarcomAdicionarItem.tsx`** linha 180: trocar `fixed bottom-16 ... safe-area-bottom` por `fixed left-0 right-0 z-30 border-t bg-background px-4 py-3` + `style={{ bottom: "calc(6rem + env(safe-area-inset-bottom))" }}`.
+2. **`src/pages/garcom/GarcomAdicionarItem.tsx`** linha 138: aumentar `pb-32` → `pb-48` para o último produto da lista não ficar atrás da barra.
+3. **`src/pages/garcom/GarcomComandaDetalhe.tsx`** linha 113: trocar `bottom-20` pelo mesmo `style={{ bottom: "calc(6rem + env(safe-area-inset-bottom))" }}`.
+4. **`src/pages/garcom/GarcomItemDetalhe.tsx`** linha 97: trocar `bottom-20` pelo mesmo `style`.
 
 ### Validação
 
-- Adicionar item à comanda em `/garcom/comanda/:id/adicionar` → toast "Item adicionado!" aparece no topo, pequeno, com largura ajustada ao texto, e some em ~2,5s.
-- Criar comanda nova / sucesso/erro em outras telas → mesmo comportamento (topo, compacto).
-- Mobile (390px) e desktop: toast nunca ocupa a tela toda; fica centralizado no topo.
+- iPhone 390×844, em `/garcom/comanda/.../adicionar` com itens pendentes: a barra "Enviar para Cozinha" aparece totalmente acima da pílula da bottom nav, sem sobreposição.
+- O botão "Enviar para Cozinha" fica clicável inteiro.
+- Lista de produtos rola até o último item sem ficar escondido pela barra.
+- Mesmo comportamento em `/garcom/comanda/:id` (barra Total/Cobrar) e na tela de item.
 
