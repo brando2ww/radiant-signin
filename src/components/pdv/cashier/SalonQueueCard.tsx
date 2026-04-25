@@ -199,17 +199,18 @@ export function SalonQueueCard({
               <ChevronDown className="h-4 w-4" />
             )}
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-10 px-2 text-muted-foreground hover:text-foreground"
-            onClick={() => setReturnDialog(true)}
-            title="Devolver ao garçom"
-            aria-label="Devolver ao garçom"
-            disabled={isCharging}
-          >
-            <Undo2 className="h-4 w-4" />
-          </Button>
+          {!isOpen && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-10 px-2 text-muted-foreground hover:text-foreground"
+              onClick={() => setReturnDialog(true)}
+              title="Devolver ao garçom"
+              aria-label="Devolver ao garçom"
+            >
+              <Undo2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 
