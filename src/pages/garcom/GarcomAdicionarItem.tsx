@@ -323,7 +323,6 @@ export default function GarcomAdicionarItem() {
                 <Button
                   className="flex-1 h-12 text-base active:scale-[0.98] transition-transform"
                   onClick={handleAdd}
-                  disabled={isAddingItem}
                 >
                   Adicionar · {formatBRL(((selectedProduct?.price_salon ?? 0) + optionsExtra) * quantity)}
                 </Button>
