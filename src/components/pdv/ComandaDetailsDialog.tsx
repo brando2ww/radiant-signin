@@ -173,6 +173,33 @@ export function ComandaDetailsDialog({
                 )}
               </div>
             )}
+            {isOpen && onTransferMultiple && items.length > 0 && (
+              <div className="flex items-center justify-end pt-1">
+                {!selectMode ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setSelectMode(true)}
+                  >
+                    <CheckSquare className="h-3.5 w-3.5 mr-1.5" />
+                    Selecionar para mover
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={exitSelectMode}
+                  >
+                    <X className="h-3.5 w-3.5 mr-1.5" />
+                    Cancelar seleção
+                  </Button>
+                )}
+              </div>
+            )}
           </DialogHeader>
 
           <ScrollArea className="flex-1 -mx-6 px-6">
