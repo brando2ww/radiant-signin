@@ -884,6 +884,21 @@ export default function PDVSalon() {
         }}
       />
 
+      {/* Transfer Items Dialog */}
+      <TransferItemsDialog
+        open={!!transferState}
+        onOpenChange={(o) => !o && setTransferState(null)}
+        sourceComanda={
+          transferState ? comandas.find((c) => c.id === transferState.sourceComandaId) || null : null
+        }
+        items={
+          transferState
+            ? comandaItems.filter((it) => transferState.itemIds.includes(it.id))
+            : []
+        }
+        onTransferred={() => setTransferState(null)}
+      />
+
       {/* Capacity Warning Dialog - never stacked with ComandaDialog */}
       <AlertDialog open={capacityWarningOpen} onOpenChange={(open) => {
         if (!open) {
