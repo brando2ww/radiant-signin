@@ -168,7 +168,7 @@ export default function PDVCashier() {
     .filter((m) => m.type === "reforco")
     .reduce((acc, m) => acc + m.amount, 0);
 
-  const currentBalance = openingBalance + totalCash + totalReinforcements - totalWithdrawals;
+  const currentBalance = openingBalance + totalSales + totalReinforcements - totalWithdrawals;
 
   // Atalhos de teclado para ações rápidas
   useEffect(() => {
