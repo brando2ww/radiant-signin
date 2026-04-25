@@ -559,7 +559,7 @@ export function PaymentDialog({
     }
   };
 
-  const isProcessing = isRegisteringPayment || isRegisteringTablePayment;
+  const isProcessing = isRegisteringPayment || isRegisteringTablePayment || isRegisteringPartialPayment;
 
   if (showSuccess) {
     const nfceEnabled = !!settings?.nfe_enable_nfce;
