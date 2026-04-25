@@ -1,145 +1,57 @@
-## Separar Saldo da Gaveta e Total de Vendas + conferência por forma de pagamento
+# Corrigir venda no cartão que não aparece no rodapé
 
-Reorganizar caixa para tratar dois conceitos independentes: **dinheiro físico** (gaveta) e **total recebido por forma**, com fechamento que confere cada máquina/extrato separadamente.
+## Diagnóstico
 
----
+A venda de **R$ 239,00 (Mesa #f732877f)** foi registrada como `payment_method = "cartao"` (método legado), antes da nova lógica entrar em produção. Na sessão atual de caixa o estado está assim:
 
-### 1. Banco de dados (migração)
-
-Adicionar colunas a `pdv_cashier_sessions`:
-- `total_credit numeric default 0` — vendas em cartão de crédito
-- `total_debit numeric default 0` — vendas em cartão de débito
-- `total_voucher numeric default 0` — vendas em vale-refeição
-- `total_change numeric default 0` — troco entregue (para calcular dinheiro líquido)
-- `declared_cash numeric` — dinheiro contado na gaveta no fechamento
-- `declared_credit numeric` — total declarado pelo operador (máquina crédito)
-- `declared_debit numeric` — total declarado pelo operador (máquina débito)
-- `declared_pix numeric` — total declarado conforme extrato PIX
-- `declared_voucher numeric` — total declarado pela máquina VR
-- `cash_difference numeric` — diferença gaveta (mantida; renomear conceitualmente sem renomear coluna `balance_difference`; usar nova coluna)
-- `credit_difference / debit_difference / pix_difference / voucher_difference numeric`
-- `differences_justified jsonb` — `{ cash?: string, credit?: string, debit?: string, pix?: string, voucher?: string }`
-
-Coluna `total_card` existente: passa a representar a soma de crédito+débito (mantida por compatibilidade; será populada por trigger ou em código).
-
----
-
-### 2. Tipos de forma de pagamento
-
-**Em `use-pdv-payments.ts`:** ampliar `PaymentMethod`:
-```ts
-export type PaymentMethod = "dinheiro" | "credito" | "debito" | "pix" | "vale_refeicao";
 ```
-Manter retrocompat: aceitar `"cartao"` na entrada, mapeando para `credito` por padrão (hoje o `PaymentDialog` já distingue `cardType: "credito" | "debito"` — passar o método correto direto).
-
-**No `PaymentDialog`:** ao confirmar pagamento, mapear:
-- método `cartao` + `cardType=credito` → `"credito"`
-- método `cartao` + `cardType=debito` → `"debito"`
-- novo botão "VR" → `"vale_refeicao"`
-
-**Atualização da sessão** em `registerPayment` / `registerTablePayment` / `registerPartialPayment`:
-```ts
-total_sales += amount
-if dinheiro:        total_cash += amount;     total_change += changeAmount
-if credito:         total_credit += amount;   total_card += amount
-if debito:          total_debit += amount;    total_card += amount
-if pix:             total_pix += amount
-if vale_refeicao:   total_voucher += amount
+total_sales   = 239,00   ← aparece em "Total Vendas" ✅
+total_card    = 239,00   ← coluna legada, ninguém lê mais
+total_credit  =   0,00   ← rodapé mostra R$ 0,00 ❌
+total_debit   =   0,00   ← rodapé mostra R$ 0,00 ❌
 ```
 
-`total_cash` = bruto recebido em dinheiro. `total_change` = troco entregue. **Dinheiro líquido = total_cash − total_change**.
+O novo `CashierSummaryFooter` lê apenas `total_credit` e `total_debit`, então a venda existe contabilmente mas não aparece em nenhum dos dois quadros de cartão.
 
----
+A causa: o movimento foi criado **antes** da migration que separou Crédito/Débito. Vendas novas já entram corretas (o `PaymentDialog` distingue Crédito x Débito e `normalizeMethod` mantém o resto consistente).
 
-### 3. Rodapé do caixa (`CashierSummaryFooter.tsx`)
+## Correção
 
-Substituir o grid atual por **dois blocos visualmente separados**:
+Como não temos como saber se a venda original foi Crédito ou Débito (o operador não escolheu na época), vamos tratar o legado como **Crédito** por padrão — é o mais comum e o critério mais seguro para conferência no fechamento.
 
-**Bloco 1 — Gaveta (à esquerda)**
-- Abertura
-- Dinheiro (líquido) = `total_cash − total_change`
-- Reforços (+)
-- Sangrias (−)
-- **Saldo Atual da Gaveta** = `Abertura + Dinheiro líquido + Reforços − Sangrias` (destaque)
+### 1. Migration de backfill (one-shot)
 
-**Bloco 2 — Vendas por forma (à direita, informativo)**
-- Crédito
-- Débito
-- PIX
-- Vale-refeição
-- Dinheiro (bruto)
-- **Total Vendas** = soma de tudo (destaque secundário)
+Para todos os movimentos antigos com `payment_method = 'cartao'`:
 
-Layout: dois `Card` lado a lado em desktop, empilhados em mobile. Ícones e cores diferentes para deixar claro que são conceitos distintos.
+- Atualizar `pdv_cashier_movements.payment_method` de `'cartao'` para `'credito'`.
+- Em cada `pdv_cashier_sessions` impactada, mover o valor de `total_card` para `total_credit` quando `total_credit = 0` (evita duplicar caso já tenha havido conciliação manual).
 
-`Cashier.tsx` (linha ~171) recalcula:
-```ts
-const netCash = totalCash - totalChange;
-const drawerBalance = openingBalance + netCash + totalReinforcements - totalWithdrawals;
+Resultado esperado para a sessão atual:
 ```
-Passa `drawerBalance` (gaveta) e `totalSales` (vendas) ao footer como dois números distintos.
-
----
-
-### 4. Diálogo de fechamento (`CloseCashierDialog.tsx`)
-
-Reescrever em duas seções:
-
-**Grupo 1 — Contagem da gaveta**
-- Mostra: Abertura, Dinheiro líquido, Reforços, Sangrias, **Saldo Esperado da Gaveta**
-- Input: "Dinheiro contado na gaveta" (`declared_cash`)
-- Diferença: contado − esperado, com badge (sobra/falta) e classificação de risco (mantém escala atual: ok/baixa/média/alta/crítica)
-
-**Grupo 2 — Conferência por forma de pagamento**
-Para cada forma com `total_x > 0`, exibir um card com:
-- Esperado (do sistema)
-- Input: "Conforme máquina/extrato" (`declared_x`)
-- Diferença com badge ✓ conferido / ⚠ divergência
-
-Formas: Crédito, Débito, PIX, Vale-refeição. Dinheiro fica no Grupo 1.
-
-**Justificativas**
-Para cada divergência (gaveta ou qualquer forma) ≠ 0, exigir campo de justificativa específico (mín 30 caracteres). Salvar em `differences_justified` (jsonb).
-
-**Resumo final (rodapé do diálogo)**
-- Total geral de vendas do turno
-- Saldo da gaveta esperado vs contado
-- Linha por forma com status: ✓ conferido / ⚠ divergência justificada / ✗ pendente
-- Botão "Confirmar Fechamento" só habilita quando: gaveta OK ou justificada, e todas as formas com divergência têm justificativa.
-
----
-
-### 5. Hook `use-pdv-cashier.ts` — `closeCashier`
-
-Receber novos campos:
-```ts
-{
-  sessionId,
-  declaredCash, declaredCredit, declaredDebit, declaredPix, declaredVoucher,
-  justifications: { cash?, credit?, debit?, pix?, voucher? },
-  riskLevel,
-}
+total_credit = 239,00   ✅
+total_card   = 239,00   (mantido como espelho legado)
 ```
-Calcular diferenças em colunas próprias e atualizar a sessão. Manter `closing_balance / expected_balance / balance_difference` populados (gaveta) por compatibilidade com relatórios atuais.
 
----
+### 2. Salvaguarda no rodapé (defesa em profundidade)
 
-### 6. Recibo de fechamento (`printCashierReport`)
+Em `src/pages/pdv/Cashier.tsx`, ao montar os totais para o `CashierSummaryFooter`:
 
-Atualizar HTML para incluir a tabela de conferência por forma (esperado / declarado / diferença / status) e separar visualmente "RESUMO DA GAVETA" de "VENDAS POR FORMA".
+- Se `totalCredit + totalDebit === 0` **e** `totalCard > 0`, exibir o valor de `totalCard` na linha de **Crédito** (fallback puramente visual).
 
----
+Isso garante que qualquer outra sessão antiga ou caso de borda não fique com a coluna em branco mesmo se a migration falhar para algum registro.
 
-### 7. Pontos colaterais
+### 3. Sem mudanças no fluxo novo
 
-- `CashMovementsList.tsx` e `pdv_cashier_movements.payment_method`: aceitar os novos valores `credito`, `debito`, `vale_refeicao` na exibição.
-- `use-pdv-reports.ts` e `CashierStatement.tsx`: agrupar por forma usando os novos campos quando presentes; manter fallback para sessões antigas.
-- Campo `total_change`: registrar a cada pagamento em dinheiro com troco; valor sempre subtraído da gaveta.
+O `PaymentDialog` já registra corretamente `credito` ou `debito` conforme o `cardType` escolhido. Nada a ajustar lá.
 
----
+## Arquivos afetados
 
-### Fora do escopo (não muda)
+- **Nova migration**: `supabase/migrations/<timestamp>_backfill_cartao_to_credito.sql`
+- `src/pages/pdv/Cashier.tsx` — fallback `totalCard → totalCredit` na composição das props do footer
 
-- Lógica de aceitar/recusar pagamento, NFC-e e descontos permanece igual.
-- Comandas e fluxo do garçom permanecem iguais.
-- Sessões antigas (sem novos campos) continuam abrindo/fechando — apenas não terão a conferência detalhada por forma.
+## Verificação após implementação
+
+1. Recarregar `/pdv/caixa` e conferir que a linha **Crédito** mostra **R$ 239,00**.
+2. **Total Vendas** continua **R$ 239,00** (não duplica).
+3. **Saldo da Gaveta** continua **R$ 458,25** (cartão não soma na gaveta).
+4. Fazer uma nova venda em Débito e validar que cai em **Débito**, não em Crédito.
