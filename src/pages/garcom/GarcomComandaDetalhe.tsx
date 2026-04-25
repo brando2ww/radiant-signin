@@ -283,5 +283,3 @@ export default function GarcomComandaDetalhe() {
     </div>
   );
 }
-  );
-}
