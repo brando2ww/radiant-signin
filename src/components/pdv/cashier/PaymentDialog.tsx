@@ -418,34 +418,49 @@ export function PaymentDialog({
         discountAuthorizedBy: hasDiscount ? discountAuthorizedBy : undefined,
       };
 
-      // Modo split-por-comanda: 1 pagamento por comanda nominal (cada um com seu método)
-      const isSplitByComanda = splitEnabled && splitPayments.some((p) => p.comandaId);
-      if (isSplitByComanda && isTablePayment) {
-        for (const line of splitPayments) {
-          if (!line.comandaId) continue;
-          const c = tableComandas.find((x) => x.id === line.comandaId);
-          if (!c) continue;
-          await registerPayment({
-            comandaId: c.id,
-            orderId: c.order_id,
-            amount: parseFloat(line.amount) || c.subtotal,
-            paymentMethod: line.method,
-            installments: line.method === "cartao" ? parseInt(line.installments) : undefined,
-            cashReceived: line.method === "dinheiro" ? parseFloat(line.amount) : undefined,
-          });
-        }
-      } else if (isTablePayment && table) {
-        await registerTablePayment({
-          tableId: table.id,
-          comandaIds: tableComandas.map((c) => c.id),
-          ...paymentData,
+      // Modo "Por produto": pagamento parcial dos itens selecionados
+      if (isByProduct && comanda) {
+        const partialItems = Array.from(selectedItemQtys.entries()).map(([id, qty]) => {
+          const it = displayItems.find((d) => d.id === id)!;
+          return { itemId: id, quantityPaid: qty, unitPrice: Number(it.unit_price || 0) };
         });
-      } else if (comanda) {
-        await registerPayment({
+        await registerPartialPayment({
           comandaId: comanda.id,
           orderId: comanda.order_id,
           ...paymentData,
+          partialItems,
+          chargingSessionId: chargingSessionRef.current,
         });
+      } else {
+        // Modo split-por-comanda: 1 pagamento por comanda nominal (cada um com seu método)
+        const isSplitByComanda = splitEnabled && splitPayments.some((p) => p.comandaId);
+        if (isSplitByComanda && isTablePayment) {
+          for (const line of splitPayments) {
+            if (!line.comandaId) continue;
+            const c = tableComandas.find((x) => x.id === line.comandaId);
+            if (!c) continue;
+            await registerPayment({
+              comandaId: c.id,
+              orderId: c.order_id,
+              amount: parseFloat(line.amount) || c.subtotal,
+              paymentMethod: line.method,
+              installments: line.method === "cartao" ? parseInt(line.installments) : undefined,
+              cashReceived: line.method === "dinheiro" ? parseFloat(line.amount) : undefined,
+            });
+          }
+        } else if (isTablePayment && table) {
+          await registerTablePayment({
+            tableId: table.id,
+            comandaIds: tableComandas.map((c) => c.id),
+            ...paymentData,
+          });
+        } else if (comanda) {
+          await registerPayment({
+            comandaId: comanda.id,
+            orderId: comanda.order_id,
+            ...paymentData,
+          });
+        }
       }
 
       paymentDoneRef.current = true;
