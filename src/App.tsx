@@ -26,58 +26,58 @@ const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-      <AuthProvider>
         <DraftCartProvider>
           <PreferencesProvider>
             <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route 
-                  path="/pdv/*" 
-                  element={
-                    <ProtectedRoute>
-                      <PDV />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route
-                  path="/garcom/*"
-                  element={
-                    <ProtectedRoute>
-                      <Garcom />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/avaliacoes/*"
-                  element={
-                    <ProtectedRoute>
-                      <EvaluationsPanel />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin/*"
-                  element={
-                    <SuperAdminGuard>
-                      <SuperAdmin />
-                    </SuperAdminGuard>
-                  }
-                />
-                {/* Public routes - no authentication required */}
-                <Route path="/cardapio/:userId" element={<PublicMenu />} />
-                <Route path="/avaliacao/:campaignId" element={<PublicEvaluation />} />
-                <Route path="/tarefas/:userId" element={<PublicTasks />} />
-                <Route path="/c/:checklistId" element={<PublicChecklistAccess />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </PreferencesProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route
+                    path="/pdv/*"
+                    element={
+                      <ProtectedRoute>
+                        <PDV />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/garcom/*"
+                    element={
+                      <ProtectedRoute>
+                        <Garcom />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/avaliacoes/*"
+                    element={
+                      <ProtectedRoute>
+                        <EvaluationsPanel />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/*"
+                    element={
+                      <SuperAdminGuard>
+                        <SuperAdmin />
+                      </SuperAdminGuard>
+                    }
+                  />
+                  {/* Public routes - no authentication required */}
+                  <Route path="/cardapio/:userId" element={<PublicMenu />} />
+                  <Route path="/avaliacao/:campaignId" element={<PublicEvaluation />} />
+                  <Route path="/tarefas/:userId" element={<PublicTasks />} />
+                  <Route path="/c/:checklistId" element={<PublicChecklistAccess />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </PreferencesProvider>
+        </DraftCartProvider>
       </AuthProvider>
     </QueryClientProvider>
   </ThemeProvider>
