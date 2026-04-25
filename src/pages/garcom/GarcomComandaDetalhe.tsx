@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Send, CreditCard, Utensils, Clock, ArrowRightLeft, CheckSquare, X, Pencil, ChefHat } from "lucide-react";
+import { ArrowLeft, Plus, Send, CreditCard, Utensils, Clock, ArrowRightLeft, CheckSquare, X, Pencil, ChefHat, Trash2 } from "lucide-react";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
+import { useDraftCart } from "@/contexts/DraftCartContext";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
 import { TransferItemsDialog } from "@/components/pdv/transfer/TransferItemsDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTableLabel } from "@/utils/formatTableNumber";
 import { formatBRL } from "@/lib/format";
+import { toast } from "sonner";
 
 export default function GarcomComandaDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -19,32 +21,63 @@ export default function GarcomComandaDetalhe() {
     isLoading,
     sendToKitchenAsync,
     closeComanda,
-    removeItem,
-    updateItem,
+    addItem: persistItem,
   } = usePDVComandas();
   const { tables } = usePDVTables();
+  const draft = useDraftCart();
 
   const comanda = comandas.find((c) => c.id === id);
-  const items = comandaItems.filter(
-    (i) => i.comanda_id === id && !(i as any).is_composite_child,
+  // Itens persistidos = todos os do banco para esta comanda. São considerados
+  // "enviados/em produção" do ponto de vista do garçom — o rascunho ao vivo
+  // (não enviado) vive somente em memória local via useDraftCart.
+  const sentItems = (id
+    ? comandaItems.filter(
+        (i) => i.comanda_id === id && !(i as any).is_composite_child,
+      )
+    : []
   );
-  const total = items.reduce((s, i) => s + i.subtotal, 0);
+  const draftItems = id ? draft.getItems(id) : [];
+  const draftCount = id ? draft.count(id) : 0;
+  const draftSubtotal = id ? draft.total(id) : 0;
+  const sentSubtotal = sentItems.reduce((s, i) => s + i.subtotal, 0);
+  const total = sentSubtotal + draftSubtotal;
 
   const tableOfComanda = comanda?.order_id
     ? tables.find((t) => t.current_order_id === comanda.order_id)
     : null;
 
-  const isDraftItem = (i: typeof items[number]) =>
-    i.kitchen_status === "pendente" && !i.sent_to_kitchen_at;
-  const draftItems = items.filter(isDraftItem);
-  const sentItems = items.filter((i) => !isDraftItem(i));
-  const pendingIds = draftItems.map((i) => i.id);
+  const [sending, setSending] = useState(false);
 
-  const handleIncrement = (item: typeof items[number]) =>
-    updateItem({ id: item.id, quantity: item.quantity + 1 });
-  const handleDecrement = (item: typeof items[number]) => {
-    if (item.quantity <= 1) removeItem(item.id);
-    else updateItem({ id: item.id, quantity: item.quantity - 1 });
+  const handleFlushDraft = async () => {
+    if (!id || draftItems.length === 0 || sending) return;
+    setSending(true);
+    try {
+      const created = await Promise.all(
+        draftItems.map((it) =>
+          persistItem({
+            comandaId: id,
+            productId: it.productId,
+            productName: it.productName,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+            notes: it.notes,
+          }),
+        ),
+      );
+      await sendToKitchenAsync(created.map((c) => c.id));
+      draft.clear(id);
+      navigate("/garcom");
+    } catch (err: any) {
+      toast.error("Erro ao enviar para a cozinha: " + (err?.message ?? "desconhecido"));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleDiscardDraft = () => {
+    if (!id) return;
+    draft.clear(id);
+    toast.success("Rascunho descartado");
   };
 
   const isLocked =
