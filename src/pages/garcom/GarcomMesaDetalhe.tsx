@@ -72,9 +72,7 @@ export default function GarcomMesaDetalhe() {
     ? comandas.filter(
         (c) =>
           c.order_id === table.current_order_id &&
-          (c.status === "aberta" ||
-            c.status === "aguardando_pagamento" ||
-            c.status === "em_cobranca"),
+          (c.status === "aberta" || c.status === "em_cobranca"),
       )
     : [];
 
@@ -296,7 +294,6 @@ export default function GarcomMesaDetalhe() {
                 ? comanda.customer_name
                 : `Mesa ${table.table_number}`;
 
-              const isWaiting = comanda.status === "aguardando_pagamento";
               const isCharging = comanda.status === "em_cobranca";
               const canEdit = comanda.status === "aberta";
 
@@ -322,11 +319,6 @@ export default function GarcomMesaDetalhe() {
                       </span>
                     </span>
                     <div className="flex items-center gap-2">
-                      {isWaiting && (
-                        <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold text-orange-600 dark:text-orange-400">
-                          Aguardando caixa
-                        </span>
-                      )}
                       {isCharging && (
                         <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
                           Em cobrança
