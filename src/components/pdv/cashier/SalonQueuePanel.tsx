@@ -296,10 +296,6 @@ export function SalonQueuePanel({
 
                   {group.comandas.map((c) => {
                     const items = getItemsByComanda(c.id);
-                    const ts = new Date(
-                      c.closed_by_waiter_at ?? c.updated_at,
-                    ).getTime();
-                    const minutes = Math.max(0, Math.floor((Date.now() - ts) / 60_000));
                     const tableLabel = group.table
                       ? formatTableLabel(group.table.table_number)
                       : null;
