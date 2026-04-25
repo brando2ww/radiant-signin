@@ -110,7 +110,7 @@ export default function GarcomAdicionarItem() {
   const hasOptions = (productOptions?.length ?? 0) > 0;
   const effectiveStep: Step = step === "options" && !hasOptions ? "quantity" : step;
 
-  const handleAdd = async () => {
+  const handleAdd = () => {
     if (!selectedProduct || !comandaId) return;
 
     const optionsNotes = selectedOptions
@@ -118,14 +118,15 @@ export default function GarcomAdicionarItem() {
       .join("; ");
     const fullNotes = [optionsNotes, notes.trim()].filter(Boolean).join(" | ");
 
-    await addItem({
-      comandaId,
+    draft.addItem(comandaId, {
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       quantity,
       unitPrice: (selectedProduct.price_salon ?? 0) + optionsExtra,
       notes: fullNotes || undefined,
+      selectedOptions,
     });
+    toast.success("Adicionado ao rascunho");
     resetSheet();
   };
 
