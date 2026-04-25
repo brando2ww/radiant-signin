@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Send, CreditCard, Utensils, Clock, ArrowRightLeft, CheckSquare, X, Pencil, ChefHat } from "lucide-react";
+import { ArrowLeft, Plus, Send, CreditCard, Utensils, Clock, ArrowRightLeft, CheckSquare, X, Pencil, ChefHat, Trash2 } from "lucide-react";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
+import { useDraftCart } from "@/contexts/DraftCartContext";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
 import { TransferItemsDialog } from "@/components/pdv/transfer/TransferItemsDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTableLabel } from "@/utils/formatTableNumber";
 import { formatBRL } from "@/lib/format";
+import { toast } from "sonner";
 
 export default function GarcomComandaDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -19,32 +21,63 @@ export default function GarcomComandaDetalhe() {
     isLoading,
     sendToKitchenAsync,
     closeComanda,
-    removeItem,
-    updateItem,
+    addItem: persistItem,
   } = usePDVComandas();
   const { tables } = usePDVTables();
+  const draft = useDraftCart();
 
   const comanda = comandas.find((c) => c.id === id);
-  const items = comandaItems.filter(
-    (i) => i.comanda_id === id && !(i as any).is_composite_child,
+  // Itens persistidos = todos os do banco para esta comanda. São considerados
+  // "enviados/em produção" do ponto de vista do garçom — o rascunho ao vivo
+  // (não enviado) vive somente em memória local via useDraftCart.
+  const sentItems = (id
+    ? comandaItems.filter(
+        (i) => i.comanda_id === id && !(i as any).is_composite_child,
+      )
+    : []
   );
-  const total = items.reduce((s, i) => s + i.subtotal, 0);
+  const draftItems = id ? draft.getItems(id) : [];
+  const draftCount = id ? draft.count(id) : 0;
+  const draftSubtotal = id ? draft.total(id) : 0;
+  const sentSubtotal = sentItems.reduce((s, i) => s + i.subtotal, 0);
+  const total = sentSubtotal + draftSubtotal;
 
   const tableOfComanda = comanda?.order_id
     ? tables.find((t) => t.current_order_id === comanda.order_id)
     : null;
 
-  const isDraftItem = (i: typeof items[number]) =>
-    i.kitchen_status === "pendente" && !i.sent_to_kitchen_at;
-  const draftItems = items.filter(isDraftItem);
-  const sentItems = items.filter((i) => !isDraftItem(i));
-  const pendingIds = draftItems.map((i) => i.id);
+  const [sending, setSending] = useState(false);
 
-  const handleIncrement = (item: typeof items[number]) =>
-    updateItem({ id: item.id, quantity: item.quantity + 1 });
-  const handleDecrement = (item: typeof items[number]) => {
-    if (item.quantity <= 1) removeItem(item.id);
-    else updateItem({ id: item.id, quantity: item.quantity - 1 });
+  const handleFlushDraft = async () => {
+    if (!id || draftItems.length === 0 || sending) return;
+    setSending(true);
+    try {
+      const created = await Promise.all(
+        draftItems.map((it) =>
+          persistItem({
+            comandaId: id,
+            productId: it.productId,
+            productName: it.productName,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+            notes: it.notes,
+          }),
+        ),
+      );
+      await sendToKitchenAsync(created.map((c) => c.id));
+      draft.clear(id);
+      navigate("/garcom");
+    } catch (err: any) {
+      toast.error("Erro ao enviar para a cozinha: " + (err?.message ?? "desconhecido"));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleDiscardDraft = () => {
+    if (!id) return;
+    draft.clear(id);
+    toast.success("Rascunho descartado");
   };
 
   const isLocked =
@@ -148,7 +181,7 @@ export default function GarcomComandaDetalhe() {
             {statusBadge}
           </div>
         </div>
-        {canEdit && items.length > 0 && (
+        {canEdit && (sentItems.length + draftItems.length) > 0 && (
           <button
             type="button"
             onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
@@ -167,7 +200,7 @@ export default function GarcomComandaDetalhe() {
             Esta comanda já foi enviada para o caixa. Não é possível adicionar ou remover itens.
           </div>
         )}
-        {items.length === 0 ? (
+        {sentItems.length + draftItems.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center">
             <p className="text-muted-foreground mb-4">Sem itens na comanda</p>
             {canEdit && (
@@ -182,8 +215,10 @@ export default function GarcomComandaDetalhe() {
             )}
           </div>
         ) : selectMode ? (
-          // Em modo seleção, lista plana para permitir transferência atravessando grupos
-          items.map((item) => (
+          // Em modo seleção, listamos apenas os itens persistidos. O rascunho
+          // local é editável diretamente nos cards "draft" e não faz sentido
+          // ser transferido (ainda não foi enviado).
+          sentItems.map((item) => (
             <ComandaItemCard
               key={item.id}
               productName={item.product_name}
@@ -199,32 +234,43 @@ export default function GarcomComandaDetalhe() {
           ))
         ) : (
           <>
-            {/* Grupo: Novos itens — não enviados ainda */}
+            {/* Grupo: Novos itens — não enviados ainda (rascunho local) */}
             {draftItems.length > 0 && (
               <section className="space-y-2">
-                <div className="flex items-center gap-2 px-1 pt-1">
-                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-                  <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Novos itens — não enviados ainda
-                    <span className="ml-1 normal-case text-muted-foreground/70">
-                      ({draftItems.length})
-                    </span>
-                  </h2>
+                <div className="flex items-center justify-between gap-2 px-1 pt-1">
+                  <div className="flex items-center gap-2">
+                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                    <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Novos itens — não enviados ainda
+                      <span className="ml-1 normal-case text-muted-foreground/70">
+                        ({draftItems.length})
+                      </span>
+                    </h2>
+                  </div>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={handleDiscardDraft}
+                      className="inline-flex items-center gap-1 h-7 px-2 rounded-md text-[11px] font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 active:scale-95 transition-all"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                      Descartar
+                    </button>
+                  )}
                 </div>
                 {draftItems.map((item) => (
                   <ComandaItemCard
-                    key={item.id}
+                    key={item.draftId}
                     variant="draft"
-                    productName={item.product_name}
+                    productName={item.productName}
                     quantity={item.quantity}
-                    unitPrice={item.unit_price}
+                    unitPrice={item.unitPrice}
                     notes={item.notes}
-                    kitchenStatus={item.kitchen_status}
-                    sentToKitchenAt={item.sent_to_kitchen_at}
-                    onRemove={canEdit ? () => removeItem(item.id) : undefined}
-                    onIncrement={canEdit ? () => handleIncrement(item) : undefined}
-                    onDecrement={canEdit ? () => handleDecrement(item) : undefined}
-                    onTransfer={canEdit ? () => setTransferIds([item.id]) : undefined}
+                    kitchenStatus="pendente"
+                    sentToKitchenAt={null}
+                    onRemove={canEdit ? () => id && draft.removeItem(id, item.draftId) : undefined}
+                    onIncrement={canEdit ? () => id && draft.updateQuantity(id, item.draftId, item.quantity + 1) : undefined}
+                    onDecrement={canEdit ? () => id && draft.updateQuantity(id, item.draftId, item.quantity - 1) : undefined}
                   />
                 ))}
               </section>
@@ -279,16 +325,14 @@ export default function GarcomComandaDetalhe() {
                   <Plus className="h-4 w-4 mr-1" />
                   Item
                 </Button>
-                {pendingIds.length > 0 ? (
+                {draftCount > 0 ? (
                   <Button
                     className="active:scale-95 h-11"
-                    onClick={async () => {
-                      await sendToKitchenAsync(pendingIds);
-                      navigate("/garcom");
-                    }}
+                    onClick={handleFlushDraft}
+                    disabled={sending}
                   >
                     <Send className="h-4 w-4 mr-1" />
-                    Cozinha
+                    {sending ? "Enviando..." : `Cozinha (${draftCount})`}
                   </Button>
                 ) : (
                   <div />
@@ -296,11 +340,12 @@ export default function GarcomComandaDetalhe() {
                 <Button
                   variant="secondary"
                   className="active:scale-95 h-11"
-                  disabled={items.length === 0}
+                  disabled={sentItems.length === 0 || draftItems.length > 0}
                   onClick={() => {
                     closeComanda(comanda.id);
                     navigate(-1);
                   }}
+                  title={draftItems.length > 0 ? "Envie o rascunho para a cozinha antes de fechar" : undefined}
                 >
                   <CreditCard className="h-4 w-4 mr-1" />
                   Fechar
@@ -344,7 +389,7 @@ export default function GarcomComandaDetalhe() {
         open={!!transferIds}
         onOpenChange={(o) => !o && setTransferIds(null)}
         sourceComanda={comanda ?? null}
-        items={transferIds ? items.filter((it) => transferIds.includes(it.id)) : []}
+        items={transferIds ? sentItems.filter((it) => transferIds.includes(it.id)) : []}
         onTransferred={() => {
           setTransferIds(null);
           exitSelectMode();

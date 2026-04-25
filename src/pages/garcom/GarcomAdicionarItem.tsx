@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Search, Plus, Minus, Send } from "lucide-react";
 import { usePDVProducts } from "@/hooks/use-pdv-products";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
+import { useDraftCart } from "@/contexts/DraftCartContext";
 import { usePDVProductOptionsForOrder } from "@/hooks/use-pdv-product-options";
 import type { SelectedOption } from "@/components/pdv/ProductOptionSelector";
 import { MobileProductOptionSelector } from "@/components/garcom/MobileProductOptionSelector";
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatBRL } from "@/lib/format";
+import { toast } from "sonner";
 import {
   Sheet,
   SheetContent,
@@ -25,18 +27,39 @@ export default function GarcomAdicionarItem() {
   const { id: comandaId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { products, isLoading } = usePDVProducts();
-  const { addItem, isAddingItem, getItemsByComanda, sendToKitchenAsync } = usePDVComandas();
+  const { addItem: persistItem, sendToKitchenAsync } = usePDVComandas();
+  const draft = useDraftCart();
 
-  const items = comandaId ? getItemsByComanda(comandaId) : [];
-  const pendingItems = items.filter(
-    (i) => i.kitchen_status === "pendente" && !i.sent_to_kitchen_at
-  );
-  const pendingTotal = pendingItems.reduce((sum, i) => sum + Number(i.subtotal), 0);
+  const draftItems = comandaId ? draft.getItems(comandaId) : [];
+  const draftTotal = comandaId ? draft.total(comandaId) : 0;
+  const draftCount = comandaId ? draft.count(comandaId) : 0;
+
+  const [sending, setSending] = useState(false);
 
   const handleSendToKitchen = async () => {
-    if (pendingItems.length === 0) return;
-    await sendToKitchenAsync(pendingItems.map((i) => i.id));
-    navigate("/garcom");
+    if (!comandaId || draftItems.length === 0 || sending) return;
+    setSending(true);
+    try {
+      const created = await Promise.all(
+        draftItems.map((it) =>
+          persistItem({
+            comandaId,
+            productId: it.productId,
+            productName: it.productName,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+            notes: it.notes,
+          }),
+        ),
+      );
+      await sendToKitchenAsync(created.map((c) => c.id));
+      draft.clear(comandaId);
+      navigate("/garcom");
+    } catch (err: any) {
+      toast.error("Erro ao enviar para a cozinha: " + (err?.message ?? "desconhecido"));
+    } finally {
+      setSending(false);
+    }
   };
 
   const [search, setSearch] = useState("");
@@ -87,7 +110,7 @@ export default function GarcomAdicionarItem() {
   const hasOptions = (productOptions?.length ?? 0) > 0;
   const effectiveStep: Step = step === "options" && !hasOptions ? "quantity" : step;
 
-  const handleAdd = async () => {
+  const handleAdd = () => {
     if (!selectedProduct || !comandaId) return;
 
     const optionsNotes = selectedOptions
@@ -95,14 +118,15 @@ export default function GarcomAdicionarItem() {
       .join("; ");
     const fullNotes = [optionsNotes, notes.trim()].filter(Boolean).join(" | ");
 
-    await addItem({
-      comandaId,
+    draft.addItem(comandaId, {
       productId: selectedProduct.id,
       productName: selectedProduct.name,
       quantity,
       unitPrice: (selectedProduct.price_salon ?? 0) + optionsExtra,
       notes: fullNotes || undefined,
+      selectedOptions,
     });
+    toast.success("Adicionado ao rascunho");
     resetSheet();
   };
 
@@ -178,21 +202,22 @@ export default function GarcomAdicionarItem() {
       </div>
 
       {/* Send to Kitchen Bar */}
-      {pendingItems.length > 0 && (
+      {draftItems.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background">
           <div className="px-4 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom))]">
             <div className="mb-2 flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                {pendingItems.length} {pendingItems.length === 1 ? "item pendente" : "itens pendentes"}
+                {draftCount} {draftCount === 1 ? "item no rascunho" : "itens no rascunho"}
               </span>
-              <span className="font-semibold tabular-nums">{formatBRL(pendingTotal)}</span>
+              <span className="font-semibold tabular-nums">{formatBRL(draftTotal)}</span>
             </div>
             <Button
               onClick={handleSendToKitchen}
+              disabled={sending}
               className="w-full h-11 active:scale-[0.98] transition-transform"
             >
               <Send className="h-4 w-4 mr-2" />
-              Enviar para Cozinha
+              {sending ? "Enviando..." : "Enviar para Cozinha"}
             </Button>
           </div>
         </div>
@@ -298,7 +323,6 @@ export default function GarcomAdicionarItem() {
                 <Button
                   className="flex-1 h-12 text-base active:scale-[0.98] transition-transform"
                   onClick={handleAdd}
-                  disabled={isAddingItem}
                 >
                   Adicionar · {formatBRL(((selectedProduct?.price_salon ?? 0) + optionsExtra) * quantity)}
                 </Button>
