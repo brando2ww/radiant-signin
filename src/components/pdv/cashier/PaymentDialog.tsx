@@ -141,6 +141,14 @@ export function PaymentDialog({
   // Split payment
   const [splitEnabled, setSplitEnabled] = useState(false);
   const [splitPayments, setSplitPayments] = useState<SplitPayment[]>([]);
+
+  // Charge mode (segmented): "all" | "split-forms" | "by-product"
+  type ChargeMode = "all" | "split-forms" | "by-product";
+  const [chargeMode, setChargeMode] = useState<ChargeMode>("all");
+  // Map<itemId, qtyToPay>
+  const [selectedItemQtys, setSelectedItemQtys] = useState<Map<string, number>>(new Map());
+  // Sessão de cobrança "Por produto" — usada para lock/unlock de itens
+  const chargingSessionRef = useRef<string>("");
   
   // Success state
   const [showSuccess, setShowSuccess] = useState(false);
