@@ -221,11 +221,25 @@ export function ComandaDetailsDialog({
               <div className="space-y-3">
                 {items.map((item) => {
                   const kitchenConfig = KITCHEN_STATUS_CONFIG[item.kitchen_status];
+                  const isSelected = selectedIds.has(item.id);
                   return (
                     <div
                       key={item.id}
-                      className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg"
+                      className={cn(
+                        "flex items-start gap-3 p-3 bg-muted/50 rounded-lg transition-colors",
+                        selectMode && "cursor-pointer hover:bg-muted",
+                        selectMode && isSelected && "bg-primary/10 ring-1 ring-primary/40",
+                      )}
+                      onClick={selectMode ? () => toggleSelect(item.id) : undefined}
                     >
+                      {selectMode && (
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleSelect(item.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1"
+                        />
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div>
