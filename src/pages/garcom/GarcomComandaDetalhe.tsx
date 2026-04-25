@@ -348,7 +348,6 @@ export default function GarcomComandaDetalhe() {
                   <Button
                     variant="secondary"
                     className="active:scale-95 h-11"
-                    disabled={sentItems.length === 0}
                     onClick={() => {
                       closeComanda(comanda.id);
                       navigate(-1);
