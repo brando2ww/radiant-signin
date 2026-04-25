@@ -16,7 +16,7 @@ export default function GarcomComandas() {
   const [search, setSearch] = useState("");
 
   const abertas = comandas.filter(
-    (c) => c.status === "aberta" || c.status === "aguardando_pagamento" || c.status === "em_cobranca",
+    (c) => c.status === "aberta" || c.status === "em_cobranca",
   );
   const filtered = abertas.filter(
     (c) =>
