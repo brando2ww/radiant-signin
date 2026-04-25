@@ -820,6 +820,14 @@ export default function PDVSalon() {
         onUpdateItem={(id, updates) => updateComandaItem({ id, ...updates })}
         onRemoveItem={(id) => removeComandaItem(id)}
         onSendToKitchen={(itemIds) => sendToKitchen(itemIds)}
+        onTransferItem={(itemId) =>
+          selectedComanda &&
+          setTransferState({ sourceComandaId: selectedComanda.id, itemIds: [itemId] })
+        }
+        onTransferMultiple={(itemIds) =>
+          selectedComanda &&
+          setTransferState({ sourceComandaId: selectedComanda.id, itemIds })
+        }
         onClose={() => {
           if (selectedComanda) {
             const items = getItemsByComanda(selectedComanda.id);
