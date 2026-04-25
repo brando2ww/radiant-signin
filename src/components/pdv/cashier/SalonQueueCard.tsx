@@ -9,7 +9,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -19,7 +18,6 @@ import {
   ChevronDown,
   ChevronUp,
   CreditCard,
-  Loader2,
   Undo2,
   AlertTriangle,
 } from "lucide-react";
@@ -91,23 +89,9 @@ export function SalonQueueCard({
         )}
         aria-busy={isCharging}
       >
-        {/* Linha 1: identificação + status */}
-        <div className="flex items-start justify-between gap-2 mb-1">
+        {/* Linha 1: identificação */}
+        <div className="mb-1">
           <div className="font-semibold text-sm leading-tight truncate">{title}</div>
-          {isCharging ? (
-            <Badge className="bg-blue-500 text-white hover:bg-blue-500 gap-1 text-[10px] shrink-0">
-              <Loader2 className="h-2.5 w-2.5 animate-spin" />
-              Em cobrança
-            </Badge>
-          ) : isOpen ? (
-            <Badge className="bg-emerald-500 text-white hover:bg-emerald-500 text-[10px] shrink-0">
-              Aberta
-            </Badge>
-          ) : (
-            <Badge className="bg-orange-500 text-white hover:bg-orange-500 text-[10px] shrink-0">
-              Aguardando
-            </Badge>
-          )}
         </div>
 
         {/* Linha 2: itens + valor (destaque) */}
