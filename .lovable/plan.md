@@ -1,13 +1,16 @@
-## Remover badges de status no painel Salão do caixa
+## Remover ação "Devolver ao garçom" do painel Salão
 
-No card de cada comanda/mesa do painel "Salão", remover completamente os badges de status ("Aguardando", "Aberta", "Em cobrança") que aparecem ao lado do título.
+Como o garçom não fecha mais comandas, devolvê-las deixa de fazer sentido — o caixa deve apenas cobrar.
 
-### Mudança
+### Mudanças
 
 **`src/components/pdv/cashier/SalonQueueCard.tsx`**
+- Remover botão "Devolver ao garçom" (ícone `Undo2`) e o `AlertDialog` de motivo.
+- Remover props `onReturnToWaiter` e `isReturning`, estados `returnDialog`/`returnReason` e o handler `handleConfirmReturn`.
+- Remover imports não usados: `AlertDialog*`, `Textarea`, `Undo2`.
 
-- Remover todo o bloco de Badge (linhas ~97-110), incluindo o "Em cobrança".
-- Ajustar o layout para o título ocupar a linha inteira.
-- Remover imports não utilizados (`Badge`, `Loader2`) se não forem usados em outro lugar do arquivo.
+**`src/components/pdv/cashier/SalonQueuePanel.tsx`**
+- Remover props `onReturnToWaiter` e `isReturning` do `<SalonQueueCard>`.
+- Remover destructuring de `returnToWaiter` e `isReturningToWaiter` do hook.
 
-A indicação visual de "em cobrança" continua existindo via outros elementos (borda/destaque do card e ações disponíveis), então os badges deixam de ser necessários.
+A mutation `returnToWaiter` em `use-pdv-comandas.ts` permanece exportada por enquanto (não há outros consumidores; pode ser limpa em outro passo se desejado).

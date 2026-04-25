@@ -64,8 +64,6 @@ export function SalonQueuePanel({
     comandas,
     getItemsByComanda,
     getPendingPaymentComandas,
-    returnToWaiter,
-    isReturningToWaiter,
   } = usePDVComandas();
   const { tables } = usePDVTables();
 
@@ -360,10 +358,6 @@ export function SalonQueuePanel({
                         siblingCount={siblings}
                         waitingMinutes={minutes}
                         onCharge={() => onSelectComanda(c, items)}
-                        onReturnToWaiter={(reason) =>
-                          returnToWaiter({ comandaId: c.id, reason })
-                        }
-                        isReturning={isReturningToWaiter}
                       />
                     );
                   })}
