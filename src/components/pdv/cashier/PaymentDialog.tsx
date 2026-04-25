@@ -106,6 +106,7 @@ const paymentMethods = [
   { id: "dinheiro" as PaymentMethod, label: "Dinheiro", icon: Banknote, color: "text-green-600" },
   { id: "cartao" as PaymentMethod, label: "Cartão", icon: CreditCard, color: "text-blue-600" },
   { id: "pix" as PaymentMethod, label: "PIX", icon: QrCode, color: "text-purple-600" },
+  { id: "vale_refeicao" as PaymentMethod, label: "VR / VA", icon: Ticket, color: "text-orange-600" },
 ];
 
 const quickValues = [50, 100, 150, 200];
