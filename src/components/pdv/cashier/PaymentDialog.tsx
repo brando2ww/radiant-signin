@@ -520,9 +520,9 @@ export function PaymentDialog({
         cashReceived: selectedMethod === "dinheiro" ? cashReceivedNum : undefined,
         changeAmount: selectedMethod === "dinheiro" ? changeAmount : undefined,
         installments: selectedMethod === "cartao" ? parseInt(installments) : undefined,
-        discountAmount: hasDiscount ? discountAmount : undefined,
-        discountReason: hasDiscount ? discountReason : undefined,
-        discountAuthorizedBy: hasDiscount ? discountAuthorizedBy : undefined,
+        discountAmount: appliedDiscount ? appliedDiscount.amount : undefined,
+        discountReason: appliedDiscount ? appliedDiscount.reason : undefined,
+        discountAuthorizedBy: appliedDiscount ? appliedDiscount.authorizedBy : undefined,
       };
 
       // Modo "Por produto": pagamento parcial dos itens selecionados
