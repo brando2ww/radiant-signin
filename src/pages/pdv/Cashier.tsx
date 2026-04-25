@@ -148,8 +148,17 @@ export default function PDVCashier() {
   const openingBalance = activeSession?.opening_balance || 0;
   const totalCash = activeSession?.total_cash || 0;
   const totalChange = (activeSession as any)?.total_change || 0;
-  const totalCredit = (activeSession as any)?.total_credit || 0;
+  const rawTotalCredit = (activeSession as any)?.total_credit || 0;
   const totalDebit = (activeSession as any)?.total_debit || 0;
+  // Fallback de exibição: vendas legadas registradas como "cartao" (sem distinção
+  // crédito/débito) ainda podem existir em sessões antigas. Quando não houver
+  // nenhum valor em crédito nem em débito, usamos o total_card legado como
+  // crédito apenas para conferência visual — sem afetar o cálculo da gaveta.
+  const legacyCard = (activeSession as any)?.total_card || 0;
+  const totalCredit =
+    rawTotalCredit === 0 && totalDebit === 0 && legacyCard > 0
+      ? legacyCard
+      : rawTotalCredit;
   const totalPix = activeSession?.total_pix || 0;
   const totalVoucher = (activeSession as any)?.total_voucher || 0;
   const totalWithdrawals = activeSession?.total_withdrawals || 0;
