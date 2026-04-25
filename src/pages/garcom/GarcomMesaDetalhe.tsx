@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, UserPlus, Send, Plus, X } from "lucide-react";
+import { ArrowLeft, UserPlus, Send, Plus, X, Pencil, ChefHat } from "lucide-react";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
