@@ -11,11 +11,13 @@ import { ComandaCard } from "@/components/pdv/ComandaCard";
 import { ComandaDialog } from "@/components/pdv/ComandaDialog";
 import { ComandaDetailsDialog } from "@/components/pdv/ComandaDetailsDialog";
 import { ComandaAddItemDialog } from "@/components/pdv/ComandaAddItemDialog";
+import { TransferItemsDialog } from "@/components/pdv/transfer/TransferItemsDialog";
 import { toast } from "sonner";
 
 export default function ComandasPage() {
   const {
     comandas,
+    comandaItems,
     isLoading,
     createComanda,
     closeComanda,
@@ -37,6 +39,10 @@ export default function ComandasPage() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
   const [addItemComanda, setAddItemComanda] = useState<Comanda | null>(null);
+  const [transferState, setTransferState] = useState<{
+    sourceComandaId: string;
+    itemIds: string[];
+  } | null>(null);
 
   const { activeSession } = usePDVCashier();
 
