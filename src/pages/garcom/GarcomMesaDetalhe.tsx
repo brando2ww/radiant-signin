@@ -283,15 +283,14 @@ export default function GarcomMesaDetalhe() {
         ) : (
           <>
             {tableComandas.map((comanda) => {
-              const items = comandaItems.filter(
+              // Itens persistidos (todos compartilhados pela comanda).
+              const sentItems = comandaItems.filter(
                 (i) => i.comanda_id === comanda.id,
               );
-              const pendingIds = items
-                .filter(
-                  (i) =>
-                    i.kitchen_status === "pendente" && !i.sent_to_kitchen_at,
-                )
-                .map((i) => i.id);
+              // Rascunho local: somente do garçom logado neste dispositivo.
+              const draftItems = draft.getItems(comanda.id);
+              const draftCount = draft.count(comanda.id);
+              const isFlushing = flushingComandaId === comanda.id;
 
               const label = comanda.customer_name
                 ? comanda.customer_name
@@ -333,87 +332,80 @@ export default function GarcomMesaDetalhe() {
                           Em cobrança
                         </span>
                       )}
-                      {canEdit && pendingIds.length > 0 && (
+                      {canEdit && draftCount > 0 && (
                         <Button
                           size="sm"
                           variant="outline"
                           className="h-8 text-xs active:scale-95"
-                          onClick={async (e) => {
+                          disabled={isFlushing}
+                          onClick={(e) => {
                             e.stopPropagation();
-                            await sendToKitchenAsync(pendingIds);
-                            navigate("/garcom");
+                            flushDraftFor(comanda.id);
                           }}
                         >
                           <Send className="h-3 w-3 mr-1" />
-                          Enviar ({pendingIds.length})
+                          {isFlushing ? "Enviando..." : `Enviar (${draftCount})`}
                         </Button>
                       )}
                     </div>
                   </div>
-                  {items.length === 0 ? (
+                  {sentItems.length === 0 && draftItems.length === 0 ? (
                     <p className="text-xs text-muted-foreground">Sem itens</p>
-                  ) : (() => {
-                    const draftItems = items.filter(
-                      (i) => i.kitchen_status === "pendente" && !i.sent_to_kitchen_at,
-                    );
-                    const sentItems = items.filter(
-                      (i) => !(i.kitchen_status === "pendente" && !i.sent_to_kitchen_at),
-                    );
-                    return (
-                      <div className="space-y-3">
-                        {draftItems.length > 0 && (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 px-1">
-                              <Pencil className="h-3 w-3 text-muted-foreground" />
-                              <h3 className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                Não enviados ainda
-                                <span className="ml-1 normal-case text-muted-foreground/70">
-                                  ({draftItems.length})
-                                </span>
-                              </h3>
-                            </div>
-                            {draftItems.map((item) => (
-                              <ComandaItemCard
-                                key={item.id}
-                                variant="draft"
-                                productName={item.product_name}
-                                quantity={item.quantity}
-                                unitPrice={item.unit_price}
-                                notes={item.notes}
-                                kitchenStatus={item.kitchen_status}
-                                sentToKitchenAt={item.sent_to_kitchen_at}
-                              />
-                            ))}
+                  ) : (
+                    <div className="space-y-3">
+                      {draftItems.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 px-1">
+                            <Pencil className="h-3 w-3 text-muted-foreground" />
+                            <h3 className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              Não enviados ainda
+                              <span className="ml-1 normal-case text-muted-foreground/70">
+                                ({draftItems.length})
+                              </span>
+                            </h3>
                           </div>
-                        )}
-                        {sentItems.length > 0 && (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 px-1">
-                              <ChefHat className="h-3 w-3 text-muted-foreground" />
-                              <h3 className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                Enviados para a cozinha
-                                <span className="ml-1 normal-case text-muted-foreground/70">
-                                  ({sentItems.length})
-                                </span>
-                              </h3>
-                            </div>
-                            {sentItems.map((item) => (
-                              <ComandaItemCard
-                                key={item.id}
-                                variant="sent"
-                                productName={item.product_name}
-                                quantity={item.quantity}
-                                unitPrice={item.unit_price}
-                                notes={item.notes}
-                                kitchenStatus={item.kitchen_status}
-                                sentToKitchenAt={item.sent_to_kitchen_at}
-                              />
-                            ))}
+                          {draftItems.map((item) => (
+                            <ComandaItemCard
+                              key={item.draftId}
+                              variant="draft"
+                              productName={item.productName}
+                              quantity={item.quantity}
+                              unitPrice={item.unitPrice}
+                              notes={item.notes}
+                              kitchenStatus="pendente"
+                              sentToKitchenAt={null}
+                              /* Edição é feita na tela da comanda */
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {sentItems.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 px-1">
+                            <ChefHat className="h-3 w-3 text-muted-foreground" />
+                            <h3 className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                              Enviados para a cozinha
+                              <span className="ml-1 normal-case text-muted-foreground/70">
+                                ({sentItems.length})
+                              </span>
+                            </h3>
                           </div>
-                        )}
-                      </div>
-                    );
-                  })()}
+                          {sentItems.map((item) => (
+                            <ComandaItemCard
+                              key={item.id}
+                              variant="sent"
+                              productName={item.product_name}
+                              quantity={item.quantity}
+                              unitPrice={item.unit_price}
+                              notes={item.notes}
+                              kitchenStatus={item.kitchen_status}
+                              sentToKitchenAt={item.sent_to_kitchen_at}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
