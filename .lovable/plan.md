@@ -1,17 +1,24 @@
-## Remover indicadores de tempo de espera no painel Salão
+## Corrigir contador "Mesa tem mais N comanda(s)"
 
-Os dados de tempo (urgência por minutos, "Aguardando há X min" e "Média de espera") não são relevantes para o caixa. Remover toda essa lógica.
+**Bug confirmado no banco:** a Mesa 03 tem apenas 1 comanda aberta, mas o card mostra "Mesa tem mais 1 comanda".
 
-### Mudanças
+**Causa:** em `SalonQueuePanel.tsx`, `openCountByOrderId` conta todas as comandas abertas/em_cobrança do `order_id`, inclusive a do próprio card. Para `siblings` (irmãs), deve-se subtrair 1.
 
-**`src/components/pdv/cashier/SalonQueueCard.tsx`**
-- Remover a linha "Aguardando há X min" e o cálculo de urgência (variáveis `urgency`, `waitingText`).
-- Remover ring/borda destacada por urgência.
-- Remover prop `waitingMinutes` e imports não usados (`Clock`, `AlertTriangle`).
+### Mudança
 
-**`src/components/pdv/cashier/SalonQueuePanel.tsx`**
-- Remover o trecho "· Média de espera: X min" e a memoização `avgWaitMin`.
-- Remover o cálculo de `minutes` e a prop `waitingMinutes` passada ao `SalonQueueCard`.
-- Manter o sort "Mais antigas primeiro" (continua funcionando via `oldestAt` dos grupos).
-- Remover o pin de "alertas (>10min)" no topo, já que urgência por tempo deixa de existir.
-- Remover o intervalo `setInterval` de 60s usado só para re-render do contador (e o estado `tick`).
+**`src/components/pdv/cashier/SalonQueuePanel.tsx`** (linhas ~307-310)
+
+Trocar:
+```ts
+const siblings = c.order_id
+  ? openCountByOrderId.get(c.order_id) ?? 0
+  : 0;
+```
+por:
+```ts
+const siblings = c.order_id
+  ? Math.max(0, (openCountByOrderId.get(c.order_id) ?? 0) - 1)
+  : 0;
+```
+
+Assim o aviso "Mesa tem mais N comanda(s)" só aparece quando realmente existem outras comandas além da exibida no card.
