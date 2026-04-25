@@ -3,11 +3,9 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 import {
-  Clock,
   ChevronDown,
   ChevronUp,
   CreditCard,
-  AlertTriangle,
 } from "lucide-react";
 import type { Comanda, ComandaItem } from "@/hooks/use-pdv-comandas";
 
@@ -20,8 +18,6 @@ interface SalonQueueCardProps {
   borderColor: string;
   /** Quantas outras comandas da mesma mesa ainda existem (abertas/em_cobranca) */
   siblingCount?: number;
-  /** Minutos esperando (calculado pelo painel para todos os cards juntos) */
-  waitingMinutes: number;
   onCharge: () => void;
 }
 
@@ -31,7 +27,6 @@ export function SalonQueueCard({
   title,
   borderColor,
   siblingCount = 0,
-  waitingMinutes,
   onCharge,
 }: SalonQueueCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -42,21 +37,11 @@ export function SalonQueueCard({
     items.slice(0, 3).map((i) => `${i.quantity}x ${i.product_name}`).join(", ") +
     (items.length > 3 ? ", …" : "");
 
-  // Urgência por tempo
-  const urgency: "ok" | "warn" | "alert" =
-    waitingMinutes >= 10 ? "alert" : waitingMinutes >= 5 ? "warn" : "ok";
-
-  const waitingText =
-    waitingMinutes < 1
-      ? "Aguardando há menos de 1 min"
-      : `Aguardando há ${waitingMinutes} min${urgency === "alert" ? " — atenção" : ""}`;
-
   return (
     <div
       className={cn(
         "rounded-lg border bg-card border-l-4 p-3 transition-colors",
         borderColor,
-        urgency === "alert" && "border-destructive ring-1 ring-destructive/30",
         isCharging && "opacity-80",
       )}
       aria-busy={isCharging}
@@ -76,24 +61,7 @@ export function SalonQueueCard({
         </span>
       </div>
 
-      {/* Linha 3: tempo aguardando com cor progressiva */}
-      <div
-        className={cn(
-          "flex items-center gap-1 text-xs mb-1",
-          urgency === "ok" && "text-muted-foreground",
-          urgency === "warn" && "text-yellow-600 dark:text-yellow-500",
-          urgency === "alert" && "text-destructive font-semibold",
-        )}
-      >
-        {urgency === "alert" ? (
-          <AlertTriangle className="h-3 w-3" />
-        ) : (
-          <Clock className="h-3 w-3" />
-        )}
-        {waitingText}
-      </div>
-
-      {/* Linha 4: prévia de itens */}
+      {/* Prévia de itens */}
       {items.length > 0 && (
         <div className="text-[11px] text-muted-foreground line-clamp-1 mb-2">
           {preview}

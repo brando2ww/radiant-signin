@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -67,12 +67,6 @@ export function SalonQueuePanel({
   } = usePDVComandas();
   const { tables } = usePDVTables();
 
-  // Re-render a cada minuto para atualizar contadores de tempo
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 60_000);
-    return () => clearInterval(id);
-  }, []);
 
   const [sortBy, setSortBy] = useState<SortOption>("time");
 
@@ -147,15 +141,7 @@ export function SalonQueuePanel({
     });
 
     // Ordena grupos
-    const now = Date.now();
-    const isAlertGroup = (g: GroupedItem) => (now - g.oldestAt) / 60_000 >= 10;
-
     arr.sort((a, b) => {
-      // Pin: alertas (>10min) sempre no topo
-      const aAlert = isAlertGroup(a);
-      const bAlert = isAlertGroup(b);
-      if (aAlert !== bAlert) return aAlert ? -1 : 1;
-
       switch (sortBy) {
         case "value":
           return b.total - a.total;
@@ -180,15 +166,6 @@ export function SalonQueuePanel({
 
   const totalCount = pendingComandas.length;
   const totalValue = pendingComandas.reduce((s, c) => s + c.subtotal, 0);
-  const avgWaitMin = useMemo(() => {
-    if (pendingComandas.length === 0) return 0;
-    const now = Date.now();
-    const total = pendingComandas.reduce((s, c) => {
-      const ts = new Date(c.closed_by_waiter_at ?? c.updated_at).getTime();
-      return s + Math.max(0, (now - ts) / 60_000);
-    }, 0);
-    return Math.round(total / pendingComandas.length);
-  }, [pendingComandas]);
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["pdv-comandas"] });
@@ -240,19 +217,6 @@ export function SalonQueuePanel({
               Total:{" "}
               <span className="font-semibold text-foreground tabular-nums">
                 {formatBRL(totalValue)}
-              </span>{" "}
-              · Média de espera:{" "}
-              <span
-                className={cn(
-                  "font-semibold tabular-nums",
-                  avgWaitMin >= 10
-                    ? "text-destructive"
-                    : avgWaitMin >= 5
-                    ? "text-yellow-600 dark:text-yellow-500"
-                    : "text-foreground",
-                )}
-              >
-                {avgWaitMin} min
               </span>
             </div>
           </div>
@@ -332,10 +296,6 @@ export function SalonQueuePanel({
 
                   {group.comandas.map((c) => {
                     const items = getItemsByComanda(c.id);
-                    const ts = new Date(
-                      c.closed_by_waiter_at ?? c.updated_at,
-                    ).getTime();
-                    const minutes = Math.max(0, Math.floor((Date.now() - ts) / 60_000));
                     const tableLabel = group.table
                       ? formatTableLabel(group.table.table_number)
                       : null;
@@ -356,7 +316,6 @@ export function SalonQueuePanel({
                         title={title}
                         borderColor={group.color}
                         siblingCount={siblings}
-                        waitingMinutes={minutes}
                         onCharge={() => onSelectComanda(c, items)}
                       />
                     );

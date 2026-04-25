@@ -1,16 +1,17 @@
-## Remover ação "Devolver ao garçom" do painel Salão
+## Remover indicadores de tempo de espera no painel Salão
 
-Como o garçom não fecha mais comandas, devolvê-las deixa de fazer sentido — o caixa deve apenas cobrar.
+Os dados de tempo (urgência por minutos, "Aguardando há X min" e "Média de espera") não são relevantes para o caixa. Remover toda essa lógica.
 
 ### Mudanças
 
 **`src/components/pdv/cashier/SalonQueueCard.tsx`**
-- Remover botão "Devolver ao garçom" (ícone `Undo2`) e o `AlertDialog` de motivo.
-- Remover props `onReturnToWaiter` e `isReturning`, estados `returnDialog`/`returnReason` e o handler `handleConfirmReturn`.
-- Remover imports não usados: `AlertDialog*`, `Textarea`, `Undo2`.
+- Remover a linha "Aguardando há X min" e o cálculo de urgência (variáveis `urgency`, `waitingText`).
+- Remover ring/borda destacada por urgência.
+- Remover prop `waitingMinutes` e imports não usados (`Clock`, `AlertTriangle`).
 
 **`src/components/pdv/cashier/SalonQueuePanel.tsx`**
-- Remover props `onReturnToWaiter` e `isReturning` do `<SalonQueueCard>`.
-- Remover destructuring de `returnToWaiter` e `isReturningToWaiter` do hook.
-
-A mutation `returnToWaiter` em `use-pdv-comandas.ts` permanece exportada por enquanto (não há outros consumidores; pode ser limpa em outro passo se desejado).
+- Remover o trecho "· Média de espera: X min" e a memoização `avgWaitMin`.
+- Remover o cálculo de `minutes` e a prop `waitingMinutes` passada ao `SalonQueueCard`.
+- Manter o sort "Mais antigas primeiro" (continua funcionando via `oldestAt` dos grupos).
+- Remover o pin de "alertas (>10min)" no topo, já que urgência por tempo deixa de existir.
+- Remover o intervalo `setInterval` de 60s usado só para re-render do contador (e o estado `tick`).
