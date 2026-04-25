@@ -301,6 +301,9 @@ export function PaymentDialog({
       setNfceState({ kind: "idle" });
       paymentDoneRef.current = false;
       lockedIdsRef.current = [];
+      setChargeMode(splitByComanda && tableComandas.length > 1 ? "split-forms" : "all");
+      setSelectedItemQtys(new Map());
+      chargingSessionRef.current = crypto.randomUUID();
 
       // Pré-popular split-por-comanda quando vier de "Cobrar tudo da mesa"
       if (splitByComanda && tableComandas.length > 1) {
