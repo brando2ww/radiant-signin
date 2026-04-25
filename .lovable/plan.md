@@ -1,107 +1,159 @@
-## Transferência de itens entre comandas e mesas
 
-Permitir mover um ou vários itens lançados na comanda errada para outra comanda (avulsa ou de outra mesa), preservando produto, quantidade, observações e `kitchen_status`. A operação é atômica, registrada em log e atualiza os subtotais imediatamente.
+## Pagamento parcial por seleção de itens
 
-### Estado atual
+Adicionar uma nova modalidade de cobrança no `PaymentDialog` que permite selecionar itens específicos (e quantidades parciais) para pagar agora, mantendo o restante pendente na comanda até liquidação total.
 
-- `usePDVComandas` já expõe `transferItem` (atualiza só `comanda_id` de um item). Vamos substituir por uma versão robusta que aceita múltiplos itens, valida regras e registra log.
-- `ComandaDetailsDialog` já tem botão "Transferir" mas o handler nunca foi ligado (Salon e Comandas passam `onTransferItem` indefinido).
-- Garçom (`GarcomComandaDetalhe`) ainda não tem ação de transferir.
-- `PaymentDialog` (caixa) lista itens com botão de remover — vamos adicionar botão de transferir ao lado, exceto quando a comanda está `em_cobranca` (regra do enunciado).
+---
 
-### Arquivos novos
+### Observação importante sobre o estado atual
 
-**`src/components/pdv/transfer/TransferItemsDialog.tsx`** — Dialog/Drawer responsivo (`useIsMobile`) com 3 passos internos:
+O dialog hoje tem apenas **dois modos**: "Pagar tudo (forma única)" e "Dividir pagamento (várias formas para o mesmo total)". Não existem ainda "dividir igualmente" nem "dividir por pessoa". Vamos introduzir um **seletor de modo de cobrança** com 3 opções iniciais e a nova quarta opção:
 
-1. **Itens selecionados** (resumo): cards mostrando `quantidade × nome` e `formatBRL(subtotal)`. Quando entrar pelo fluxo de seleção múltipla, lista todos os itens; quando entrar por um item só, mostra apenas ele.
-2. **Destino**:
-   - Campo de busca (filtra por número de mesa e nome de comanda).
-   - Lista de mesas ocupadas: card por mesa com `formatTableLabel`, contagem de comandas e nomes (ex: "Mesa 3 — Eduardo, João"). Mesa atual é excluída visualmente.
-   - Seção "Comandas avulsas" (sem `order_id`, status `aberta`).
-   - Comandas com status `em_cobranca` ou `aguardando_pagamento` aparecem desabilitadas com tooltip "Comanda em cobrança".
-   - Mesa com 2+ comandas expande em sub-cards para o usuário escolher uma especificamente.
-3. **Confirmação**: resumo "De Mesa X — Comanda Y" → "Para Mesa Z — Comanda W", lista de itens, e impacto financeiro `Subtotal origem reduz formatBRL(total) / Subtotal destino aumenta formatBRL(total)`. Botões "Confirmar transferência" / "Voltar".
-
-Aviso superior amarelo quando algum item tem `kitchen_status` = `pronto`/`entregue`: "Este item já foi preparado. Mover não desfaz o preparo na cozinha."
-
-**`src/hooks/use-transfer-items.ts`** (ou expandir em `use-pdv-comandas.ts`) — substitui `transferItemMutation`:
-
-```ts
-mutationFn: async ({ itemIds, targetComandaId, sourceComandaId }: {
-  itemIds: string[]; targetComandaId: string; sourceComandaId: string;
-}) => {
-  // 1. Buscar comanda destino e validar status != em_cobranca/aguardando_pagamento
-  const { data: target } = await supabase
-    .from("pdv_comandas").select("id,status").eq("id", targetComandaId).single();
-  if (!target || ["em_cobranca","aguardando_pagamento","fechada","cancelada"].includes(target.status))
-    throw new Error("Comanda destino não está disponível");
-  if (targetComandaId === sourceComandaId) throw new Error("Origem e destino iguais");
-
-  // 2. Update em batch (atômico via .in())
-  const { error } = await supabase.from("pdv_comanda_items")
-    .update({ comanda_id: targetComandaId })
-    .in("id", itemIds);
-  if (error) throw error;
-
-  // 3. Log via logActivityDirect
-  await logActivityDirect(user.id, "update", "transaction", targetComandaId, {
-    action: "comanda_item_transfer",
-    source_comanda_id: sourceComandaId,
-    target_comanda_id: targetComandaId,
-    item_ids: itemIds,
-  });
-}
+```text
+[ Tudo ]  [ Várias formas ]  [ Por produto (NOVO) ]
 ```
 
-Trigger SQL `update_comanda_subtotal` já recalcula subtotais de origem e destino automaticamente em UPDATE — sem migração necessária.
+(Os dois modos antigos ficam preservados; "dividir igualmente / por pessoa" pode ser feito num próximo passo.)
 
-### Arquivos modificados
+---
 
-**`src/pages/pdv/Salon.tsx`** e **`src/pages/pdv/Comandas.tsx`**:
-- Adicionar estado `transferState: { itemIds: string[]; sourceComandaId: string } | null`.
-- Passar `onTransferItem={(itemId) => setTransferState({ itemIds: [itemId], sourceComandaId: selectedComanda.id })}` para `ComandaDetailsDialog`.
-- Renderizar `<TransferItemsDialog>` controlado por `transferState`.
+### Fluxo da nova opção "Por produto"
 
-**`src/components/pdv/ComandaDetailsDialog.tsx`**:
-- Adicionar modo de seleção múltipla: ícone "checkbox" no header que ativa checkboxes em cada linha. Botão flutuante "Mover N itens" aparece quando há seleção e chama uma nova prop `onTransferMultiple(itemIds: string[])`.
-- Manter botão individual de transferir já existente.
-- Ocultar/desabilitar transferir quando `comanda.status === "em_cobranca"`.
+**Passo 1 — Seleção**
+- A lista do "Resumo do pedido" passa a renderizar checkbox grande à esquerda de cada linha.
+- Itens já marcados como `pago` aparecem riscados, esmaecidos, sem checkbox.
+- Itens em `em_cobranca` por outra sessão paralela aparecem com cadeado e badge "em cobrança", desabilitados.
+- Para `quantity > 1`, mostrar stepper "1 / 3" ao lado do checkbox para escolher quantas unidades pagar agora (default = restante não-pago).
+- Atalhos: "Selecionar todos pendentes" e "Limpar seleção".
+- Subtotal da seleção atualiza em tempo real e aparece num **rodapé sticky** com:
+  `X de Y itens — R$ XX,XX selecionado`
+  Botão "Cobrar seleção".
 
-**`src/pages/garcom/GarcomComandaDetalhe.tsx`**:
-- Adicionar ícone `ArrowRightLeft` em cada `ComandaItemCard` (nova prop `onTransfer?`) que abre `TransferItemsDialog`.
-- Modo de seleção múltipla com long-press ou botão "Selecionar" no header → checkboxes + botão "Mover (N)" no bottom bar.
+**Passo 2 — Confirmar e pagar**
+- Ao clicar "Cobrar seleção", o painel direito do dialog passa a operar sobre o **subtotal da seleção** (não o subtotal total).
+- Desconto e taxa de serviço são calculados **proporcionalmente** sobre a fração selecionada.
+- Card destacado mostra:
+  - "Cobrando agora": lista resumida dos itens/qtds selecionados + total
+  - "Fica em aberto": contagem + total restante após o pagamento
+- Forma de pagamento (dinheiro/cartão/pix) e troco funcionam normalmente.
 
-**`src/components/garcom/ComandaItemCard.tsx`**:
-- Nova prop `onTransfer?: () => void`. Adiciona botão `ArrowRightLeft` ao lado do `onRemove` existente.
-- Nova prop opcional `selectMode?: boolean` + `selected?: boolean` + `onToggleSelect?: () => void` para renderizar checkbox.
+**Passo 3 — Após confirmar**
+- Itens 100% pagos: marcados como `pago` (visualmente riscados na próxima abertura).
+- Itens parcialmente pagos (qtd parcial): permanecem na lista com indicador "1 de 3 pago" e podem ser cobrados de novo depois.
+- A comanda **permanece aberta** (status volta de `em_cobranca` → `aguardando_pagamento` ou `aberta` conforme origem) enquanto houver qtd pendente.
+- Quando a última unidade pendente for paga, a comanda fecha automaticamente e a mesa libera (lógica já existente em `registerPayment`).
+- Cada pagamento parcial é gravado individualmente em `pdv_payments` + tabela de auditoria `pdv_payment_items` com (item_id, qty_paga, valor).
 
-**`src/components/pdv/cashier/PaymentDialog.tsx`** (linhas 680-720):
-- Ao lado do botão `Trash2`, adicionar botão `ArrowRightLeft` (mesmo padrão `canRemove` — habilitado só quando `comanda.status !== "em_cobranca"` da origem; aqui já está sendo cobrada, então o botão fica desabilitado com tooltip "Comanda em cobrança — transferência não permitida"). Se a regra for permitir transferir antes de iniciar a cobrança, isso fica fora do PaymentDialog. **Decisão**: no PaymentDialog não permitir transferir (comanda já está sendo cobrada). Ao invés disso, manter ação de transferir apenas em Salon/Comandas/Garçom (antes do envio para o caixa).
+---
 
-### Regras de negócio aplicadas
+### Mudanças técnicas
 
-| Regra | Implementação |
-|---|---|
-| Origem ≠ destino | Validação no mutation + filtro visual na lista |
-| Comanda destino em cobrança/fechada/cancelada | Bloqueada visualmente + erro no servidor |
-| Comanda origem em cobrança | Botão "Transferir" desabilitado |
-| `kitchen_status` preservado | Update só altera `comanda_id` |
-| Atomicidade | Update único com `.in("id", itemIds)` |
-| Subtotais recalculam | Trigger `update_comanda_subtotal` (já existe) |
-| Log auditoria | `logActivityDirect` com action `comanda_item_transfer` |
-| Toast | "N item(s) movido(s) de Mesa X para Mesa Y" |
-| Comanda origem fica vazia | Permanece `aberta` (não fechamos automaticamente) |
+**Schema (migration)**
 
-### Permissões
+1. `pdv_comanda_items`: adicionar colunas
+   - `paid_quantity integer NOT NULL DEFAULT 0`
+   - `fully_paid boolean GENERATED ALWAYS AS (paid_quantity >= quantity) STORED` (ou coluna comum + trigger)
+   - índice em `(comanda_id, fully_paid)` para queries rápidas
 
-Para v1, qualquer usuário autenticado com acesso à comanda pode transferir (RLS atual já restringe). O enunciado pede "garçom responsável pela mesa, líder ou gestor" — porém não há campo `assigned_waiter_id` em `pdv_orders`. Se quiser restringir por role, adicionar guard com `useUserRole`: bloquear `caixa` (que opera o PaymentDialog) e permitir `garcom`, `gerente`, `proprietario`. Confirmação: aplicaremos esse guard simples no botão de transferir.
+2. Nova tabela `pdv_payment_items`:
+   - `id uuid pk`, `payment_id uuid → pdv_payments.id ON DELETE CASCADE`
+   - `comanda_item_id uuid → pdv_comanda_items.id`
+   - `quantity_paid integer`, `unit_price numeric`, `subtotal_paid numeric`
+   - `created_at`
+   - RLS espelhando a do `pdv_payments`
+
+3. Trigger `update_comanda_subtotal`: ajustar para considerar **subtotal pendente** = `SUM(unit_price * (quantity - paid_quantity))`. Manter `subtotal` original e adicionar `pending_subtotal` em `pdv_comandas`, OU recalcular `subtotal` para refletir só o pendente — **vamos manter `subtotal` como total bruto** (não muda) e **adicionar `pending_subtotal numeric` em `pdv_comandas`** atualizado pelo trigger. Isto evita quebrar relatórios.
+
+4. Bloqueio de seleção concorrente: nova tabela leve `pdv_comanda_item_locks` (item_id, locked_by, locked_at, expires_at) com TTL curto (~5 min), checada na UI e no momento do pagamento. Alternativa mais simples: gravar `charging_session_id` na própria linha de item — preferimos esta para reduzir superfície.
+   - Adicionar `charging_session_id uuid NULL` em `pdv_comanda_items` + função RPC `lock_comanda_items(item_ids[])` que faz update atômico só se `charging_session_id IS NULL`.
+
+**Hook `usePDVPayments`**
+
+- Estender `RegisterPaymentParams` com campo opcional `partialItems?: { itemId, quantityPaid }[]`.
+- Quando presente:
+  - **NÃO** fechar a comanda automaticamente.
+  - Atualizar `paid_quantity` de cada item (incrementando, não substituindo).
+  - Inserir linhas em `pdv_payment_items`.
+  - Liberar `charging_session_id` dos itens cobrados.
+  - Após o update, verificar se todos os itens têm `fully_paid = true`; se sim, executar a finalização normal (fechar comanda, liberar mesa, fechar order).
+- Inserir movimento de caixa com descrição `"Comanda #X — pagamento parcial"`.
+- Disparar `logActivityDirect` com action `comanda_partial_payment` contendo lista de itens cobertos.
+
+**Hook `usePDVComandas`**
+
+- Filtrar `liveComandaItems` para incluir `paid_quantity` e flags. Já carregado pela query — basta o tipo.
+- Nova mutation `lockItemsForCharging(itemIds[])` / `unlockItems(itemIds[])` chamando RPC.
+
+**Componente `PaymentDialog`**
+
+- Novo state:
+  ```ts
+  type ChargeMode = "all" | "split-forms" | "by-product";
+  const [chargeMode, setChargeMode] = useState<ChargeMode>("all");
+  const [selectedItemQtys, setSelectedItemQtys] = useState<Map<string, number>>(new Map());
+  const [byProductStep, setByProductStep] = useState<"select" | "confirm">("select");
+  ```
+- Trocar o atual `Switch "Dividir pagamento"` por um **segmented control** com 3 modos no topo da coluna direita.
+- `subtotal` efetivo passa a ser derivado:
+  - `all` / `split-forms`: comportamento atual (soma de displayItems pendentes)
+  - `by-product`: soma de `unit_price * selectedQty` para cada itemId selecionado
+- Desconto/taxa: a fração `selectedSubtotal / fullSubtotal` é aplicada aos valores absolutos (mantém percent natural).
+- Ao confirmar pagamento `by-product`: chamar `registerPayment({ ..., partialItems })`.
+- Ao abrir o modo "by-product", chamar `lockItemsForCharging` para os itens visíveis (ou só ao marcar checkbox — preferível: lock no momento do clique, unlock no desmarcar).
+- Ao fechar o dialog sem concluir: liberar todos os locks adquiridos.
+- Itens com `paid_quantity > 0` mostrar badge "Pago: 1/3", `paid_quantity === quantity` mostrar riscado e cinza.
+
+**Lista de itens fora do PaymentDialog**
+
+- `ComandaItemCard.tsx`, `ComandaDetailsDialog.tsx`, `GarcomComandaDetalhe.tsx`: aplicar o mesmo tratamento visual (riscado / "X/Y pago") para refletir consistência.
+
+**Validações**
+
+- Não confirmar com 0 itens selecionados (botão desabilitado).
+- Se outro caixa pegou um item entre a seleção e a confirmação, exibir toast e remover da seleção (conflito otimista).
+- Comanda em status `fechada` ou `cancelada`: modo "by-product" indisponível.
+
+---
+
+### Estrutura de UI (modo by-product, mobile-friendly p/ tablet)
+
+```text
+┌─ Pagamento - Mesa 5 ────────────────── X ─┐
+│ [ Tudo ] [ Várias formas ] [Por produto▣]│
+│                                            │
+│  Resumo do Pedido                          │
+│  ┌──────────────────────────────────────┐ │
+│  │ ☐  3x Refrigerante  [2/3]  R$ 18,00 │ │
+│  │ ☑  1x X-Burger              R$ 28,00│ │
+│  │ ━━ 1x Suco (PAGO) ━━━━━━━━ R$ 8,00 │ │
+│  │ 🔒 1x Sobremesa (em cobrança)       │ │
+│  └──────────────────────────────────────┘ │
+│  [Selecionar todos]  [Limpar]              │
+│                                            │
+│  ─── Cobrando agora ─────────────          │
+│  • 2x Refrigerante      R$ 12,00           │
+│  • 1x X-Burger          R$ 28,00           │
+│  Subtotal selecionado:  R$ 40,00           │
+│  Taxa serviço (10%):    R$  4,00           │
+│  TOTAL A COBRAR:        R$ 44,00           │
+│                                            │
+│  Fica em aberto: 2 itens — R$ 26,00        │
+│                                            │
+│  [Forma de pagamento ...]                  │
+│                                            │
+│  [Cancelar]            [Cobrar R$ 44,00]   │
+└────────────────────────────────────────────┘
+```
+
+---
 
 ### Validação manual
 
-1. Garçom: comanda da Mesa 3 → toca em item → "Transferir" → seleciona Mesa 5 (com 2 comandas) → escolhe a comanda do João → confirma → item some da origem, aparece no destino, totais recalculam, toast.
-2. Selecionar 3 itens via checkbox → "Mover 3" → escolhe comanda avulsa → confirmação mostra os 3 itens e o total → confirma → tudo movido.
-3. Tentar transferir para a própria comanda: opção não aparece na lista.
-4. Tentar transferir para comanda em cobrança: card aparece desabilitado com tooltip.
-5. Item com `kitchen_status="pronto"`: dialog mostra aviso amarelo, mas permite mover.
-6. Transferir item de comanda `em_cobranca`: botão desabilitado.
-7. Auditoria: gestor abre tela de logs e vê entrada `comanda_item_transfer` com IDs.
+- Comanda com 3 itens; selecionar 1 → cobrar → dialog mostra "concluído", reabrir comanda → 2 itens visíveis, 1 riscado como pago.
+- Item com qty=3, pagar 2 → reabrir, item mostra "1/3 pendente, 2/3 pago" e qty restante = 1.
+- Pagar último item pendente → comanda fecha, mesa libera (mesma lógica de hoje).
+- Dois caixas no mesmo PDV: caixa A marca itens A; caixa B vê esses itens com cadeado e não consegue selecionar.
+- Cancelar dialog após selecionar → locks liberados, próximo caixa consegue selecionar.
+- Desconto 10% aplicado em modo by-product → desconto incide só sobre o subtotal selecionado.
+- Auditoria: `pdv_payments` ganha 1 linha por pagamento parcial; `pdv_payment_items` mostra a composição.
+- Balcão (comanda virtual sem registro): o seletor "Por produto" fica desabilitado com tooltip "disponível apenas para comandas/mesas".
