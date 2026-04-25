@@ -42,6 +42,7 @@ interface ComandaDetailsDialogProps {
   onUpdateItem: (id: string, updates: Partial<ComandaItem>) => void;
   onRemoveItem: (id: string) => void;
   onTransferItem?: (itemId: string) => void;
+  onTransferMultiple?: (itemIds: string[]) => void;
   onSendToKitchen: (itemIds: string[]) => void;
   onClose: () => void;
   onCancel: () => void;
