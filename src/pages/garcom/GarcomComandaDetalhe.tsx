@@ -67,6 +67,7 @@ export default function GarcomComandaDetalhe() {
       await sendToKitchenAsync(created.map((c) => c.id));
       draft.clear(id);
       toast.success("Pedido enviado para a cozinha");
+      navigate("/garcom");
     } catch (err: any) {
       toast.error("Erro ao enviar para a cozinha: " + (err?.message ?? "desconhecido"));
     } finally {
