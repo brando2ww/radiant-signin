@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Plus, Minus, Send } from "lucide-react";
+import { ArrowLeft, Search, Plus, Minus, ClipboardCheck } from "lucide-react";
 import { usePDVProducts } from "@/hooks/use-pdv-products";
-import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { useDraftCart } from "@/contexts/DraftCartContext";
 import { usePDVProductOptionsForOrder } from "@/hooks/use-pdv-product-options";
 import type { SelectedOption } from "@/components/pdv/ProductOptionSelector";
