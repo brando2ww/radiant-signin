@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Search, Plus, Minus, Send } from "lucide-react";
+import { ArrowLeft, Search, Plus, Minus, ClipboardCheck } from "lucide-react";
 import { usePDVProducts } from "@/hooks/use-pdv-products";
-import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { useDraftCart } from "@/contexts/DraftCartContext";
 import { usePDVProductOptionsForOrder } from "@/hooks/use-pdv-product-options";
 import type { SelectedOption } from "@/components/pdv/ProductOptionSelector";
@@ -27,39 +26,15 @@ export default function GarcomAdicionarItem() {
   const { id: comandaId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { products, isLoading } = usePDVProducts();
-  const { addItem: persistItem, sendToKitchenAsync } = usePDVComandas();
   const draft = useDraftCart();
 
   const draftItems = comandaId ? draft.getItems(comandaId) : [];
   const draftTotal = comandaId ? draft.total(comandaId) : 0;
   const draftCount = comandaId ? draft.count(comandaId) : 0;
 
-  const [sending, setSending] = useState(false);
-
-  const handleSendToKitchen = async () => {
-    if (!comandaId || draftItems.length === 0 || sending) return;
-    setSending(true);
-    try {
-      const created = await Promise.all(
-        draftItems.map((it) =>
-          persistItem({
-            comandaId,
-            productId: it.productId,
-            productName: it.productName,
-            quantity: it.quantity,
-            unitPrice: it.unitPrice,
-            notes: it.notes,
-          }),
-        ),
-      );
-      await sendToKitchenAsync(created.map((c) => c.id));
-      draft.clear(comandaId);
-      navigate("/garcom");
-    } catch (err: any) {
-      toast.error("Erro ao enviar para a cozinha: " + (err?.message ?? "desconhecido"));
-    } finally {
-      setSending(false);
-    }
+  const handleGoToReview = () => {
+    if (!comandaId) return;
+    navigate(`/garcom/comanda/${comandaId}`);
   };
 
   const [search, setSearch] = useState("");
@@ -201,7 +176,7 @@ export default function GarcomAdicionarItem() {
         )}
       </div>
 
-      {/* Send to Kitchen Bar */}
+      {/* Conferir Comanda Bar */}
       {draftItems.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background">
           <div className="px-4 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom))]">
@@ -212,12 +187,11 @@ export default function GarcomAdicionarItem() {
               <span className="font-semibold tabular-nums">{formatBRL(draftTotal)}</span>
             </div>
             <Button
-              onClick={handleSendToKitchen}
-              disabled={sending}
+              onClick={handleGoToReview}
               className="w-full h-11 active:scale-[0.98] transition-transform"
             >
-              <Send className="h-4 w-4 mr-2" />
-              {sending ? "Enviando..." : "Enviar para Cozinha"}
+              <ClipboardCheck className="h-4 w-4 mr-2" />
+              Conferir comanda ({draftCount})
             </Button>
           </div>
         </div>

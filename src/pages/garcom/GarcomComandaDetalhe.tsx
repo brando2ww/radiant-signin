@@ -66,7 +66,7 @@ export default function GarcomComandaDetalhe() {
       );
       await sendToKitchenAsync(created.map((c) => c.id));
       draft.clear(id);
-      navigate("/garcom");
+      toast.success("Pedido enviado para a cozinha");
     } catch (err: any) {
       toast.error("Erro ao enviar para a cozinha: " + (err?.message ?? "desconhecido"));
     } finally {
@@ -316,41 +316,49 @@ export default function GarcomComandaDetalhe() {
               <span className="tabular-nums">{formatBRL(total)}</span>
             </div>
             {canEdit ? (
-              <div className="grid grid-cols-3 gap-2">
-                <Button
-                  variant="outline"
-                  className="active:scale-95 h-11"
-                  onClick={() => navigate(`/garcom/comanda/${id}/adicionar`)}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Item
-                </Button>
-                {draftCount > 0 ? (
+              draftCount > 0 ? (
+                <div className="space-y-2">
                   <Button
-                    className="active:scale-95 h-11"
+                    className="w-full h-12 active:scale-95 text-base"
                     onClick={handleFlushDraft}
                     disabled={sending}
                   >
-                    <Send className="h-4 w-4 mr-1" />
-                    {sending ? "Enviando..." : `Cozinha (${draftCount})`}
+                    <Send className="h-4 w-4 mr-2" />
+                    {sending ? "Enviando..." : `Enviar para cozinha (${draftCount})`}
                   </Button>
-                ) : (
-                  <div />
-                )}
-                <Button
-                  variant="secondary"
-                  className="active:scale-95 h-11"
-                  disabled={sentItems.length === 0 || draftItems.length > 0}
-                  onClick={() => {
-                    closeComanda(comanda.id);
-                    navigate(-1);
-                  }}
-                  title={draftItems.length > 0 ? "Envie o rascunho para a cozinha antes de fechar" : undefined}
-                >
-                  <CreditCard className="h-4 w-4 mr-1" />
-                  Fechar
-                </Button>
-              </div>
+                  <Button
+                    variant="outline"
+                    className="w-full h-11 active:scale-95"
+                    onClick={() => navigate(`/garcom/comanda/${id}/adicionar`)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Continuar adicionando
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    className="active:scale-95 h-11"
+                    onClick={() => navigate(`/garcom/comanda/${id}/adicionar`)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar item
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="active:scale-95 h-11"
+                    disabled={sentItems.length === 0}
+                    onClick={() => {
+                      closeComanda(comanda.id);
+                      navigate(-1);
+                    }}
+                  >
+                    <CreditCard className="h-4 w-4 mr-1" />
+                    Fechar
+                  </Button>
+                </div>
+              )
             ) : (
               <p className="text-xs text-center text-muted-foreground py-2">
                 {comanda.status === "em_cobranca"
