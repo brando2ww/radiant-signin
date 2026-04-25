@@ -9,14 +9,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, DollarSign, CreditCard, Smartphone } from "lucide-react";
+import { ArrowDown, ArrowUp, DollarSign, CreditCard, Smartphone, Ticket } from "lucide-react";
 import { formatBRL } from "@/lib/format";
+
+type PaymentMethodKey =
+  | "dinheiro"
+  | "cartao"
+  | "credito"
+  | "debito"
+  | "pix"
+  | "vale_refeicao";
 
 interface Movement {
   id: string;
   type: "entrada" | "sangria" | "reforco" | "venda";
   amount: number;
-  payment_method?: "dinheiro" | "cartao" | "pix";
+  payment_method?: PaymentMethodKey;
   description: string | null;
   created_at: string;
 }
@@ -32,10 +40,13 @@ const TYPE_CONFIG = {
   venda: { label: "Venda", icon: DollarSign, variant: "default" as const },
 };
 
-const PAYMENT_METHOD_CONFIG = {
+const PAYMENT_METHOD_CONFIG: Record<PaymentMethodKey, { label: string; icon: typeof DollarSign }> = {
   dinheiro: { label: "Dinheiro", icon: DollarSign },
   cartao: { label: "Cartão", icon: CreditCard },
+  credito: { label: "Crédito", icon: CreditCard },
+  debito: { label: "Débito", icon: CreditCard },
   pix: { label: "PIX", icon: Smartphone },
+  vale_refeicao: { label: "Vale-refeição", icon: Ticket },
 };
 
 export function CashMovementsList({ movements }: CashMovementsListProps) {
