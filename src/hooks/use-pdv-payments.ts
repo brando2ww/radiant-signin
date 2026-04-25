@@ -20,6 +20,27 @@ interface RegisterPaymentParams {
   discountAuthorizedBy?: string;
 }
 
+export interface PartialPaymentItem {
+  itemId: string;
+  quantityPaid: number;
+  unitPrice: number;
+}
+
+interface RegisterPartialPaymentParams {
+  comandaId: string;
+  orderId?: string | null;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  cashReceived?: number;
+  changeAmount?: number;
+  installments?: number;
+  discountAmount?: number;
+  discountReason?: string;
+  discountAuthorizedBy?: string;
+  partialItems: PartialPaymentItem[];
+  chargingSessionId: string;
+}
+
 export function usePDVPayments() {
   const { user } = useAuth();
   const { visibleUserId } = useEstablishmentId();
