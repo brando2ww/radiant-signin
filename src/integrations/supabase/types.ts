@@ -2815,63 +2815,120 @@ export type Database = {
       pdv_cashier_sessions: {
         Row: {
           balance_difference: number | null
+          cash_difference: number | null
           closed_at: string | null
           closing_balance: number | null
           created_at: string
+          credit_difference: number | null
+          debit_difference: number | null
+          declared_cash: number | null
+          declared_credit: number | null
+          declared_debit: number | null
+          declared_pix: number | null
+          declared_voucher: number | null
           difference_justified: boolean | null
           expected_balance: number | null
           fraud_risk_level: string | null
           id: string
+          justification_cash: string | null
+          justification_credit: string | null
+          justification_debit: string | null
+          justification_pix: string | null
+          justification_voucher: string | null
           notes: string | null
           opened_at: string
           opening_balance: number
+          pix_difference: number | null
           total_card: number
           total_cash: number
+          total_change: number
+          total_credit: number
+          total_debit: number
           total_pix: number
           total_sales: number
+          total_voucher: number
           total_withdrawals: number
           updated_at: string
           user_id: string
+          voucher_difference: number | null
         }
         Insert: {
           balance_difference?: number | null
+          cash_difference?: number | null
           closed_at?: string | null
           closing_balance?: number | null
           created_at?: string
+          credit_difference?: number | null
+          debit_difference?: number | null
+          declared_cash?: number | null
+          declared_credit?: number | null
+          declared_debit?: number | null
+          declared_pix?: number | null
+          declared_voucher?: number | null
           difference_justified?: boolean | null
           expected_balance?: number | null
           fraud_risk_level?: string | null
           id?: string
+          justification_cash?: string | null
+          justification_credit?: string | null
+          justification_debit?: string | null
+          justification_pix?: string | null
+          justification_voucher?: string | null
           notes?: string | null
           opened_at?: string
           opening_balance?: number
+          pix_difference?: number | null
           total_card?: number
           total_cash?: number
+          total_change?: number
+          total_credit?: number
+          total_debit?: number
           total_pix?: number
           total_sales?: number
+          total_voucher?: number
           total_withdrawals?: number
           updated_at?: string
           user_id: string
+          voucher_difference?: number | null
         }
         Update: {
           balance_difference?: number | null
+          cash_difference?: number | null
           closed_at?: string | null
           closing_balance?: number | null
           created_at?: string
+          credit_difference?: number | null
+          debit_difference?: number | null
+          declared_cash?: number | null
+          declared_credit?: number | null
+          declared_debit?: number | null
+          declared_pix?: number | null
+          declared_voucher?: number | null
           difference_justified?: boolean | null
           expected_balance?: number | null
           fraud_risk_level?: string | null
           id?: string
+          justification_cash?: string | null
+          justification_credit?: string | null
+          justification_debit?: string | null
+          justification_pix?: string | null
+          justification_voucher?: string | null
           notes?: string | null
           opened_at?: string
           opening_balance?: number
+          pix_difference?: number | null
           total_card?: number
           total_cash?: number
+          total_change?: number
+          total_credit?: number
+          total_debit?: number
           total_pix?: number
           total_sales?: number
+          total_voucher?: number
           total_withdrawals?: number
           updated_at?: string
           user_id?: string
+          voucher_difference?: number | null
         }
         Relationships: []
       }

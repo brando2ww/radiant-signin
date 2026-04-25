@@ -4,7 +4,14 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useEstablishmentId } from "@/hooks/use-establishment-id";
 import { toast } from "sonner";
 
-export type PaymentMethod = "dinheiro" | "cartao" | "pix";
+export type PaymentMethod =
+  | "dinheiro"
+  | "credito"
+  | "debito"
+  | "pix"
+  | "vale_refeicao"
+  // Retrocompat: aceito como entrada e mapeado para "credito".
+  | "cartao";
 
 interface RegisterPaymentParams {
   comandaId: string;
@@ -41,6 +48,54 @@ interface RegisterPartialPaymentParams {
   chargingSessionId: string;
 }
 
+/**
+ * Normaliza "cartao" (legado) para "credito" e devolve o método final
+ * usado tanto na coluna `payment_method` do movimento quanto na
+ * atualização dos totais da sessão.
+ */
+function normalizeMethod(m: PaymentMethod): Exclude<PaymentMethod, "cartao"> {
+  return m === "cartao" ? "credito" : m;
+}
+
+/**
+ * Calcula como uma venda de `amount` (com troco opcional) afeta os
+ * totais da sessão. Retorna um Partial<Record<column, delta>> que
+ * deve ser aplicado por incremento. Mantém `total_card` (legado) =
+ * crédito + débito.
+ */
+function buildSessionDeltas(
+  method: Exclude<PaymentMethod, "cartao">,
+  amount: number,
+  changeAmount: number | undefined,
+): Record<string, number> {
+  const deltas: Record<string, number> = {
+    total_sales: amount,
+  };
+  if (method === "dinheiro") {
+    deltas.total_cash = amount;
+    if (changeAmount && changeAmount > 0) deltas.total_change = changeAmount;
+  } else if (method === "credito") {
+    deltas.total_credit = amount;
+    deltas.total_card = amount;
+  } else if (method === "debito") {
+    deltas.total_debit = amount;
+    deltas.total_card = amount;
+  } else if (method === "pix") {
+    deltas.total_pix = amount;
+  } else if (method === "vale_refeicao") {
+    deltas.total_voucher = amount;
+  }
+  return deltas;
+}
+
+function applyDeltas(session: any, deltas: Record<string, number>) {
+  const updates: Record<string, number> = {};
+  for (const [k, v] of Object.entries(deltas)) {
+    updates[k] = (Number(session?.[k]) || 0) + v;
+  }
+  return updates;
+}
+
 export function usePDVPayments() {
   const { user } = useAuth();
   const { visibleUserId } = useEstablishmentId();
@@ -60,6 +115,7 @@ export function usePDVPayments() {
       discountAuthorizedBy,
     }: RegisterPaymentParams) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
+      const method = normalizeMethod(paymentMethod);
 
       // 1. Close the comanda (only if still open OR awaiting payment from waiter)
       const { data: updatedComandas, error: comandaError } = await supabase
@@ -77,7 +133,7 @@ export function usePDVPayments() {
         throw new Error("Comanda já finalizada");
       }
 
-      // 1b. If comanda was tied to a table-order, free the table when it was the last open one
+      // If table comanda, free the table when this was the last open one
       if (orderId) {
         const { count } = await supabase
           .from("pdv_comandas")
@@ -108,7 +164,7 @@ export function usePDVPayments() {
           .from("pdv_payments")
           .insert({
             order_id: orderId,
-            payment_method: paymentMethod,
+            payment_method: method,
             amount,
             cash_received: cashReceived || null,
             change_amount: changeAmount || null,
@@ -131,32 +187,21 @@ export function usePDVPayments() {
         .maybeSingle();
 
       if (activeSession) {
-        // Insert movement
         const movementData: any = {
           cashier_session_id: activeSession.id,
           type: "venda",
           amount,
-          payment_method: paymentMethod,
+          payment_method: method,
           description: `Comanda #${comandaId.slice(0, 8)}`,
         };
-        
+
         if (discountReason) movementData.discount_reason = discountReason;
         if (discountAuthorizedBy) movementData.discount_authorized_by = discountAuthorizedBy;
-        
+
         await supabase.from("pdv_cashier_movements").insert(movementData);
 
-        // Update session totals
-        const updates: Record<string, number> = {
-          total_sales: activeSession.total_sales + amount,
-        };
-
-        if (paymentMethod === "dinheiro") {
-          updates.total_cash = activeSession.total_cash + amount;
-        } else if (paymentMethod === "cartao") {
-          updates.total_card = activeSession.total_card + amount;
-        } else if (paymentMethod === "pix") {
-          updates.total_pix = activeSession.total_pix + amount;
-        }
+        const deltas = buildSessionDeltas(method, amount, changeAmount);
+        const updates = applyDeltas(activeSession, deltas);
 
         await supabase
           .from("pdv_cashier_sessions")
@@ -180,7 +225,7 @@ export function usePDVPayments() {
     },
   });
 
-  // Register payment for a table (closes all comandas and frees table)
+  // Pagar TODAS as comandas de uma mesa de uma só vez (mesmo método)
   const registerTablePayment = useMutation({
     mutationFn: async ({
       tableId,
@@ -200,18 +245,17 @@ export function usePDVPayments() {
       cashReceived?: number;
       changeAmount?: number;
       installments?: number;
+      discountAmount?: number;
       discountReason?: string;
       discountAuthorizedBy?: string;
     }) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
+      const method = normalizeMethod(paymentMethod);
 
-      // 1. Close all comandas for this table (open OR awaiting payment)
+      // 1. Close all comandas
       const { data: updatedComandas, error: comandaError } = await supabase
         .from("pdv_comandas")
-        .update({
-          status: "fechada",
-          updated_at: new Date().toISOString(),
-        })
+        .update({ status: "fechada", updated_at: new Date().toISOString() })
         .in("id", comandaIds)
         .in("status", ["aberta", "aguardando_pagamento", "em_cobranca"])
         .select();
@@ -233,7 +277,6 @@ export function usePDVPayments() {
 
       if (tableError) throw tableError;
 
-      // Also close the underlying order(s) for this table
       const orderIds = Array.from(
         new Set(updatedComandas.map((c: any) => c.order_id).filter(Boolean)),
       ) as string[];
@@ -258,26 +301,17 @@ export function usePDVPayments() {
           cashier_session_id: activeSession.id,
           type: "venda",
           amount,
-          payment_method: paymentMethod,
+          payment_method: method,
           description: `Mesa #${tableId.slice(0, 8)}`,
         };
-        
+
         if (discountReason) movementData.discount_reason = discountReason;
         if (discountAuthorizedBy) movementData.discount_authorized_by = discountAuthorizedBy;
-        
+
         await supabase.from("pdv_cashier_movements").insert(movementData);
 
-        const updates: Record<string, number> = {
-          total_sales: activeSession.total_sales + amount,
-        };
-
-        if (paymentMethod === "dinheiro") {
-          updates.total_cash = activeSession.total_cash + amount;
-        } else if (paymentMethod === "cartao") {
-          updates.total_card = activeSession.total_card + amount;
-        } else if (paymentMethod === "pix") {
-          updates.total_pix = activeSession.total_pix + amount;
-        }
+        const deltas = buildSessionDeltas(method, amount, changeAmount);
+        const updates = applyDeltas(activeSession, deltas);
 
         await supabase
           .from("pdv_cashier_sessions")
@@ -317,92 +351,63 @@ export function usePDVPayments() {
       chargingSessionId,
     }: RegisterPartialPaymentParams) => {
       if (!user?.id) throw new Error("Usuário não autenticado");
-      if (!partialItems.length) throw new Error("Nenhum item selecionado");
+      const method = normalizeMethod(paymentMethod);
 
-      // 1. Carrega itens-alvo do banco para validar quantidades atuais
+      // 1. Buscar quantidades pagas atuais (para incremento atômico no client)
       const itemIds = partialItems.map((p) => p.itemId);
-      const { data: dbItems, error: fetchErr } = await supabase
+      const { data: currentItems, error: itemsErr } = await supabase
         .from("pdv_comanda_items")
-        .select("id, quantity, paid_quantity, unit_price, charging_session_id")
+        .select("id, quantity, paid_quantity")
         .in("id", itemIds);
-      if (fetchErr) throw fetchErr;
+      if (itemsErr) throw itemsErr;
 
-      // Valida que cada item ainda está disponível para esta sessão
+      // 2. Atualizar paid_quantity de cada item
       for (const p of partialItems) {
-        const db = (dbItems || []).find((d: any) => d.id === p.itemId);
-        if (!db) throw new Error("Item não encontrado");
-        const remaining = db.quantity - (db.paid_quantity || 0);
-        if (p.quantityPaid > remaining) {
-          throw new Error(`Quantidade indisponível para um dos itens (restam ${remaining}).`);
-        }
-        if (db.charging_session_id && db.charging_session_id !== chargingSessionId) {
-          throw new Error("Item travado por outro operador. Atualize e tente novamente.");
-        }
-      }
-
-      // 2. Atualiza paid_quantity em cada item (incrementando)
-      for (const p of partialItems) {
-        const db = (dbItems || []).find((d: any) => d.id === p.itemId);
-        const newPaid = (db?.paid_quantity || 0) + p.quantityPaid;
-        const { error: updErr } = await supabase
+        const cur = (currentItems || []).find((i: any) => i.id === p.itemId);
+        if (!cur) continue;
+        const newPaid = Math.min(
+          Number(cur.quantity) || 0,
+          (Number(cur.paid_quantity) || 0) + p.quantityPaid,
+        );
+        await supabase
           .from("pdv_comanda_items")
-          .update({ paid_quantity: newPaid })
-          .eq("id", p.itemId);
-        if (updErr) throw updErr;
-      }
-
-      // 3. Insere registro em pdv_payments (somente se houver order_id)
-      let createdPaymentId: string | null = null;
-      if (orderId) {
-        const { data: pay, error: payErr } = await supabase
-          .from("pdv_payments")
-          .insert({
-            order_id: orderId,
-            payment_method: paymentMethod,
-            amount,
-            cash_received: cashReceived || null,
-            change_amount: changeAmount || null,
-            installments: installments || 1,
+          .update({
+            paid_quantity: newPaid,
+            charging_session_id: null,
           })
-          .select("id")
-          .single();
-        if (payErr) {
-          console.error("Partial payment insert error:", payErr);
-        } else {
-          createdPaymentId = pay?.id ?? null;
-        }
+          .eq("id", p.itemId);
       }
 
-      // 4. Auditoria detalhada em pdv_payment_items
-      if (createdPaymentId) {
-        const rows = partialItems.map((p) => ({
-          payment_id: createdPaymentId,
-          comanda_item_id: p.itemId,
-          quantity_paid: p.quantityPaid,
-          unit_price: p.unitPrice,
-          subtotal_paid: p.unitPrice * p.quantityPaid,
-        }));
-        const { error: piErr } = await supabase.from("pdv_payment_items" as any).insert(rows);
-        if (piErr) console.error("payment_items insert error:", piErr);
+      // 3. Inserir registro em pdv_payments (se houver order_id)
+      if (orderId) {
+        await supabase.from("pdv_payments").insert({
+          order_id: orderId,
+          payment_method: method,
+          amount,
+          cash_received: cashReceived || null,
+          change_amount: changeAmount || null,
+          installments: installments || 1,
+        });
       }
 
-      // 5. Libera locks dos itens cobrados
-      await (supabase.rpc as any)("pdv_unlock_comanda_items", {
-        p_item_ids: itemIds,
-        p_session_id: chargingSessionId,
-      });
+      // 4. Liberar locks remanescentes desta sessão de cobrança
+      await supabase
+        .from("pdv_comanda_items")
+        .update({ charging_session_id: null })
+        .eq("comanda_id", comandaId)
+        .eq("charging_session_id", chargingSessionId);
 
-      // 6. Verifica se restou algum item pendente na comanda
+      // 5. Há itens pendentes ainda?
       const { data: remainingItems } = await supabase
         .from("pdv_comanda_items")
-        .select("quantity, paid_quantity")
+        .select("id, quantity, paid_quantity")
         .eq("comanda_id", comandaId);
+
       const stillPending = (remainingItems || []).some(
         (r: any) => (r.quantity - (r.paid_quantity || 0)) > 0,
       );
 
       if (!stillPending) {
-        // Tudo pago — finaliza comanda como o registerPayment normal faria
         await supabase
           .from("pdv_comandas")
           .update({ status: "fechada", updated_at: new Date().toISOString() })
@@ -433,7 +438,6 @@ export function usePDVPayments() {
           }
         }
       } else {
-        // Mantém aberta: se estava em_cobranca, devolve para aguardando_pagamento
         await supabase
           .from("pdv_comandas")
           .update({ status: "aguardando_pagamento", updated_at: new Date().toISOString() })
@@ -441,7 +445,7 @@ export function usePDVPayments() {
           .eq("status", "em_cobranca");
       }
 
-      // 7. Movimento de caixa
+      // 6. Movimento de caixa
       const ownerId = visibleUserId || user.id;
       const { data: activeSession } = await supabase
         .from("pdv_cashier_sessions")
@@ -455,19 +459,15 @@ export function usePDVPayments() {
           cashier_session_id: activeSession.id,
           type: "venda",
           amount,
-          payment_method: paymentMethod,
+          payment_method: method,
           description: `Comanda #${comandaId.slice(0, 8)} — pagamento parcial`,
         };
         if (discountReason) movementData.discount_reason = discountReason;
         if (discountAuthorizedBy) movementData.discount_authorized_by = discountAuthorizedBy;
         await supabase.from("pdv_cashier_movements").insert(movementData);
 
-        const updates: Record<string, number> = {
-          total_sales: activeSession.total_sales + amount,
-        };
-        if (paymentMethod === "dinheiro") updates.total_cash = activeSession.total_cash + amount;
-        else if (paymentMethod === "cartao") updates.total_card = activeSession.total_card + amount;
-        else if (paymentMethod === "pix") updates.total_pix = activeSession.total_pix + amount;
+        const deltas = buildSessionDeltas(method, amount, changeAmount);
+        const updates = applyDeltas(activeSession, deltas);
 
         await supabase
           .from("pdv_cashier_sessions")

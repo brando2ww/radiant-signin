@@ -46,6 +46,7 @@ import {
   Lock as LockIcon,
   Minus,
   Check,
+  Ticket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Comanda, ComandaItem, usePDVComandas } from "@/hooks/use-pdv-comandas";
@@ -106,6 +107,7 @@ const paymentMethods = [
   { id: "dinheiro" as PaymentMethod, label: "Dinheiro", icon: Banknote, color: "text-green-600" },
   { id: "cartao" as PaymentMethod, label: "Cartão", icon: CreditCard, color: "text-blue-600" },
   { id: "pix" as PaymentMethod, label: "PIX", icon: QrCode, color: "text-purple-600" },
+  { id: "vale_refeicao" as PaymentMethod, label: "VR / VA", icon: Ticket, color: "text-orange-600" },
 ];
 
 const quickValues = [50, 100, 150, 200];
@@ -514,12 +516,18 @@ export function PaymentDialog({
     if (isProcessing) return;
     try {
       const finalAmount = total;
+      // Mapeia "cartao" + cardType para credito/debito (granularidade exigida pela conferência do fechamento)
+      const resolvedMethod: PaymentMethod =
+        selectedMethod === "cartao"
+          ? (cardType === "debito" ? "debito" : "credito")
+          : selectedMethod;
+
       const paymentData = {
         amount: finalAmount,
-        paymentMethod: selectedMethod,
+        paymentMethod: resolvedMethod,
         cashReceived: selectedMethod === "dinheiro" ? cashReceivedNum : undefined,
         changeAmount: selectedMethod === "dinheiro" ? changeAmount : undefined,
-        installments: selectedMethod === "cartao" ? parseInt(installments) : undefined,
+        installments: resolvedMethod === "credito" ? parseInt(installments) : undefined,
         discountAmount: appliedDiscount ? appliedDiscount.amount : undefined,
         discountReason: appliedDiscount ? appliedDiscount.reason : undefined,
         discountAuthorizedBy: appliedDiscount ? appliedDiscount.authorizedBy : undefined,
@@ -546,13 +554,17 @@ export function PaymentDialog({
             if (!line.comandaId) continue;
             const c = tableComandas.find((x) => x.id === line.comandaId);
             if (!c) continue;
+            const lineMethod: PaymentMethod =
+              line.method === "cartao"
+                ? (line.cardType === "debito" ? "debito" : "credito")
+                : line.method;
             await registerPayment({
               comandaId: c.id,
               orderId: c.order_id,
               amount: parseFloat(line.amount) || c.subtotal,
-              paymentMethod: line.method,
-              installments: line.method === "cartao" ? parseInt(line.installments) : undefined,
-              cashReceived: line.method === "dinheiro" ? parseFloat(line.amount) : undefined,
+              paymentMethod: lineMethod,
+              installments: lineMethod === "credito" ? parseInt(line.installments) : undefined,
+              cashReceived: lineMethod === "dinheiro" ? parseFloat(line.amount) : undefined,
             });
           }
         } else if (isTablePayment && table) {

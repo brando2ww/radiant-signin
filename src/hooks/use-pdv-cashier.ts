@@ -14,7 +14,11 @@ interface CashierSession {
   total_sales: number;
   total_cash: number;
   total_card: number;
+  total_credit: number;
+  total_debit: number;
   total_pix: number;
+  total_voucher: number;
+  total_change: number;
   total_withdrawals: number;
   notes: string | null;
 }
@@ -24,9 +28,37 @@ interface CashMovement {
   cashier_session_id: string;
   type: "entrada" | "sangria" | "reforco" | "venda";
   amount: number;
-  payment_method?: "dinheiro" | "cartao" | "pix";
+  payment_method?:
+    | "dinheiro"
+    | "cartao"
+    | "credito"
+    | "debito"
+    | "pix"
+    | "vale_refeicao";
   description: string | null;
   created_at: string;
+}
+
+export interface CloseCashierPayload {
+  sessionId: string;
+  // Gaveta
+  declaredCash: number;
+  expectedCash: number;
+  // Conferência por forma
+  declaredCredit?: number | null;
+  declaredDebit?: number | null;
+  declaredPix?: number | null;
+  declaredVoucher?: number | null;
+  // Justificativas (texto livre por forma)
+  justifications: {
+    cash?: string;
+    credit?: string;
+    debit?: string;
+    pix?: string;
+    voucher?: string;
+  };
+  notes?: string;
+  riskLevel: "ok" | "low" | "medium" | "high" | "critical";
 }
 
 export function usePDVCashier() {
@@ -106,35 +138,80 @@ export function usePDVCashier() {
     },
   });
 
-  // Fechar caixa com sistema antifraude
+  // Fechar caixa com conferência por forma de pagamento
   const closeCashier = useMutation({
-    mutationFn: async ({
-      sessionId,
-      closingBalance,
-      notes,
-      expectedBalance,
-      riskLevel,
-    }: {
-      sessionId: string;
-      closingBalance: number;
-      notes?: string;
-      expectedBalance: number;
-      riskLevel: "ok" | "low" | "medium" | "high" | "critical";
-    }) => {
-      const balanceDifference = closingBalance - expectedBalance;
-      const differenceJustified = notes && notes.length >= 30;
+    mutationFn: async (payload: CloseCashierPayload) => {
+      const {
+        sessionId,
+        declaredCash,
+        expectedCash,
+        declaredCredit,
+        declaredDebit,
+        declaredPix,
+        declaredVoucher,
+        justifications,
+        notes,
+        riskLevel,
+      } = payload;
+
+      const cashDifference = declaredCash - expectedCash;
+
+      // Buscar totais atuais para calcular diferenças por forma
+      const { data: session } = await supabase
+        .from("pdv_cashier_sessions")
+        .select("total_credit, total_debit, total_pix, total_voucher")
+        .eq("id", sessionId)
+        .single();
+
+      const totalCredit = Number(session?.total_credit) || 0;
+      const totalDebit = Number(session?.total_debit) || 0;
+      const totalPix = Number(session?.total_pix) || 0;
+      const totalVoucher = Number(session?.total_voucher) || 0;
+
+      const creditDiff = declaredCredit != null ? declaredCredit - totalCredit : null;
+      const debitDiff = declaredDebit != null ? declaredDebit - totalDebit : null;
+      const pixDiff = declaredPix != null ? declaredPix - totalPix : null;
+      const voucherDiff = declaredVoucher != null ? declaredVoucher - totalVoucher : null;
+
+      const differenceJustified = !!(
+        justifications.cash ||
+        justifications.credit ||
+        justifications.debit ||
+        justifications.pix ||
+        justifications.voucher ||
+        notes
+      );
+
+      const updateData: any = {
+        closed_at: new Date().toISOString(),
+        closing_balance: declaredCash,
+        notes,
+        // Compat com colunas antigas (gaveta)
+        expected_balance: expectedCash,
+        balance_difference: cashDifference,
+        difference_justified: differenceJustified,
+        fraud_risk_level: riskLevel,
+        // Novos campos
+        declared_cash: declaredCash,
+        cash_difference: cashDifference,
+        declared_credit: declaredCredit ?? null,
+        declared_debit: declaredDebit ?? null,
+        declared_pix: declaredPix ?? null,
+        declared_voucher: declaredVoucher ?? null,
+        credit_difference: creditDiff,
+        debit_difference: debitDiff,
+        pix_difference: pixDiff,
+        voucher_difference: voucherDiff,
+        justification_cash: justifications.cash ?? null,
+        justification_credit: justifications.credit ?? null,
+        justification_debit: justifications.debit ?? null,
+        justification_pix: justifications.pix ?? null,
+        justification_voucher: justifications.voucher ?? null,
+      };
 
       const { data, error } = await supabase
         .from("pdv_cashier_sessions")
-        .update({
-          closed_at: new Date().toISOString(),
-          closing_balance: closingBalance,
-          notes,
-          expected_balance: expectedBalance,
-          balance_difference: balanceDifference,
-          difference_justified: differenceJustified,
-          fraud_risk_level: riskLevel,
-        })
+        .update(updateData)
         .eq("id", sessionId)
         .select()
         .single();
@@ -168,7 +245,6 @@ export function usePDVCashier() {
     }) => {
       if (!activeSession?.id) throw new Error("Nenhuma sessão de caixa ativa");
 
-      // Inserir movimentação
       const { error: movError } = await supabase
         .from("pdv_cashier_movements")
         .insert({
@@ -181,7 +257,6 @@ export function usePDVCashier() {
       if (movError) throw movError;
 
       // Atualizar totais da sessão APENAS para sangria.
-      // Reforço é contabilizado separadamente no frontend a partir da lista de movements.
       if (type === "sangria") {
         const { error: updateError } = await supabase
           .from("pdv_cashier_sessions")
@@ -201,62 +276,6 @@ export function usePDVCashier() {
     onError: (error) => {
       console.error("Erro ao registrar movimentação:", error);
       toast.error("Erro ao registrar movimentação");
-    },
-  });
-
-  // Registrar venda
-  const registerSale = useMutation({
-    mutationFn: async ({
-      orderId,
-      amount,
-      paymentMethod,
-    }: {
-      orderId: string;
-      amount: number;
-      paymentMethod: "dinheiro" | "cartao" | "pix";
-    }) => {
-      if (!activeSession?.id) throw new Error("Nenhuma sessão de caixa ativa");
-
-      // Inserir movimentação
-      const { error: movError } = await supabase
-        .from("pdv_cashier_movements")
-        .insert({
-          cashier_session_id: activeSession.id,
-          type: "venda",
-          amount,
-          payment_method: paymentMethod,
-          description: `Pedido #${orderId}`,
-        });
-
-      if (movError) throw movError;
-
-      // Atualizar totais da sessão
-      const updates: any = {
-        total_sales: activeSession.total_sales + amount,
-      };
-
-      if (paymentMethod === "dinheiro") {
-        updates.total_cash = activeSession.total_cash + amount;
-      } else if (paymentMethod === "cartao") {
-        updates.total_card = activeSession.total_card + amount;
-      } else if (paymentMethod === "pix") {
-        updates.total_pix = activeSession.total_pix + amount;
-      }
-
-      const { error: updateError } = await supabase
-        .from("pdv_cashier_sessions")
-        .update(updates)
-        .eq("id", activeSession.id);
-
-      if (updateError) throw updateError;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pdv-cashier-active"] });
-      queryClient.invalidateQueries({ queryKey: ["pdv-cashier-movements"] });
-    },
-    onError: (error) => {
-      console.error("Erro ao registrar venda:", error);
-      toast.error("Erro ao registrar venda");
     },
   });
 
@@ -312,7 +331,6 @@ export function usePDVCashier() {
     isClosingCashier: closeCashier.isPending,
     addMovement: addMovement.mutate,
     isAddingMovement: addMovement.isPending,
-    registerSale: registerSale.mutate,
     lastClosedSession,
     lastClosedMovements,
   };
