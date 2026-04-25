@@ -403,7 +403,87 @@ export function PaymentDialog({
     );
   };
 
-  const handleSubmit = async () => {
+  // ===== Modo "Por produto" — helpers =====
+  const remainingQty = (it: ComandaItem) => it.quantity - ((it as any).paid_quantity || 0);
+
+  const isItemLockedByOther = (it: ComandaItem) => {
+    const sid = (it as any).charging_session_id as string | null | undefined;
+    return !!sid && sid !== chargingSessionRef.current;
+  };
+
+  const tryLockItem = async (itemId: string): Promise<boolean> => {
+    try {
+      const locked = await lockItemsForCharging({
+        itemIds: [itemId],
+        sessionId: chargingSessionRef.current,
+      });
+      if (!locked.includes(itemId)) {
+        toast.error("Este item já está sendo cobrado por outro operador.");
+        return false;
+      }
+      return true;
+    } catch (e) {
+      toast.error("Não foi possível travar o item.");
+      return false;
+    }
+  };
+
+  const toggleItemSelection = async (it: ComandaItem) => {
+    const next = new Map(selectedItemQtys);
+    if (next.has(it.id)) {
+      next.delete(it.id);
+      setSelectedItemQtys(next);
+      // Libera lock
+      unlockItemsForCharging({
+        itemIds: [it.id],
+        sessionId: chargingSessionRef.current,
+      }).catch(() => {});
+    } else {
+      const ok = await tryLockItem(it.id);
+      if (!ok) return;
+      next.set(it.id, remainingQty(it));
+      setSelectedItemQtys(next);
+    }
+  };
+
+  const setItemQty = (itemId: string, qty: number) => {
+    const it = displayItems.find((d) => d.id === itemId);
+    if (!it) return;
+    const max = remainingQty(it);
+    const clamped = Math.max(1, Math.min(max, qty));
+    const next = new Map(selectedItemQtys);
+    next.set(itemId, clamped);
+    setSelectedItemQtys(next);
+  };
+
+  const selectAllPending = async () => {
+    const candidates = selectableItems.filter((it) => !isItemLockedByOther(it) && !selectedItemQtys.has(it.id));
+    if (!candidates.length) return;
+    try {
+      const locked = await lockItemsForCharging({
+        itemIds: candidates.map((c) => c.id),
+        sessionId: chargingSessionRef.current,
+      });
+      const next = new Map(selectedItemQtys);
+      candidates.forEach((it) => {
+        if (locked.includes(it.id)) next.set(it.id, remainingQty(it));
+      });
+      setSelectedItemQtys(next);
+      if (locked.length < candidates.length) {
+        toast.info("Alguns itens já estão sendo cobrados por outro operador.");
+      }
+    } catch {
+      toast.error("Erro ao selecionar itens.");
+    }
+  };
+
+  const clearSelection = () => {
+    if (selectedItemQtys.size === 0) return;
+    const itemIds = Array.from(selectedItemQtys.keys());
+    unlockItemsForCharging({ itemIds, sessionId: chargingSessionRef.current }).catch(() => {});
+    setSelectedItemQtys(new Map());
+  };
+
     if (isProcessing) return;
     try {
       const finalAmount = total;
