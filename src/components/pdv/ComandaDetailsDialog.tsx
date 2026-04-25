@@ -81,12 +81,15 @@ export function ComandaDetailsDialog({
   onUpdateItem,
   onRemoveItem,
   onTransferItem,
+  onTransferMultiple,
   onSendToKitchen,
   onClose,
   onCancel,
 }: ComandaDetailsDialogProps) {
   const [confirmClose, setConfirmClose] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   if (!comanda) return null;
 
@@ -95,6 +98,26 @@ export function ComandaDetailsDialog({
     (item) => !item.sent_to_kitchen_at && item.kitchen_status === "pendente"
   );
   const hasPendingItems = pendingItems.length > 0;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleTransferSelected = () => {
+    if (!onTransferMultiple || selectedIds.size === 0) return;
+    onTransferMultiple(Array.from(selectedIds));
+    exitSelectMode();
+  };
 
   const handleQuantityChange = (item: ComandaItem, delta: number) => {
     const newQuantity = item.quantity + delta;
