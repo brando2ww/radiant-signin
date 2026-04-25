@@ -28,8 +28,10 @@ import {
   ChefHat,
   Send,
   X,
+  CheckSquare,
 } from "lucide-react";
 import { Comanda, ComandaItem, KitchenStatus } from "@/hooks/use-pdv-comandas";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 
