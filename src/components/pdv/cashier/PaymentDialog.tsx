@@ -264,17 +264,6 @@ export function PaymentDialog({
     ? formatTableLabel(table?.table_number)
     : `Comanda #${comanda?.comanda_number}`;
 
-  // Calculate discount
-  const discountAmount = discountType === "percent"
-    ? (subtotal * (parseFloat(discountValue) || 0)) / 100
-    : parseFloat(discountValue) || 0;
-
-  // Calculate service fee (10%)
-  const serviceFeeAmount = serviceFeeEnabled ? (subtotal - discountAmount) * 0.1 : 0;
-
-  // Final total
-  const total = Math.max(0, subtotal - discountAmount + serviceFeeAmount);
-
   // Calculate discount — só conta no total quando confirmado/aplicado
   // Durante "typing"/"confirming" o operador ainda não decidiu, então o total fica intacto
   const discountAmount = appliedDiscount?.amount ?? 0;
