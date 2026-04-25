@@ -1,121 +1,162 @@
-## Distinguir itens "rascunho" de itens enviados na tela do garçom
+## Rascunho local por garçom — não persiste nem vaza entre sessões
 
-### Problema atual
+### Bug raiz
 
-Na `GarcomComandaDetalhe`, todos os itens da comanda aparecem misturados no mesmo bloco. O `ComandaItemCard` mostra um badge "Pendente" / "Enviado" / "Preparando", mas:
+Hoje `addItem` (em `usePDVComandas`, linhas ~240-329) faz `INSERT` direto em `pdv_comanda_items` com `kitchen_status = "pendente"` e `sent_to_kitchen_at = null`. Como a tabela é compartilhada e visível para todos os garçons do estabelecimento, os "itens pendentes" de um garçom aparecem na tela do próximo que abrir a mesma comanda — e somam ao novo pedido. Pior: nunca são limpos automaticamente; ficam até alguém apagar manualmente.
 
-- Itens **não enviados ainda** (rascunho do garçom) e itens **já enviados para a cozinha** vivem na mesma lista, lado a lado, com o mesmo botão de remover.
-- Não fica visualmente claro o que ainda pode ser editado livremente vs. o que já está em produção.
-- Faltam controles de **quantidade** (− / +) nos itens rascunho — hoje, para mudar de "1× X-Burguer" para "2× X-Burguer", o garçom precisa apagar e adicionar de novo.
-- O botão de remover de itens já enviados também não passa por confirmação/motivo (lacuna separada que esta task **não** corrige — apenas vai esconder o botão para itens enviados, deixando o fluxo "remover após envio" para um momento futuro com confirmação dedicada).
+### Princípio da correção
+
+Rascunho deixa de existir no banco. Vira **estado local do dispositivo do garçom**, com chave por `(userId, comandaId)`. Só vira linha em `pdv_comanda_items` no momento em que o garçom toca **Enviar para a cozinha**.
 
 ### Onde mexer
 
-- `src/pages/garcom/GarcomComandaDetalhe.tsx` — separar a lista em dois grupos.
-- `src/pages/garcom/GarcomMesaDetalhe.tsx` — mesmo agrupamento (a mesa também lista itens das comandas).
-- `src/components/garcom/ComandaItemCard.tsx` — adicionar suporte a controles de quantidade (− / +) e variante "rascunho" / "enviado" (visual + permissões).
+Apenas frontend, sem migração:
 
-Sem mudanças em hooks ou banco — `updateItem({ id, quantity })` e `removeItem(id)` já existem em `usePDVComandas` e o segundo já é instantâneo (sem confirm).
+- `src/contexts/DraftCartContext.tsx` (novo) — provider que mantém o rascunho em memória + `sessionStorage` por dispositivo/aba.
+- `src/App.tsx` — montar o `DraftCartProvider` dentro do `AuthProvider`.
+- `src/hooks/use-pdv-comandas.ts` — não muda comportamento de `addItem`/`updateItem`/`removeItem` (continuam servindo o caixa via `PaymentDialog`/`OrderDetailsDialog`, que precisa persistir em correções pós-cobrança). Vamos apenas usar esses hooks pelo cashier; o garçom passa a usar o draft.
+- `src/pages/garcom/GarcomAdicionarItem.tsx` — `handleAdd` grava no draft em vez de chamar `addItem`. Listagem de "itens pendentes" no rodapé vem do draft.
+- `src/pages/garcom/GarcomComandaDetalhe.tsx` — grupo "Novos itens — não enviados ainda" passa a vir do draft (não mais do banco). `−`/`+`/lixeira mexem no draft. Botão **Cozinha** envia tudo do draft em uma só transação e limpa o draft.
+- `src/pages/garcom/GarcomMesaDetalhe.tsx` — mesma fonte para o grupo "Não enviados ainda" (somente leitura nessa tela). Como cada draft é por garçom, a mesa de outro garçom só mostra os enviados.
 
-### Como vai funcionar
+### Como o draft funciona
 
-**Critério de "rascunho":** `kitchen_status === "pendente" && !sent_to_kitchen_at`. Mesmo critério já usado para listar `pendingIds` ao enviar para cozinha.
+#### Estrutura
 
-#### Layout em 2 grupos na `GarcomComandaDetalhe`
+```ts
+type DraftItem = {
+  draftId: string;            // uuid local
+  productId: string;
+  productName: string;
+  unitPrice: number;          // preço base + ajustes de opções já somados
+  quantity: number;
+  notes?: string;
+  // metadados úteis para o envio:
+  selectedOptions?: SelectedOption[];
+  createdAt: number;
+};
 
-```text
-┌─ Novos itens — não enviados ainda ──────────┐
-│                                              │
-│  [ 2× ] X-Burguer            R$ 64,00        │
-│         [ − ] 2 [ + ]                  [🗑]  │
-│                                              │
-│  [ 1× ] Coca-Cola lata       R$  8,00        │
-│         [ − ] 1 [ + ]                  [🗑]  │
-└──────────────────────────────────────────────┘
-
-┌─ Já enviados para a cozinha ────────────────┐
-│                                              │
-│  [ 1× ] Batata G        Preparando  R$ 30,00 │
-│  [ 2× ] Suco            Pronto      R$ 24,00 │
-│                                              │
-└──────────────────────────────────────────────┘
+type DraftCart = Record<string /*comandaId*/, DraftItem[]>;
 ```
 
-Regras de cada grupo:
+Persistência: `sessionStorage` na chave `garcom-draft:<userId>`. `sessionStorage` (e não `localStorage`) garante que:
+- Fechar a aba/app → some.
+- Logout/expirar sessão → na re-autenticação a chave muda (ou já não existe).
+- Outras abas/dispositivos não compartilham — escopo nativo do `sessionStorage` é por aba.
 
-- **Novos itens — não enviados ainda**
-  - Header com label clara + contagem.
-  - Cada card: nome, observações, controles `− N +`, botão lixeira sempre visível.
-  - Tocar lixeira → remoção imediata, sem `AlertDialog`, sem motivo.
-  - Tocar `−` quando `quantity === 1` → remove o item (mesmo efeito de lixeira).
-  - Tocar `+` ou `−` (acima de 1) → chama `updateItem({ id, quantity: novaQty })`.
-  - Subtotal e barra fixa de "Total" recalculam por React Query (já acontece hoje).
-  - Sem badge de status (são todos "Pendente" implícito) — o próprio header do grupo já comunica.
+Para reforçar a regra "outro garçom nunca vê", a chave inclui `userId` (vinda de `useAuth().user.id`); se trocar de usuário no mesmo dispositivo, o draft do anterior fica invisível e é descartado na próxima limpeza (ver TTL).
 
-- **Já enviados para a cozinha**
-  - Header com label clara + contagem.
-  - Cada card: somente leitura — mantém badge `Preparando`/`Pronto`/`Entregue`/`Enviado`, mas **sem** controles de quantidade e **sem** botão lixeira nem botão "Mover" no fluxo padrão.
-  - Visual ligeiramente esmaecido (`opacity-90 bg-muted/30`) para reforçar que é histórico em produção.
-  - O botão "Mover" (transferência) **continua disponível** apenas dentro do `selectMode` (modo seleção do header) — ele é caso de correção operacional separado e já implementado.
+#### TTL implícito
 
-- Se a comanda estiver em `aguardando_pagamento` / `em_cobranca` / `fechada` (`!canEdit`): nenhum dos grupos exibe controles de edição (igual hoje).
+Cada `DraftItem` carrega `createdAt`. Ao montar o provider e a cada gravação, descartamos itens com mais de 8 horas (limite simples; cobre turno de garçom e evita lixo eterno). Não há TTL de 30s "para perguntar se quer recuperar" — em vez disso, o app sempre **mostra o rascunho próprio** quando o mesmo garçom volta para a mesma comanda no mesmo dispositivo/aba, com um botão claro **"Descartar rascunho"**. Esse padrão é mais simples e não esconde nada do garçom.
 
-- Se algum dos grupos estiver vazio, o cabeçalho dele não é renderizado.
+> Decisão deliberada: o prompt sugeria um modal "recuperar / descartar / 30s timeout". Trocamos por mostrar o rascunho diretamente + um botão "Descartar" sempre visível no header do grupo. Motivo: timer de 30s assusta e perde dado por inatividade. Se o usuário não quiser, basta um toque. Posso alterar para o fluxo modal com timer se preferir.
 
-#### `GarcomMesaDetalhe`
+#### API do contexto
 
-A mesa também renderiza `ComandaItemCard` por comanda. Aplicar o mesmo agrupamento dentro de cada bloco de comanda (mesmo padrão: rascunho primeiro, enviados depois, com headers claros) — mantém consistência entre as duas telas.
+```ts
+interface DraftCartContextValue {
+  getItems(comandaId: string): DraftItem[];
+  addItem(comandaId: string, item: Omit<DraftItem, "draftId" | "createdAt">): void;
+  updateQuantity(comandaId: string, draftId: string, quantity: number): void;
+  removeItem(comandaId: string, draftId: string): void;
+  clear(comandaId: string): void;
+  total(comandaId: string): number;   // sum quantity * unitPrice
+  count(comandaId: string): number;
+}
+```
 
-#### `ComandaItemCard` — nova prop e variante
+Tudo síncrono e in-memory; nada toca o Supabase.
 
-- Adicionar props:
-  ```ts
-  variant?: "draft" | "sent";          // default "sent" (compat)
-  onIncrement?: () => void;
-  onDecrement?: () => void;
-  ```
-- Quando `variant === "draft"`:
-  - Renderizar a linha de controles `[ − ] qty [ + ]` abaixo do nome.
-  - Esconder o badge de `kitchen_status` (redundante — o header do grupo já informa).
-  - `onRemove` aparece sempre (sem `selectMode` necessário) com lixeira maior (`h-9 w-9` e `Trash2 h-4 w-4`) — touch-friendly em tablet.
-- Quando `variant === "sent"`:
-  - Comportamento atual (badge visível, lixeira só fora de `selectMode` se `onRemove` for passado). Para honrar a regra "remoção depois do envio exige fluxo separado", a `GarcomComandaDetalhe`/`GarcomMesaDetalhe` **não** vão passar `onRemove` para itens enviados — botão simplesmente não aparece. (Quando o fluxo dedicado de remoção pós-envio com motivo existir, é só voltar a passar `onRemove` mais um `confirm` por cima.)
-- Manter compatibilidade: `selectMode` continua funcionando em ambas as variantes — o header do `GarcomComandaDetalhe` continua oferecendo "Selecionar" para mover.
+#### Envio para cozinha
 
-#### Detalhe de UX
+Em vez do fluxo atual (toca em "Enviar para Cozinha" → atualiza linhas já existentes), passa a ser:
 
-- Header de cada grupo: pequeno, em uppercase / `text-xs font-semibold text-muted-foreground`, com um ícone discreto (`Pencil` para rascunho, `ChefHat` ou `CheckCircle` para enviados) e contador `(N)` ao lado.
-- Espaçamento `space-y-2` dentro dos grupos, `space-y-4` entre grupos.
-- Total na barra inferior continua somando tudo (rascunho + enviado) — comportamento atual preservado.
+1. `await Promise.all(draftItems.map(it => addItem({ comandaId, productId: it.productId, productName: it.productName, quantity: it.quantity, unitPrice: it.unitPrice, notes: it.notes })))` — usa o `addItem` atual do hook, que já faz o `INSERT` correto.
+2. Coleta os IDs retornados.
+3. `await sendToKitchenAsync(insertedIds)` — marca `sent_to_kitchen_at` e enfileira impressão.
+4. `clear(comandaId)` no draft.
+5. `navigate("/garcom")`.
+
+Isso garante atomicidade prática: se algum `addItem` falhar, **não** chamamos `sendToKitchen` e o draft permanece intacto para o garçom tentar de novo.
+
+#### O que muda visualmente
+
+- `GarcomAdicionarItem`: rodapé "X itens pendentes / R$ Y" agora reflete o draft local. O botão **Enviar para a Cozinha** dispara o flush descrito acima.
+- `GarcomComandaDetalhe`:
+  - O grupo "Novos itens — não enviados ainda" lê do draft em vez de filtrar `comandaItems`. Os controles `−`/`+`/lixeira chamam `updateQuantity`/`removeItem` do contexto.
+  - O grupo "Já enviados para a cozinha" continua lendo do banco normalmente.
+  - O cabeçalho do grupo de rascunho ganha um botão pequeno **"Descartar"** ao lado do contador. Toque limpa o draft daquela comanda.
+- `GarcomMesaDetalhe`: exibe o grupo "Não enviados ainda" usando `getItems(comanda.id)`. Como o draft é por usuário do dispositivo, mesas/comandas vistas por outro garçom não exibem rascunho alheio (correto por construção).
+
+#### Limpeza do banco
+
+Itens que hoje já estão "presos" como pendentes nas comandas (pré-correção) **continuarão aparecendo** como enviados para o garçom (pois `kitchen_status = "pendente"` e `sent_to_kitchen_at = null` é hoje a definição de rascunho). Para evitar exibir esses fantasmas como "Já enviados", vamos tratá-los como rascunho órfão:
+
+- No `GarcomComandaDetalhe`, ao montar, se houver itens persistidos com `kitchen_status === "pendente" && !sent_to_kitchen_at`, mostrar um banner discreto **"Existem N itens não enviados pendentes nesta comanda (sessão antiga). [Apagar todos] [Enviar para a cozinha]"** com a ação que o garçom escolher. Sem esse banner, o app fica inconsistente nas comandas que já têm lixo.
+- Não fazemos limpeza automática em background — o garçom decide.
 
 ### Detalhes técnicos
 
-`GarcomComandaDetalhe.tsx`:
+`DraftCartProvider` lê/escreve `sessionStorage` em todo `useEffect` de mutação. A chave inclui `userId`; se `user` mudar (login/logout), reseta o estado. Estrutura inicial:
 
-```tsx
-const { updateItem, isUpdatingItem } = usePDVComandas(); // já existe
-const draftItems = items.filter(i => i.kitchen_status === "pendente" && !i.sent_to_kitchen_at);
-const sentItems  = items.filter(i => !(i.kitchen_status === "pendente" && !i.sent_to_kitchen_at));
-
-const handleIncrement = (item) => updateItem({ id: item.id, quantity: item.quantity + 1 });
-const handleDecrement = (item) => {
-  if (item.quantity <= 1) removeItem(item.id);
-  else updateItem({ id: item.id, quantity: item.quantity - 1 });
-};
+```ts
+const STORAGE_KEY = (uid: string) => `garcom-draft:${uid}`;
+const TTL_MS = 8 * 60 * 60 * 1000;
 ```
 
-Renderizar dois `<section>` quando `canEdit && !selectMode` para o grupo draft (controles ativos), e um `<section>` somente leitura para o grupo sent. Em `selectMode`, manter lista única (a seleção pode atravessar os dois grupos sem problema, já que só "Mover" usa isso).
+Hidratação: ao montar, ler chave, descartar itens com `createdAt < now - TTL_MS`, manter o resto.
 
-Aplicar o mesmo padrão em `GarcomMesaDetalhe.tsx` dentro de cada bloco de comanda.
+`GarcomAdicionarItem.handleAdd`:
+```ts
+const { addItem: addToDraft } = useDraftCart();
+addToDraft(comandaId, {
+  productId: selectedProduct.id,
+  productName: selectedProduct.name,
+  quantity,
+  unitPrice: (selectedProduct.price_salon ?? 0) + optionsExtra,
+  notes: fullNotes || undefined,
+  selectedOptions,
+});
+resetSheet();
+toast.success("Adicionado ao rascunho");
+```
+
+`GarcomComandaDetalhe`:
+- Substituir `draftItems = items.filter(isDraftItem)` por `draftItems = useDraftCart().getItems(id)`.
+- Manter `sentItems` como hoje, mas estendido para incluir tudo de `comandaItems` filtrado por `comanda_id` (ou seja: todos itens persistidos viram "enviados" para fins de visualização — exceto o caso do banner de fantasmas legados acima).
+- `pendingIds` para o botão "Cozinha" desaparece — o botão vira "Cozinha (N)" baseado em `count(id)` do draft.
+- Handler do botão Cozinha:
+  ```ts
+  const flush = async () => {
+    const list = getItems(id);
+    if (!list.length) return;
+    const created = await Promise.all(
+      list.map(it => addItem({
+        comandaId: id, productId: it.productId, productName: it.productName,
+        quantity: it.quantity, unitPrice: it.unitPrice, notes: it.notes,
+      }))
+    );
+    await sendToKitchenAsync(created.map(c => c.id));
+    clear(id);
+    navigate("/garcom");
+  };
+  ```
+
+`GarcomMesaDetalhe`: mesmo padrão de leitura — `draftItems = useDraftCart().getItems(comanda.id)`, sem qualquer ação de edição.
+
+### O que NÃO muda
+
+- `usePDVComandas.addItem` continua funcionando do jeito atual — o caixa (`PaymentDialog`, `OrderDetailsDialog`) usa para correção de itens já confirmados, fluxo onde a persistência imediata é correta.
+- `sendToKitchen` continua igual.
+- Banco / RLS / triggers não mudam.
 
 ### Validação
 
-- Adicionar 2 itens no `GarcomAdicionarItem` → voltar para detalhe da comanda → ambos aparecem em "Novos itens".
-- `+` em um deles → quantidade vai pra 2, subtotal e total recalculam ao vivo.
-- `−` até 1 → continua 1. Mais um `−` → item some sem confirmação.
-- Lixeira → some imediato.
-- Tocar "Cozinha" → itens viram grupo "Já enviados", sem controles, com badge correto.
-- Adicionar mais um item depois → ele aparece em "Novos itens", separado dos enviados.
-- Toggle "Selecionar" no header → ambos os grupos viram seleção plana, "Mover" funciona em qualquer item.
-- Comanda em `aguardando_pagamento` → nenhum controle de edição visível, apenas a lista somente-leitura.
-- Mesma experiência em `GarcomMesaDetalhe`.
+- Garçom A adiciona 3 itens à comanda X, sai sem enviar. Banco continua com 0 itens novos para X.
+- Garçom B abre a mesma comanda X em outro dispositivo: vê só os itens que já foram realmente enviados antes. Não enxerga nada do rascunho de A.
+- Garçom A volta para X no mesmo dispositivo/aba: rascunho intacto, com botão "Descartar" no header do grupo.
+- Garçom A toca "Cozinha": os 3 itens viram linhas em `pdv_comanda_items` com `sent_to_kitchen_at` preenchido, draft fica vazio, app navega para /garcom.
+- Garçom A faz logout: ao logar de novo, draft sumiu (chave do `sessionStorage` está atrelada ao user, e a aba/sessão pode até sobreviver — ainda assim, ao deslogar limpamos a chave explicitamente).
+- Fechar aba/app: rascunho some.
+- Comanda com fantasmas legados: banner aparece com [Apagar todos] / [Enviar para a cozinha].
