@@ -26,39 +26,15 @@ export default function GarcomAdicionarItem() {
   const { id: comandaId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { products, isLoading } = usePDVProducts();
-  const { addItem: persistItem, sendToKitchenAsync } = usePDVComandas();
   const draft = useDraftCart();
 
   const draftItems = comandaId ? draft.getItems(comandaId) : [];
   const draftTotal = comandaId ? draft.total(comandaId) : 0;
   const draftCount = comandaId ? draft.count(comandaId) : 0;
 
-  const [sending, setSending] = useState(false);
-
-  const handleSendToKitchen = async () => {
-    if (!comandaId || draftItems.length === 0 || sending) return;
-    setSending(true);
-    try {
-      const created = await Promise.all(
-        draftItems.map((it) =>
-          persistItem({
-            comandaId,
-            productId: it.productId,
-            productName: it.productName,
-            quantity: it.quantity,
-            unitPrice: it.unitPrice,
-            notes: it.notes,
-          }),
-        ),
-      );
-      await sendToKitchenAsync(created.map((c) => c.id));
-      draft.clear(comandaId);
-      navigate("/garcom");
-    } catch (err: any) {
-      toast.error("Erro ao enviar para a cozinha: " + (err?.message ?? "desconhecido"));
-    } finally {
-      setSending(false);
-    }
+  const handleGoToReview = () => {
+    if (!comandaId) return;
+    navigate(`/garcom/comanda/${comandaId}`);
   };
 
   const [search, setSearch] = useState("");
