@@ -312,12 +312,15 @@ export function PaymentDialog({
       setCardType("credito");
       setCashReceived("");
       setInstallments("1");
-      setDiscountType("percent");
+      setDiscountStage("idle");
+      setDiscountTypeChosen(null);
       setDiscountValue("");
       setDiscountPassword("");
       setDiscountAuthorized(false);
       setDiscountAuthorizedBy("");
       setDiscountReason("");
+      setDiscountTypeChangedWarning(false);
+      setAppliedDiscount(null);
       setServiceFeeEnabled(true);
       setShowSuccess(false);
       setSuccessData(null);
