@@ -814,6 +814,12 @@ export function PaymentDialog({
                         const canRemove =
                           item.kitchen_status === "pendente" ||
                           item.kitchen_status === "preparando";
+                        const paid = (item as any).paid_quantity || 0;
+                        const remaining = item.quantity - paid;
+                        const fullyPaid = remaining <= 0;
+                        const lockedByOther = isItemLockedByOther(item);
+                        const selectedQty = selectedItemQtys.get(item.id) || 0;
+                        const isSelected = selectedQty > 0;
                         return (
                           <motion.div
                             key={item.id}
@@ -822,15 +828,62 @@ export function PaymentDialog({
                             animate={{ opacity: 1, height: "auto" }}
                             exit={{ opacity: 0, height: 0, marginTop: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="flex items-center justify-between gap-2 text-sm py-1"
+                            className={cn(
+                              "flex items-center justify-between gap-2 text-sm py-1",
+                              isByProduct && isSelected && "bg-primary/5 rounded-md px-1",
+                              fullyPaid && "opacity-50",
+                            )}
                           >
-                            <span className="text-muted-foreground flex-1 min-w-0 truncate">
+                            {isByProduct && (
+                              <div className="shrink-0">
+                                {fullyPaid ? (
+                                  <Check className="h-4 w-4 text-green-600" />
+                                ) : lockedByOther ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <LockIcon className="h-4 w-4 text-muted-foreground" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">Em cobrança por outro operador</TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleItemSelection(item)}
+                                    aria-label={`Selecionar ${item.product_name}`}
+                                    className="h-5 w-5"
+                                  />
+                                )}
+                              </div>
+                            )}
+                            <span className={cn(
+                              "text-muted-foreground flex-1 min-w-0 truncate",
+                              fullyPaid && "line-through",
+                            )}>
                               {item.quantity}x {item.product_name}
+                              {paid > 0 && !fullyPaid && (
+                                <Badge variant="outline" className="ml-2 text-[10px] h-4 px-1">{paid}/{item.quantity} pago</Badge>
+                              )}
+                              {fullyPaid && (
+                                <Badge variant="outline" className="ml-2 text-[10px] h-4 px-1 border-green-600 text-green-700">pago</Badge>
+                              )}
                             </span>
-                            <span className="font-medium tabular-nums">
-                              {formatCurrency(item.subtotal)}
+                            {isByProduct && isSelected && remaining > 1 && (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <Button type="button" variant="outline" size="icon" className="h-6 w-6"
+                                  onClick={() => setItemQty(item.id, selectedQty - 1)} disabled={selectedQty <= 1}>
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <span className="text-xs font-medium tabular-nums w-10 text-center">{selectedQty}/{remaining}</span>
+                                <Button type="button" variant="outline" size="icon" className="h-6 w-6"
+                                  onClick={() => setItemQty(item.id, selectedQty + 1)} disabled={selectedQty >= remaining}>
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
+                            <span className="font-medium tabular-nums shrink-0">
+                              {formatCurrency(isByProduct && isSelected ? selectedQty * Number(item.unit_price || 0) : item.subtotal)}
                             </span>
-                            {canRemove ? (
+                            {!isByProduct && (canRemove ? (
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -859,11 +912,9 @@ export function PaymentDialog({
                                     </Button>
                                   </span>
                                 </TooltipTrigger>
-                                <TooltipContent side="left">
-                                  Item já preparado pela cozinha — não pode ser removido
-                                </TooltipContent>
+                                <TooltipContent side="left">Item já preparado pela cozinha — não pode ser removido</TooltipContent>
                               </Tooltip>
-                            )}
+                            ))}
                           </motion.div>
                         );
                       })}
