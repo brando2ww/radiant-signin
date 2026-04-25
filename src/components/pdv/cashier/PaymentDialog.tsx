@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -42,6 +43,9 @@ import {
   AlertTriangle,
   Trash2,
   Search,
+  Lock as LockIcon,
+  Minus,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Comanda, ComandaItem, usePDVComandas } from "@/hooks/use-pdv-comandas";
@@ -137,6 +141,14 @@ export function PaymentDialog({
   // Split payment
   const [splitEnabled, setSplitEnabled] = useState(false);
   const [splitPayments, setSplitPayments] = useState<SplitPayment[]>([]);
+
+  // Charge mode (segmented): "all" | "split-forms" | "by-product"
+  type ChargeMode = "all" | "split-forms" | "by-product";
+  const [chargeMode, setChargeMode] = useState<ChargeMode>("all");
+  // Map<itemId, qtyToPay>
+  const [selectedItemQtys, setSelectedItemQtys] = useState<Map<string, number>>(new Map());
+  // Sessão de cobrança "Por produto" — usada para lock/unlock de itens
+  const chargingSessionRef = useRef<string>("");
   
   // Success state
   const [showSuccess, setShowSuccess] = useState(false);
@@ -147,7 +159,7 @@ export function PaymentDialog({
     | { kind: "error"; message: string; missing?: string[] }
   >({ kind: "idle" });
 
-  const { registerPayment, isRegisteringPayment, registerTablePayment, isRegisteringTablePayment } = usePDVPayments();
+  const { registerPayment, isRegisteringPayment, registerTablePayment, isRegisteringTablePayment, registerPartialPayment, isRegisteringPartialPayment } = usePDVPayments();
   const {
     markAsCharging,
     releaseFromCharging,
@@ -156,6 +168,8 @@ export function PaymentDialog({
     addItem,
     isAddingItem,
     comandaItems: liveComandaItems,
+    lockItemsForCharging,
+    unlockItemsForCharging,
   } = usePDVComandas();
   const { products: productsList } = usePDVProducts();
   const { emitNFCe, isEmitting } = useNFCeEmission();
@@ -200,11 +214,38 @@ export function PaymentDialog({
     (sum, it) => sum + Number(it.subtotal || 0),
     0,
   );
-  const subtotal = liveItemsForPayment.length > 0
+  const fullSubtotal = liveItemsForPayment.length > 0
     ? liveSubtotal
     : (isTablePayment
         ? tableComandas.reduce((sum, c) => sum + c.subtotal, 0)
         : (comanda?.subtotal || 0));
+
+  // Pagamento parcial (modo by-product) é suportado apenas quando temos itens reais persistidos.
+  const supportsByProduct = liveItemsForPayment.length > 0 && !isTablePayment;
+
+  // Itens disponíveis para seleção parcial (apenas com quantidade pendente)
+  const selectableItems = displayItems.filter((it) => {
+    const paid = (it as any).paid_quantity || 0;
+    return it.quantity - paid > 0;
+  });
+
+  // Subtotal pendente (todos itens não pagos)
+  const pendingSubtotal = selectableItems.reduce((sum, it) => {
+    const paid = (it as any).paid_quantity || 0;
+    return sum + (it.quantity - paid) * Number(it.unit_price || 0);
+  }, 0);
+
+  // Subtotal selecionado (modo by-product)
+  const selectedSubtotal = Array.from(selectedItemQtys.entries()).reduce((sum, [id, qty]) => {
+    const it = displayItems.find((d) => d.id === id);
+    if (!it) return sum;
+    return sum + qty * Number(it.unit_price || 0);
+  }, 0);
+
+  const isByProduct = chargeMode === "by-product" && supportsByProduct;
+
+  // Subtotal efetivo usado para descontos/taxas/total
+  const subtotal = isByProduct ? selectedSubtotal : fullSubtotal;
 
   const title = isTablePayment
     ? formatTableLabel(table?.table_number)
@@ -224,7 +265,7 @@ export function PaymentDialog({
   // Cash calculations
   const cashReceivedNum = parseFloat(cashReceived) || 0;
   const changeAmount = selectedMethod === "dinheiro" ? Math.max(0, cashReceivedNum - total) : 0;
-  
+
   // Split payment total
   const splitTotal = splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const splitRemaining = total - splitTotal;
@@ -235,9 +276,9 @@ export function PaymentDialog({
   const discountNeedsReason = hasDiscount && !discountReason.trim();
 
   // Validation
-  // No modo splitByComanda, cada linha JÁ vem com valor travado da comanda;
-  // basta garantir que existe uma linha por comanda e que somam o subtotal.
-  const canSubmit = !discountNeedsAuth && !discountNeedsReason && (splitEnabled
+  const hasByProductSelection = isByProduct && selectedItemQtys.size > 0 && selectedSubtotal > 0;
+  const byProductBlocks = chargeMode === "by-product" && (!supportsByProduct || !hasByProductSelection);
+  const canSubmit = !discountNeedsAuth && !discountNeedsReason && !byProductBlocks && (splitEnabled
     ? Math.abs(splitRemaining) < 0.01 && splitPayments.length > 0
     : selectedMethod !== "dinheiro" || cashReceivedNum >= total);
 
@@ -260,6 +301,9 @@ export function PaymentDialog({
       setNfceState({ kind: "idle" });
       paymentDoneRef.current = false;
       lockedIdsRef.current = [];
+      setChargeMode(splitByComanda && tableComandas.length > 1 ? "split-forms" : "all");
+      setSelectedItemQtys(new Map());
+      chargingSessionRef.current = crypto.randomUUID();
 
       // Pré-popular split-por-comanda quando vier de "Cobrar tudo da mesa"
       if (splitByComanda && tableComandas.length > 1) {
@@ -311,6 +355,11 @@ export function PaymentDialog({
         releaseFromCharging(lockedIdsRef.current).catch(() => {});
         lockedIdsRef.current = [];
       }
+      // Liberar locks de itens em modo by-product
+      if (!paymentDoneRef.current && chargingSessionRef.current && selectedItemQtys.size > 0) {
+        const itemIds = Array.from(selectedItemQtys.keys());
+        unlockItemsForCharging({ itemIds, sessionId: chargingSessionRef.current }).catch(() => {});
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -354,6 +403,87 @@ export function PaymentDialog({
     );
   };
 
+  // ===== Modo "Por produto" — helpers =====
+  const remainingQty = (it: ComandaItem) => it.quantity - ((it as any).paid_quantity || 0);
+
+  const isItemLockedByOther = (it: ComandaItem) => {
+    const sid = (it as any).charging_session_id as string | null | undefined;
+    return !!sid && sid !== chargingSessionRef.current;
+  };
+
+  const tryLockItem = async (itemId: string): Promise<boolean> => {
+    try {
+      const locked = await lockItemsForCharging({
+        itemIds: [itemId],
+        sessionId: chargingSessionRef.current,
+      });
+      if (!locked.includes(itemId)) {
+        toast.error("Este item já está sendo cobrado por outro operador.");
+        return false;
+      }
+      return true;
+    } catch (e) {
+      toast.error("Não foi possível travar o item.");
+      return false;
+    }
+  };
+
+  const toggleItemSelection = async (it: ComandaItem) => {
+    const next = new Map(selectedItemQtys);
+    if (next.has(it.id)) {
+      next.delete(it.id);
+      setSelectedItemQtys(next);
+      // Libera lock
+      unlockItemsForCharging({
+        itemIds: [it.id],
+        sessionId: chargingSessionRef.current,
+      }).catch(() => {});
+    } else {
+      const ok = await tryLockItem(it.id);
+      if (!ok) return;
+      next.set(it.id, remainingQty(it));
+      setSelectedItemQtys(next);
+    }
+  };
+
+  const setItemQty = (itemId: string, qty: number) => {
+    const it = displayItems.find((d) => d.id === itemId);
+    if (!it) return;
+    const max = remainingQty(it);
+    const clamped = Math.max(1, Math.min(max, qty));
+    const next = new Map(selectedItemQtys);
+    next.set(itemId, clamped);
+    setSelectedItemQtys(next);
+  };
+
+  const selectAllPending = async () => {
+    const candidates = selectableItems.filter((it) => !isItemLockedByOther(it) && !selectedItemQtys.has(it.id));
+    if (!candidates.length) return;
+    try {
+      const locked = await lockItemsForCharging({
+        itemIds: candidates.map((c) => c.id),
+        sessionId: chargingSessionRef.current,
+      });
+      const next = new Map(selectedItemQtys);
+      candidates.forEach((it) => {
+        if (locked.includes(it.id)) next.set(it.id, remainingQty(it));
+      });
+      setSelectedItemQtys(next);
+      if (locked.length < candidates.length) {
+        toast.info("Alguns itens já estão sendo cobrados por outro operador.");
+      }
+    } catch {
+      toast.error("Erro ao selecionar itens.");
+    }
+  };
+
+  const clearSelection = () => {
+    if (selectedItemQtys.size === 0) return;
+    const itemIds = Array.from(selectedItemQtys.keys());
+    unlockItemsForCharging({ itemIds, sessionId: chargingSessionRef.current }).catch(() => {});
+    setSelectedItemQtys(new Map());
+  };
+
   const handleSubmit = async () => {
     if (isProcessing) return;
     try {
@@ -369,34 +499,49 @@ export function PaymentDialog({
         discountAuthorizedBy: hasDiscount ? discountAuthorizedBy : undefined,
       };
 
-      // Modo split-por-comanda: 1 pagamento por comanda nominal (cada um com seu método)
-      const isSplitByComanda = splitEnabled && splitPayments.some((p) => p.comandaId);
-      if (isSplitByComanda && isTablePayment) {
-        for (const line of splitPayments) {
-          if (!line.comandaId) continue;
-          const c = tableComandas.find((x) => x.id === line.comandaId);
-          if (!c) continue;
-          await registerPayment({
-            comandaId: c.id,
-            orderId: c.order_id,
-            amount: parseFloat(line.amount) || c.subtotal,
-            paymentMethod: line.method,
-            installments: line.method === "cartao" ? parseInt(line.installments) : undefined,
-            cashReceived: line.method === "dinheiro" ? parseFloat(line.amount) : undefined,
-          });
-        }
-      } else if (isTablePayment && table) {
-        await registerTablePayment({
-          tableId: table.id,
-          comandaIds: tableComandas.map((c) => c.id),
-          ...paymentData,
+      // Modo "Por produto": pagamento parcial dos itens selecionados
+      if (isByProduct && comanda) {
+        const partialItems = Array.from(selectedItemQtys.entries()).map(([id, qty]) => {
+          const it = displayItems.find((d) => d.id === id)!;
+          return { itemId: id, quantityPaid: qty, unitPrice: Number(it.unit_price || 0) };
         });
-      } else if (comanda) {
-        await registerPayment({
+        await registerPartialPayment({
           comandaId: comanda.id,
           orderId: comanda.order_id,
           ...paymentData,
+          partialItems,
+          chargingSessionId: chargingSessionRef.current,
         });
+      } else {
+        // Modo split-por-comanda: 1 pagamento por comanda nominal (cada um com seu método)
+        const isSplitByComanda = splitEnabled && splitPayments.some((p) => p.comandaId);
+        if (isSplitByComanda && isTablePayment) {
+          for (const line of splitPayments) {
+            if (!line.comandaId) continue;
+            const c = tableComandas.find((x) => x.id === line.comandaId);
+            if (!c) continue;
+            await registerPayment({
+              comandaId: c.id,
+              orderId: c.order_id,
+              amount: parseFloat(line.amount) || c.subtotal,
+              paymentMethod: line.method,
+              installments: line.method === "cartao" ? parseInt(line.installments) : undefined,
+              cashReceived: line.method === "dinheiro" ? parseFloat(line.amount) : undefined,
+            });
+          }
+        } else if (isTablePayment && table) {
+          await registerTablePayment({
+            tableId: table.id,
+            comandaIds: tableComandas.map((c) => c.id),
+            ...paymentData,
+          });
+        } else if (comanda) {
+          await registerPayment({
+            comandaId: comanda.id,
+            orderId: comanda.order_id,
+            ...paymentData,
+          });
+        }
       }
 
       paymentDoneRef.current = true;
@@ -495,7 +640,7 @@ export function PaymentDialog({
     }
   };
 
-  const isProcessing = isRegisteringPayment || isRegisteringTablePayment;
+  const isProcessing = isRegisteringPayment || isRegisteringTablePayment || isRegisteringPartialPayment;
 
   if (showSuccess) {
     const nfceEnabled = !!settings?.nfe_enable_nfce;
@@ -662,13 +807,19 @@ export function PaymentDialog({
                   <Receipt className="h-4 w-4" />
                   Resumo do Pedido
                 </h4>
-                <ScrollArea className="h-[160px]">
+                <ScrollArea className={cn(isByProduct ? "h-[260px]" : "h-[160px]")}>
                   <div className="space-y-1">
                     <AnimatePresence initial={false}>
                       {displayItems.map((item) => {
                         const canRemove =
                           item.kitchen_status === "pendente" ||
                           item.kitchen_status === "preparando";
+                        const paid = (item as any).paid_quantity || 0;
+                        const remaining = item.quantity - paid;
+                        const fullyPaid = remaining <= 0;
+                        const lockedByOther = isItemLockedByOther(item);
+                        const selectedQty = selectedItemQtys.get(item.id) || 0;
+                        const isSelected = selectedQty > 0;
                         return (
                           <motion.div
                             key={item.id}
@@ -677,15 +828,62 @@ export function PaymentDialog({
                             animate={{ opacity: 1, height: "auto" }}
                             exit={{ opacity: 0, height: 0, marginTop: 0 }}
                             transition={{ duration: 0.2 }}
-                            className="flex items-center justify-between gap-2 text-sm py-1"
+                            className={cn(
+                              "flex items-center justify-between gap-2 text-sm py-1",
+                              isByProduct && isSelected && "bg-primary/5 rounded-md px-1",
+                              fullyPaid && "opacity-50",
+                            )}
                           >
-                            <span className="text-muted-foreground flex-1 min-w-0 truncate">
+                            {isByProduct && (
+                              <div className="shrink-0">
+                                {fullyPaid ? (
+                                  <Check className="h-4 w-4 text-green-600" />
+                                ) : lockedByOther ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <LockIcon className="h-4 w-4 text-muted-foreground" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right">Em cobrança por outro operador</TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleItemSelection(item)}
+                                    aria-label={`Selecionar ${item.product_name}`}
+                                    className="h-5 w-5"
+                                  />
+                                )}
+                              </div>
+                            )}
+                            <span className={cn(
+                              "text-muted-foreground flex-1 min-w-0 truncate",
+                              fullyPaid && "line-through",
+                            )}>
                               {item.quantity}x {item.product_name}
+                              {paid > 0 && !fullyPaid && (
+                                <Badge variant="outline" className="ml-2 text-[10px] h-4 px-1">{paid}/{item.quantity} pago</Badge>
+                              )}
+                              {fullyPaid && (
+                                <Badge variant="outline" className="ml-2 text-[10px] h-4 px-1 border-green-600 text-green-700">pago</Badge>
+                              )}
                             </span>
-                            <span className="font-medium tabular-nums">
-                              {formatCurrency(item.subtotal)}
+                            {isByProduct && isSelected && remaining > 1 && (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <Button type="button" variant="outline" size="icon" className="h-6 w-6"
+                                  onClick={() => setItemQty(item.id, selectedQty - 1)} disabled={selectedQty <= 1}>
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <span className="text-xs font-medium tabular-nums w-10 text-center">{selectedQty}/{remaining}</span>
+                                <Button type="button" variant="outline" size="icon" className="h-6 w-6"
+                                  onClick={() => setItemQty(item.id, selectedQty + 1)} disabled={selectedQty >= remaining}>
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
+                            <span className="font-medium tabular-nums shrink-0">
+                              {formatCurrency(isByProduct && isSelected ? selectedQty * Number(item.unit_price || 0) : item.subtotal)}
                             </span>
-                            {canRemove ? (
+                            {!isByProduct && (canRemove ? (
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -714,11 +912,9 @@ export function PaymentDialog({
                                     </Button>
                                   </span>
                                 </TooltipTrigger>
-                                <TooltipContent side="left">
-                                  Item já preparado pela cozinha — não pode ser removido
-                                </TooltipContent>
+                                <TooltipContent side="left">Item já preparado pela cozinha — não pode ser removido</TooltipContent>
                               </Tooltip>
-                            )}
+                            ))}
                           </motion.div>
                         );
                       })}
@@ -985,23 +1181,104 @@ onClick={() => {
 
           {/* Right Column - Payment */}
           <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-1">
-            {/* Split Payment Toggle */}
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <Label htmlFor="split-payment" className="text-sm cursor-pointer flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Dividir pagamento
-              </Label>
-              <Switch
-                id="split-payment"
-                checked={splitEnabled}
-                onCheckedChange={(checked) => {
-                  setSplitEnabled(checked);
-                  if (checked && splitPayments.length === 0) {
-                    addSplitPayment();
-                  }
+            {/* Charge mode segmented control */}
+            <div className="grid grid-cols-3 gap-1 p-1 bg-muted/50 rounded-lg">
+              <Button
+                type="button"
+                variant={chargeMode === "all" ? "default" : "ghost"}
+                size="sm"
+                className="text-xs h-9"
+                onClick={() => {
+                  setChargeMode("all");
+                  setSplitEnabled(false);
+                  clearSelection();
                 }}
-              />
+              >
+                Tudo
+              </Button>
+              <Button
+                type="button"
+                variant={chargeMode === "split-forms" ? "default" : "ghost"}
+                size="sm"
+                className="text-xs h-9"
+                onClick={() => {
+                  setChargeMode("split-forms");
+                  setSplitEnabled(true);
+                  if (splitPayments.length === 0) addSplitPayment();
+                  clearSelection();
+                }}
+              >
+                Várias formas
+              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      type="button"
+                      variant={chargeMode === "by-product" ? "default" : "ghost"}
+                      size="sm"
+                      className="text-xs h-9 w-full"
+                      disabled={!supportsByProduct}
+                      onClick={() => {
+                        setChargeMode("by-product");
+                        setSplitEnabled(false);
+                        setSplitPayments([]);
+                      }}
+                    >
+                      Por produto
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!supportsByProduct && (
+                  <TooltipContent side="bottom">
+                    Disponível apenas para comandas individuais com itens persistidos
+                  </TooltipContent>
+                )}
+              </Tooltip>
             </div>
+
+            {/* Selection summary (by-product) */}
+            {isByProduct && (
+              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    {selectedItemQtys.size} de {selectableItems.length} itens — {formatCurrency(selectedSubtotal)}
+                  </span>
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs"
+                      onClick={selectAllPending}
+                      disabled={selectableItems.length === 0}
+                    >
+                      Todos
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs"
+                      onClick={clearSelection}
+                      disabled={selectedItemQtys.size === 0}
+                    >
+                      Limpar
+                    </Button>
+                  </div>
+                </div>
+                {pendingSubtotal - selectedSubtotal > 0.005 && (
+                  <p className="text-xs text-muted-foreground">
+                    Fica em aberto: {formatCurrency(pendingSubtotal - selectedSubtotal)}
+                  </p>
+                )}
+                {selectedItemQtys.size === 0 && (
+                  <p className="text-xs text-amber-600">
+                    Selecione ao menos um item à esquerda para continuar.
+                  </p>
+                )}
+              </div>
+            )}
 
             <AnimatePresence mode="wait">
               {splitEnabled ? (

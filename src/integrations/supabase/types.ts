@@ -2960,6 +2960,7 @@ export type Database = {
       }
       pdv_comanda_items: {
         Row: {
+          charging_session_id: string | null
           comanda_id: string
           created_at: string
           id: string
@@ -2967,6 +2968,7 @@ export type Database = {
           kitchen_status: string
           modifiers: Json | null
           notes: string | null
+          paid_quantity: number
           parent_item_id: string | null
           product_id: string
           product_name: string
@@ -2978,6 +2980,7 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          charging_session_id?: string | null
           comanda_id: string
           created_at?: string
           id?: string
@@ -2985,6 +2988,7 @@ export type Database = {
           kitchen_status?: string
           modifiers?: Json | null
           notes?: string | null
+          paid_quantity?: number
           parent_item_id?: string | null
           product_id: string
           product_name: string
@@ -2996,6 +3000,7 @@ export type Database = {
           unit_price: number
         }
         Update: {
+          charging_session_id?: string | null
           comanda_id?: string
           created_at?: string
           id?: string
@@ -3003,6 +3008,7 @@ export type Database = {
           kitchen_status?: string
           modifiers?: Json | null
           notes?: string | null
+          paid_quantity?: number
           parent_item_id?: string | null
           product_id?: string
           product_name?: string
@@ -3053,6 +3059,7 @@ export type Database = {
           id: string
           notes: string | null
           order_id: string | null
+          pending_subtotal: number
           person_number: number | null
           status: string
           subtotal: number
@@ -3067,6 +3074,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id?: string | null
+          pending_subtotal?: number
           person_number?: number | null
           status?: string
           subtotal?: number
@@ -3081,6 +3089,7 @@ export type Database = {
           id?: string
           notes?: string | null
           order_id?: string | null
+          pending_subtotal?: number
           person_number?: number | null
           status?: string
           subtotal?: number
@@ -4234,6 +4243,58 @@ export type Database = {
             columns: ["table_id"]
             isOneToOne: false
             referencedRelation: "pdv_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pdv_payment_items: {
+        Row: {
+          comanda_item_id: string
+          created_at: string
+          id: string
+          payment_id: string
+          quantity_paid: number
+          subtotal_paid: number
+          unit_price: number
+        }
+        Insert: {
+          comanda_item_id: string
+          created_at?: string
+          id?: string
+          payment_id: string
+          quantity_paid: number
+          subtotal_paid: number
+          unit_price: number
+        }
+        Update: {
+          comanda_item_id?: string
+          created_at?: string
+          id?: string
+          payment_id?: string
+          quantity_paid?: number
+          subtotal_paid?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_payment_items_comanda_item_id_fkey"
+            columns: ["comanda_item_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_comanda_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_payment_items_comanda_item_id_fkey"
+            columns: ["comanda_item_id"]
+            isOneToOne: false
+            referencedRelation: "vw_print_bridge_comanda_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_payment_items_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_payments"
             referencedColumns: ["id"]
           },
         ]
@@ -6588,6 +6649,16 @@ export type Database = {
       }
       is_establishment_member: { Args: { owner_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      pdv_lock_comanda_items: {
+        Args: { p_item_ids: string[]; p_session_id: string }
+        Returns: {
+          locked_id: string
+        }[]
+      }
+      pdv_unlock_comanda_items: {
+        Args: { p_item_ids: string[]; p_session_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role:

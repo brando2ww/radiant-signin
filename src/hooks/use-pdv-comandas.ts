@@ -45,6 +45,8 @@ export interface ComandaItem {
   ready_at: string | null;
   created_at: string;
   production_center_id: string | null;
+  paid_quantity?: number;
+  charging_session_id?: string | null;
 }
 
 export function usePDVComandas() {
@@ -638,6 +640,36 @@ export function usePDVComandas() {
     },
   });
 
+  // Lock atômico de itens individuais para o modo "Pagar por produto".
+  const lockItemsForChargingMutation = useMutation({
+    mutationFn: async ({ itemIds, sessionId }: { itemIds: string[]; sessionId: string }): Promise<string[]> => {
+      if (!itemIds.length) return [];
+      const { data, error } = await (supabase.rpc as any)("pdv_lock_comanda_items", {
+        p_item_ids: itemIds,
+        p_session_id: sessionId,
+      });
+      if (error) throw error;
+      return ((data ?? []) as Array<{ locked_id: string }>).map((r) => r.locked_id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-comanda-items"] });
+    },
+  });
+
+  const unlockItemsForChargingMutation = useMutation({
+    mutationFn: async ({ itemIds, sessionId }: { itemIds: string[]; sessionId: string }) => {
+      if (!itemIds.length) return;
+      const { error } = await (supabase.rpc as any)("pdv_unlock_comanda_items", {
+        p_item_ids: itemIds,
+        p_session_id: sessionId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-comanda-items"] });
+    },
+  });
+
   // Helper to get items for a specific comanda (only visible/parent items)
   const getItemsByComanda = (comandaId: string) => {
     return comandaItems.filter(
@@ -691,6 +723,8 @@ export function usePDVComandas() {
     sendToKitchenAsync: sendToKitchenMutation.mutateAsync,
     markAsCharging: markAsChargingMutation.mutateAsync,
     releaseFromCharging: releaseFromChargingMutation.mutateAsync,
+    lockItemsForCharging: lockItemsForChargingMutation.mutateAsync,
+    unlockItemsForCharging: unlockItemsForChargingMutation.mutateAsync,
     returnToWaiter: returnToWaiterMutation.mutateAsync,
     isReturningToWaiter: returnToWaiterMutation.isPending,
 
