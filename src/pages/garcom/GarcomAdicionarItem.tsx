@@ -202,21 +202,22 @@ export default function GarcomAdicionarItem() {
       </div>
 
       {/* Send to Kitchen Bar */}
-      {pendingItems.length > 0 && (
+      {draftItems.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background">
           <div className="px-4 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom))]">
             <div className="mb-2 flex items-center justify-between text-sm">
               <span className="text-muted-foreground">
-                {pendingItems.length} {pendingItems.length === 1 ? "item pendente" : "itens pendentes"}
+                {draftCount} {draftCount === 1 ? "item no rascunho" : "itens no rascunho"}
               </span>
-              <span className="font-semibold tabular-nums">{formatBRL(pendingTotal)}</span>
+              <span className="font-semibold tabular-nums">{formatBRL(draftTotal)}</span>
             </div>
             <Button
               onClick={handleSendToKitchen}
+              disabled={sending}
               className="w-full h-11 active:scale-[0.98] transition-transform"
             >
               <Send className="h-4 w-4 mr-2" />
-              Enviar para Cozinha
+              {sending ? "Enviando..." : "Enviar para Cozinha"}
             </Button>
           </div>
         </div>
