@@ -147,17 +147,22 @@ export default function PDVCashier() {
   // Calcular valores
   const openingBalance = activeSession?.opening_balance || 0;
   const totalCash = activeSession?.total_cash || 0;
-  const totalCard = activeSession?.total_card || 0;
+  const totalChange = (activeSession as any)?.total_change || 0;
+  const totalCredit = (activeSession as any)?.total_credit || 0;
+  const totalDebit = (activeSession as any)?.total_debit || 0;
   const totalPix = activeSession?.total_pix || 0;
+  const totalVoucher = (activeSession as any)?.total_voucher || 0;
   const totalWithdrawals = activeSession?.total_withdrawals || 0;
   const totalSales = activeSession?.total_sales || 0;
-  
+
   // Calcular reforços a partir dos movimentos
   const totalReinforcements = movements
     .filter((m) => m.type === "reforco")
     .reduce((acc, m) => acc + m.amount, 0);
 
-  const currentBalance = openingBalance + totalSales + totalReinforcements - totalWithdrawals;
+  // Saldo da gaveta = abertura + dinheiro líquido (− troco) + reforços − sangrias
+  const netCash = totalCash - totalChange;
+  const drawerBalance = openingBalance + netCash + totalReinforcements - totalWithdrawals;
 
   // Atalhos de teclado para ações rápidas
   useEffect(() => {
