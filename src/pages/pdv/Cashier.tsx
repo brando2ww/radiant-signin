@@ -63,20 +63,9 @@ export default function PDVCashier() {
     setOpenDialog(false);
   };
 
-  const handleCloseCashier = (
-    closingBalance: number, 
-    notes?: string,
-    expectedBalance?: number,
-    riskLevel?: "ok" | "low" | "medium" | "high" | "critical"
-  ) => {
+  const handleCloseCashier = (payload: Omit<import("@/hooks/use-pdv-cashier").CloseCashierPayload, "sessionId">) => {
     if (!activeSession) return;
-    closeCashier({ 
-      sessionId: activeSession.id, 
-      closingBalance, 
-      notes,
-      expectedBalance: expectedBalance || 0,
-      riskLevel: riskLevel || "ok"
-    });
+    closeCashier({ sessionId: activeSession.id, ...payload });
     setCloseDialog(false);
   };
 
