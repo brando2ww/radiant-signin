@@ -328,6 +328,22 @@ export function ComandaDetailsDialog({
             )}
           </ScrollArea>
 
+          {selectMode && (
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/40 bg-primary/5 p-3">
+              <span className="text-sm font-medium">
+                {selectedIds.size} {selectedIds.size === 1 ? "item selecionado" : "itens selecionados"}
+              </span>
+              <Button
+                size="sm"
+                onClick={handleTransferSelected}
+                disabled={selectedIds.size === 0}
+              >
+                <ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" />
+                Mover {selectedIds.size > 0 ? `(${selectedIds.size})` : ""}
+              </Button>
+            </div>
+          )}
+
           <Separator className="my-2" />
 
           {/* Totals */}
