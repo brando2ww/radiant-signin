@@ -723,6 +723,8 @@ export function usePDVComandas() {
     sendToKitchenAsync: sendToKitchenMutation.mutateAsync,
     markAsCharging: markAsChargingMutation.mutateAsync,
     releaseFromCharging: releaseFromChargingMutation.mutateAsync,
+    lockItemsForCharging: lockItemsForChargingMutation.mutateAsync,
+    unlockItemsForCharging: unlockItemsForChargingMutation.mutateAsync,
     returnToWaiter: returnToWaiterMutation.mutateAsync,
     isReturningToWaiter: returnToWaiterMutation.isPending,
 
