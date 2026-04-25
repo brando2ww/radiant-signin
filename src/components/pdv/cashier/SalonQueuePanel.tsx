@@ -304,9 +304,9 @@ export function SalonQueuePanel({
                     const title = tableLabel
                       ? `${tableLabel} — ${customer}`
                       : `Avulsa — ${customer}`;
-                    // Contar siblings (mesa tem outras abertas)
+                    // Contar siblings (mesa tem outras abertas, sem contar esta)
                     const siblings = c.order_id
-                      ? openCountByOrderId.get(c.order_id) ?? 0
+                      ? Math.max(0, (openCountByOrderId.get(c.order_id) ?? 0) - 1)
                       : 0;
                     return (
                       <SalonQueueCard
