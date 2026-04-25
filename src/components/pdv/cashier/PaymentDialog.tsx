@@ -807,7 +807,7 @@ export function PaymentDialog({
                   <Receipt className="h-4 w-4" />
                   Resumo do Pedido
                 </h4>
-                <ScrollArea className="h-[160px]">
+                <ScrollArea className={cn(isByProduct ? "h-[260px]" : "h-[160px]")}>
                   <div className="space-y-1">
                     <AnimatePresence initial={false}>
                       {displayItems.map((item) => {
