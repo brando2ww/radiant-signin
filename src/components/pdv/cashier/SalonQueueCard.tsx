@@ -57,6 +57,7 @@ export function SalonQueueCard({
   const [returnReason, setReturnReason] = useState("");
 
   const isCharging = comanda.status === "em_cobranca";
+  const isOpen = comanda.status === "aberta";
   const totalQty = items.reduce((s, i) => s + i.quantity, 0);
   const preview =
     items.slice(0, 3).map((i) => `${i.quantity}x ${i.product_name}`).join(", ") +
@@ -97,6 +98,10 @@ export function SalonQueueCard({
             <Badge className="bg-blue-500 text-white hover:bg-blue-500 gap-1 text-[10px] shrink-0">
               <Loader2 className="h-2.5 w-2.5 animate-spin" />
               Em cobrança
+            </Badge>
+          ) : isOpen ? (
+            <Badge className="bg-emerald-500 text-white hover:bg-emerald-500 text-[10px] shrink-0">
+              Aberta
             </Badge>
           ) : (
             <Badge className="bg-orange-500 text-white hover:bg-orange-500 text-[10px] shrink-0">
@@ -194,17 +199,18 @@ export function SalonQueueCard({
               <ChevronDown className="h-4 w-4" />
             )}
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-10 px-2 text-muted-foreground hover:text-foreground"
-            onClick={() => setReturnDialog(true)}
-            title="Devolver ao garçom"
-            aria-label="Devolver ao garçom"
-            disabled={isCharging}
-          >
-            <Undo2 className="h-4 w-4" />
-          </Button>
+          {!isOpen && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-10 px-2 text-muted-foreground hover:text-foreground"
+              onClick={() => setReturnDialog(true)}
+              title="Devolver ao garçom"
+              aria-label="Devolver ao garçom"
+            >
+              <Undo2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 

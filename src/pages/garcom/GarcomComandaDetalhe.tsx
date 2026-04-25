@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Send, CreditCard, Utensils, Clock, ArrowRightLeft, CheckSquare, X, Pencil, ChefHat, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Send, CreditCard, Utensils, ArrowRightLeft, CheckSquare, X, Pencil, ChefHat, Trash2 } from "lucide-react";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { useDraftCart } from "@/contexts/DraftCartContext";
@@ -20,7 +20,6 @@ export default function GarcomComandaDetalhe() {
     comandaItems,
     isLoading,
     sendToKitchenAsync,
-    closeComanda,
     addItem: persistItem,
   } = usePDVComandas();
   const { tables } = usePDVTables();
@@ -81,9 +80,8 @@ export default function GarcomComandaDetalhe() {
     toast.success("Rascunho descartado");
   };
 
-  const isLocked =
-    comanda?.status === "aguardando_pagamento" ||
-    comanda?.status === "em_cobranca";
+  // Comanda em cobrança no caixa: garçom não pode mais editar.
+  const isLocked = comanda?.status === "em_cobranca";
   const isClosed = comanda?.status === "fechada" || comanda?.status === "cancelada";
   const canEdit = comanda?.status === "aberta";
 
@@ -128,19 +126,11 @@ export default function GarcomComandaDetalhe() {
   }
 
   const statusBadge = (() => {
-    if (comanda.status === "aguardando_pagamento") {
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold text-orange-600 dark:text-orange-400">
-          <Clock className="h-3 w-3" />
-          Aguardando caixa
-        </span>
-      );
-    }
     if (comanda.status === "em_cobranca") {
       return (
         <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
           <CreditCard className="h-3 w-3" />
-          Sendo cobrada no caixa
+          Em cobrança no caixa
         </span>
       );
     }
@@ -197,8 +187,8 @@ export default function GarcomComandaDetalhe() {
       {/* Items */}
       <div className="flex-1 p-4 pb-56 space-y-2">
         {isLocked && (
-          <div className="rounded-2xl border border-orange-500/30 bg-orange-500/5 p-3 text-xs text-orange-700 dark:text-orange-300">
-            Esta comanda já foi enviada para o caixa. Não é possível adicionar ou remover itens.
+          <div className="rounded-2xl border border-blue-500/30 bg-blue-500/5 p-3 text-xs text-blue-700 dark:text-blue-300">
+            Esta comanda está sendo cobrada no caixa. Não é possível adicionar ou remover itens enquanto isso.
           </div>
         )}
         {sentItems.length + draftItems.length === 0 ? (
@@ -337,33 +327,19 @@ export default function GarcomComandaDetalhe() {
                   </Button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    className="active:scale-95 h-11"
-                    onClick={() => navigate(`/garcom/comanda/${id}/adicionar`)}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Adicionar item
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    className="active:scale-95 h-11"
-                    onClick={() => {
-                      closeComanda(comanda.id);
-                      navigate(-1);
-                    }}
-                  >
-                    <CreditCard className="h-4 w-4 mr-1" />
-                    Fechar
-                  </Button>
-                </div>
+                <Button
+                  className="w-full h-12 active:scale-95 text-base"
+                  onClick={() => navigate(`/garcom/comanda/${id}/adicionar`)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar item
+                </Button>
               )
             ) : (
               <p className="text-xs text-center text-muted-foreground py-2">
                 {comanda.status === "em_cobranca"
                   ? "O caixa está cobrando esta comanda."
-                  : "Aguardando o operador do caixa cobrar esta comanda."}
+                  : "Esta comanda foi finalizada."}
               </p>
             )}
           </div>
