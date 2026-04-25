@@ -192,7 +192,7 @@ export default function GarcomComandaDetalhe() {
       </div>
 
       {/* Bottom Action Bar */}
-      {!isClosed && (
+      {!isClosed && !selectMode && (
         <div className="fixed bottom-0 inset-x-0 z-40 border-t bg-background">
           <div className="p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] space-y-2">
             <div className="flex items-center justify-between text-sm font-semibold">
@@ -245,6 +245,42 @@ export default function GarcomComandaDetalhe() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Selection Action Bar */}
+      {selectMode && (
+        <div className="fixed bottom-0 inset-x-0 z-40 border-t bg-background">
+          <div className="p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] flex items-center gap-2">
+            <span className="text-sm font-medium flex-1">
+              {selectedIds.size} {selectedIds.size === 1 ? "selecionado" : "selecionados"}
+            </span>
+            <Button variant="outline" className="h-11" onClick={exitSelectMode}>
+              Cancelar
+            </Button>
+            <Button
+              className="h-11 active:scale-95"
+              onClick={handleTransferSelected}
+              disabled={selectedIds.size === 0}
+            >
+              <ArrowRightLeft className="h-4 w-4 mr-1.5" />
+              Mover ({selectedIds.size})
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Items Dialog */}
+      <TransferItemsDialog
+        open={!!transferIds}
+        onOpenChange={(o) => !o && setTransferIds(null)}
+        sourceComanda={comanda ?? null}
+        items={transferIds ? items.filter((it) => transferIds.includes(it.id)) : []}
+        onTransferred={() => {
+          setTransferIds(null);
+          exitSelectMode();
+        }}
+      />
+
       )}
     </div>
   );
