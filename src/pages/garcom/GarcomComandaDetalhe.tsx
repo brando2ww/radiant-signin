@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Send, CreditCard, Utensils, Clock, ArrowRightLeft, CheckSquare, X } from "lucide-react";
+import { ArrowLeft, Plus, Send, CreditCard, Utensils, Clock, ArrowRightLeft, CheckSquare, X, Pencil, ChefHat } from "lucide-react";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
@@ -20,6 +20,7 @@ export default function GarcomComandaDetalhe() {
     sendToKitchenAsync,
     closeComanda,
     removeItem,
+    updateItem,
   } = usePDVComandas();
   const { tables } = usePDVTables();
 
@@ -33,9 +34,18 @@ export default function GarcomComandaDetalhe() {
     ? tables.find((t) => t.current_order_id === comanda.order_id)
     : null;
 
-  const pendingIds = items
-    .filter((i) => i.kitchen_status === "pendente" && !i.sent_to_kitchen_at)
-    .map((i) => i.id);
+  const isDraftItem = (i: typeof items[number]) =>
+    i.kitchen_status === "pendente" && !i.sent_to_kitchen_at;
+  const draftItems = items.filter(isDraftItem);
+  const sentItems = items.filter((i) => !isDraftItem(i));
+  const pendingIds = draftItems.map((i) => i.id);
+
+  const handleIncrement = (item: typeof items[number]) =>
+    updateItem({ id: item.id, quantity: item.quantity + 1 });
+  const handleDecrement = (item: typeof items[number]) => {
+    if (item.quantity <= 1) removeItem(item.id);
+    else updateItem({ id: item.id, quantity: item.quantity - 1 });
+  };
 
   const isLocked =
     comanda?.status === "aguardando_pagamento" ||
@@ -171,7 +181,8 @@ export default function GarcomComandaDetalhe() {
               </Button>
             )}
           </div>
-        ) : (
+        ) : selectMode ? (
+          // Em modo seleção, lista plana para permitir transferência atravessando grupos
           items.map((item) => (
             <ComandaItemCard
               key={item.id}
@@ -181,13 +192,72 @@ export default function GarcomComandaDetalhe() {
               notes={item.notes}
               kitchenStatus={item.kitchen_status}
               sentToKitchenAt={item.sent_to_kitchen_at}
-              onRemove={canEdit && !selectMode ? () => removeItem(item.id) : undefined}
-              onTransfer={canEdit && !selectMode ? () => setTransferIds([item.id]) : undefined}
-              selectMode={selectMode}
+              selectMode
               selected={selectedIds.has(item.id)}
               onToggleSelect={() => toggleSelect(item.id)}
             />
           ))
+        ) : (
+          <>
+            {/* Grupo: Novos itens — não enviados ainda */}
+            {draftItems.length > 0 && (
+              <section className="space-y-2">
+                <div className="flex items-center gap-2 px-1 pt-1">
+                  <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                  <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Novos itens — não enviados ainda
+                    <span className="ml-1 normal-case text-muted-foreground/70">
+                      ({draftItems.length})
+                    </span>
+                  </h2>
+                </div>
+                {draftItems.map((item) => (
+                  <ComandaItemCard
+                    key={item.id}
+                    variant="draft"
+                    productName={item.product_name}
+                    quantity={item.quantity}
+                    unitPrice={item.unit_price}
+                    notes={item.notes}
+                    kitchenStatus={item.kitchen_status}
+                    sentToKitchenAt={item.sent_to_kitchen_at}
+                    onRemove={canEdit ? () => removeItem(item.id) : undefined}
+                    onIncrement={canEdit ? () => handleIncrement(item) : undefined}
+                    onDecrement={canEdit ? () => handleDecrement(item) : undefined}
+                    onTransfer={canEdit ? () => setTransferIds([item.id]) : undefined}
+                  />
+                ))}
+              </section>
+            )}
+
+            {/* Grupo: Já enviados para a cozinha */}
+            {sentItems.length > 0 && (
+              <section className="space-y-2 pt-2">
+                <div className="flex items-center gap-2 px-1 pt-1">
+                  <ChefHat className="h-3.5 w-3.5 text-muted-foreground" />
+                  <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Já enviados para a cozinha
+                    <span className="ml-1 normal-case text-muted-foreground/70">
+                      ({sentItems.length})
+                    </span>
+                  </h2>
+                </div>
+                {sentItems.map((item) => (
+                  <ComandaItemCard
+                    key={item.id}
+                    variant="sent"
+                    productName={item.product_name}
+                    quantity={item.quantity}
+                    unitPrice={item.unit_price}
+                    notes={item.notes}
+                    kitchenStatus={item.kitchen_status}
+                    sentToKitchenAt={item.sent_to_kitchen_at}
+                    /* Itens enviados: somente leitura — sem remover/mover fora do selectMode */
+                  />
+                ))}
+              </section>
+            )}
+          </>
         )}
       </div>
 

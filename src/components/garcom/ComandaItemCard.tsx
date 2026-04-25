@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 import type { KitchenStatus } from "@/hooks/use-pdv-comandas";
 import { formatBRL } from "@/lib/format";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowRightLeft, Trash2 } from "lucide-react";
+import { ArrowRightLeft, Trash2, Minus, Plus } from "lucide-react";
 
 const kitchenStatusConfig: Record<KitchenStatus, { color: string; label: string }> = {
   pendente: { color: "bg-muted text-muted-foreground", label: "Pendente" },
@@ -25,9 +25,18 @@ interface ComandaItemCardProps {
   sentToKitchenAt?: string | null;
   onRemove?: () => void;
   onTransfer?: () => void;
+  onIncrement?: () => void;
+  onDecrement?: () => void;
   selectMode?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
+  /**
+   * "draft" = rascunho do garçom, ainda não enviado para cozinha. Mostra
+   * controles de quantidade e botão remover sempre visível, sem badge de status.
+   * "sent" = histórico em produção. Somente leitura, com badge.
+   * Default "sent" para preservar compatibilidade.
+   */
+  variant?: "draft" | "sent";
 }
 
 export function ComandaItemCard({
@@ -39,15 +48,19 @@ export function ComandaItemCard({
   sentToKitchenAt,
   onRemove,
   onTransfer,
+  onIncrement,
+  onDecrement,
   selectMode = false,
   selected = false,
   onToggleSelect,
+  variant = "sent",
 }: ComandaItemCardProps) {
   const config =
     kitchenStatus === "pendente" && sentToKitchenAt
       ? sentToKitchenConfig
       : kitchenStatusConfig[kitchenStatus];
   const subtotal = quantity * unitPrice;
+  const isDraft = variant === "draft";
 
   const handleCardClick = () => {
     if (selectMode) onToggleSelect?.();
@@ -59,6 +72,7 @@ export function ComandaItemCard({
         "flex items-start gap-3 rounded-xl border bg-card p-3 transition-colors",
         selectMode && "cursor-pointer active:scale-[0.99]",
         selectMode && selected && "border-primary bg-primary/5",
+        !isDraft && !selectMode && "bg-muted/30",
       )}
       onClick={handleCardClick}
     >
@@ -78,11 +92,44 @@ export function ComandaItemCard({
         {notes && (
           <p className="mt-0.5 text-xs text-muted-foreground italic truncate">{notes}</p>
         )}
-        <div className="mt-1.5 flex items-center gap-2">
-          <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", config.color)}>
-            {config.label}
-          </span>
-        </div>
+        {/* Status badge: só em itens enviados (rascunho não precisa) */}
+        {!isDraft && (
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", config.color)}>
+              {config.label}
+            </span>
+          </div>
+        )}
+        {/* Controles de quantidade: só em rascunho, fora do selectMode */}
+        {isDraft && !selectMode && (onIncrement || onDecrement) && (
+          <div className="mt-2 inline-flex items-center gap-2">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDecrement?.();
+              }}
+              className="h-9 w-9 inline-flex items-center justify-center rounded-md border bg-background text-foreground hover:bg-accent active:scale-95 transition-all"
+              aria-label="Diminuir quantidade"
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <span className="min-w-[1.5rem] text-center text-sm font-semibold tabular-nums">
+              {quantity}
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onIncrement?.();
+              }}
+              className="h-9 w-9 inline-flex items-center justify-center rounded-md border bg-background text-foreground hover:bg-accent active:scale-95 transition-all"
+              aria-label="Aumentar quantidade"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
       <div className="flex flex-col items-end gap-1.5">
         <span className="text-sm font-semibold tabular-nums">{formatBRL(subtotal)}</span>
@@ -108,10 +155,13 @@ export function ComandaItemCard({
                   e.stopPropagation();
                   onRemove();
                 }}
-                className="h-7 w-7 inline-flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 active:scale-95 transition-all"
+                className={cn(
+                  "inline-flex items-center justify-center rounded-md text-destructive hover:bg-destructive/10 active:scale-95 transition-all",
+                  isDraft ? "h-9 w-9" : "h-7 w-7",
+                )}
                 aria-label="Remover item"
               >
-                <Trash2 className="h-3.5 w-3.5" />
+                <Trash2 className={cn(isDraft ? "h-4 w-4" : "h-3.5 w-3.5")} />
               </button>
             )}
           </div>
