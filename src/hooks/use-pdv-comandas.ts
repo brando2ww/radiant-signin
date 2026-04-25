@@ -552,8 +552,8 @@ export function usePDVComandas() {
     },
   });
 
-  // Lock comandas para o caixa atual (transição aguardando_pagamento -> em_cobranca).
-  // Retorna a lista de IDs efetivamente travados (apenas os que estavam aguardando).
+  // Lock comandas para o caixa atual (transição aberta|aguardando_pagamento -> em_cobranca).
+  // Retorna a lista de IDs efetivamente travados.
   const markAsChargingMutation = useMutation({
     mutationFn: async (ids: string[]): Promise<string[]> => {
       if (!ids.length) return [];
@@ -561,7 +561,7 @@ export function usePDVComandas() {
         .from("pdv_comandas")
         .update({ status: "em_cobranca", updated_at: new Date().toISOString() })
         .in("id", ids)
-        .eq("status", "aguardando_pagamento")
+        .in("status", ["aberta", "aguardando_pagamento"])
         .select("id");
       if (error) throw error;
       return ((data ?? []) as Array<{ id: string }>).map((r) => r.id);
@@ -571,9 +571,9 @@ export function usePDVComandas() {
     },
   });
 
-  // Devolver comanda ao garçom (aguardando_pagamento|em_cobranca -> aberta)
-  // com motivo obrigatório. Usado quando o caixa identifica que o cliente
-  // pediu mais itens ou a comanda não está pronta para cobrança.
+  // Devolver comanda ao garçom (em_cobranca -> aberta) com motivo obrigatório.
+  // Usado quando o caixa abriu cobrança mas precisa cancelar (cliente quer
+  // mais itens, etc.).
   const returnToWaiterMutation = useMutation({
     mutationFn: async ({ comandaId, reason }: { comandaId: string; reason: string }) => {
       const trimmed = reason.trim();
@@ -587,8 +587,8 @@ export function usePDVComandas() {
         .maybeSingle();
       if (fetchErr) throw fetchErr;
       if (!current) throw new Error("Comanda não encontrada");
-      if (current.status !== "aguardando_pagamento" && current.status !== "em_cobranca") {
-        throw new Error("Esta comanda não está mais aguardando cobrança");
+      if (current.status !== "em_cobranca") {
+        throw new Error("Esta comanda não está em cobrança");
       }
 
       const stamp = new Date().toLocaleString("pt-BR");
@@ -604,7 +604,7 @@ export function usePDVComandas() {
           updated_at: new Date().toISOString(),
         })
         .eq("id", comandaId)
-        .in("status", ["aguardando_pagamento", "em_cobranca"])
+        .eq("status", "em_cobranca")
         .select()
         .maybeSingle();
       if (error) throw error;
@@ -620,15 +620,15 @@ export function usePDVComandas() {
     },
   });
 
-  // Liberar comandas travadas (em_cobranca -> aguardando_pagamento) quando o
-  // caixa fecha o dialog sem concluir o pagamento.
+  // Liberar comandas travadas (em_cobranca -> aberta) quando o
+  // caixa fecha o dialog sem concluir o pagamento. Garçom volta a poder editar.
   const releaseFromChargingMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       if (!ids.length) return;
       const { error } = await supabase
         .from("pdv_comandas")
         .update({
-          status: "aguardando_pagamento",
+          status: "aberta",
           updated_at: new Date().toISOString(),
         })
         .in("id", ids)
@@ -687,21 +687,31 @@ export function usePDVComandas() {
     return comandas.filter((c) => !c.order_id && c.status === "aberta");
   };
 
-  // Helper: comandas aguardando cobrança (qualquer origem) — fila do caixa
+  // Helper: comandas elegíveis para a fila do caixa.
+  // Inclui:
+  //  - 'em_cobranca' (já abertas no caixa)
+  //  - 'aberta' que tenham ao menos um item enviado à cozinha
+  //    (descarta comandas vazias / só rascunho local).
+  // Mantém 'aguardando_pagamento' por compatibilidade com comandas legadas.
   const getPendingPaymentComandas = () => {
-    return comandas.filter(
-      (c) => c.status === "aguardando_pagamento" || c.status === "em_cobranca",
-    );
+    const sentByComanda = new Set<string>();
+    comandaItems.forEach((it) => {
+      if (it.sent_to_kitchen_at && !(it as any).is_composite_child) {
+        sentByComanda.add(it.comanda_id);
+      }
+    });
+    return comandas.filter((c) => {
+      if (c.status === "em_cobranca" || c.status === "aguardando_pagamento") return true;
+      if (c.status === "aberta" && sentByComanda.has(c.id)) return true;
+      return false;
+    });
   };
 
   // Helper: comandas pendentes de pagamento de uma mesa específica
   const getPendingComandasByOrderId = (orderId: string | null | undefined) => {
     if (!orderId) return [];
-    return comandas.filter(
-      (c) =>
-        c.order_id === orderId &&
-        (c.status === "aguardando_pagamento" || c.status === "em_cobranca"),
-    );
+    const eligible = new Set(getPendingPaymentComandas().map((c) => c.id));
+    return comandas.filter((c) => c.order_id === orderId && eligible.has(c.id));
   };
 
   return {
