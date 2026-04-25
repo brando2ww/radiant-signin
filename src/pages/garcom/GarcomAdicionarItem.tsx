@@ -176,7 +176,7 @@ export default function GarcomAdicionarItem() {
         )}
       </div>
 
-      {/* Send to Kitchen Bar */}
+      {/* Conferir Comanda Bar */}
       {draftItems.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background">
           <div className="px-4 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom))]">
@@ -187,12 +187,11 @@ export default function GarcomAdicionarItem() {
               <span className="font-semibold tabular-nums">{formatBRL(draftTotal)}</span>
             </div>
             <Button
-              onClick={handleSendToKitchen}
-              disabled={sending}
+              onClick={handleGoToReview}
               className="w-full h-11 active:scale-[0.98] transition-transform"
             >
-              <Send className="h-4 w-4 mr-2" />
-              {sending ? "Enviando..." : "Enviar para Cozinha"}
+              <ClipboardCheck className="h-4 w-4 mr-2" />
+              Conferir comanda ({draftCount})
             </Button>
           </div>
         </div>
