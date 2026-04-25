@@ -159,7 +159,7 @@ export function PaymentDialog({
     | { kind: "error"; message: string; missing?: string[] }
   >({ kind: "idle" });
 
-  const { registerPayment, isRegisteringPayment, registerTablePayment, isRegisteringTablePayment } = usePDVPayments();
+  const { registerPayment, isRegisteringPayment, registerTablePayment, isRegisteringTablePayment, registerPartialPayment, isRegisteringPartialPayment } = usePDVPayments();
   const {
     markAsCharging,
     releaseFromCharging,
@@ -168,6 +168,8 @@ export function PaymentDialog({
     addItem,
     isAddingItem,
     comandaItems: liveComandaItems,
+    lockItemsForCharging,
+    unlockItemsForCharging,
   } = usePDVComandas();
   const { products: productsList } = usePDVProducts();
   const { emitNFCe, isEmitting } = useNFCeEmission();
