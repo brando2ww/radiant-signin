@@ -4,6 +4,7 @@ import { ArrowLeft, UserPlus, Send, Plus, X, Pencil, ChefHat } from "lucide-reac
 import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
+import { useDraftCart } from "@/contexts/DraftCartContext";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,8 +33,38 @@ export default function GarcomMesaDetalhe() {
     createComanda,
     isCreating,
     sendToKitchenAsync,
+    addItem: persistItem,
   } = usePDVComandas();
   const { activeSession, isLoadingSession } = usePDVCashier();
+  const draft = useDraftCart();
+  const [flushingComandaId, setFlushingComandaId] = useState<string | null>(null);
+
+  const flushDraftFor = async (comandaId: string) => {
+    const items = draft.getItems(comandaId);
+    if (items.length === 0) return;
+    setFlushingComandaId(comandaId);
+    try {
+      const created = await Promise.all(
+        items.map((it) =>
+          persistItem({
+            comandaId,
+            productId: it.productId,
+            productName: it.productName,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+            notes: it.notes,
+          }),
+        ),
+      );
+      await sendToKitchenAsync(created.map((c) => c.id));
+      draft.clear(comandaId);
+      navigate("/garcom");
+    } catch (err: any) {
+      toast.error("Erro ao enviar para a cozinha: " + (err?.message ?? "desconhecido"));
+    } finally {
+      setFlushingComandaId(null);
+    }
+  };
 
   const table = tables.find((t) => t.id === id);
 
