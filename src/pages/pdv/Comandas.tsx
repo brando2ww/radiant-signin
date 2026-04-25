@@ -237,6 +237,14 @@ export default function ComandasPage() {
         onUpdateItem={(id, updates) => updateItem({ id, ...updates })}
         onRemoveItem={removeItem}
         onSendToKitchen={sendToKitchen}
+        onTransferItem={(itemId) =>
+          selectedComanda &&
+          setTransferState({ sourceComandaId: selectedComanda.id, itemIds: [itemId] })
+        }
+        onTransferMultiple={(itemIds) =>
+          selectedComanda &&
+          setTransferState({ sourceComandaId: selectedComanda.id, itemIds })
+        }
         onClose={() => selectedComanda && closeComanda(selectedComanda.id)}
         onCancel={() => selectedComanda && cancelComanda(selectedComanda.id)}
       />
@@ -247,6 +255,21 @@ export default function ComandasPage() {
         onOpenChange={setAddItemDialogOpen}
         onAddItem={handleAddItem}
         isLoading={isAddingItem}
+      />
+
+      {/* Transfer Items Dialog */}
+      <TransferItemsDialog
+        open={!!transferState}
+        onOpenChange={(o) => !o && setTransferState(null)}
+        sourceComanda={
+          transferState ? comandas.find((c) => c.id === transferState.sourceComandaId) || null : null
+        }
+        items={
+          transferState
+            ? comandaItems.filter((it) => transferState.itemIds.includes(it.id))
+            : []
+        }
+        onTransferred={() => setTransferState(null)}
       />
     </div>
   );
