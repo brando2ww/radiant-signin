@@ -42,6 +42,9 @@ import {
   AlertTriangle,
   Trash2,
   Search,
+  Lock as LockIcon,
+  Minus,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Comanda, ComandaItem, usePDVComandas } from "@/hooks/use-pdv-comandas";
