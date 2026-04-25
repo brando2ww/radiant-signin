@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Search, Plus, Minus, Send } from "lucide-react";
 import { usePDVProducts } from "@/hooks/use-pdv-products";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
+import { useDraftCart } from "@/contexts/DraftCartContext";
 import { usePDVProductOptionsForOrder } from "@/hooks/use-pdv-product-options";
 import type { SelectedOption } from "@/components/pdv/ProductOptionSelector";
 import { MobileProductOptionSelector } from "@/components/garcom/MobileProductOptionSelector";
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatBRL } from "@/lib/format";
+import { toast } from "sonner";
 import {
   Sheet,
   SheetContent,
@@ -25,18 +27,39 @@ export default function GarcomAdicionarItem() {
   const { id: comandaId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { products, isLoading } = usePDVProducts();
-  const { addItem, isAddingItem, getItemsByComanda, sendToKitchenAsync } = usePDVComandas();
+  const { addItem: persistItem, sendToKitchenAsync } = usePDVComandas();
+  const draft = useDraftCart();
 
-  const items = comandaId ? getItemsByComanda(comandaId) : [];
-  const pendingItems = items.filter(
-    (i) => i.kitchen_status === "pendente" && !i.sent_to_kitchen_at
-  );
-  const pendingTotal = pendingItems.reduce((sum, i) => sum + Number(i.subtotal), 0);
+  const draftItems = comandaId ? draft.getItems(comandaId) : [];
+  const draftTotal = comandaId ? draft.total(comandaId) : 0;
+  const draftCount = comandaId ? draft.count(comandaId) : 0;
+
+  const [sending, setSending] = useState(false);
 
   const handleSendToKitchen = async () => {
-    if (pendingItems.length === 0) return;
-    await sendToKitchenAsync(pendingItems.map((i) => i.id));
-    navigate("/garcom");
+    if (!comandaId || draftItems.length === 0 || sending) return;
+    setSending(true);
+    try {
+      const created = await Promise.all(
+        draftItems.map((it) =>
+          persistItem({
+            comandaId,
+            productId: it.productId,
+            productName: it.productName,
+            quantity: it.quantity,
+            unitPrice: it.unitPrice,
+            notes: it.notes,
+          }),
+        ),
+      );
+      await sendToKitchenAsync(created.map((c) => c.id));
+      draft.clear(comandaId);
+      navigate("/garcom");
+    } catch (err: any) {
+      toast.error("Erro ao enviar para a cozinha: " + (err?.message ?? "desconhecido"));
+    } finally {
+      setSending(false);
+    }
   };
 
   const [search, setSearch] = useState("");
