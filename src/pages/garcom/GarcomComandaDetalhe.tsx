@@ -34,9 +34,18 @@ export default function GarcomComandaDetalhe() {
     ? tables.find((t) => t.current_order_id === comanda.order_id)
     : null;
 
-  const pendingIds = items
-    .filter((i) => i.kitchen_status === "pendente" && !i.sent_to_kitchen_at)
-    .map((i) => i.id);
+  const isDraftItem = (i: typeof items[number]) =>
+    i.kitchen_status === "pendente" && !i.sent_to_kitchen_at;
+  const draftItems = items.filter(isDraftItem);
+  const sentItems = items.filter((i) => !isDraftItem(i));
+  const pendingIds = draftItems.map((i) => i.id);
+
+  const handleIncrement = (item: typeof items[number]) =>
+    updateItem({ id: item.id, quantity: item.quantity + 1 });
+  const handleDecrement = (item: typeof items[number]) => {
+    if (item.quantity <= 1) removeItem(item.id);
+    else updateItem({ id: item.id, quantity: item.quantity - 1 });
+  };
 
   const isLocked =
     comanda?.status === "aguardando_pagamento" ||
