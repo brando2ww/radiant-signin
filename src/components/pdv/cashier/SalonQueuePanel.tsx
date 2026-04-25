@@ -217,19 +217,6 @@ export function SalonQueuePanel({
               Total:{" "}
               <span className="font-semibold text-foreground tabular-nums">
                 {formatBRL(totalValue)}
-              </span>{" "}
-              · Média de espera:{" "}
-              <span
-                className={cn(
-                  "font-semibold tabular-nums",
-                  avgWaitMin >= 10
-                    ? "text-destructive"
-                    : avgWaitMin >= 5
-                    ? "text-yellow-600 dark:text-yellow-500"
-                    : "text-foreground",
-                )}
-              >
-                {avgWaitMin} min
               </span>
             </div>
           </div>
@@ -333,7 +320,6 @@ export function SalonQueuePanel({
                         title={title}
                         borderColor={group.color}
                         siblingCount={siblings}
-                        waitingMinutes={minutes}
                         onCharge={() => onSelectComanda(c, items)}
                       />
                     );
