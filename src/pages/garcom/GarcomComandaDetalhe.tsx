@@ -280,8 +280,8 @@ export default function GarcomComandaDetalhe() {
           exitSelectMode();
         }}
       />
-
-      )}
     </div>
+  );
+}
   );
 }
