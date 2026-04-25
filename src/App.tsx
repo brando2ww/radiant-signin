@@ -26,8 +26,10 @@ const App = () => (
   <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <PreferencesProvider>
-          <TooltipProvider>
+      <AuthProvider>
+        <DraftCartProvider>
+          <PreferencesProvider>
+            <TooltipProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
