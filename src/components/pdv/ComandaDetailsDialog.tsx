@@ -28,8 +28,10 @@ import {
   ChefHat,
   Send,
   X,
+  CheckSquare,
 } from "lucide-react";
 import { Comanda, ComandaItem, KitchenStatus } from "@/hooks/use-pdv-comandas";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { formatBRL } from "@/lib/format";
 
@@ -42,6 +44,7 @@ interface ComandaDetailsDialogProps {
   onUpdateItem: (id: string, updates: Partial<ComandaItem>) => void;
   onRemoveItem: (id: string) => void;
   onTransferItem?: (itemId: string) => void;
+  onTransferMultiple?: (itemIds: string[]) => void;
   onSendToKitchen: (itemIds: string[]) => void;
   onClose: () => void;
   onCancel: () => void;
@@ -78,12 +81,15 @@ export function ComandaDetailsDialog({
   onUpdateItem,
   onRemoveItem,
   onTransferItem,
+  onTransferMultiple,
   onSendToKitchen,
   onClose,
   onCancel,
 }: ComandaDetailsDialogProps) {
   const [confirmClose, setConfirmClose] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   if (!comanda) return null;
 
@@ -92,6 +98,26 @@ export function ComandaDetailsDialog({
     (item) => !item.sent_to_kitchen_at && item.kitchen_status === "pendente"
   );
   const hasPendingItems = pendingItems.length > 0;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleTransferSelected = () => {
+    if (!onTransferMultiple || selectedIds.size === 0) return;
+    onTransferMultiple(Array.from(selectedIds));
+    exitSelectMode();
+  };
 
   const handleQuantityChange = (item: ComandaItem, delta: number) => {
     const newQuantity = item.quantity + delta;
@@ -147,6 +173,33 @@ export function ComandaDetailsDialog({
                 )}
               </div>
             )}
+            {isOpen && onTransferMultiple && items.length > 0 && (
+              <div className="flex items-center justify-end pt-1">
+                {!selectMode ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setSelectMode(true)}
+                  >
+                    <CheckSquare className="h-3.5 w-3.5 mr-1.5" />
+                    Selecionar para mover
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={exitSelectMode}
+                  >
+                    <X className="h-3.5 w-3.5 mr-1.5" />
+                    Cancelar seleção
+                  </Button>
+                )}
+              </div>
+            )}
           </DialogHeader>
 
           <ScrollArea className="flex-1 -mx-6 px-6">
@@ -168,11 +221,25 @@ export function ComandaDetailsDialog({
               <div className="space-y-3">
                 {items.map((item) => {
                   const kitchenConfig = KITCHEN_STATUS_CONFIG[item.kitchen_status];
+                  const isSelected = selectedIds.has(item.id);
                   return (
                     <div
                       key={item.id}
-                      className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg"
+                      className={cn(
+                        "flex items-start gap-3 p-3 bg-muted/50 rounded-lg transition-colors",
+                        selectMode && "cursor-pointer hover:bg-muted",
+                        selectMode && isSelected && "bg-primary/10 ring-1 ring-primary/40",
+                      )}
+                      onClick={selectMode ? () => toggleSelect(item.id) : undefined}
                     >
+                      {selectMode && (
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleSelect(item.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="mt-1"
+                        />
+                      )}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div>
@@ -260,6 +327,22 @@ export function ComandaDetailsDialog({
               </div>
             )}
           </ScrollArea>
+
+          {selectMode && (
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-primary/40 bg-primary/5 p-3">
+              <span className="text-sm font-medium">
+                {selectedIds.size} {selectedIds.size === 1 ? "item selecionado" : "itens selecionados"}
+              </span>
+              <Button
+                size="sm"
+                onClick={handleTransferSelected}
+                disabled={selectedIds.size === 0}
+              >
+                <ArrowRightLeft className="h-3.5 w-3.5 mr-1.5" />
+                Mover {selectedIds.size > 0 ? `(${selectedIds.size})` : ""}
+              </Button>
+            </div>
+          )}
 
           <Separator className="my-2" />
 

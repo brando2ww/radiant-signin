@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Send, CreditCard, Utensils, Clock } from "lucide-react";
+import { ArrowLeft, Plus, Send, CreditCard, Utensils, Clock, ArrowRightLeft, CheckSquare, X } from "lucide-react";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
+import { TransferItemsDialog } from "@/components/pdv/transfer/TransferItemsDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTableLabel } from "@/utils/formatTableNumber";
@@ -40,6 +42,29 @@ export default function GarcomComandaDetalhe() {
     comanda?.status === "em_cobranca";
   const isClosed = comanda?.status === "fechada" || comanda?.status === "cancelada";
   const canEdit = comanda?.status === "aberta";
+
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [transferIds, setTransferIds] = useState<string[] | null>(null);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleTransferSelected = () => {
+    if (selectedIds.size === 0) return;
+    setTransferIds(Array.from(selectedIds));
+  };
 
   if (isLoading) {
     return (
@@ -113,6 +138,16 @@ export default function GarcomComandaDetalhe() {
             {statusBadge}
           </div>
         </div>
+        {canEdit && items.length > 0 && (
+          <button
+            type="button"
+            onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+            className="ml-auto h-9 px-3 rounded-md text-xs font-medium hover:bg-accent active:scale-95 transition-all inline-flex items-center gap-1.5"
+          >
+            {selectMode ? <X className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
+            {selectMode ? "Cancelar" : "Selecionar"}
+          </button>
+        )}
       </header>
 
       {/* Items */}
@@ -146,14 +181,18 @@ export default function GarcomComandaDetalhe() {
               notes={item.notes}
               kitchenStatus={item.kitchen_status}
               sentToKitchenAt={item.sent_to_kitchen_at}
-              onRemove={canEdit ? () => removeItem(item.id) : undefined}
+              onRemove={canEdit && !selectMode ? () => removeItem(item.id) : undefined}
+              onTransfer={canEdit && !selectMode ? () => setTransferIds([item.id]) : undefined}
+              selectMode={selectMode}
+              selected={selectedIds.has(item.id)}
+              onToggleSelect={() => toggleSelect(item.id)}
             />
           ))
         )}
       </div>
 
       {/* Bottom Action Bar */}
-      {!isClosed && (
+      {!isClosed && !selectMode && (
         <div className="fixed bottom-0 inset-x-0 z-40 border-t bg-background">
           <div className="p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] space-y-2">
             <div className="flex items-center justify-between text-sm font-semibold">
@@ -207,6 +246,40 @@ export default function GarcomComandaDetalhe() {
           </div>
         </div>
       )}
+
+      {/* Selection Action Bar */}
+      {selectMode && (
+        <div className="fixed bottom-0 inset-x-0 z-40 border-t bg-background">
+          <div className="p-4 pb-[calc(6rem+env(safe-area-inset-bottom))] flex items-center gap-2">
+            <span className="text-sm font-medium flex-1">
+              {selectedIds.size} {selectedIds.size === 1 ? "selecionado" : "selecionados"}
+            </span>
+            <Button variant="outline" className="h-11" onClick={exitSelectMode}>
+              Cancelar
+            </Button>
+            <Button
+              className="h-11 active:scale-95"
+              onClick={handleTransferSelected}
+              disabled={selectedIds.size === 0}
+            >
+              <ArrowRightLeft className="h-4 w-4 mr-1.5" />
+              Mover ({selectedIds.size})
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Items Dialog */}
+      <TransferItemsDialog
+        open={!!transferIds}
+        onOpenChange={(o) => !o && setTransferIds(null)}
+        sourceComanda={comanda ?? null}
+        items={transferIds ? items.filter((it) => transferIds.includes(it.id)) : []}
+        onTransferred={() => {
+          setTransferIds(null);
+          exitSelectMode();
+        }}
+      />
     </div>
   );
 }

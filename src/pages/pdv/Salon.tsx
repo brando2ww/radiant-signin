@@ -22,6 +22,7 @@ import { ComandaDialog } from "@/components/pdv/ComandaDialog";
 import { ComandaDetailsDialog } from "@/components/pdv/ComandaDetailsDialog";
 import { ComandaAddItemDialog } from "@/components/pdv/ComandaAddItemDialog";
 import { PaymentDialog } from "@/components/pdv/cashier/PaymentDialog";
+import { TransferItemsDialog } from "@/components/pdv/transfer/TransferItemsDialog";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
@@ -121,7 +122,6 @@ export default function PDVSalon() {
     updateItem: updateComandaItem,
     removeItem: removeComandaItem,
     sendToKitchen,
-    transferItem,
   } = usePDVComandas();
 
   const [tableDialog, setTableDialog] = useState(false);
@@ -162,6 +162,12 @@ export default function PDVSalon() {
   const [paymentTable, setPaymentTable] = useState<any>(null);
   const [paymentTableComandas, setPaymentTableComandas] = useState<Comanda[]>([]);
   const [paymentTableItems, setPaymentTableItems] = useState<any[]>([]);
+
+  // Transfer items state
+  const [transferState, setTransferState] = useState<{
+    sourceComandaId: string;
+    itemIds: string[];
+  } | null>(null);
 
   // Sensors for drag and drop
   const sensors = useSensors(
@@ -814,6 +820,14 @@ export default function PDVSalon() {
         onUpdateItem={(id, updates) => updateComandaItem({ id, ...updates })}
         onRemoveItem={(id) => removeComandaItem(id)}
         onSendToKitchen={(itemIds) => sendToKitchen(itemIds)}
+        onTransferItem={(itemId) =>
+          selectedComanda &&
+          setTransferState({ sourceComandaId: selectedComanda.id, itemIds: [itemId] })
+        }
+        onTransferMultiple={(itemIds) =>
+          selectedComanda &&
+          setTransferState({ sourceComandaId: selectedComanda.id, itemIds })
+        }
         onClose={() => {
           if (selectedComanda) {
             const items = getItemsByComanda(selectedComanda.id);
@@ -868,6 +882,21 @@ export default function PDVSalon() {
           setPaymentTableComandas([]);
           setPaymentTableItems([]);
         }}
+      />
+
+      {/* Transfer Items Dialog */}
+      <TransferItemsDialog
+        open={!!transferState}
+        onOpenChange={(o) => !o && setTransferState(null)}
+        sourceComanda={
+          transferState ? comandas.find((c) => c.id === transferState.sourceComandaId) || null : null
+        }
+        items={
+          transferState
+            ? comandaItems.filter((it) => transferState.itemIds.includes(it.id))
+            : []
+        }
+        onTransferred={() => setTransferState(null)}
       />
 
       {/* Capacity Warning Dialog - never stacked with ComandaDialog */}

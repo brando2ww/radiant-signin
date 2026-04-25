@@ -11,11 +11,13 @@ import { ComandaCard } from "@/components/pdv/ComandaCard";
 import { ComandaDialog } from "@/components/pdv/ComandaDialog";
 import { ComandaDetailsDialog } from "@/components/pdv/ComandaDetailsDialog";
 import { ComandaAddItemDialog } from "@/components/pdv/ComandaAddItemDialog";
+import { TransferItemsDialog } from "@/components/pdv/transfer/TransferItemsDialog";
 import { toast } from "sonner";
 
 export default function ComandasPage() {
   const {
     comandas,
+    comandaItems,
     isLoading,
     createComanda,
     closeComanda,
@@ -37,6 +39,10 @@ export default function ComandasPage() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
   const [addItemComanda, setAddItemComanda] = useState<Comanda | null>(null);
+  const [transferState, setTransferState] = useState<{
+    sourceComandaId: string;
+    itemIds: string[];
+  } | null>(null);
 
   const { activeSession } = usePDVCashier();
 
@@ -231,6 +237,14 @@ export default function ComandasPage() {
         onUpdateItem={(id, updates) => updateItem({ id, ...updates })}
         onRemoveItem={removeItem}
         onSendToKitchen={sendToKitchen}
+        onTransferItem={(itemId) =>
+          selectedComanda &&
+          setTransferState({ sourceComandaId: selectedComanda.id, itemIds: [itemId] })
+        }
+        onTransferMultiple={(itemIds) =>
+          selectedComanda &&
+          setTransferState({ sourceComandaId: selectedComanda.id, itemIds })
+        }
         onClose={() => selectedComanda && closeComanda(selectedComanda.id)}
         onCancel={() => selectedComanda && cancelComanda(selectedComanda.id)}
       />
@@ -241,6 +255,21 @@ export default function ComandasPage() {
         onOpenChange={setAddItemDialogOpen}
         onAddItem={handleAddItem}
         isLoading={isAddingItem}
+      />
+
+      {/* Transfer Items Dialog */}
+      <TransferItemsDialog
+        open={!!transferState}
+        onOpenChange={(o) => !o && setTransferState(null)}
+        sourceComanda={
+          transferState ? comandas.find((c) => c.id === transferState.sourceComandaId) || null : null
+        }
+        items={
+          transferState
+            ? comandaItems.filter((it) => transferState.itemIds.includes(it.id))
+            : []
+        }
+        onTransferred={() => setTransferState(null)}
       />
     </div>
   );
