@@ -1,114 +1,128 @@
-import { Banknote, CreditCard, Smartphone, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { Banknote, CreditCard, Smartphone, TrendingDown, TrendingUp, Wallet, Ticket, Receipt } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatBRL } from "@/lib/format";
 
 interface CashierSummaryFooterProps {
+  // Gaveta
   openingBalance: number;
-  totalCash: number;
-  totalCard: number;
-  totalPix: number;
-  totalWithdrawals: number;
+  netCash: number;          // total_cash − total_change
   totalReinforcements: number;
+  totalWithdrawals: number;
+  drawerBalance: number;    // saldo esperado da gaveta agora
+  // Vendas por forma (informativo)
+  totalCash: number;        // bruto recebido em dinheiro
+  totalCredit: number;
+  totalDebit: number;
+  totalPix: number;
+  totalVoucher: number;
   totalSales: number;
-  currentBalance: number;
   isOpen: boolean;
+}
+
+interface SummaryRowProps {
+  icon: typeof Wallet;
+  label: string;
+  value: number;
+  prefix?: "+" | "-" | "";
+  emphasis?: boolean;
+  tone?: "neutral" | "positive" | "negative";
+}
+
+function SummaryRow({ icon: Icon, label, value, prefix = "", emphasis, tone = "neutral" }: SummaryRowProps) {
+  const toneClass =
+    tone === "positive" ? "text-emerald-600"
+    : tone === "negative" ? "text-destructive"
+    : "text-foreground";
+  return (
+    <div className="flex items-center justify-between gap-3 py-1">
+      <div className="flex items-center gap-2 min-w-0">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+        <span className={`text-xs ${emphasis ? "font-semibold text-foreground" : "text-muted-foreground"} truncate`}>
+          {label}
+        </span>
+      </div>
+      <span className={`tabular-nums ${emphasis ? "text-sm font-bold" : "text-xs font-medium"} ${toneClass}`}>
+        {prefix && value > 0 ? prefix : ""}
+        {formatBRL(value)}
+      </span>
+    </div>
+  );
 }
 
 export function CashierSummaryFooter({
   openingBalance,
-  totalCash,
-  totalCard,
-  totalPix,
-  totalWithdrawals,
+  netCash,
   totalReinforcements,
+  totalWithdrawals,
+  drawerBalance,
+  totalCash,
+  totalCredit,
+  totalDebit,
+  totalPix,
+  totalVoucher,
   totalSales,
-  currentBalance,
   isOpen,
 }: CashierSummaryFooterProps) {
-  const summaryItems = [
-    {
-      label: "Abertura",
-      value: openingBalance,
-      icon: Wallet,
-      prefix: "",
-    },
-    {
-      label: "Dinheiro",
-      value: totalCash,
-      icon: Banknote,
-      prefix: "+",
-    },
-    {
-      label: "Cartão",
-      value: totalCard,
-      icon: CreditCard,
-      prefix: "",
-    },
-    {
-      label: "PIX",
-      value: totalPix,
-      icon: Smartphone,
-      prefix: "",
-    },
-    {
-      label: "Sangrias",
-      value: totalWithdrawals,
-      icon: TrendingDown,
-      prefix: "-",
-    },
-    {
-      label: "Reforços",
-      value: totalReinforcements,
-      icon: TrendingUp,
-      prefix: "+",
-    },
-  ];
-
   return (
-    <div className="bg-muted/30 border rounded-lg p-3">
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
-        {/* Cards menores de resumo */}
-        {summaryItems.map((item) => (
-          <Card key={item.label} className="border-0 shadow-none bg-background">
-            <CardContent className="p-2">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="h-5 w-5 rounded bg-muted flex items-center justify-center">
-                  <item.icon className="h-3 w-3 text-muted-foreground" />
-                </div>
-                <span className="text-xs text-muted-foreground">{item.label}</span>
-              </div>
-              <p className="text-sm font-semibold text-foreground">
-                {item.prefix && item.value > 0 ? item.prefix : ""}
-                {formatBRL(item.value)}
-              </p>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      {/* Bloco 1 — Gaveta (dinheiro físico) */}
+      <Card className={`border-2 ${isOpen ? "border-primary/40" : "border-muted"}`}>
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between mb-2 pb-2 border-b">
+            <div className="flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold">Gaveta (dinheiro físico)</h3>
+            </div>
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              o que deve estar na gaveta
+            </span>
+          </div>
+          <div className="space-y-0.5">
+            <SummaryRow icon={Wallet} label="Abertura" value={openingBalance} />
+            <SummaryRow icon={Banknote} label="Dinheiro líquido (− troco)" value={netCash} prefix="+" tone="positive" />
+            <SummaryRow icon={TrendingUp} label="Reforços" value={totalReinforcements} prefix="+" tone="positive" />
+            <SummaryRow icon={TrendingDown} label="Sangrias" value={totalWithdrawals} prefix="-" tone="negative" />
+          </div>
+          <div className="mt-2 pt-2 border-t">
+            <SummaryRow
+              icon={Wallet}
+              label="Saldo Atual da Gaveta"
+              value={drawerBalance}
+              emphasis
+            />
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* Card Total de Vendas */}
-        <Card className="border shadow-none bg-muted/50">
-          <CardContent className="p-2">
-            <p className="text-xs text-muted-foreground mb-1">Total Vendas</p>
-            <p className="text-base font-bold text-foreground">
-              {formatBRL(totalSales)}
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Card Saldo Atual - Destaque */}
-        <Card
-          className={`border-2 shadow-sm bg-muted/50 ${
-            isOpen ? "border-primary" : "border-muted-foreground/20"
-          }`}
-        >
-          <CardContent className="p-2">
-            <p className="text-xs text-muted-foreground mb-1">Saldo Atual</p>
-            <p className="text-lg font-bold text-foreground">
-              {formatBRL(currentBalance)}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Bloco 2 — Vendas por forma (informativo) */}
+      <Card className="border bg-muted/20">
+        <CardContent className="p-3">
+          <div className="flex items-center justify-between mb-2 pb-2 border-b">
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold">Vendas por forma de pagamento</h3>
+            </div>
+            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              informativo (conferência no fechamento)
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+            <SummaryRow icon={Banknote} label="Dinheiro (bruto)" value={totalCash} />
+            <SummaryRow icon={CreditCard} label="Crédito" value={totalCredit} />
+            <SummaryRow icon={CreditCard} label="Débito" value={totalDebit} />
+            <SummaryRow icon={Smartphone} label="PIX" value={totalPix} />
+            <SummaryRow icon={Ticket} label="Vale-refeição" value={totalVoucher} />
+          </div>
+          <div className="mt-2 pt-2 border-t">
+            <SummaryRow
+              icon={Receipt}
+              label="Total Vendas"
+              value={totalSales}
+              emphasis
+            />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
