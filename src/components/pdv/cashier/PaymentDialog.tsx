@@ -214,11 +214,38 @@ export function PaymentDialog({
     (sum, it) => sum + Number(it.subtotal || 0),
     0,
   );
-  const subtotal = liveItemsForPayment.length > 0
+  const fullSubtotal = liveItemsForPayment.length > 0
     ? liveSubtotal
     : (isTablePayment
         ? tableComandas.reduce((sum, c) => sum + c.subtotal, 0)
         : (comanda?.subtotal || 0));
+
+  // Pagamento parcial (modo by-product) é suportado apenas quando temos itens reais persistidos.
+  const supportsByProduct = liveItemsForPayment.length > 0 && !isTablePayment;
+
+  // Itens disponíveis para seleção parcial (apenas com quantidade pendente)
+  const selectableItems = displayItems.filter((it) => {
+    const paid = (it as any).paid_quantity || 0;
+    return it.quantity - paid > 0;
+  });
+
+  // Subtotal pendente (todos itens não pagos)
+  const pendingSubtotal = selectableItems.reduce((sum, it) => {
+    const paid = (it as any).paid_quantity || 0;
+    return sum + (it.quantity - paid) * Number(it.unit_price || 0);
+  }, 0);
+
+  // Subtotal selecionado (modo by-product)
+  const selectedSubtotal = Array.from(selectedItemQtys.entries()).reduce((sum, [id, qty]) => {
+    const it = displayItems.find((d) => d.id === id);
+    if (!it) return sum;
+    return sum + qty * Number(it.unit_price || 0);
+  }, 0);
+
+  const isByProduct = chargeMode === "by-product" && supportsByProduct;
+
+  // Subtotal efetivo usado para descontos/taxas/total
+  const subtotal = isByProduct ? selectedSubtotal : fullSubtotal;
 
   const title = isTablePayment
     ? formatTableLabel(table?.table_number)
@@ -238,7 +265,7 @@ export function PaymentDialog({
   // Cash calculations
   const cashReceivedNum = parseFloat(cashReceived) || 0;
   const changeAmount = selectedMethod === "dinheiro" ? Math.max(0, cashReceivedNum - total) : 0;
-  
+
   // Split payment total
   const splitTotal = splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const splitRemaining = total - splitTotal;
@@ -249,9 +276,9 @@ export function PaymentDialog({
   const discountNeedsReason = hasDiscount && !discountReason.trim();
 
   // Validation
-  // No modo splitByComanda, cada linha JÁ vem com valor travado da comanda;
-  // basta garantir que existe uma linha por comanda e que somam o subtotal.
-  const canSubmit = !discountNeedsAuth && !discountNeedsReason && (splitEnabled
+  const hasByProductSelection = isByProduct && selectedItemQtys.size > 0 && selectedSubtotal > 0;
+  const byProductBlocks = chargeMode === "by-product" && (!supportsByProduct || !hasByProductSelection);
+  const canSubmit = !discountNeedsAuth && !discountNeedsReason && !byProductBlocks && (splitEnabled
     ? Math.abs(splitRemaining) < 0.01 && splitPayments.length > 0
     : selectedMethod !== "dinheiro" || cashReceivedNum >= total);
 
