@@ -45,6 +45,8 @@ export interface ComandaItem {
   ready_at: string | null;
   created_at: string;
   production_center_id: string | null;
+  paid_quantity?: number;
+  charging_session_id?: string | null;
 }
 
 export function usePDVComandas() {
