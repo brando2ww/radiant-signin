@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Send, CreditCard, Utensils, Clock } from "lucide-react";
+import { ArrowLeft, Plus, Send, CreditCard, Utensils, Clock, ArrowRightLeft, CheckSquare, X } from "lucide-react";
 import { usePDVComandas } from "@/hooks/use-pdv-comandas";
 import { usePDVTables } from "@/hooks/use-pdv-tables";
 import { ComandaItemCard } from "@/components/garcom/ComandaItemCard";
+import { TransferItemsDialog } from "@/components/pdv/transfer/TransferItemsDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatTableLabel } from "@/utils/formatTableNumber";
@@ -40,6 +42,29 @@ export default function GarcomComandaDetalhe() {
     comanda?.status === "em_cobranca";
   const isClosed = comanda?.status === "fechada" || comanda?.status === "cancelada";
   const canEdit = comanda?.status === "aberta";
+
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [transferIds, setTransferIds] = useState<string[] | null>(null);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleTransferSelected = () => {
+    if (selectedIds.size === 0) return;
+    setTransferIds(Array.from(selectedIds));
+  };
 
   if (isLoading) {
     return (
