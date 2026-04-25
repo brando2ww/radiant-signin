@@ -1130,23 +1130,104 @@ onClick={() => {
 
           {/* Right Column - Payment */}
           <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-1">
-            {/* Split Payment Toggle */}
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <Label htmlFor="split-payment" className="text-sm cursor-pointer flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Dividir pagamento
-              </Label>
-              <Switch
-                id="split-payment"
-                checked={splitEnabled}
-                onCheckedChange={(checked) => {
-                  setSplitEnabled(checked);
-                  if (checked && splitPayments.length === 0) {
-                    addSplitPayment();
-                  }
+            {/* Charge mode segmented control */}
+            <div className="grid grid-cols-3 gap-1 p-1 bg-muted/50 rounded-lg">
+              <Button
+                type="button"
+                variant={chargeMode === "all" ? "default" : "ghost"}
+                size="sm"
+                className="text-xs h-9"
+                onClick={() => {
+                  setChargeMode("all");
+                  setSplitEnabled(false);
+                  clearSelection();
                 }}
-              />
+              >
+                Tudo
+              </Button>
+              <Button
+                type="button"
+                variant={chargeMode === "split-forms" ? "default" : "ghost"}
+                size="sm"
+                className="text-xs h-9"
+                onClick={() => {
+                  setChargeMode("split-forms");
+                  setSplitEnabled(true);
+                  if (splitPayments.length === 0) addSplitPayment();
+                  clearSelection();
+                }}
+              >
+                Várias formas
+              </Button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      type="button"
+                      variant={chargeMode === "by-product" ? "default" : "ghost"}
+                      size="sm"
+                      className="text-xs h-9 w-full"
+                      disabled={!supportsByProduct}
+                      onClick={() => {
+                        setChargeMode("by-product");
+                        setSplitEnabled(false);
+                        setSplitPayments([]);
+                      }}
+                    >
+                      Por produto
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!supportsByProduct && (
+                  <TooltipContent side="bottom">
+                    Disponível apenas para comandas individuais com itens persistidos
+                  </TooltipContent>
+                )}
+              </Tooltip>
             </div>
+
+            {/* Selection summary (by-product) */}
+            {isByProduct && (
+              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">
+                    {selectedItemQtys.size} de {selectableItems.length} itens — {formatCurrency(selectedSubtotal)}
+                  </span>
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs"
+                      onClick={selectAllPending}
+                      disabled={selectableItems.length === 0}
+                    >
+                      Todos
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs"
+                      onClick={clearSelection}
+                      disabled={selectedItemQtys.size === 0}
+                    >
+                      Limpar
+                    </Button>
+                  </div>
+                </div>
+                {pendingSubtotal - selectedSubtotal > 0.005 && (
+                  <p className="text-xs text-muted-foreground">
+                    Fica em aberto: {formatCurrency(pendingSubtotal - selectedSubtotal)}
+                  </p>
+                )}
+                {selectedItemQtys.size === 0 && (
+                  <p className="text-xs text-amber-600">
+                    Selecione ao menos um item à esquerda para continuar.
+                  </p>
+                )}
+              </div>
+            )}
 
             <AnimatePresence mode="wait">
               {splitEnabled ? (
