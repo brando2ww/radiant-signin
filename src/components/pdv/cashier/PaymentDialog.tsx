@@ -355,6 +355,11 @@ export function PaymentDialog({
         releaseFromCharging(lockedIdsRef.current).catch(() => {});
         lockedIdsRef.current = [];
       }
+      // Liberar locks de itens em modo by-product
+      if (!paymentDoneRef.current && chargingSessionRef.current && selectedItemQtys.size > 0) {
+        const itemIds = Array.from(selectedItemQtys.keys());
+        unlockItemsForCharging({ itemIds, sessionId: chargingSessionRef.current }).catch(() => {});
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
