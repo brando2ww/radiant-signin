@@ -1,159 +1,135 @@
+## Fluxo de desconto explícito no PaymentDialog
 
-## Pagamento parcial por seleção de itens
+### Objetivo
 
-Adicionar uma nova modalidade de cobrança no `PaymentDialog` que permite selecionar itens específicos (e quantidades parciais) para pagar agora, mantendo o restante pendente na comanda até liquidação total.
+Substituir o atual campo de desconto (que aplica em tempo real conforme o operador digita) por um fluxo guiado em 4 passos, com confirmação obrigatória antes do desconto efetivamente reduzir o total. Eliminar o risco de aplicar desconto errado por engano.
 
----
+### Onde
 
-### Observação importante sobre o estado atual
+`src/components/pdv/cashier/PaymentDialog.tsx` — bloco "Desconto" (linhas ~953-1128). O resto do dialog (formas de pagamento, divisão, taxa de serviço, totais) permanece igual.
 
-O dialog hoje tem apenas **dois modos**: "Pagar tudo (forma única)" e "Dividir pagamento (várias formas para o mesmo total)". Não existem ainda "dividir igualmente" nem "dividir por pessoa". Vamos introduzir um **seletor de modo de cobrança** com 3 opções iniciais e a nova quarta opção:
+### Como funciona hoje (problema)
 
-```text
-[ Tudo ]  [ Várias formas ]  [ Por produto (NOVO) ]
-```
+- Botões `%` e `R$` são ícones pequenos lado a lado, com `%` pré-selecionado
+- O campo já está habilitado de cara
+- Conforme o operador digita o valor, o desconto **já é aplicado** ao total exibido em tempo real
+- Não existe etapa de "confirmar antes de aplicar"
+- Motivo do desconto é sempre obrigatório (sem configuração)
 
-(Os dois modos antigos ficam preservados; "dividir igualmente / por pessoa" pode ser feito num próximo passo.)
+### Como vai funcionar
 
----
-
-### Fluxo da nova opção "Por produto"
-
-**Passo 1 — Seleção**
-- A lista do "Resumo do pedido" passa a renderizar checkbox grande à esquerda de cada linha.
-- Itens já marcados como `pago` aparecem riscados, esmaecidos, sem checkbox.
-- Itens em `em_cobranca` por outra sessão paralela aparecem com cadeado e badge "em cobrança", desabilitados.
-- Para `quantity > 1`, mostrar stepper "1 / 3" ao lado do checkbox para escolher quantas unidades pagar agora (default = restante não-pago).
-- Atalhos: "Selecionar todos pendentes" e "Limpar seleção".
-- Subtotal da seleção atualiza em tempo real e aparece num **rodapé sticky** com:
-  `X de Y itens — R$ XX,XX selecionado`
-  Botão "Cobrar seleção".
-
-**Passo 2 — Confirmar e pagar**
-- Ao clicar "Cobrar seleção", o painel direito do dialog passa a operar sobre o **subtotal da seleção** (não o subtotal total).
-- Desconto e taxa de serviço são calculados **proporcionalmente** sobre a fração selecionada.
-- Card destacado mostra:
-  - "Cobrando agora": lista resumida dos itens/qtds selecionados + total
-  - "Fica em aberto": contagem + total restante após o pagamento
-- Forma de pagamento (dinheiro/cartão/pix) e troco funcionam normalmente.
-
-**Passo 3 — Após confirmar**
-- Itens 100% pagos: marcados como `pago` (visualmente riscados na próxima abertura).
-- Itens parcialmente pagos (qtd parcial): permanecem na lista com indicador "1 de 3 pago" e podem ser cobrados de novo depois.
-- A comanda **permanece aberta** (status volta de `em_cobranca` → `aguardando_pagamento` ou `aberta` conforme origem) enquanto houver qtd pendente.
-- Quando a última unidade pendente for paga, a comanda fecha automaticamente e a mesa libera (lógica já existente em `registerPayment`).
-- Cada pagamento parcial é gravado individualmente em `pdv_payments` + tabela de auditoria `pdv_payment_items` com (item_id, qty_paga, valor).
-
----
-
-### Mudanças técnicas
-
-**Schema (migration)**
-
-1. `pdv_comanda_items`: adicionar colunas
-   - `paid_quantity integer NOT NULL DEFAULT 0`
-   - `fully_paid boolean GENERATED ALWAYS AS (paid_quantity >= quantity) STORED` (ou coluna comum + trigger)
-   - índice em `(comanda_id, fully_paid)` para queries rápidas
-
-2. Nova tabela `pdv_payment_items`:
-   - `id uuid pk`, `payment_id uuid → pdv_payments.id ON DELETE CASCADE`
-   - `comanda_item_id uuid → pdv_comanda_items.id`
-   - `quantity_paid integer`, `unit_price numeric`, `subtotal_paid numeric`
-   - `created_at`
-   - RLS espelhando a do `pdv_payments`
-
-3. Trigger `update_comanda_subtotal`: ajustar para considerar **subtotal pendente** = `SUM(unit_price * (quantity - paid_quantity))`. Manter `subtotal` original e adicionar `pending_subtotal` em `pdv_comandas`, OU recalcular `subtotal` para refletir só o pendente — **vamos manter `subtotal` como total bruto** (não muda) e **adicionar `pending_subtotal numeric` em `pdv_comandas`** atualizado pelo trigger. Isto evita quebrar relatórios.
-
-4. Bloqueio de seleção concorrente: nova tabela leve `pdv_comanda_item_locks` (item_id, locked_by, locked_at, expires_at) com TTL curto (~5 min), checada na UI e no momento do pagamento. Alternativa mais simples: gravar `charging_session_id` na própria linha de item — preferimos esta para reduzir superfície.
-   - Adicionar `charging_session_id uuid NULL` em `pdv_comanda_items` + função RPC `lock_comanda_items(item_ids[])` que faz update atômico só se `charging_session_id IS NULL`.
-
-**Hook `usePDVPayments`**
-
-- Estender `RegisterPaymentParams` com campo opcional `partialItems?: { itemId, quantityPaid }[]`.
-- Quando presente:
-  - **NÃO** fechar a comanda automaticamente.
-  - Atualizar `paid_quantity` de cada item (incrementando, não substituindo).
-  - Inserir linhas em `pdv_payment_items`.
-  - Liberar `charging_session_id` dos itens cobrados.
-  - Após o update, verificar se todos os itens têm `fully_paid = true`; se sim, executar a finalização normal (fechar comanda, liberar mesa, fechar order).
-- Inserir movimento de caixa com descrição `"Comanda #X — pagamento parcial"`.
-- Disparar `logActivityDirect` com action `comanda_partial_payment` contendo lista de itens cobertos.
-
-**Hook `usePDVComandas`**
-
-- Filtrar `liveComandaItems` para incluir `paid_quantity` e flags. Já carregado pela query — basta o tipo.
-- Nova mutation `lockItemsForCharging(itemIds[])` / `unlockItems(itemIds[])` chamando RPC.
-
-**Componente `PaymentDialog`**
-
-- Novo state:
-  ```ts
-  type ChargeMode = "all" | "split-forms" | "by-product";
-  const [chargeMode, setChargeMode] = useState<ChargeMode>("all");
-  const [selectedItemQtys, setSelectedItemQtys] = useState<Map<string, number>>(new Map());
-  const [byProductStep, setByProductStep] = useState<"select" | "confirm">("select");
-  ```
-- Trocar o atual `Switch "Dividir pagamento"` por um **segmented control** com 3 modos no topo da coluna direita.
-- `subtotal` efetivo passa a ser derivado:
-  - `all` / `split-forms`: comportamento atual (soma de displayItems pendentes)
-  - `by-product`: soma de `unit_price * selectedQty` para cada itemId selecionado
-- Desconto/taxa: a fração `selectedSubtotal / fullSubtotal` é aplicada aos valores absolutos (mantém percent natural).
-- Ao confirmar pagamento `by-product`: chamar `registerPayment({ ..., partialItems })`.
-- Ao abrir o modo "by-product", chamar `lockItemsForCharging` para os itens visíveis (ou só ao marcar checkbox — preferível: lock no momento do clique, unlock no desmarcar).
-- Ao fechar o dialog sem concluir: liberar todos os locks adquiridos.
-- Itens com `paid_quantity > 0` mostrar badge "Pago: 1/3", `paid_quantity === quantity` mostrar riscado e cinza.
-
-**Lista de itens fora do PaymentDialog**
-
-- `ComandaItemCard.tsx`, `ComandaDetailsDialog.tsx`, `GarcomComandaDetalhe.tsx`: aplicar o mesmo tratamento visual (riscado / "X/Y pago") para refletir consistência.
-
-**Validações**
-
-- Não confirmar com 0 itens selecionados (botão desabilitado).
-- Se outro caixa pegou um item entre a seleção e a confirmação, exibir toast e remover da seleção (conflito otimista).
-- Comanda em status `fechada` ou `cancelada`: modo "by-product" indisponível.
-
----
-
-### Estrutura de UI (modo by-product, mobile-friendly p/ tablet)
+Máquina de estados local com 4 fases:
 
 ```text
-┌─ Pagamento - Mesa 5 ────────────────── X ─┐
-│ [ Tudo ] [ Várias formas ] [Por produto▣]│
-│                                            │
-│  Resumo do Pedido                          │
-│  ┌──────────────────────────────────────┐ │
-│  │ ☐  3x Refrigerante  [2/3]  R$ 18,00 │ │
-│  │ ☑  1x X-Burger              R$ 28,00│ │
-│  │ ━━ 1x Suco (PAGO) ━━━━━━━━ R$ 8,00 │ │
-│  │ 🔒 1x Sobremesa (em cobrança)       │ │
-│  └──────────────────────────────────────┘ │
-│  [Selecionar todos]  [Limpar]              │
-│                                            │
-│  ─── Cobrando agora ─────────────          │
-│  • 2x Refrigerante      R$ 12,00           │
-│  • 1x X-Burger          R$ 28,00           │
-│  Subtotal selecionado:  R$ 40,00           │
-│  Taxa serviço (10%):    R$  4,00           │
-│  TOTAL A COBRAR:        R$ 44,00           │
-│                                            │
-│  Fica em aberto: 2 itens — R$ 26,00        │
-│                                            │
-│  [Forma de pagamento ...]                  │
-│                                            │
-│  [Cancelar]            [Cobrar R$ 44,00]   │
-└────────────────────────────────────────────┘
+idle → typing → confirming → applied
+ ↑                              │
+ └──────── botão Remover ───────┘
 ```
 
----
+**Fase `idle`** (sem tipo escolhido):
+- Dois botões grandes lado a lado, mesma largura, com label completo:
+  - `[ % Desconto em % ]`
+  - `[ R$ Desconto em R$ ]`
+- Nenhum pré-selecionado
+- Campo de valor visível mas desabilitado (cinza), placeholder "Selecione o tipo primeiro"
+- Botão "Aplicar desconto" oculto
 
-### Validação manual
+**Fase `typing`** (tipo escolhido, digitando valor):
+- Tipo escolhido fica destacado (variant solid); o outro fica outline pequeno
+- Campo habilitado, sufixo `%` ou prefixo `R$` dentro do input conforme tipo
+- Linha de feedback abaixo do campo, atualizada a cada keystroke:
+  - Modo %: `**10% = R$ 15,40** será descontado do subtotal de R$ 154,00`
+  - Modo R$: `**R$ 20,00 = 12,9%** será descontado do subtotal de R$ 154,00`
+- Validação inline: se valor > subtotal, borda vermelha + mensagem "Desconto maior que o valor da conta" e botão "Aplicar desconto" desabilitado
+- Botão **"Aplicar desconto"** (full width, secondary) abaixo da linha de feedback, separado do botão final de pagamento
+- Trocar de tipo durante essa fase: limpa o campo + toast/inline warning "Tipo alterado — revise o valor"
+- Total exibido no painel de totais ainda **NÃO** considera o desconto
 
-- Comanda com 3 itens; selecionar 1 → cobrar → dialog mostra "concluído", reabrir comanda → 2 itens visíveis, 1 riscado como pago.
-- Item com qty=3, pagar 2 → reabrir, item mostra "1/3 pendente, 2/3 pago" e qty restante = 1.
-- Pagar último item pendente → comanda fecha, mesa libera (mesma lógica de hoje).
-- Dois caixas no mesmo PDV: caixa A marca itens A; caixa B vê esses itens com cadeado e não consegue selecionar.
-- Cancelar dialog após selecionar → locks liberados, próximo caixa consegue selecionar.
-- Desconto 10% aplicado em modo by-product → desconto incide só sobre o subtotal selecionado.
-- Auditoria: `pdv_payments` ganha 1 linha por pagamento parcial; `pdv_payment_items` mostra a composição.
-- Balcão (comanda virtual sem registro): o seletor "Por produto" fica desabilitado com tooltip "disponível apenas para comandas/mesas".
+**Fase `confirming`** (clicou Aplicar):
+- Substitui inline o bloco do campo por uma mini-confirmação (não Modal Dialog — apenas um Card destacado dentro da seção):
+  - Tipo: "Percentual" ou "Valor fixo"
+  - Valor digitado: "10%" ou "R$ 20,00"
+  - Será descontado: `R$ 15,40`
+  - Novo total: `R$ 138,60`
+  - Se a configuração de "Exigir motivo de desconto" estiver ativa: campo Motivo obrigatório aqui (e senha de autorização, mantendo o fluxo atual)
+  - Dois botões: `[ Confirmar ]` (primary) e `[ Corrigir ]` (ghost — volta para `typing`)
+- O total geral ainda **NÃO** considera o desconto até clicar Confirmar
+
+**Fase `applied`**:
+- Bloco do desconto vira um resumo fixo, em uma linha com fundo sutil (verde/amber):
+  - `Desconto aplicado: -R$ 15,40 (10%)` + botão "Remover" pequeno (variant ghost) à direita
+- Total no painel agora reflete o desconto
+- Botão "Cobrar" / finalizar liberado para uso
+- Clicar "Remover" → volta para `idle`, limpa todos os estados de desconto (tipo, valor, motivo, autorização)
+
+### Configuração de motivo opcional
+
+Hoje o motivo é sempre obrigatório. Vai virar configurável:
+
+- Adicionar coluna `require_discount_reason boolean default false` em `pdv_settings` (migração)
+- Expor em `usePDVSettings` (interface + UI de configurações em outra tela — fora do escopo desta task; só o flag e leitura aqui)
+- No PaymentDialog, na fase `confirming`:
+  - Se flag `true` → campo Motivo obrigatório (bloqueia Confirmar enquanto vazio)
+  - Se flag `false` → campo Motivo não aparece
+- Senha/autorização de desconto (já existente) **continua obrigatória sempre que houver desconto**, independente do flag de motivo. Movida da fase `typing` para a fase `confirming`.
+
+### Detalhes técnicos
+
+Estados novos no componente:
+```ts
+type DiscountStage = "idle" | "typing" | "confirming" | "applied";
+const [discountStage, setDiscountStage] = useState<DiscountStage>("idle");
+const [discountTypeChosen, setDiscountTypeChosen] = useState<DiscountType | null>(null);
+// discountValue, discountReason, discountAuthorized, discountAuthorizedBy, discountPassword: já existem
+const [appliedDiscount, setAppliedDiscount] = useState<{
+  type: DiscountType;
+  rawValue: string;
+  amount: number;     // em R$
+  percent: number;    // equivalente em %
+  reason?: string;
+  authorizedBy?: string;
+} | null>(null);
+```
+
+Cálculo do `discountAmount` usado nos totais (linhas ~255-263) muda para depender de `appliedDiscount` em vez de `discountValue` direto:
+```ts
+const discountAmount = appliedDiscount?.amount ?? 0;
+```
+Assim, durante `typing`/`confirming` o total exibido fica intacto. Só recalcula em `applied`.
+
+Variável de feedback inline (durante `typing`):
+```ts
+const previewAmount = discountTypeChosen === "percent"
+  ? (subtotal * (parseFloat(discountValue) || 0)) / 100
+  : parseFloat(discountValue) || 0;
+const previewPercent = subtotal > 0 ? (previewAmount / subtotal) * 100 : 0;
+const exceedsSubtotal = previewAmount > subtotal;
+```
+
+Reset ao fechar o dialog ou ao trocar de comanda: setar `discountStage="idle"`, `appliedDiscount=null`, limpar campos.
+
+Submissão do pagamento (linhas ~497-499, 578, 621): trocar `hasDiscount`/`discountAmount`/`discountReason`/`discountAuthorizedBy` para ler de `appliedDiscount`. Se `appliedDiscount` é `null`, não envia desconto.
+
+Bloqueio de submissão: além das validações atuais, `canSubmit` deve exigir que `discountStage` esteja em `idle` ou `applied` (nunca `typing`/`confirming`) — evita finalizar pagamento com desconto pendente de confirmação.
+
+### Migração
+
+Uma migração simples:
+```sql
+ALTER TABLE public.pdv_settings
+  ADD COLUMN IF NOT EXISTS require_discount_reason boolean NOT NULL DEFAULT false;
+```
+Atualizar `PDVSettings` interface em `use-pdv-settings.ts` e regenerar `types.ts` (automático).
+
+### Validação
+
+- Abrir PaymentDialog: nenhum tipo selecionado, campo desabilitado, placeholder correto
+- Escolher `%`: campo habilita, sufixo `%` aparece, digitar `10` mostra preview correto, total ainda intacto
+- Trocar para `R$` no meio da digitação: campo limpa + aviso aparece
+- Digitar valor > subtotal: borda vermelha, botão Aplicar bloqueado
+- Clicar Aplicar com valor válido: aparece mini-confirmação com tipo/valor/desconto/novo total e (se senha) campo de senha, total ainda intacto
+- Confirmar: total atualiza, bloco vira resumo "Desconto aplicado: -R$ X (Y%)"
+- Clicar Remover: volta ao estado inicial, total restaura
+- Com `require_discount_reason=true`: confirmação exige motivo
+- Tentar finalizar pagamento estando em `typing`/`confirming`: botão Cobrar bloqueado
+- Comportamento idêntico nos modos `Tudo`, `Várias formas` e `Por produto` (o subtotal usado no preview é o `subtotal` efetivo já calculado, que respeita o modo)
