@@ -22,6 +22,7 @@ import { ComandaDialog } from "@/components/pdv/ComandaDialog";
 import { ComandaDetailsDialog } from "@/components/pdv/ComandaDetailsDialog";
 import { ComandaAddItemDialog } from "@/components/pdv/ComandaAddItemDialog";
 import { PaymentDialog } from "@/components/pdv/cashier/PaymentDialog";
+import { TransferItemsDialog } from "@/components/pdv/transfer/TransferItemsDialog";
 import { usePDVCashier } from "@/hooks/use-pdv-cashier";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
@@ -121,7 +122,6 @@ export default function PDVSalon() {
     updateItem: updateComandaItem,
     removeItem: removeComandaItem,
     sendToKitchen,
-    transferItem,
   } = usePDVComandas();
 
   const [tableDialog, setTableDialog] = useState(false);
@@ -162,6 +162,12 @@ export default function PDVSalon() {
   const [paymentTable, setPaymentTable] = useState<any>(null);
   const [paymentTableComandas, setPaymentTableComandas] = useState<Comanda[]>([]);
   const [paymentTableItems, setPaymentTableItems] = useState<any[]>([]);
+
+  // Transfer items state
+  const [transferState, setTransferState] = useState<{
+    sourceComandaId: string;
+    itemIds: string[];
+  } | null>(null);
 
   // Sensors for drag and drop
   const sensors = useSensors(
