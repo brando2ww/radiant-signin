@@ -484,6 +484,7 @@ export function PaymentDialog({
     setSelectedItemQtys(new Map());
   };
 
+  const handleSubmit = async () => {
     if (isProcessing) return;
     try {
       const finalAmount = total;
