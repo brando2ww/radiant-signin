@@ -129,13 +129,26 @@ export function PaymentDialog({
   const [cashReceived, setCashReceived] = useState("");
   const [installments, setInstallments] = useState("1");
   
-  // Discount & fees
-  const [discountType, setDiscountType] = useState<DiscountType>("percent");
+  // Discount & fees — fluxo guiado em 4 etapas
+  type DiscountStage = "idle" | "typing" | "confirming" | "applied";
+  const [discountStage, setDiscountStage] = useState<DiscountStage>("idle");
+  const [discountTypeChosen, setDiscountTypeChosen] = useState<DiscountType | null>(null);
+  // Mantemos `discountType` legado como espelho para evitar undefined em handlers existentes
+  const discountType: DiscountType = discountTypeChosen ?? "percent";
   const [discountValue, setDiscountValue] = useState("");
   const [discountPassword, setDiscountPassword] = useState("");
   const [discountAuthorized, setDiscountAuthorized] = useState(false);
   const [discountAuthorizedBy, setDiscountAuthorizedBy] = useState("");
   const [discountReason, setDiscountReason] = useState("");
+  const [discountTypeChangedWarning, setDiscountTypeChangedWarning] = useState(false);
+  const [appliedDiscount, setAppliedDiscount] = useState<{
+    type: DiscountType;
+    rawValue: string;
+    amount: number;
+    percent: number;
+    reason?: string;
+    authorizedBy?: string;
+  } | null>(null);
   const [serviceFeeEnabled, setServiceFeeEnabled] = useState(true);
   
   // Split payment
@@ -251,10 +264,18 @@ export function PaymentDialog({
     ? formatTableLabel(table?.table_number)
     : `Comanda #${comanda?.comanda_number}`;
 
-  // Calculate discount
-  const discountAmount = discountType === "percent"
-    ? (subtotal * (parseFloat(discountValue) || 0)) / 100
-    : parseFloat(discountValue) || 0;
+  // Calculate discount — só conta no total quando confirmado/aplicado
+  // Durante "typing"/"confirming" o operador ainda não decidiu, então o total fica intacto
+  const discountAmount = appliedDiscount?.amount ?? 0;
+
+  // Preview enquanto digita (não afeta o total mostrado)
+  const previewAmount = discountStage === "typing"
+    ? (discountTypeChosen === "percent"
+        ? (subtotal * (parseFloat(discountValue) || 0)) / 100
+        : parseFloat(discountValue) || 0)
+    : 0;
+  const previewPercent = subtotal > 0 ? (previewAmount / subtotal) * 100 : 0;
+  const previewExceedsSubtotal = previewAmount > subtotal && subtotal > 0;
 
   // Calculate service fee (10%)
   const serviceFeeAmount = serviceFeeEnabled ? (subtotal - discountAmount) * 0.1 : 0;
@@ -270,15 +291,17 @@ export function PaymentDialog({
   const splitTotal = splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const splitRemaining = total - splitTotal;
 
-  // Discount requires password authorization and reason
-  const hasDiscount = parseFloat(discountValue) > 0;
-  const discountNeedsAuth = hasDiscount && !discountAuthorized;
-  const discountNeedsReason = hasDiscount && !discountReason.trim();
+  // Discount: dependendo da configuração, motivo pode ou não ser obrigatório
+  const requireReason = !!settings?.require_discount_reason;
+  const hasDiscount = !!appliedDiscount;
+
+  // Bloqueia finalização enquanto o operador estiver mexendo num desconto sem confirmar
+  const discountInProgress = discountStage === "typing" || discountStage === "confirming";
 
   // Validation
   const hasByProductSelection = isByProduct && selectedItemQtys.size > 0 && selectedSubtotal > 0;
   const byProductBlocks = chargeMode === "by-product" && (!supportsByProduct || !hasByProductSelection);
-  const canSubmit = !discountNeedsAuth && !discountNeedsReason && !byProductBlocks && (splitEnabled
+  const canSubmit = !discountInProgress && !byProductBlocks && (splitEnabled
     ? Math.abs(splitRemaining) < 0.01 && splitPayments.length > 0
     : selectedMethod !== "dinheiro" || cashReceivedNum >= total);
 
@@ -289,12 +312,15 @@ export function PaymentDialog({
       setCardType("credito");
       setCashReceived("");
       setInstallments("1");
-      setDiscountType("percent");
+      setDiscountStage("idle");
+      setDiscountTypeChosen(null);
       setDiscountValue("");
       setDiscountPassword("");
       setDiscountAuthorized(false);
       setDiscountAuthorizedBy("");
       setDiscountReason("");
+      setDiscountTypeChangedWarning(false);
+      setAppliedDiscount(null);
       setServiceFeeEnabled(true);
       setShowSuccess(false);
       setSuccessData(null);
@@ -494,9 +520,9 @@ export function PaymentDialog({
         cashReceived: selectedMethod === "dinheiro" ? cashReceivedNum : undefined,
         changeAmount: selectedMethod === "dinheiro" ? changeAmount : undefined,
         installments: selectedMethod === "cartao" ? parseInt(installments) : undefined,
-        discountAmount: hasDiscount ? discountAmount : undefined,
-        discountReason: hasDiscount ? discountReason : undefined,
-        discountAuthorizedBy: hasDiscount ? discountAuthorizedBy : undefined,
+        discountAmount: appliedDiscount ? appliedDiscount.amount : undefined,
+        discountReason: appliedDiscount ? appliedDiscount.reason : undefined,
+        discountAuthorizedBy: appliedDiscount ? appliedDiscount.authorizedBy : undefined,
       };
 
       // Modo "Por produto": pagamento parcial dos itens selecionados
@@ -953,121 +979,269 @@ export function PaymentDialog({
             {/* Discount & Service Fee */}
             <Card>
               <CardContent className="p-4 space-y-4">
-                {/* Discount */}
-                <div className="space-y-2">
+                {/* Discount — fluxo guiado em 4 etapas */}
+                <div className="space-y-3">
                   <Label className="text-sm flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-amber-500" />
                     Desconto
                   </Label>
-                  <div className="flex gap-2">
-                    <div className="flex border rounded-lg overflow-hidden">
+
+                  {/* === ETAPA: applied — resumo fixo === */}
+                  {discountStage === "applied" && appliedDiscount && (
+                    <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-900 px-3 py-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-emerald-600" />
+                        <span className="font-medium">
+                          Desconto aplicado: -{formatCurrency(appliedDiscount.amount)}{" "}
+                          <span className="text-muted-foreground">
+                            ({appliedDiscount.type === "percent"
+                              ? `${appliedDiscount.rawValue}%`
+                              : `${appliedDiscount.percent.toFixed(1).replace(".", ",")}%`})
+                          </span>
+                        </span>
+                      </div>
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className={cn(
-                          "rounded-none px-3",
-                          discountType === "percent" && "bg-primary/10 text-primary"
-                        )}
-onClick={() => {
-                          setDiscountType("percent");
-                          setDiscountAuthorized(false);
-                          setDiscountAuthorizedBy("");
-                          setDiscountPassword("");
-                        }}
-                      >
-                        <Percent className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className={cn(
-                          "rounded-none px-3",
-                          discountType === "value" && "bg-primary/10 text-primary"
-                        )}
+                        className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
                         onClick={() => {
-                          setDiscountType("value");
+                          setAppliedDiscount(null);
+                          setDiscountStage("idle");
+                          setDiscountTypeChosen(null);
+                          setDiscountValue("");
+                          setDiscountPassword("");
                           setDiscountAuthorized(false);
                           setDiscountAuthorizedBy("");
-                          setDiscountPassword("");
+                          setDiscountReason("");
+                          setDiscountTypeChangedWarning(false);
                         }}
                       >
-                        <DollarSign className="h-4 w-4" />
+                        Remover
                       </Button>
                     </div>
-                    {discountType === "percent" ? (
-                      <div className="relative flex-1">
-                        <Input
-                          type="number"
-                          min={0}
-                          max={100}
-                          placeholder="0"
-                          value={discountValue}
-                          onChange={(e) => {
-                            const val = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
-                            setDiscountValue(val > 0 ? val.toString() : e.target.value);
-                            setDiscountAuthorized(false);
-                            setDiscountAuthorizedBy("");
-                            setDiscountPassword("");
-                            setDiscountReason("");
-                          }}
-                          className="pr-8"
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">%</span>
-                      </div>
-                    ) : (
-                      <div className="flex-1">
-                        <CurrencyInput
-                          value={discountValue}
-                          onChange={(val) => {
-                            setDiscountValue(val);
-                            setDiscountAuthorized(false);
-                            setDiscountAuthorizedBy("");
-                            setDiscountPassword("");
-                            setDiscountReason("");
-                          }}
-                          placeholder="0,00"
-                        />
-                      </div>
-                    )}
-                  </div>
+                  )}
 
-                  {/* Discount reason + password side by side */}
-                  {hasDiscount && (
-                    <div className="grid grid-cols-2 gap-2 mt-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs flex items-center gap-1">
-                          <FileText className="h-3 w-3 text-amber-500" />
-                          Motivo *
-                        </Label>
-                        <Input
-                          type="text"
-                          placeholder="Ex: Cliente frequente"
-                          value={discountReason}
-                          onChange={(e) => setDiscountReason(e.target.value)}
-                          className="h-8 text-sm"
-                        />
+                  {/* === ETAPA: idle / typing — escolha de tipo + campo === */}
+                  {(discountStage === "idle" || discountStage === "typing") && (
+                    <>
+                      {/* Botões grandes de tipo */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          type="button"
+                          variant={discountTypeChosen === "percent" ? "default" : "outline"}
+                          className="h-12 justify-center gap-2"
+                          onClick={() => {
+                            const switching = discountTypeChosen && discountTypeChosen !== "percent" && discountValue;
+                            setDiscountTypeChosen("percent");
+                            if (switching) {
+                              setDiscountValue("");
+                              setDiscountTypeChangedWarning(true);
+                            } else {
+                              setDiscountTypeChangedWarning(false);
+                            }
+                            if (discountStage === "idle") setDiscountStage("typing");
+                          }}
+                        >
+                          <Percent className="h-4 w-4" />
+                          <span className="font-medium">Desconto em %</span>
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={discountTypeChosen === "value" ? "default" : "outline"}
+                          className="h-12 justify-center gap-2"
+                          onClick={() => {
+                            const switching = discountTypeChosen && discountTypeChosen !== "value" && discountValue;
+                            setDiscountTypeChosen("value");
+                            if (switching) {
+                              setDiscountValue("");
+                              setDiscountTypeChangedWarning(true);
+                            } else {
+                              setDiscountTypeChangedWarning(false);
+                            }
+                            if (discountStage === "idle") setDiscountStage("typing");
+                          }}
+                        >
+                          <DollarSign className="h-4 w-4" />
+                          <span className="font-medium">Desconto em R$</span>
+                        </Button>
                       </div>
+
+                      {/* Campo de valor */}
+                      {discountTypeChosen === "percent" ? (
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            placeholder={discountStage === "idle" ? "Selecione o tipo primeiro" : "0"}
+                            value={discountValue}
+                            disabled={discountStage === "idle"}
+                            onChange={(e) => {
+                              const val = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
+                              setDiscountValue(val > 0 ? val.toString() : e.target.value);
+                              setDiscountTypeChangedWarning(false);
+                            }}
+                            className={cn(
+                              "pr-8 h-11",
+                              previewExceedsSubtotal && "border-destructive focus-visible:ring-destructive",
+                            )}
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm pointer-events-none">%</span>
+                        </div>
+                      ) : discountTypeChosen === "value" ? (
+                        <div className="relative">
+                          <CurrencyInput
+                            value={discountValue}
+                            onChange={(val) => {
+                              setDiscountValue(val);
+                              setDiscountTypeChangedWarning(false);
+                            }}
+                            placeholder="0,00"
+                            className={cn(
+                              "h-11",
+                              previewExceedsSubtotal && "border-destructive focus-visible:ring-destructive",
+                            )}
+                          />
+                        </div>
+                      ) : (
+                        <Input
+                          placeholder="Selecione o tipo primeiro"
+                          disabled
+                          className="h-11 bg-muted/40"
+                        />
+                      )}
+
+                      {/* Aviso de troca de tipo */}
+                      {discountTypeChangedWarning && (
+                        <p className="text-xs text-amber-600 flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          Tipo alterado — revise o valor
+                        </p>
+                      )}
+
+                      {/* Preview / erro */}
+                      {discountStage === "typing" && discountValue && parseFloat(discountValue) > 0 && (
+                        previewExceedsSubtotal ? (
+                          <p className="text-xs text-destructive flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            Desconto maior que o valor da conta
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            {discountTypeChosen === "percent" ? (
+                              <>
+                                <span className="font-semibold text-foreground">
+                                  {discountValue}% = {formatCurrency(previewAmount)}
+                                </span>{" "}
+                                será descontado do subtotal de {formatCurrency(subtotal)}
+                              </>
+                            ) : (
+                              <>
+                                <span className="font-semibold text-foreground">
+                                  {formatCurrency(previewAmount)} = {previewPercent.toFixed(1).replace(".", ",")}%
+                                </span>{" "}
+                                será descontado do subtotal de {formatCurrency(subtotal)}
+                              </>
+                            )}
+                          </p>
+                        )
+                      )}
+
+                      {/* Botão Aplicar desconto (separado do botão Cobrar) */}
+                      {discountStage === "typing" && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          className="w-full"
+                          disabled={
+                            !discountValue ||
+                            parseFloat(discountValue) <= 0 ||
+                            previewExceedsSubtotal
+                          }
+                          onClick={() => setDiscountStage("confirming")}
+                        >
+                          Aplicar desconto
+                        </Button>
+                      )}
+                    </>
+                  )}
+
+                  {/* === ETAPA: confirming — resumo + senha + (motivo se exigido) === */}
+                  {discountStage === "confirming" && (
+                    <div className="rounded-lg border border-amber-300 bg-amber-50/60 dark:bg-amber-950/20 dark:border-amber-900 p-3 space-y-3">
+                      <div className="text-sm font-semibold flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        Confirmar desconto
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                        <span className="text-muted-foreground">Tipo:</span>
+                        <span className="text-right font-medium">
+                          {discountTypeChosen === "percent" ? "Percentual" : "Valor fixo"}
+                        </span>
+
+                        <span className="text-muted-foreground">Valor:</span>
+                        <span className="text-right font-medium">
+                          {discountTypeChosen === "percent"
+                            ? `${discountValue}%`
+                            : formatCurrency(parseFloat(discountValue) || 0)}
+                        </span>
+
+                        <span className="text-muted-foreground">Será descontado:</span>
+                        <span className="text-right font-semibold text-emerald-700 dark:text-emerald-400">
+                          -{formatCurrency(previewAmount)}
+                        </span>
+
+                        <span className="text-muted-foreground">Novo total:</span>
+                        <span className="text-right font-bold">
+                          {formatCurrency(
+                            Math.max(
+                              0,
+                              subtotal - previewAmount + (serviceFeeEnabled ? (subtotal - previewAmount) * 0.1 : 0),
+                            ),
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Motivo (se configurado) */}
+                      {requireReason && (
+                        <div className="space-y-1">
+                          <Label className="text-xs flex items-center gap-1">
+                            <FileText className="h-3 w-3 text-amber-600" />
+                            Motivo *
+                          </Label>
+                          <Input
+                            type="text"
+                            placeholder="Ex: Cliente frequente"
+                            value={discountReason}
+                            onChange={(e) => setDiscountReason(e.target.value)}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                      )}
+
+                      {/* Senha de autorização (sempre obrigatória) */}
                       <div className="space-y-1">
                         <Label className="text-xs flex items-center gap-1">
-                          <Lock className="h-3 w-3 text-amber-500" />
-                          Senha
+                          <Lock className="h-3 w-3 text-amber-600" />
+                          Senha de autorização *
                         </Label>
                         <div className="flex gap-1">
                           <Input
                             type="password"
                             inputMode="numeric"
-                            placeholder="Senha"
+                            placeholder="Senha do operador autorizado"
                             value={discountPassword}
                             onChange={(e) => setDiscountPassword(e.target.value)}
-                            className="h-8 text-sm flex-1"
+                            className="h-9 text-sm flex-1"
+                            disabled={discountAuthorized}
                           />
                           <Button
                             type="button"
                             variant={discountAuthorized ? "default" : "outline"}
                             size="sm"
-                            className="shrink-0 h-8 px-2 text-xs"
+                            className="shrink-0 h-9 px-3 text-xs"
                             disabled={discountAuthorized}
                             onClick={async () => {
                               if (!discountPassword) {
@@ -1095,10 +1269,10 @@ onClick={() => {
                                 return;
                               }
 
-                              const discountPercent = discountType === "percent"
+                              const discountPercent = discountTypeChosen === "percent"
                                 ? parseFloat(discountValue) || 0
-                                : ((parseFloat(discountValue) || 0) / subtotal) * 100;
-                              
+                                : subtotal > 0 ? ((parseFloat(discountValue) || 0) / subtotal) * 100 : 0;
+
                               const maxAllowed = authorizer.max_discount_percent ?? 100;
 
                               if (discountPercent > maxAllowed) {
@@ -1111,17 +1285,57 @@ onClick={() => {
 
                               setDiscountAuthorized(true);
                               setDiscountAuthorizedBy(authorizer.display_name || "Operador");
-                              toast.success(`Desconto autorizado por ${authorizer.display_name || "operador"}`);
+                              toast.success(`Autorizado por ${authorizer.display_name || "operador"}`);
                             }}
                           >
                             {discountAuthorized ? "✓" : "OK"}
                           </Button>
                         </div>
                         {discountAuthorized && discountAuthorizedBy && (
-                          <p className="text-xs text-green-600">
-                            Por: {discountAuthorizedBy}
-                          </p>
+                          <p className="text-xs text-emerald-600">Por: {discountAuthorizedBy}</p>
                         )}
+                      </div>
+
+                      {/* Ações Confirmar / Corrigir */}
+                      <div className="flex gap-2 pt-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="flex-1"
+                          onClick={() => {
+                            setDiscountStage("typing");
+                            setDiscountAuthorized(false);
+                            setDiscountAuthorizedBy("");
+                            setDiscountPassword("");
+                          }}
+                        >
+                          Corrigir
+                        </Button>
+                        <Button
+                          type="button"
+                          className="flex-1"
+                          disabled={
+                            !discountAuthorized ||
+                            (requireReason && !discountReason.trim()) ||
+                            previewExceedsSubtotal
+                          }
+                          onClick={() => {
+                            const amt = previewAmount;
+                            const pct = subtotal > 0 ? (amt / subtotal) * 100 : 0;
+                            setAppliedDiscount({
+                              type: discountTypeChosen as DiscountType,
+                              rawValue: discountValue,
+                              amount: amt,
+                              percent: pct,
+                              reason: discountReason.trim() || undefined,
+                              authorizedBy: discountAuthorizedBy || undefined,
+                            });
+                            setDiscountStage("applied");
+                            toast.success("Desconto aplicado");
+                          }}
+                        >
+                          Confirmar
+                        </Button>
                       </div>
                     </div>
                   )}
