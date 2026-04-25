@@ -321,13 +321,16 @@ export default function PDVCashier() {
       {/* Footer com Resumo */}
       <CashierSummaryFooter
         openingBalance={openingBalance}
-        totalCash={totalCash}
-        totalCard={totalCard}
-        totalPix={totalPix}
-        totalWithdrawals={totalWithdrawals}
+        netCash={netCash}
         totalReinforcements={totalReinforcements}
+        totalWithdrawals={totalWithdrawals}
+        drawerBalance={drawerBalance}
+        totalCash={totalCash}
+        totalCredit={totalCredit}
+        totalDebit={totalDebit}
+        totalPix={totalPix}
+        totalVoucher={totalVoucher}
         totalSales={totalSales}
-        currentBalance={currentBalance}
         isOpen={!!activeSession}
       />
 
