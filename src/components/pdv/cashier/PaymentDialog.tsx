@@ -349,9 +349,9 @@ export function PaymentDialog({
         setSplitPayments([]);
       }
 
-      // Adquire lock em_cobranca para comandas vindas do garçom
+      // Adquire lock em_cobranca para comandas vindas do garçom (aberta ou aguardando_pagamento)
       const candidateIds = involvedComandas
-        .filter((c) => c.status === "aguardando_pagamento")
+        .filter((c) => c.status === "aberta" || c.status === "aguardando_pagamento")
         .map((c) => c.id);
       if (candidateIds.length > 0) {
         markAsCharging(candidateIds)
