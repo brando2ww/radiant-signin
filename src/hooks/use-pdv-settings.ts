@@ -73,6 +73,8 @@ export interface PDVSettings {
   // CSC NFC-e (gerado no portal SEFAZ)
   nfe_csc_id?: string;
   nfe_csc_token?: string;
+  // Desconto: exigir motivo na confirmação
+  require_discount_reason?: boolean;
 }
 
 export function usePDVSettings() {
