@@ -5206,6 +5206,7 @@ export type Database = {
           order_ready_sound: string | null
           printers: Json | null
           require_customer_identification: boolean | null
+          require_discount_reason: boolean
           requires_opening_balance: boolean | null
           salon_layout: Json | null
           service_fee_percentage: number | null
@@ -5268,6 +5269,7 @@ export type Database = {
           order_ready_sound?: string | null
           printers?: Json | null
           require_customer_identification?: boolean | null
+          require_discount_reason?: boolean
           requires_opening_balance?: boolean | null
           salon_layout?: Json | null
           service_fee_percentage?: number | null
@@ -5330,6 +5332,7 @@ export type Database = {
           order_ready_sound?: string | null
           printers?: Json | null
           require_customer_identification?: boolean | null
+          require_discount_reason?: boolean
           requires_opening_balance?: boolean | null
           salon_layout?: Json | null
           service_fee_percentage?: number | null
