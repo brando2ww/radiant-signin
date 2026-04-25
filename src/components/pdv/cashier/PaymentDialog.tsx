@@ -129,13 +129,26 @@ export function PaymentDialog({
   const [cashReceived, setCashReceived] = useState("");
   const [installments, setInstallments] = useState("1");
   
-  // Discount & fees
-  const [discountType, setDiscountType] = useState<DiscountType>("percent");
+  // Discount & fees — fluxo guiado em 4 etapas
+  type DiscountStage = "idle" | "typing" | "confirming" | "applied";
+  const [discountStage, setDiscountStage] = useState<DiscountStage>("idle");
+  const [discountTypeChosen, setDiscountTypeChosen] = useState<DiscountType | null>(null);
+  // Mantemos `discountType` legado como espelho para evitar undefined em handlers existentes
+  const discountType: DiscountType = discountTypeChosen ?? "percent";
   const [discountValue, setDiscountValue] = useState("");
   const [discountPassword, setDiscountPassword] = useState("");
   const [discountAuthorized, setDiscountAuthorized] = useState(false);
   const [discountAuthorizedBy, setDiscountAuthorizedBy] = useState("");
   const [discountReason, setDiscountReason] = useState("");
+  const [discountTypeChangedWarning, setDiscountTypeChangedWarning] = useState(false);
+  const [appliedDiscount, setAppliedDiscount] = useState<{
+    type: DiscountType;
+    rawValue: string;
+    amount: number;
+    percent: number;
+    reason?: string;
+    authorizedBy?: string;
+  } | null>(null);
   const [serviceFeeEnabled, setServiceFeeEnabled] = useState(true);
   
   // Split payment
