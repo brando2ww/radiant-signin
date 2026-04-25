@@ -138,6 +138,16 @@ export default function GarcomComandaDetalhe() {
             {statusBadge}
           </div>
         </div>
+        {canEdit && items.length > 0 && (
+          <button
+            type="button"
+            onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+            className="ml-auto h-9 px-3 rounded-md text-xs font-medium hover:bg-accent active:scale-95 transition-all inline-flex items-center gap-1.5"
+          >
+            {selectMode ? <X className="h-4 w-4" /> : <CheckSquare className="h-4 w-4" />}
+            {selectMode ? "Cancelar" : "Selecionar"}
+          </button>
+        )}
       </header>
 
       {/* Items */}
@@ -171,7 +181,11 @@ export default function GarcomComandaDetalhe() {
               notes={item.notes}
               kitchenStatus={item.kitchen_status}
               sentToKitchenAt={item.sent_to_kitchen_at}
-              onRemove={canEdit ? () => removeItem(item.id) : undefined}
+              onRemove={canEdit && !selectMode ? () => removeItem(item.id) : undefined}
+              onTransfer={canEdit && !selectMode ? () => setTransferIds([item.id]) : undefined}
+              selectMode={selectMode}
+              selected={selectedIds.has(item.id)}
+              onToggleSelect={() => toggleSelect(item.id)}
             />
           ))
         )}
