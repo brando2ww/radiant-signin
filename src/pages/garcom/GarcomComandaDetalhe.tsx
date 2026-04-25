@@ -20,6 +20,7 @@ export default function GarcomComandaDetalhe() {
     sendToKitchenAsync,
     closeComanda,
     removeItem,
+    updateItem,
   } = usePDVComandas();
   const { tables } = usePDVTables();
 
