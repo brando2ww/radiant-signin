@@ -275,6 +275,25 @@ export function PaymentDialog({
   // Final total
   const total = Math.max(0, subtotal - discountAmount + serviceFeeAmount);
 
+  // Calculate discount — só conta no total quando confirmado/aplicado
+  // Durante "typing"/"confirming" o operador ainda não decidiu, então o total fica intacto
+  const discountAmount = appliedDiscount?.amount ?? 0;
+
+  // Preview enquanto digita (não afeta o total mostrado)
+  const previewAmount = discountStage === "typing"
+    ? (discountTypeChosen === "percent"
+        ? (subtotal * (parseFloat(discountValue) || 0)) / 100
+        : parseFloat(discountValue) || 0)
+    : 0;
+  const previewPercent = subtotal > 0 ? (previewAmount / subtotal) * 100 : 0;
+  const previewExceedsSubtotal = previewAmount > subtotal && subtotal > 0;
+
+  // Calculate service fee (10%)
+  const serviceFeeAmount = serviceFeeEnabled ? (subtotal - discountAmount) * 0.1 : 0;
+
+  // Final total
+  const total = Math.max(0, subtotal - discountAmount + serviceFeeAmount);
+
   // Cash calculations
   const cashReceivedNum = parseFloat(cashReceived) || 0;
   const changeAmount = selectedMethod === "dinheiro" ? Math.max(0, cashReceivedNum - total) : 0;
@@ -283,15 +302,17 @@ export function PaymentDialog({
   const splitTotal = splitPayments.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
   const splitRemaining = total - splitTotal;
 
-  // Discount requires password authorization and reason
-  const hasDiscount = parseFloat(discountValue) > 0;
-  const discountNeedsAuth = hasDiscount && !discountAuthorized;
-  const discountNeedsReason = hasDiscount && !discountReason.trim();
+  // Discount: dependendo da configuração, motivo pode ou não ser obrigatório
+  const requireReason = !!settings?.require_discount_reason;
+  const hasDiscount = !!appliedDiscount;
+
+  // Bloqueia finalização enquanto o operador estiver mexendo num desconto sem confirmar
+  const discountInProgress = discountStage === "typing" || discountStage === "confirming";
 
   // Validation
   const hasByProductSelection = isByProduct && selectedItemQtys.size > 0 && selectedSubtotal > 0;
   const byProductBlocks = chargeMode === "by-product" && (!supportsByProduct || !hasByProductSelection);
-  const canSubmit = !discountNeedsAuth && !discountNeedsReason && !byProductBlocks && (splitEnabled
+  const canSubmit = !discountInProgress && !byProductBlocks && (splitEnabled
     ? Math.abs(splitRemaining) < 0.01 && splitPayments.length > 0
     : selectedMethod !== "dinheiro" || cashReceivedNum >= total);
 
