@@ -28,14 +28,16 @@ export const ProductList = ({ products, categories, onAddToCart }: ProductListPr
     <div className="space-y-12 md:space-y-16">
       {featuredProducts.length > 0 && (
         <section id="cat-featured" className="scroll-mt-24">
-          <div className="bg-muted rounded-lg border-l-4 border-primary px-5 py-5 mb-6 flex items-center justify-between gap-4">
-            <h2 className="text-2xl md:text-3xl font-extrabold uppercase tracking-wide">
-              ⭐ Destaques
-            </h2>
-            <span className="text-sm text-muted-foreground whitespace-nowrap">
-              {featuredProducts.length}{" "}
-              {featuredProducts.length === 1 ? "item" : "itens"}
-            </span>
+          <div className="mb-5 border-b border-border pb-2">
+            <div className="flex items-end justify-between gap-4">
+              <h2 className="relative inline-block text-xl md:text-2xl font-semibold tracking-tight pb-2 -mb-2 after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-primary">
+                <span className="mr-2">⭐</span>Destaques
+              </h2>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {featuredProducts.length}{" "}
+                {featuredProducts.length === 1 ? "item" : "itens"}
+              </span>
+            </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {featuredProducts.map((product) => (
@@ -64,12 +66,12 @@ export const ProductList = ({ products, categories, onAddToCart }: ProductListPr
               aria-hidden="true"
               className="block h-0 scroll-mt-24"
             />
-            <div className="bg-muted rounded-lg border-l-4 border-primary px-5 py-5 mb-6">
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="text-2xl md:text-3xl font-extrabold uppercase tracking-wide">
+            <div className="mb-5 border-b border-border pb-2">
+              <div className="flex items-end justify-between gap-4">
+                <h2 className="relative inline-block text-xl md:text-2xl font-semibold tracking-tight pb-2 -mb-2 after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-full after:bg-primary">
                   {category.name}
                 </h2>
-                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">
                   {list.length} {list.length === 1 ? "item" : "itens"}
                 </span>
               </div>
