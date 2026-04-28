@@ -1,26 +1,47 @@
-# Melhorar UX da divisão das categorias no cardápio
+# Cardápio público: agrupar por categoria e remover avaliações
 
-## Problema
-
-Na tela `/pdv/delivery/menu` os produtos "sumiram" porque todas as categorias começam fechadas (accordion com `openCategoryIds = []`). Os contadores na imagem (2, 6, 5, 4, 5, 0) confirmam que os produtos existem no banco — só não estão visíveis. Além disso, as categorias ficam todas coladas no topo sem separação visual clara.
+## Por que o layout público não mudou
+As mudanças anteriores foram só no painel administrativo (`/pdv/delivery/menu`). O cardápio que o cliente final vê (`/cardapio/:userId` → `src/pages/PublicMenu.tsx`) usa outros componentes (`PublicMenuHeader`, `CategoryNav`, `ProductList`) que continuam com o layout antigo: "⭐ Destaques" + "Cardápio" em grid plano, sem separação por categoria.
 
 ## O que será feito
 
-### 1. Produtos visíveis por padrão
-Abrir todas as categorias automaticamente no primeiro carregamento (`useEffect` que popula `openCategoryIds` com todos os IDs assim que `categories` chega). O usuário continua podendo recolher manualmente o que quiser.
+### 1. Remover avaliações do header público
+Em `PublicMenuHeader.tsx`, remover o bloco `⭐ 4.8 (234)` (que hoje é hardcoded) e o ícone `Star`. O resto do header (logo, nome, slogan, tempo de preparo, taxa, status aberto/fechado) permanece igual.
 
-### 2. Cabeçalho de categoria sticky
-Quando o usuário rola o cardápio, o nome da categoria atual fica fixo no topo (`sticky top-14`, abaixo do header de 3.5rem da app). Assim você sempre sabe em qual seção está, mesmo numa categoria longa como Sushi Express.
+### 2. Cardápio agrupado por categoria
+Reescrever `ProductList.tsx` para receber `categories` e `products` e renderizar:
 
-### 3. Separação visual clara entre categorias
-- Espaçamento entre seções aumenta de `space-y-3` para `space-y-6`.
-- Cada seção ganha `rounded-lg` + `overflow-hidden` para um cartão mais "fechado".
-- Cabeçalho com fundo `bg-card` e `border-b` separando do conteúdo, título em `text-lg` para hierarquia mais forte.
-- Mantém os tokens do design system (sem cores customizadas, conforme a memória do projeto).
+```text
+⭐ Destaques (se houver featured)
+   [card] [card] [card]
 
-### 4. Pequeno polimento
-- `scroll-mt-20` em cada `AccordionItem` para que, no futuro, links/âncoras de categoria parem na posição certa abaixo do header.
+Promoções Exclusiva do Dia          ← cabeçalho sticky por categoria
+   [card] [card] [card]
+
+Sushi Express
+   [card] [card] [card]
+
+Sushi Prime
+   ...
+```
+
+Cada cabeçalho de categoria recebe `id="cat-<id>"` + `scroll-mt-32` para o scroll-spy do `CategoryNav` funcionar corretamente abaixo do header sticky.
+
+### 3. CategoryNav vira navegação por âncoras
+Em vez de filtrar produtos (que recarrega a lista), clicar numa categoria do `CategoryNav` vai rolar a página até a seção correspondente (`document.getElementById('cat-<id>')?.scrollIntoView`). O botão "Todos" rola pro topo do cardápio. Isso funciona melhor com listas longas e não esconde nada.
+
+Opcional simples: destacar a categoria visível usando `IntersectionObserver` para sincronizar a aba ativa.
+
+### 4. Buscar TODOS os produtos de uma vez
+Em `PublicMenu.tsx`, remover o filtro `selectedCategory` da query `usePublicProducts` — passa a buscar todos os produtos do estabelecimento de uma vez. Performance é boa pois cardápios costumam ter dezenas, não milhares de itens, e o cliente já recebe a ordenação por `order_position`.
+
+### 5. Respeitar a ordem definida no admin
+Os produtos dentro de cada categoria já vêm ordenados por `order_position` (o hook `use-public-menu` ordena assim). As categorias também — então a reordenação que você fez no painel admin reflete aqui automaticamente.
 
 ## Arquivos afetados
+- `src/components/public-menu/PublicMenuHeader.tsx` — remove estrela/avaliação.
+- `src/components/public-menu/ProductList.tsx` — agrupa por categoria com cabeçalhos sticky.
+- `src/components/public-menu/CategoryNav.tsx` — clique vira scroll para âncora.
+- `src/pages/PublicMenu.tsx` — busca todos os produtos; passa `categories` para `ProductList`.
 
-- `src/components/delivery/MenuTab.tsx` — único arquivo alterado. Sem mudança de banco, sem novas dependências.
+Sem mudança de banco. Sem novas dependências.
