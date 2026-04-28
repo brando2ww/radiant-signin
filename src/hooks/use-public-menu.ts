@@ -20,6 +20,7 @@ export interface PublicProduct {
   preparation_time: number;
   serves: number;
   is_featured: boolean;
+  available_days?: number[] | null;
   delivery_product_options?: PublicProductOption[];
 }
 
@@ -79,6 +80,7 @@ export const usePublicProducts = (userId: string, categoryId?: string) => {
           preparation_time,
           serves,
           is_featured,
+          available_days,
           delivery_product_options (
             id,
             product_id,
@@ -108,7 +110,15 @@ export const usePublicProducts = (userId: string, categoryId?: string) => {
       const { data, error } = await query.order("order_position", { ascending: true });
 
       if (error) throw error;
-      return data as PublicProduct[];
+
+      // Filtra produtos pelo dia da semana atual (0=Dom .. 6=Sáb)
+      const today = new Date().getDay();
+      const filtered = (data as PublicProduct[]).filter((p) => {
+        const days = p.available_days as number[] | null | undefined;
+        return !days || days.length === 0 || days.includes(today);
+      });
+
+      return filtered;
     },
     enabled: !!userId,
   });
