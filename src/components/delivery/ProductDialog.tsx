@@ -105,7 +105,7 @@ export const ProductDialog = ({
       setImageFile(null);
       setAvailableDays([]);
     }
-  }, [product, categories, open]);
+  }, [product, categories, open, preselectedCategoryId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
