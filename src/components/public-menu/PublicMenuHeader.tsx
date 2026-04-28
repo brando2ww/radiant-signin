@@ -1,5 +1,5 @@
 import { useBusinessSettings, usePublicSettings } from "@/hooks/use-public-menu";
-import { Star, Clock, MapPin } from "lucide-react";
+import { Clock, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatBRL } from "@/lib/format";
 
@@ -50,11 +50,6 @@ export const PublicMenuHeader = ({ userId }: PublicMenuHeaderProps) => {
               </p>
             )}
             <div className="flex flex-wrap items-center gap-3 mt-2 text-sm">
-              <div className="flex items-center gap-1">
-                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                <span className="font-medium">4.8</span>
-                <span className="text-muted-foreground">(234)</span>
-              </div>
               {deliverySettings?.estimated_preparation_time && (
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <Clock className="h-4 w-4" />
