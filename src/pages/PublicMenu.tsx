@@ -29,15 +29,11 @@ const PublicMenu = () => {
   const { userId } = useParams<{ userId: string }>();
   const [searchParams] = useSearchParams();
   const initialCoupon = searchParams.get("cupom") || undefined;
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cart, setCart] = useState<CartItem[]>([]);
   const { trackPageView } = useMarketingTracking();
 
   const { data: categories = [] } = usePublicCategories(userId || "");
-  const { data: products = [] } = usePublicProducts(
-    userId || "",
-    selectedCategory || undefined
-  );
+  const { data: products = [] } = usePublicProducts(userId || "");
 
   // Fetch marketing settings
   const { data: settings } = useQuery({
@@ -172,15 +168,15 @@ const PublicMenu = () => {
       <PublicMenuHeader userId={userId} />
       
       <div className="sticky top-0 z-30 bg-background border-b">
-        <CategoryNav
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-        />
+        <CategoryNav categories={categories} />
       </div>
 
       <div className="container mx-auto px-4 py-6 pb-32">
-        <ProductList products={products} onAddToCart={addToCart} />
+        <ProductList
+          products={products}
+          categories={categories}
+          onAddToCart={addToCart}
+        />
       </div>
 
       <ShoppingCart
