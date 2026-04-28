@@ -49,12 +49,17 @@ export const ProductList = ({ products, categories, onAddToCart }: ProductListPr
           <section
             key={category.id}
             id={`cat-${category.id}`}
-            className="scroll-mt-32"
+            className="scroll-mt-24"
           >
-            <div className="sticky top-[7.5rem] z-20 bg-background/95 backdrop-blur py-2 mb-4 border-b">
+            <span
+              data-cat-anchor={category.id}
+              aria-hidden="true"
+              className="block h-0 scroll-mt-24"
+            />
+            <div className="pb-3 mb-4 border-b">
               <h2 className="text-xl font-bold">{category.name}</h2>
               {category.description && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mt-1">
                   {category.description}
                 </p>
               )}

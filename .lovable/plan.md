@@ -1,47 +1,51 @@
-# Cardápio público: agrupar por categoria e remover avaliações
+## Problemas identificados
 
-## Por que o layout público não mudou
-As mudanças anteriores foram só no painel administrativo (`/pdv/delivery/menu`). O cardápio que o cliente final vê (`/cardapio/:userId` → `src/pages/PublicMenu.tsx`) usa outros componentes (`PublicMenuHeader`, `CategoryNav`, `ProductList`) que continuam com o layout antigo: "⭐ Destaques" + "Cardápio" em grid plano, sem separação por categoria.
+Olhando a captura de tela e o código atual em `src/components/public-menu/`, há dois bugs visuais/comportamentais:
 
-## O que será feito
+### 1. Header da categoria "flutuando" no meio da página
+Em `ProductList.tsx`, cada categoria tem um header com `sticky top-[7.5rem]`. Como a `CategoryNav` (barra "Todos / Sushi Express / ...") usa `sticky top-0` e tem altura ~72px, o valor `7.5rem` (120px) deixa um espaço vazio entre as duas barras. Resultado: o título "Sushi Express" gruda no meio da página, com fundo `bg-background/95 backdrop-blur` parcialmente transparente sobrepondo as imagens dos produtos abaixo — exatamente o efeito esquisito da screenshot.
 
-### 1. Remover avaliações do header público
-Em `PublicMenuHeader.tsx`, remover o bloco `⭐ 4.8 (234)` (que hoje é hardcoded) e o ícone `Star`. O resto do header (logo, nome, slogan, tempo de preparo, taxa, status aberto/fechado) permanece igual.
+### 2. Scroll-spy não atualiza a categoria ativa no topo
+Em `CategoryNav.tsx`, o `IntersectionObserver` observa o elemento `<section id="cat-XYZ">` inteiro. Como cada `<section>` é alta (várias linhas de produtos), a section anterior continua "intersectando" enquanto o usuário rola pela próxima — e o `rootMargin: "-140px 0px -60% 0px"` combinado com a ordenação por `boundingClientRect.top` acaba mantendo a categoria errada selecionada. Por isso "Todos" continua marcado ao descer.
 
-### 2. Cardápio agrupado por categoria
-Reescrever `ProductList.tsx` para receber `categories` e `products` e renderizar:
+Além disso, o sticky header **interno** de cada section (item 1) impede o `IntersectionObserver` de detectar a saída da section corretamente, porque o próprio header fica grudado dentro do viewport.
 
-```text
-⭐ Destaques (se houver featured)
-   [card] [card] [card]
+---
 
-Promoções Exclusiva do Dia          ← cabeçalho sticky por categoria
-   [card] [card] [card]
+## Plano de correção
 
-Sushi Express
-   [card] [card] [card]
+### A. Eliminar o header sticky duplicado dentro de cada categoria
+Em `src/components/public-menu/ProductList.tsx`:
+- Remover o `<div className="sticky top-[7.5rem] ...">` ao redor do título da categoria.
+- Manter o título como header normal (não-sticky), com bom espaçamento e separador, logo acima do grid de produtos.
+- A única barra "sticky" da página passa a ser a `CategoryNav` no topo — que já mostra qual categoria está ativa, então não há perda de contexto.
 
-Sushi Prime
-   ...
-```
+Isso elimina o efeito "flutuando no meio da tela" e devolve a clareza visual.
 
-Cada cabeçalho de categoria recebe `id="cat-<id>"` + `scroll-mt-32` para o scroll-spy do `CategoryNav` funcionar corretamente abaixo do header sticky.
+### B. Corrigir o scroll-spy para atualizar em tempo real
+Em `src/components/public-menu/CategoryNav.tsx`:
+- Trocar a lógica baseada em `IntersectionObserver` da section inteira por uma abordagem que detecta qual **título de categoria** acabou de cruzar a linha logo abaixo da `CategoryNav`.
+- Adicionar um marcador leve (`<span data-cat-anchor={id}>`) imediatamente antes de cada título em `ProductList.tsx`, e observar esses marcadores com:
+  - `rootMargin: "-${navHeight + 8}px 0px -75% 0px"` para que apenas o marcador que cruza a faixa logo abaixo da navbar conte como "ativo".
+  - Tracking adicional via `scroll` event (throttled com `requestAnimationFrame`) como fallback, escolhendo o último marcador cujo `getBoundingClientRect().top <= navHeight + 8`.
+- Calcular dinamicamente a altura real da `CategoryNav` via `ref` em vez de chutar `140px`.
+- Quando o usuário está acima da primeira categoria, marcar "Todos" como ativo; ao chegar na primeira categoria, ela vira ativa imediatamente.
 
-### 3. CategoryNav vira navegação por âncoras
-Em vez de filtrar produtos (que recarrega a lista), clicar numa categoria do `CategoryNav` vai rolar a página até a seção correspondente (`document.getElementById('cat-<id>')?.scrollIntoView`). O botão "Todos" rola pro topo do cardápio. Isso funciona melhor com listas longas e não esconde nada.
+### C. Ajustar `scroll-mt` para alinhar com a nova altura da navbar
+Em `ProductList.tsx`, trocar `scroll-mt-32` pelas categorias por um valor consistente com a altura real da `CategoryNav` (ex.: `scroll-mt-24`) para que o `scrollIntoView` ao clicar num botão da nav posicione o título da categoria logo abaixo da barra, sem ficar escondido.
 
-Opcional simples: destacar a categoria visível usando `IntersectionObserver` para sincronizar a aba ativa.
+---
 
-### 4. Buscar TODOS os produtos de uma vez
-Em `PublicMenu.tsx`, remover o filtro `selectedCategory` da query `usePublicProducts` — passa a buscar todos os produtos do estabelecimento de uma vez. Performance é boa pois cardápios costumam ter dezenas, não milhares de itens, e o cliente já recebe a ordenação por `order_position`.
+## Detalhes técnicos
 
-### 5. Respeitar a ordem definida no admin
-Os produtos dentro de cada categoria já vêm ordenados por `order_position` (o hook `use-public-menu` ordena assim). As categorias também — então a reordenação que você fez no painel admin reflete aqui automaticamente.
+**Arquivos a editar:**
+- `src/components/public-menu/ProductList.tsx` — remover sticky interno; adicionar `<span data-cat-anchor>` antes de cada `<h2>`; ajustar `scroll-mt`.
+- `src/components/public-menu/CategoryNav.tsx` — reescrever lógica do scroll-spy usando os anchors + medição dinâmica da altura da nav; usar ref para o container da nav.
 
-## Arquivos afetados
-- `src/components/public-menu/PublicMenuHeader.tsx` — remove estrela/avaliação.
-- `src/components/public-menu/ProductList.tsx` — agrupa por categoria com cabeçalhos sticky.
-- `src/components/public-menu/CategoryNav.tsx` — clique vira scroll para âncora.
-- `src/pages/PublicMenu.tsx` — busca todos os produtos; passa `categories` para `ProductList`.
+**Sem alteração:** `PublicMenu.tsx` continua envolvendo `CategoryNav` num `sticky top-0 z-30` — esse é o único elemento sticky da página depois desta mudança.
 
-Sem mudança de banco. Sem novas dependências.
+**Comportamento esperado após o fix:**
+- A barra de categorias no topo permanece fixa enquanto o usuário rola.
+- Os títulos "Sushi Express", "Sushi Prime", etc. aparecem como cabeçalhos normais entre os blocos de produtos (não flutuam mais sobre as imagens).
+- À medida que o usuário desce, o botão correspondente na barra do topo acende automaticamente em tempo real.
+- Clicar num botão da barra rola até a categoria com o título visível logo abaixo da barra.
