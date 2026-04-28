@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { PublicCategory } from "@/hooks/use-public-menu";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface CategoryNavProps {
   categories: PublicCategory[];
@@ -10,32 +10,59 @@ interface CategoryNavProps {
 
 export const CategoryNav = ({ categories }: CategoryNavProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const navRef = useRef<HTMLDivElement>(null);
+  const buttonsRef = useRef<Map<string, HTMLButtonElement>>(new Map());
 
-  // Scroll-spy: highlight the section currently in view
+  // Real-time scroll-spy: pick the last anchor whose top has crossed below the nav bar.
   useEffect(() => {
-    const ids = ["featured", ...categories.map((c) => c.id)];
-    const elements = ids
-      .map((id) => document.getElementById(`cat-${id}`))
-      .filter((el): el is HTMLElement => el !== null);
+    if (categories.length === 0) return;
 
-    if (elements.length === 0) return;
+    let rafId: number | null = null;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
-        if (visible) {
-          const id = visible.target.id.replace("cat-", "");
-          setActiveId(id);
+    const compute = () => {
+      rafId = null;
+      const navHeight = navRef.current?.getBoundingClientRect().height ?? 0;
+      const threshold = navHeight + 8;
+
+      const anchors = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-cat-anchor]")
+      );
+      if (anchors.length === 0) return;
+
+      let current: string | null = null;
+      for (const el of anchors) {
+        const top = el.getBoundingClientRect().top;
+        if (top - threshold <= 0) {
+          current = el.getAttribute("data-cat-anchor");
+        } else {
+          break;
         }
-      },
-      { rootMargin: "-140px 0px -60% 0px", threshold: 0 }
-    );
+      }
 
-    elements.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
+      setActiveId((prev) => (prev === current ? prev : current));
+    };
+
+    const onScroll = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(compute);
+    };
+
+    compute();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, [categories]);
+
+  // Keep the active button visible inside the horizontal scroll area
+  useEffect(() => {
+    const key = activeId ?? "__all__";
+    const btn = buttonsRef.current.get(key);
+    btn?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [activeId]);
 
   const scrollTo = (id: string | null) => {
     if (!id) {
@@ -50,32 +77,41 @@ export const CategoryNav = ({ categories }: CategoryNavProps) => {
     }
   };
 
+  const setBtnRef = (key: string) => (el: HTMLButtonElement | null) => {
+    if (el) buttonsRef.current.set(key, el);
+    else buttonsRef.current.delete(key);
+  };
+
   return (
-    <ScrollArea className="w-full whitespace-nowrap">
-      <div className="flex gap-2 p-4">
-        <Button
-          variant={activeId === null ? "default" : "outline"}
-          size="sm"
-          onClick={() => scrollTo(null)}
-        >
-          Todos
-        </Button>
-        {categories.map((category) => (
+    <div ref={navRef}>
+      <ScrollArea className="w-full whitespace-nowrap">
+        <div className="flex gap-2 p-4">
           <Button
-            key={category.id}
-            variant={activeId === category.id ? "default" : "outline"}
+            ref={setBtnRef("__all__")}
+            variant={activeId === null ? "default" : "outline"}
             size="sm"
-            onClick={() => scrollTo(category.id)}
-            className={cn(
-              "whitespace-nowrap",
-              activeId === category.id && "shadow-md"
-            )}
+            onClick={() => scrollTo(null)}
           >
-            {category.name}
+            Todos
           </Button>
-        ))}
-      </div>
-      <ScrollBar orientation="horizontal" />
-    </ScrollArea>
+          {categories.map((category) => (
+            <Button
+              key={category.id}
+              ref={setBtnRef(category.id)}
+              variant={activeId === category.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => scrollTo(category.id)}
+              className={cn(
+                "whitespace-nowrap",
+                activeId === category.id && "shadow-md"
+              )}
+            >
+              {category.name}
+            </Button>
+          ))}
+        </div>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
+    </div>
   );
 };
