@@ -54,9 +54,23 @@ export const useCreateProduct = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
+      // Auto-assign order_position as max+1 within the category if not set
+      let orderPosition = product.order_position;
+      if (!orderPosition || orderPosition === 0) {
+        const { data: maxRow } = await supabase
+          .from("delivery_products")
+          .select("order_position")
+          .eq("user_id", user.id)
+          .eq("category_id", product.category_id)
+          .order("order_position", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        orderPosition = (maxRow?.order_position ?? 0) + 1;
+      }
+
       const { data, error } = await supabase
         .from("delivery_products")
-        .insert({ ...product, user_id: user.id })
+        .insert({ ...product, order_position: orderPosition, user_id: user.id })
         .select()
         .single();
 
@@ -100,6 +114,32 @@ export const useUpdateProduct = () => {
     },
     onError: (error: Error) => {
       toast.error("Erro ao atualizar produto: " + error.message);
+    },
+  });
+};
+
+export const useReorderProducts = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (items: { id: string; order_position: number }[]) => {
+      const results = await Promise.all(
+        items.map((item) =>
+          supabase
+            .from("delivery_products")
+            .update({ order_position: item.order_position })
+            .eq("id", item.id)
+        )
+      );
+      const firstError = results.find((r) => r.error);
+      if (firstError?.error) throw firstError.error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["delivery-products"] });
+      queryClient.invalidateQueries({ queryKey: ["public-menu"] });
+    },
+    onError: (error: Error) => {
+      toast.error("Erro ao reordenar produtos: " + error.message);
     },
   });
 };
