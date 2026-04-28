@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Settings2 } from "lucide-react";
+import { Plus, Settings2, Download } from "lucide-react";
 import { ProductOptionCard } from "./ProductOptionCard";
 import { ProductOptionDialog } from "./ProductOptionDialog";
+import { ImportOptionsDialog } from "./ImportOptionsDialog";
 import {
   useProductOptions,
   useCreateProductOption,
@@ -19,6 +20,7 @@ interface ProductOptionsManagerProps {
 
 export const ProductOptionsManager = ({ productId }: ProductOptionsManagerProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [editingOption, setEditingOption] = useState<ProductOption | undefined>();
 
   const { data: options = [], isLoading } = useProductOptions(productId);
