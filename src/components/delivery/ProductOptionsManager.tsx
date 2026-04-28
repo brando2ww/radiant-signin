@@ -80,10 +80,16 @@ export const ProductOptionsManager = ({ productId }: ProductOptionsManagerProps)
                 <Badge variant="secondary">{options.length}</Badge>
               )}
             </div>
-            <Button size="sm" onClick={handleNewOption}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Opção
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => setIsImportOpen(true)}>
+                <Download className="h-4 w-4 mr-2" />
+                Importar opções
+              </Button>
+              <Button size="sm" onClick={handleNewOption}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Opção
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -112,13 +118,20 @@ export const ProductOptionsManager = ({ productId }: ProductOptionsManagerProps)
       </Card>
 
       {productId && (
-        <ProductOptionDialog
-          open={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          option={editingOption}
-          productId={productId}
-          onSave={handleSaveOption}
-        />
+        <>
+          <ProductOptionDialog
+            open={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+            option={editingOption}
+            productId={productId}
+            onSave={handleSaveOption}
+          />
+          <ImportOptionsDialog
+            open={isImportOpen}
+            onOpenChange={setIsImportOpen}
+            targetProductId={productId}
+          />
+        </>
       )}
     </>
   );
