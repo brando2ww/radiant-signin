@@ -93,6 +93,32 @@ export const useUpdateCategory = () => {
   });
 };
 
+export const useReorderCategories = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (items: { id: string; order_position: number }[]) => {
+      const results = await Promise.all(
+        items.map((item) =>
+          supabase
+            .from("delivery_categories")
+            .update({ order_position: item.order_position })
+            .eq("id", item.id)
+        )
+      );
+      const firstError = results.find((r) => r.error);
+      if (firstError?.error) throw firstError.error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["delivery-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["public-menu"] });
+    },
+    onError: (error: Error) => {
+      toast.error("Erro ao reordenar categorias: " + error.message);
+    },
+  });
+};
+
 export const useDeleteCategory = () => {
   const queryClient = useQueryClient();
 
