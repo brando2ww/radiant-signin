@@ -47,6 +47,7 @@ interface ProductDialogProps {
   product?: DeliveryProduct;
   categories: DeliveryCategory[];
   onProductCreated?: (product: DeliveryProduct) => void;
+  preselectedCategoryId?: string;
 }
 
 export const ProductDialog = ({
@@ -55,6 +56,7 @@ export const ProductDialog = ({
   product,
   categories,
   onProductCreated,
+  preselectedCategoryId,
 }: ProductDialogProps) => {
   const [categoryId, setCategoryId] = useState("");
   const [name, setName] = useState("");
@@ -90,7 +92,7 @@ export const ProductDialog = ({
       setImageFile(null);
       setAvailableDays((product as any).available_days || []);
     } else {
-      setCategoryId(categories[0]?.id || "");
+      setCategoryId(preselectedCategoryId || categories[0]?.id || "");
       setName("");
       setDescription("");
       setBasePrice("");
