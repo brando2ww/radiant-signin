@@ -469,6 +469,14 @@ export const MenuTab = () => {
     [categories]
   );
 
+  // Open all categories by default on first load
+  useEffect(() => {
+    if (!initializedOpenRef.current && sortedCategories.length > 0) {
+      setOpenCategoryIds(sortedCategories.map((c) => c.id));
+      initializedOpenRef.current = true;
+    }
+  }, [sortedCategories]);
+
   const productsByCategory = useMemo(() => {
     const map = new Map<string, DeliveryProduct[]>();
     for (const c of categories) map.set(c.id, []);
