@@ -25,10 +25,18 @@ export const ProductList = ({ products, categories, onAddToCart }: ProductListPr
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-12 md:space-y-16">
       {featuredProducts.length > 0 && (
-        <section id="cat-featured" className="scroll-mt-32">
-          <h2 className="text-xl font-bold mb-4">⭐ Destaques</h2>
+        <section id="cat-featured" className="scroll-mt-24">
+          <div className="bg-muted rounded-lg border-l-4 border-primary px-5 py-5 mb-6 flex items-center justify-between gap-4">
+            <h2 className="text-2xl md:text-3xl font-extrabold uppercase tracking-wide">
+              ⭐ Destaques
+            </h2>
+            <span className="text-sm text-muted-foreground whitespace-nowrap">
+              {featuredProducts.length}{" "}
+              {featuredProducts.length === 1 ? "item" : "itens"}
+            </span>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {featuredProducts.map((product) => (
               <ProductCard
@@ -56,10 +64,17 @@ export const ProductList = ({ products, categories, onAddToCart }: ProductListPr
               aria-hidden="true"
               className="block h-0 scroll-mt-24"
             />
-            <div className="pb-3 mb-4 border-b">
-              <h2 className="text-xl font-bold">{category.name}</h2>
+            <div className="bg-muted rounded-lg border-l-4 border-primary px-5 py-5 mb-6">
+              <div className="flex items-center justify-between gap-4">
+                <h2 className="text-2xl md:text-3xl font-extrabold uppercase tracking-wide">
+                  {category.name}
+                </h2>
+                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                  {list.length} {list.length === 1 ? "item" : "itens"}
+                </span>
+              </div>
               {category.description && (
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm text-muted-foreground mt-2">
                   {category.description}
                 </p>
               )}
