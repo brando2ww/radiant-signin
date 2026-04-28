@@ -359,6 +359,116 @@ export const useDeleteProductOption = () => {
   });
 };
 
+// Importa opções de outro produto (clona opções, itens e receitas dos itens)
+export const useImportProductOptions = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      targetProductId,
+      sourceOptionIds,
+    }: {
+      targetProductId: string;
+      sourceOptionIds: string[];
+    }) => {
+      if (sourceOptionIds.length === 0) return { count: 0 };
+
+      // pega maior order_position atual no destino
+      const { data: existing } = await supabase
+        .from("delivery_product_options")
+        .select("order_position")
+        .eq("product_id", targetProductId)
+        .order("order_position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      let nextPos = (existing?.order_position ?? -1) + 1;
+
+      const { data: srcOptions, error: srcErr } = await supabase
+        .from("delivery_product_options")
+        .select("*")
+        .in("id", sourceOptionIds)
+        .order("order_position");
+      if (srcErr) throw srcErr;
+
+      let imported = 0;
+      for (const opt of srcOptions || []) {
+        const { data: newOpt, error: optErr } = await supabase
+          .from("delivery_product_options")
+          .insert({
+            product_id: targetProductId,
+            name: opt.name,
+            type: opt.type,
+            is_required: opt.is_required,
+            min_selections: opt.min_selections,
+            max_selections: opt.max_selections,
+            order_position: nextPos++,
+          })
+          .select()
+          .single();
+        if (optErr) throw optErr;
+
+        const { data: srcItems } = await supabase
+          .from("delivery_product_option_items")
+          .select("*")
+          .eq("option_id", opt.id)
+          .order("order_position");
+
+        if (srcItems && srcItems.length > 0) {
+          const { data: newItems, error: itemsErr } = await supabase
+            .from("delivery_product_option_items")
+            .insert(
+              srcItems.map((it: any) => ({
+                option_id: newOpt.id,
+                name: it.name,
+                price_adjustment: it.price_adjustment,
+                is_available: it.is_available,
+                order_position: it.order_position,
+              })),
+            )
+            .select();
+          if (itemsErr) throw itemsErr;
+
+          const idMap = new Map<string, string>();
+          srcItems.forEach((old: any, idx: number) => {
+            if (newItems?.[idx]) idMap.set(old.id, newItems[idx].id);
+          });
+
+          const oldItemIds = srcItems.map((i: any) => i.id);
+          const { data: srcOptRecipes } = await supabase
+            .from("delivery_option_item_recipes")
+            .select("option_item_id, ingredient_id, quantity, unit")
+            .in("option_item_id", oldItemIds);
+
+          if (srcOptRecipes && srcOptRecipes.length > 0) {
+            await supabase.from("delivery_option_item_recipes").insert(
+              srcOptRecipes
+                .filter((r) => idMap.has(r.option_item_id))
+                .map((r) => ({
+                  option_item_id: idMap.get(r.option_item_id)!,
+                  ingredient_id: r.ingredient_id,
+                  quantity: r.quantity,
+                  unit: r.unit,
+                })),
+            );
+          }
+        }
+
+        imported++;
+      }
+
+      return { count: imported };
+    },
+    onSuccess: ({ count }, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["product-options", variables.targetProductId] });
+      queryClient.invalidateQueries({ queryKey: ["delivery-option-recipes"] });
+      toast.success(`${count} ${count === 1 ? "opção importada" : "opções importadas"} com sucesso!`);
+    },
+    onError: (error: any) => {
+      toast.error("Erro ao importar opções: " + error.message);
+    },
+  });
+};
+
 // Create option item
 export const useCreateOptionItem = () => {
   const queryClient = useQueryClient();
