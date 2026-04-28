@@ -155,6 +155,16 @@ export const useUpdateOrderStatus = () => {
         .single();
 
       if (error) throw error;
+
+      // Baixa automática de estoque ao confirmar o pedido (idempotente no servidor)
+      if (status === "confirmed") {
+        const { error: consumeErr } = await supabase.rpc(
+          "consume_ingredients_for_delivery_order",
+          { p_order_id: id },
+        );
+        if (consumeErr) console.error("Erro ao baixar estoque (delivery):", consumeErr);
+      }
+
       return data;
     },
     onSuccess: () => {

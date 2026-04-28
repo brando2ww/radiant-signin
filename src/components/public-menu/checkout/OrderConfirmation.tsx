@@ -121,7 +121,12 @@ export const OrderConfirmation = ({
             item.selectedOptions.reduce((s, o) => s + o.priceAdjustment, 0)) *
           item.quantity,
         notes: item.notes,
-        options: item.selectedOptions,
+        options: item.selectedOptions.map((o) => ({
+          optionName: o.optionName,
+          itemName: o.itemName,
+          itemId: o.itemId,
+          priceAdjustment: o.priceAdjustment,
+        })),
       })),
     };
 

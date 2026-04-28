@@ -165,6 +165,7 @@ export const useCreateOrder = () => {
         options: {
           optionName: string;
           itemName: string;
+          itemId?: string;
           priceAdjustment: number;
         }[];
       }[];
@@ -228,6 +229,7 @@ export const useCreateOrder = () => {
             order_item_id: orderItemId,
             option_name: option.optionName,
             item_name: option.itemName,
+            option_item_id: option.itemId || null,
             price_adjustment: option.priceAdjustment,
           });
         });
