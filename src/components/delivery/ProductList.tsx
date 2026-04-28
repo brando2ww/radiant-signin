@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DeliveryProduct, useUpdateProduct, useDeleteProduct, useCreateProduct } from "@/hooks/use-delivery-products";
+import { DeliveryProduct, useUpdateProduct, useDeleteProduct, useDuplicateProduct } from "@/hooks/use-delivery-products";
 import { useProductOptions } from "@/hooks/use-product-options";
 import { useState } from "react";
 import { ProductDialog } from "./ProductDialog";
@@ -120,6 +120,13 @@ const ProductListItem = ({ product, onEdit, onDuplicate, onDelete }: { product: 
             {!product.is_available && (
               <Badge variant="outline">Indisponível</Badge>
             )}
+            {(() => {
+              const days = (product as any).available_days as number[] | undefined;
+              if (days && days.length > 0 && !days.includes(new Date().getDay())) {
+                return <Badge variant="outline">Indisponível hoje</Badge>;
+              }
+              return null;
+            })()}
             <Badge variant="secondary" className="text-xs">
               {product.preparation_time} min
             </Badge>
@@ -144,14 +151,10 @@ export const ProductList = ({ products, categoryId }: ProductListProps) => {
   const [deletingProduct, setDeletingProduct] = useState<DeliveryProduct | null>(null);
   const { data: categories = [] } = useDeliveryCategories();
   const deleteProduct = useDeleteProduct();
-  const createProduct = useCreateProduct();
+  const duplicateProduct = useDuplicateProduct();
 
   const handleDuplicate = (product: DeliveryProduct) => {
-    const { id, user_id, created_at, updated_at, ...productData } = product;
-    createProduct.mutate({
-      ...productData,
-      name: `${product.name} (cópia)`,
-    });
+    duplicateProduct.mutate(product.id);
   };
 
   const handleDelete = () => {
