@@ -41,7 +41,7 @@ import {
   ChevronDown,
   Settings2,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CategoryDialog } from "./CategoryDialog";
 import { ProductDialog } from "./ProductDialog";
 import { DeleteCategoryDialog } from "./DeleteCategoryDialog";
@@ -338,9 +338,10 @@ const SortableCategorySection = ({
       ref={setNodeRef}
       style={style}
       value={category.id}
-      className="border rounded-md bg-card"
+      id={`category-${category.id}`}
+      className="border rounded-lg bg-card overflow-hidden scroll-mt-20"
     >
-      <div className="flex items-center gap-1 px-2">
+      <div className="flex items-center gap-1 px-2 sticky top-14 z-10 bg-card border-b">
         <button
           type="button"
           className="p-1 cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
@@ -350,9 +351,9 @@ const SortableCategorySection = ({
         >
           <GripVertical className="h-4 w-4" />
         </button>
-        <AccordionTrigger className="flex-1 hover:no-underline py-3">
+        <AccordionTrigger className="flex-1 hover:no-underline py-4">
           <div className="flex items-center gap-2 flex-1 text-left">
-            <span className="font-semibold">{category.name}</span>
+            <span className="text-lg font-semibold">{category.name}</span>
             <Badge variant="secondary">{products.length}</Badge>
             {!category.is_active && (
               <Badge variant="outline" className="text-xs">
@@ -451,6 +452,7 @@ export const MenuTab = () => {
   const [createdProduct, setCreatedProduct] = useState<DeliveryProduct | null>(null);
   const [search, setSearch] = useState("");
   const [openCategoryIds, setOpenCategoryIds] = useState<string[]>([]);
+  const initializedOpenRef = useRef(false);
 
   const { data: categories = [] } = useDeliveryCategories();
   const { data: allProducts = [] } = useDeliveryProducts();
@@ -466,6 +468,14 @@ export const MenuTab = () => {
       ),
     [categories]
   );
+
+  // Open all categories by default on first load
+  useEffect(() => {
+    if (!initializedOpenRef.current && sortedCategories.length > 0) {
+      setOpenCategoryIds(sortedCategories.map((c) => c.id));
+      initializedOpenRef.current = true;
+    }
+  }, [sortedCategories]);
 
   const productsByCategory = useMemo(() => {
     const map = new Map<string, DeliveryProduct[]>();
@@ -598,7 +608,7 @@ export const MenuTab = () => {
               type="multiple"
               value={accordionValue}
               onValueChange={setOpenCategoryIds}
-              className="space-y-3"
+              className="space-y-6"
             >
               {visibleCategories.map((category) => (
                 <SortableCategorySection
