@@ -1520,6 +1520,7 @@ export type Database = {
         Row: {
           id: string
           item_name: string
+          option_item_id: string | null
           option_name: string
           order_item_id: string
           price_adjustment: number | null
@@ -1527,6 +1528,7 @@ export type Database = {
         Insert: {
           id?: string
           item_name: string
+          option_item_id?: string | null
           option_name: string
           order_item_id: string
           price_adjustment?: number | null
@@ -1534,11 +1536,19 @@ export type Database = {
         Update: {
           id?: string
           item_name?: string
+          option_item_id?: string | null
           option_name?: string
           order_item_id?: string
           price_adjustment?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "delivery_order_item_options_option_item_id_fkey"
+            columns: ["option_item_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_product_option_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "delivery_order_item_options_order_item_id_fkey"
             columns: ["order_item_id"]
@@ -6682,6 +6692,13 @@ export type Database = {
       }
       consume_ingredients_for_comanda_items: {
         Args: { p_item_ids: string[] }
+        Returns: {
+          out_ingredient_id: string
+          out_total_consumed: number
+        }[]
+      }
+      consume_ingredients_for_delivery_order: {
+        Args: { p_order_id: string }
         Returns: {
           out_ingredient_id: string
           out_total_consumed: number

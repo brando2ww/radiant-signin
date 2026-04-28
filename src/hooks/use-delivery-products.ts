@@ -144,6 +144,153 @@ export const useReorderProducts = () => {
   });
 };
 
+// Duplica um produto incluindo opções, itens das opções, ficha técnica
+// e receitas dos itens das opções (preserva vínculos com pdv_ingredients).
+export const useDuplicateProduct = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (sourceId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Usuário não autenticado");
+
+      // 1) Carrega o produto fonte
+      const { data: src, error: srcErr } = await supabase
+        .from("delivery_products")
+        .select("*")
+        .eq("id", sourceId)
+        .single();
+      if (srcErr) throw srcErr;
+
+      // 2) order_position no final da categoria
+      const { data: maxRow } = await supabase
+        .from("delivery_products")
+        .select("order_position")
+        .eq("user_id", user.id)
+        .eq("category_id", src.category_id)
+        .order("order_position", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const orderPosition = (maxRow?.order_position ?? 0) + 1;
+
+      // 3) Cria o novo produto
+      const { id, user_id, created_at, updated_at, ...productData } = src as any;
+      const { data: newProduct, error: prodErr } = await supabase
+        .from("delivery_products")
+        .insert({
+          ...productData,
+          name: `${src.name} (cópia)`,
+          order_position: orderPosition,
+          user_id: user.id,
+        })
+        .select()
+        .single();
+      if (prodErr) throw prodErr;
+
+      // 4) Replica ficha técnica do produto principal
+      const { data: srcRecipes } = await supabase
+        .from("delivery_product_recipes")
+        .select("ingredient_id, quantity, unit")
+        .eq("product_id", sourceId);
+
+      if (srcRecipes && srcRecipes.length > 0) {
+        await supabase.from("delivery_product_recipes").insert(
+          srcRecipes.map((r) => ({
+            product_id: newProduct.id,
+            ingredient_id: r.ingredient_id,
+            quantity: r.quantity,
+            unit: r.unit,
+          })),
+        );
+      }
+
+      // 5) Replica opções + itens + receitas dos itens
+      const { data: srcOptions } = await supabase
+        .from("delivery_product_options")
+        .select("*")
+        .eq("product_id", sourceId)
+        .order("order_position");
+
+      if (srcOptions && srcOptions.length > 0) {
+        for (const opt of srcOptions) {
+          const { data: newOpt, error: optErr } = await supabase
+            .from("delivery_product_options")
+            .insert({
+              product_id: newProduct.id,
+              name: opt.name,
+              type: opt.type,
+              is_required: opt.is_required,
+              min_selections: opt.min_selections,
+              max_selections: opt.max_selections,
+              order_position: opt.order_position,
+            })
+            .select()
+            .single();
+          if (optErr) throw optErr;
+
+          const { data: srcItems } = await supabase
+            .from("delivery_product_option_items")
+            .select("*")
+            .eq("option_id", opt.id)
+            .order("order_position");
+
+          if (srcItems && srcItems.length > 0) {
+            const { data: newItems, error: itemsErr } = await supabase
+              .from("delivery_product_option_items")
+              .insert(
+                srcItems.map((it: any) => ({
+                  option_id: newOpt.id,
+                  name: it.name,
+                  price_adjustment: it.price_adjustment,
+                  is_available: it.is_available,
+                  order_position: it.order_position,
+                })),
+              )
+              .select();
+            if (itemsErr) throw itemsErr;
+
+            // mapa oldItemId -> newItemId (preserva ordem)
+            const idMap = new Map<string, string>();
+            srcItems.forEach((old: any, idx: number) => {
+              if (newItems?.[idx]) idMap.set(old.id, newItems[idx].id);
+            });
+
+            const oldItemIds = srcItems.map((i: any) => i.id);
+            const { data: srcOptRecipes } = await supabase
+              .from("delivery_option_item_recipes")
+              .select("option_item_id, ingredient_id, quantity, unit")
+              .in("option_item_id", oldItemIds);
+
+            if (srcOptRecipes && srcOptRecipes.length > 0) {
+              await supabase.from("delivery_option_item_recipes").insert(
+                srcOptRecipes
+                  .filter((r) => idMap.has(r.option_item_id))
+                  .map((r) => ({
+                    option_item_id: idMap.get(r.option_item_id)!,
+                    ingredient_id: r.ingredient_id,
+                    quantity: r.quantity,
+                    unit: r.unit,
+                  })),
+              );
+            }
+          }
+        }
+      }
+
+      return newProduct;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["delivery-products"] });
+      queryClient.invalidateQueries({ queryKey: ["product-options"] });
+      queryClient.invalidateQueries({ queryKey: ["delivery-option-recipes"] });
+      toast.success("Produto duplicado com opções e ficha técnica!");
+    },
+    onError: (error: Error) => {
+      toast.error("Erro ao duplicar produto: " + error.message);
+    },
+  });
+};
+
 export const useDeleteProduct = () => {
   const queryClient = useQueryClient();
 

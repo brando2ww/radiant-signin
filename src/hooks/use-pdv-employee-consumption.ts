@@ -86,6 +86,13 @@ export function usePDVEmployeeConsumption() {
 
   const closeConsumption = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: "pago" | "descontado" }) => {
+      // Buscar a comanda vinculada para baixar estoque
+      const { data: consumption } = await supabase
+        .from("pdv_employee_consumption")
+        .select("comanda_id")
+        .eq("id", id)
+        .maybeSingle();
+
       const { data, error } = await supabase
         .from("pdv_employee_consumption")
         .update({
@@ -97,6 +104,23 @@ export function usePDVEmployeeConsumption() {
         .single();
 
       if (error) throw error;
+
+      // Baixa estoque de todos os itens da comanda associada (idempotente)
+      if (consumption?.comanda_id) {
+        const { data: items } = await supabase
+          .from("pdv_comanda_items")
+          .select("id")
+          .eq("comanda_id", consumption.comanda_id);
+        const itemIds = (items || []).map((i: any) => i.id);
+        if (itemIds.length > 0) {
+          const { error: consumeErr } = await supabase.rpc(
+            "consume_ingredients_for_comanda_items",
+            { p_item_ids: itemIds },
+          );
+          if (consumeErr) console.error("Erro ao baixar estoque (consumo):", consumeErr);
+        }
+      }
+
       return data as EmployeeConsumption;
     },
     onSuccess: (_, variables) => {

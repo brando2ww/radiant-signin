@@ -361,7 +361,8 @@ export function usePDVPayments() {
         .in("id", itemIds);
       if (itemsErr) throw itemsErr;
 
-      // 2. Atualizar paid_quantity de cada item
+      // 2. Atualizar paid_quantity de cada item e coletar os que ficaram 100% pagos
+      const fullyPaidItemIds: string[] = [];
       for (const p of partialItems) {
         const cur = (currentItems || []).find((i: any) => i.id === p.itemId);
         if (!cur) continue;
@@ -376,6 +377,21 @@ export function usePDVPayments() {
             charging_session_id: null,
           })
           .eq("id", p.itemId);
+
+        if (newPaid >= (Number(cur.quantity) || 0)) {
+          fullyPaidItemIds.push(p.itemId);
+        }
+      }
+
+      // 2.1 Baixa automática de estoque para itens 100% pagos (idempotente no servidor)
+      if (fullyPaidItemIds.length > 0) {
+        const { error: consumeErr } = await supabase.rpc(
+          "consume_ingredients_for_comanda_items",
+          { p_item_ids: fullyPaidItemIds },
+        );
+        if (consumeErr) {
+          console.error("Erro ao baixar estoque:", consumeErr);
+        }
       }
 
       // 3. Inserir registro em pdv_payments (se houver order_id)
