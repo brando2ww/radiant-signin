@@ -1,139 +1,61 @@
-## Resumo
+## Problema
 
-Quatro melhorias na área de Produtos do Delivery + baixa automática de estoque em **todas** as vendas (PDV/comandas/mesas, balcão, garçom e delivery):
+Na tela do Salão (e Comandas), ao abrir uma comanda ocupada o diálogo mostra "Nenhum item na comanda", mesmo quando o total exibido é maior que zero (ex.: R$ 1.267,50). Confirmei no banco: a comanda `20260429-005` tem 29 itens (19 visíveis + 10 filhos de composição) somando R$ 1.267,50. Os dados existem; o problema é no frontend.
 
-1. **Duplicar produto** → também replica opções, itens das opções e fichas técnicas (insumos).
-2. **Importar opções** já cadastradas em outro produto.
-3. **Corrigir disponibilidade por dia da semana** no cardápio público.
-4. **Baixa automática de estoque em toda venda** — produto principal + sub-produtos das opções (ex.: adicional de temaki consumindo alga, arroz, salmão, vinagre, açúcar, gergelim, cebolinha).
+## Causa raiz
 
----
+No hook `src/hooks/use-pdv-comandas.ts`:
 
-## 1) Replicar item com as opções
+- A query de comandas usa `visibleUserId` (dono do estabelecimento) na chave e no filtro.
+- A query de itens usa `user?.id` (usuário logado, que para um funcionário é diferente do dono) na `queryKey`, e tem `enabled: !!user && comandas.length > 0`.
+- A `queryKey` dos itens não depende de `comandas` nem de `visibleUserId`. Resultado: dependendo da ordem em que `comandas` e `visibleUserId` ficam prontos (ou quando o staff troca de contexto), a query de itens pode:
+  1. Iniciar com `comandas.length === 0` (desabilitada) e nunca re-executar de forma confiável quando `comandas` chega — mantendo cache vazio do mount anterior.
+  2. Ficar com cache "preso" porque a chave nunca muda quando novas comandas são criadas/abertas.
 
-**Hoje:** `handleDuplicate` em `src/components/delivery/ProductList.tsx` cria só a linha em `delivery_products`. Opções, itens e receitas ficam de fora.
+Por isso o usuário vê o total calculado pelo trigger no banco (`update_comanda_subtotal` atualiza `subtotal` mesmo quando o front não tem itens carregados), mas a lista no diálogo fica vazia.
 
-**Solução:** novo hook `useDuplicateProduct` em `src/hooks/use-delivery-products.ts` que:
-1. Insere o novo `delivery_products` com `(cópia)` no nome.
-2. Replica `delivery_product_recipes` (ficha técnica do produto).
-3. Para cada `delivery_product_options` do original:
-   - Cria a nova opção no produto novo.
-   - Replica `delivery_product_option_items` mantendo nome, preço, ordem, disponibilidade.
-   - Replica `delivery_option_item_recipes` usando o mapa `oldItemId → newItemId` para preservar o vínculo com os mesmos `pdv_ingredients`.
-4. Invalida `delivery-products`, `product-options` e `delivery-option-recipes`.
+Adicionalmente, o filtro `getItemsByComanda` esconde itens com `is_composite_child = true` (correto), porém não é a causa — há 19 itens com `is_composite_child = false` que deveriam aparecer.
 
-`ProductList.tsx` passa a chamar esse novo hook.
+## Plano de correção
 
-## 2) Importar opções de outro produto
+### 1. Corrigir a query de itens em `src/hooks/use-pdv-comandas.ts`
 
-- Botão "Importar opções" em `src/components/delivery/ProductOptionsManager.tsx`, ao lado de "Nova Opção".
-- Novo `ImportOptionsDialog.tsx`:
-  - Lista os outros produtos do usuário (`useDeliveryProducts()`).
-  - Ao escolher um, mostra suas opções (`useProductOptions(otherProductId)`) com checkbox.
-  - Botão "Importar selecionadas" chama `useImportProductOptions({ targetProductId, sourceOptionIds })` que clona cada opção (mesma lógica do passo 1.3, preservando receitas dos itens).
-- Toast com quantas opções foram importadas; invalida `product-options` do destino.
+- Trocar `user?.id` por `visibleUserId` na `queryKey` (alinhar com a query de comandas).
+- Incluir as IDs das comandas (ou ao menos `comandas.length` + último `updated_at`) na `queryKey` para que toda nova comanda dispare refetch automático.
+- Manter `enabled: !!visibleUserId && comandas.length > 0`.
 
-## 3) Corrigir disponibilidade por dia da semana
-
-**Diagnóstico:** `delivery_products.available_days` (jsonb) já existe e é salva. O cardápio público (`src/hooks/use-public-menu.ts → usePublicProducts`) **não seleciona nem filtra** por esse campo.
-
-**Solução:**
-- Adicionar `available_days` ao `select` e ao tipo `PublicProduct`.
-- Filtrar no client após a query:
-  ```ts
-  const today = new Date().getDay();
-  return data.filter(p => !p.available_days?.length || p.available_days.includes(today));
-  ```
-- Em `src/components/delivery/ProductList.tsx` (admin), exibir badge "Indisponível hoje" quando `available_days` não inclui o dia atual (apenas visual; admin continua enxergando o produto).
-
-## 4) Baixa automática de estoque em TODAS as vendas
-
-**Diagnóstico atual:**
-- A função SQL `consume_ingredients_for_comanda_items(p_item_ids uuid[])` **já existe** e cobre receitas do produto principal + receitas dos itens de opção, com idempotência via `pdv_stock_movements.comanda_item_id`.
-- **Ela nunca é chamada** pelo frontend — por isso nada baixa estoque hoje, em nenhum canal.
-- Delivery não usa `pdv_comanda_items`, então precisa de função própria.
-
-### 4.1 PDV / Comanda / Mesa / Garçom / Balcão
-
-Disparar a baixa quando os itens são efetivamente **pagos** (não na criação, para não baixar item cancelado).
-
-**Local:** `src/hooks/use-pdv-payments.ts`, dentro do mutation que registra pagamento parcial/total (passo 2 — após atualizar `paid_quantity`):
+Estrutura final (resumo):
 
 ```ts
-const fullyPaidIds = partialItems
-  .filter(p => {
-    const cur = currentItems.find(i => i.id === p.itemId);
-    if (!cur) return false;
-    const newPaid = Math.min(cur.quantity, (cur.paid_quantity || 0) + p.quantityPaid);
-    return newPaid >= cur.quantity; // só consome quando o item ficou 100% pago
-  })
-  .map(p => p.itemId);
-
-if (fullyPaidIds.length > 0) {
-  await supabase.rpc("consume_ingredients_for_comanda_items", { p_item_ids: fullyPaidIds });
-}
+const comandaIds = comandas.map((c) => c.id);
+const { data: comandaItems = [] } = useQuery({
+  queryKey: ["pdv-comanda-items", visibleUserId, comandaIds.join(",")],
+  queryFn: async () => {
+    if (!visibleUserId || comandaIds.length === 0) return [];
+    const { data, error } = await supabase
+      .from("pdv_comanda_items")
+      .select("*")
+      .in("comanda_id", comandaIds)
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data as ComandaItem[];
+  },
+  enabled: !!visibleUserId && comandaIds.length > 0,
+});
 ```
 
-A idempotência da função (via `pdv_stock_movements.comanda_item_id`) garante que pagamentos parciais sucessivos não causam baixa duplicada.
+### 2. Garantir invalidação consistente
 
-**Cobre automaticamente:** comanda de mesa, comanda de garçom (`/garcom`), balcão e qualquer outro fluxo que finalize pagamento via `register-partial-payment` — porque todos passam por esse mutation.
+Revisar os pontos do hook que fazem `queryClient.invalidateQueries({ queryKey: ["pdv-comanda-items", ...] })` e ajustar para invalidar pela raiz `["pdv-comanda-items"]` (sem o segundo segmento), evitando que mudanças no formato da chave deixem invalidações órfãs.
 
-**Consumo interno (cortesia/funcionário):** em `src/hooks/use-pdv-employee-consumption.ts`, ao confirmar o consumo, chamar a mesma RPC para os `comanda_item_id` envolvidos.
+### 3. Validação manual após a correção
 
-### 4.2 Delivery
+- Abrir Salão → mesa ocupada → clicar em uma comanda. A lista de itens deve aparecer com os 19 itens visíveis e o total R$ 1.267,50 deve continuar igual.
+- Adicionar item novo via "Adicionar item" e confirmar que ele aparece imediatamente (refetch).
+- Repetir o teste logado como funcionário (não-dono) para validar que o `visibleUserId` resolve corretamente.
 
-Delivery grava em `delivery_order_items` / `delivery_order_item_options` — estrutura paralela.
+## Arquivos afetados
 
-**Migration:**
-```sql
--- Linkar a opção escolhida ao item do catálogo (hoje só temos texto)
-ALTER TABLE public.delivery_order_item_options
-  ADD COLUMN option_item_id uuid REFERENCES public.delivery_product_option_items(id);
+- `src/hooks/use-pdv-comandas.ts` (ajuste da query e das invalidações).
 
--- Função análoga à de comanda, idempotente via pdv_stock_movements.order_item_id
-CREATE OR REPLACE FUNCTION public.consume_ingredients_for_delivery_order(p_order_id uuid)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE v_owner uuid;
-BEGIN
-  SELECT user_id INTO v_owner FROM public.delivery_orders WHERE id = p_order_id;
-  IF v_owner IS NULL THEN RETURN; END IF;
-
-  -- monta consumo: produto principal + opções escolhidas
-  -- agrega por (order_item_id, ingredient_id), exclui o que já tem movimento
-  -- atualiza pdv_ingredients.current_stock e insere pdv_stock_movements
-  --   (type='saida_venda', reason='Venda via delivery', created_by=v_owner, order_item_id=...)
-END;
-$$;
-```
-
-**Frontend:**
-- `src/hooks/use-delivery-customers.ts → useCreateOrder`: incluir `option_item_id: option.itemId` no insert de `delivery_order_item_options` (o cart já carrega `itemId` em `selectedOptions`; só falta propagar — pequeno ajuste em `OrderConfirmation.tsx`).
-- `src/hooks/use-delivery-orders.ts → useUpdateOrderStatus`: ao mudar para `confirmed`, chamar `supabase.rpc("consume_ingredients_for_delivery_order", { p_order_id: id })`. Idempotência garante segurança em retentativas.
-
-## Detalhes técnicos
-
-### Arquivos modificados
-- `src/hooks/use-delivery-products.ts` — `useDuplicateProduct`.
-- `src/hooks/use-product-options.ts` — `useImportProductOptions`.
-- `src/hooks/use-public-menu.ts` — selecionar e filtrar `available_days`.
-- `src/hooks/use-pdv-payments.ts` — chamar `consume_ingredients_for_comanda_items` após pagamento.
-- `src/hooks/use-pdv-employee-consumption.ts` — idem para consumo interno.
-- `src/hooks/use-delivery-customers.ts` — gravar `option_item_id` no pedido.
-- `src/hooks/use-delivery-orders.ts` — chamar RPC ao confirmar pedido.
-- `src/components/delivery/ProductList.tsx` — usar `useDuplicateProduct` + badge "Indisponível hoje".
-- `src/components/delivery/ProductOptionsManager.tsx` — botão "Importar opções".
-- `src/components/delivery/ImportOptionsDialog.tsx` — novo.
-- `src/components/public-menu/checkout/OrderConfirmation.tsx` — incluir `itemId` no payload das opções.
-
-### Migration SQL
-- `ALTER TABLE delivery_order_item_options ADD COLUMN option_item_id uuid REFERENCES delivery_product_option_items(id);`
-- `CREATE OR REPLACE FUNCTION public.consume_ingredients_for_delivery_order(p_order_id uuid) ...` (SECURITY DEFINER, idempotente via `pdv_stock_movements.order_item_id`).
-
-### Fora do escopo
-- Reverter baixa de estoque em pedido cancelado após confirmação (futuro: `revert_ingredients_for_*`).
-- Bloquear venda quando estoque ficar negativo (manter como aviso/relatório por ora — função já permite negativo).
-- Alerta de estoque insuficiente no checkout público.
+Sem migrações de banco e sem mudanças de UI.
