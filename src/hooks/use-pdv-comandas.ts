@@ -71,23 +71,32 @@ export function usePDVComandas() {
     enabled: !!visibleUserId,
   });
 
-  // Fetch all comanda items
-  const comandaIds = comandas.map((c) => c.id);
-  const comandaIdsKey = comandaIds.join(",");
+  // Fetch comanda items — apenas das comandas ativas para evitar carregar histórico inteiro
+  // (que pode ultrapassar o limite default de 1000 linhas do Supabase).
+  const activeComandaIds = comandas
+    .filter(
+      (c) =>
+        c.status === "aberta" ||
+        c.status === "em_cobranca" ||
+        c.status === "aguardando_pagamento",
+    )
+    .map((c) => c.id);
+  const activeComandaIdsKey = activeComandaIds.join(",");
   const { data: comandaItems = [], isLoading: isLoadingItems } = useQuery({
-    queryKey: ["pdv-comanda-items", visibleUserId, comandaIdsKey],
+    queryKey: ["pdv-comanda-items", visibleUserId, activeComandaIdsKey],
     queryFn: async () => {
-      if (!visibleUserId || comandaIds.length === 0) return [];
+      if (!visibleUserId || activeComandaIds.length === 0) return [];
       const { data, error } = await supabase
         .from("pdv_comanda_items")
         .select("*")
-        .in("comanda_id", comandaIds)
-        .order("created_at", { ascending: true });
+        .in("comanda_id", activeComandaIds)
+        .order("created_at", { ascending: true })
+        .limit(10000);
 
       if (error) throw error;
       return data as ComandaItem[];
     },
-    enabled: !!visibleUserId && comandaIds.length > 0,
+    enabled: !!visibleUserId && activeComandaIds.length > 0,
   });
 
   // Generate next comanda number
