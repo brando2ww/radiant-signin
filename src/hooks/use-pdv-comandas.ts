@@ -72,11 +72,12 @@ export function usePDVComandas() {
   });
 
   // Fetch all comanda items
+  const comandaIds = comandas.map((c) => c.id);
+  const comandaIdsKey = comandaIds.join(",");
   const { data: comandaItems = [], isLoading: isLoadingItems } = useQuery({
-    queryKey: ["pdv-comanda-items", user?.id],
+    queryKey: ["pdv-comanda-items", visibleUserId, comandaIdsKey],
     queryFn: async () => {
-      if (!user || comandas.length === 0) return [];
-      const comandaIds = comandas.map((c) => c.id);
+      if (!visibleUserId || comandaIds.length === 0) return [];
       const { data, error } = await supabase
         .from("pdv_comanda_items")
         .select("*")
@@ -86,7 +87,7 @@ export function usePDVComandas() {
       if (error) throw error;
       return data as ComandaItem[];
     },
-    enabled: !!user && comandas.length > 0,
+    enabled: !!visibleUserId && comandaIds.length > 0,
   });
 
   // Generate next comanda number
