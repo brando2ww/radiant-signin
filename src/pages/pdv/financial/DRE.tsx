@@ -30,6 +30,7 @@ export default function DRE() {
       `(-) DEDUÇÕES;${fmt(data.deductions)}`,
       `  Descontos;${fmt(data.totalDiscounts)}`,
       `  Cancelamentos;${fmt(data.totalCancellations)}`,
+      `  Taxas de meios de pagamento;${fmt(data.paymentFees || 0)}`,
       `= RECEITA LÍQUIDA;${fmt(data.netRevenue)}`,
       `(-) CMV;${fmt(data.cmv)}`,
       `= LUCRO BRUTO;${fmt(data.grossProfit)}`,
@@ -104,6 +105,7 @@ export default function DRE() {
               </div>
               <DRELine label="Descontos concedidos" value={data.totalDiscounts} indent />
               <DRELine label="Cancelamentos" value={data.totalCancellations} indent />
+              <DRELine label="Taxas de meios de pagamento" value={data.paymentFees || 0} indent />
 
               <DRELine label="= RECEITA LÍQUIDA" value={data.netRevenue} bold bg="bg-muted/50" />
 
