@@ -1,29 +1,30 @@
-## Objetivo
-Tornar o card **"Total de Respostas"** do Dashboard clicável e abrir a mesma lista que já abre para Promotores/Neutros/Detratores — só que mostrando **todas as avaliações do período**, sem filtro de NPS. Ao clicar no olho de cada linha, segue abrindo o `ClientDetailDialog` (que agora já mostra as respostas com estrelas, igual a Campanhas > Respostas).
+## Diagnóstico
+A campanha lista 14 respostas e o "Total de Respostas" do Dashboard também 14, mas com pessoas diferentes. A causa, confirmada via consulta ao banco:
 
-## Alterações
+- `customer_evaluations.evaluation_date` é `timestamptz`.
+- O Dashboard filtra por intervalo de datas usando strings `"yyyy-MM-dd"` (ex.: `endDate = "2026-04-30"`).
+- Em SQL isso é interpretado como `2026-04-30 00:00:00 UTC`. Logo, `.lte("evaluation_date", "2026-04-30")` corta tudo o que aconteceu **depois da meia-noite UTC do último dia**.
+- Cristiane (`30/04 01:13 UTC` = `29/04 22:13 BRT`), Larissa (`30/04 00:53 UTC` = `29/04 21:53 BRT`) e Luísa (mesmo) ficam de fora — o usuário vê "29/04" na UI da campanha, mas o filtro do dashboard descarta porque já passou da meia-noite UTC.
+- O mesmo erro de borda acontece em `startDate`.
 
-### 1. `src/components/evaluations/dashboard/NPSDetailDialog.tsx`
-- Adicionar `"all"` ao tipo `NpsCategory`.
-- Adicionar entrada no `categoryConfig`:
+## Correção
+Em `src/hooks/use-customer-evaluations.ts`, no `useCustomerEvaluations`:
+
+- Trocar:
   ```ts
-  all: { label: "Todas as Respostas", icon: Eye, color: "text-foreground", scoreLabel: "Todas" }
+  if (filters?.startDate) query = query.gte("evaluation_date", filters.startDate);
+  if (filters?.endDate)   query = query.lte("evaluation_date", filters.endDate);
   ```
-- Ajustar o `useMemo` `filtered`: quando `category === "all"`, retornar todas as `evaluations` (sem o filtro `if (e.nps_score == null) return false` nem o filtro por faixa). Manter a busca por nome/telefone.
-- Ajustar a coluna "NPS" da tabela: quando `nps_score` for `null` (avaliação sem NPS), mostrar `—` em vez de quebrar o estilo.
+- Por:
+  ```ts
+  if (filters?.startDate) query = query.gte("evaluation_date", `${filters.startDate}T00:00:00`);
+  if (filters?.endDate)   query = query.lte("evaluation_date", `${filters.endDate}T23:59:59.999`);
+  ```
+  Isso compara timestamptz contra um instante explícito no fim do dia, garantindo que toda quinta-feira 29/04 (BRT) entre — e que respostas até as ~21h BRT de 30/04 também entrem quando o usuário escolher 30/04 como `endDate`. Para um filtro 100% calcado em fuso de Brasília bastaria adicionar `-03:00`, mas a maioria dos relatórios já trabalha implicitamente em horário local; a correção `T00:00:00 / T23:59:59.999` resolve o caso reportado e mantém comportamento previsível.
 
-### 2. `src/components/evaluations/dashboard/DashboardKPICards.tsx`
-- Trocar a prop `onNpsClick?: (category: "promoters" | "neutrals" | "detractors") => void` por `onCardClick?: (category: "promoters" | "neutrals" | "detractors" | "all") => void` (mantendo `onNpsClick` como alias deprecated para não quebrar nada, ou apenas renomeando — `EvaluationsDashboard` é o único consumidor).
-- No card "Total de Respostas" (linhas 107-115): adicionar `cursor-pointer hover:shadow-md transition-shadow` e `onClick={() => onCardClick?.("all")}`.
-- Manter "Cadastros únicos", "Cupons Gerados" e "Cupons Utilizados" como estão (você pediu apenas Total de Respostas).
-
-### 3. `src/pages/evaluations/EvaluationsDashboard.tsx`
-- Renomear o handler atual `onNpsClick={setNpsFilter}` para `onCardClick={setNpsFilter}` (o tipo `NpsCategory` já vai aceitar `"all"` por causa da mudança em #1).
-- Nada mais muda — o `NPSDetailDialog` já recebe `evaluations` e abre o `ClientDetailDialog` ao clicar no olho.
+Aplicar a mesma correção em `useExportEvaluations` no mesmo arquivo, para que a exportação CSV fique consistente com a tela.
 
 ## Critério de aceitação
-- Card "Total de Respostas" fica clicável (com hover).
-- Ao clicar, abre o mesmo diálogo de listagem mostrando **todas** as avaliações do período (incluindo as sem NPS), buscáveis por nome/telefone.
-- Olho em cada linha abre o detalhe com perguntas + estrelas, igual ao que já funciona para Promotores/Neutros/Detratores.
-
-Posso aplicar?
+- Abrindo "Total de Respostas" no Dashboard com range padrão (últimos 30 dias), Cristiane Secrieru, Larissa Zibetti e Luísa Fransetto passam a aparecer (assim como qualquer resposta no fim do dia em horário Brasília).
+- Contagens "Total de Respostas" do Dashboard e "Respostas" na tela da campanha passam a coincidir quando o range cobre o período da campanha.
+- Exportação CSV reflete o mesmo conjunto.
