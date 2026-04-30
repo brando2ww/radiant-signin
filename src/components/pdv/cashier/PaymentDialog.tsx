@@ -192,6 +192,9 @@ export function PaymentDialog({
 
   // Edição do pedido (correção pelo caixa)
   const [itemToRemove, setItemToRemove] = useState<ComandaItem | null>(null);
+  // IDs removidos otimisticamente — garante que o item suma do Resumo
+  // imediatamente, mesmo no fallback de Balcão (props snapshot).
+  const [optimisticallyRemoved, setOptimisticallyRemoved] = useState<Set<string>>(new Set());
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
