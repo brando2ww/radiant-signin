@@ -422,13 +422,19 @@ export const useExportEvaluations = () => {
 
       if (error) throw error;
 
+      // Carrega tipos para excluir múltipla escolha da Média Geral do CSV
+      const typeMap = await fetchQuestionTypeMap();
+
       // Criar CSV
       const csvRows = [];
       csvRows.push(["Data", "Nome", "WhatsApp", "Data Nascimento", "NPS", "Média Geral"].join(","));
 
       data.forEach((evaluation: any) => {
-        const avgScore = evaluation.evaluation_answers.length > 0
-          ? evaluation.evaluation_answers.reduce((sum: number, a: any) => sum + a.score, 0) / evaluation.evaluation_answers.length
+        const starsAnswers = (evaluation.evaluation_answers as any[]).filter(
+          (a) => (typeMap.get(a.question_id) || "stars") === "stars"
+        );
+        const avgScore = starsAnswers.length > 0
+          ? starsAnswers.reduce((sum: number, a: any) => sum + a.score, 0) / starsAnswers.length
           : 0;
 
         csvRows.push([
