@@ -46,7 +46,9 @@ export function CampaignResponses({ campaignId }: Props) {
 
   const getAvgScore = (answers: any[]) => {
     if (!answers || answers.length === 0) return 0;
-    return answers.reduce((s: number, a: any) => s + a.score, 0) / answers.length;
+    const stars = answers.filter((a: any) => (a.question_type || "stars") === "stars");
+    if (stars.length === 0) return 0;
+    return stars.reduce((s: number, a: any) => s + a.score, 0) / stars.length;
   };
 
   const getNpsBadge = (nps: number | null) => {
