@@ -9,6 +9,7 @@ import { FinancialTab } from "@/components/pdv/settings/FinancialTab";
 import { OrdersTab } from "@/components/pdv/settings/OrdersTab";
 import { NotificationsTab } from "@/components/pdv/settings/NotificationsTab";
 import { IntegrationsTab } from "@/components/pdv/settings/IntegrationsTab";
+import { PermissionsTab } from "@/components/pdv/settings/PermissionsTab";
 
 export default function PDVSettings() {
   const { settings, isLoading, updateSettings, isUpdating } = usePDVSettings();
