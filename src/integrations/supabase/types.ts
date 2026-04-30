@@ -1725,26 +1725,35 @@ export type Database = {
         Row: {
           id: string
           is_available: boolean | null
+          item_kind: string
+          linked_product_id: string | null
           name: string
           option_id: string
           order_position: number
           price_adjustment: number | null
+          source_pdv_option_item_id: string | null
         }
         Insert: {
           id?: string
           is_available?: boolean | null
+          item_kind?: string
+          linked_product_id?: string | null
           name: string
           option_id: string
           order_position?: number
           price_adjustment?: number | null
+          source_pdv_option_item_id?: string | null
         }
         Update: {
           id?: string
           is_available?: boolean | null
+          item_kind?: string
+          linked_product_id?: string | null
           name?: string
           option_id?: string
           order_position?: number
           price_adjustment?: number | null
+          source_pdv_option_item_id?: string | null
         }
         Relationships: [
           {
@@ -1765,6 +1774,7 @@ export type Database = {
           name: string
           order_position: number
           product_id: string
+          source_pdv_option_id: string | null
           type: string
         }
         Insert: {
@@ -1775,6 +1785,7 @@ export type Database = {
           name: string
           order_position?: number
           product_id: string
+          source_pdv_option_id?: string | null
           type?: string
         }
         Update: {
@@ -1785,6 +1796,7 @@ export type Database = {
           name?: string
           order_position?: number
           product_id?: string
+          source_pdv_option_id?: string | null
           type?: string
         }
         Relationships: [
@@ -1856,6 +1868,7 @@ export type Database = {
           promotional_price: number | null
           serves: number | null
           source_pdv_product_id: string | null
+          sync_enabled: boolean
           updated_at: string
           user_id: string
         }
@@ -1875,6 +1888,7 @@ export type Database = {
           promotional_price?: number | null
           serves?: number | null
           source_pdv_product_id?: string | null
+          sync_enabled?: boolean
           updated_at?: string
           user_id: string
         }
@@ -1894,6 +1908,7 @@ export type Database = {
           promotional_price?: number | null
           serves?: number | null
           source_pdv_product_id?: string | null
+          sync_enabled?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -4794,6 +4809,7 @@ export type Database = {
           created_at: string
           id: string
           is_available: boolean | null
+          item_kind: string
           linked_product_id: string | null
           name: string
           option_id: string
@@ -4804,6 +4820,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_available?: boolean | null
+          item_kind?: string
           linked_product_id?: string | null
           name: string
           option_id: string
@@ -4814,6 +4831,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_available?: boolean | null
+          item_kind?: string
           linked_product_id?: string | null
           name?: string
           option_id?: string
@@ -6939,6 +6957,10 @@ export type Database = {
           out_ingredient_id: string
           out_total_consumed: number
         }[]
+      }
+      delivery_clone_options_from_pdv: {
+        Args: { p_pdv_product_id: string }
+        Returns: Json
       }
       get_user_child_tenant_ids: { Args: never; Returns: string[] }
       get_user_parent_tenant_ids: { Args: never; Returns: string[] }
