@@ -1,29 +1,20 @@
-## Problema
+Vou corrigir a roleta que aparece em `/pdv/avaliacoes/cupons/roletas`, pois o ajuste anterior foi aplicado na roleta pública (`SpinWheel`), mas a tela do print usa outro componente: `RoulettePreview`.
 
-Os textos dos prêmios na roleta (`SpinWheel`) estão sendo desenhados **perpendicularmente ao raio** do segmento, ou seja, atravessando a fatia de um lado para o outro. Isso faz com que cada label fique "deitado" sobre a borda da fatia, dificultando a leitura — especialmente quando há vários prêmios pequenos como na imagem enviada.
+Plano de alteração:
 
-## Causa
+1. Atualizar `src/components/pdv/evaluations/RoulettePreview.tsx`
+   - Trocar a rotação atual do texto (`midAngleDeg`) para alinhamento radial (`midAngleDeg - 90`), igual ao comportamento corrigido na roleta pública.
+   - Manter o flip automático de 180° no lado esquerdo da roleta para impedir texto de cabeça para baixo.
+   - Ajustar a posição do texto para ficar mais ao centro útil da fatia, sem encostar demais no miolo nem na borda.
+   - Aplicar truncamento com reticências em nomes longos para evitar que invadam fatias vizinhas.
+   - Ajustar levemente o tamanho mínimo/máximo da fonte para melhorar leitura no preview pequeno de 220px.
 
-Em `src/components/public-evaluation/SpinWheel.tsx` (linhas 83-90), a rotação do texto é feita com:
+2. Manter consistência entre telas
+   - A mesma regra visual valerá para as duas áreas que usam `RoulettePreview`:
+     - `Cupons > Roletas`
+     - configuração de roleta por campanha, quando aplicável.
 
-```ts
-let textRotation = midAngleDeg; // tangencial à circunferência
-```
+3. Não alterar dados dos prêmios
+   - Os nomes como “Petit Gateau”, “01 Drink Sugestão”, etc. continuarão vindo do cadastro; a mudança será apenas na renderização para ficarem legíveis.
 
-O ideal em uma roleta de prêmios é que o texto fique **alinhado ao raio** (lendo do centro para a borda), não tangencial.
-
-## Correção proposta
-
-Em `src/components/public-evaluation/SpinWheel.tsx`:
-
-1. **Mudar a rotação do texto para `midAngleDeg - 90`**, alinhando o texto ao longo da linha radial (lendo do centro em direção à borda).
-2. **Manter o flip de 180°** para os segmentos do lado esquerdo (90° < mid < 270°) para que o texto nunca apareça de cabeça para baixo.
-3. **Mover o texto um pouco mais para fora** (de 58% → ~62% do raio), aproveitando o eixo radial mais longo.
-4. **Aumentar levemente o tamanho mínimo da fonte** (de 10 → 11) e ajustar o divisor (`s.deg / 3.5` em vez de `/4`) para melhor legibilidade.
-5. **Truncar nomes muito longos** com `…` baseado no tamanho do segmento, evitando que o texto vaze para fora da fatia.
-
-## Resultado esperado
-
-Cada nome de prêmio aparecerá disposto ao longo do raio da fatia, lendo naturalmente do centro para a borda, exatamente como em uma roleta de prêmios tradicional — fácil de ler em qualquer quantidade de segmentos.
-
-Nenhuma outra parte do componente é afetada (animação, sorteio, cores e ponteiro permanecem iguais).
+Após aprovado, implemento diretamente esse ajuste no componente de preview.
