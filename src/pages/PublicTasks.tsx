@@ -27,6 +27,7 @@ interface ScheduleItem {
   maxDuration: number;
   executionId: string | null;
   executionStatus: string | null;
+  isStandalone?: boolean;
 }
 
 export default function PublicTasks() {
