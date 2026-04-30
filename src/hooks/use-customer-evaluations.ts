@@ -23,10 +23,29 @@ export interface EvaluationAnswer {
   created_at?: string;
   comment?: string | null;
   selected_options?: unknown;
+  /** Tipo da pergunta — apenas "stars" entra nos cálculos numéricos.
+   *  Outros tipos (multiple_choice, single_choice, text...) NÃO. */
+  question_type?: string;
 }
 
 export interface EvaluationWithAnswers extends CustomerEvaluation {
   evaluation_answers: EvaluationAnswer[];
+}
+
+/** Helper canônico: respostas que contam como "nota" para médias / NPS por pergunta. */
+export const isStarsAnswer = (a: { question_type?: string }) =>
+  (a?.question_type || "stars") === "stars";
+
+/** Carrega o map { question_id -> question_type }.
+ *  Apenas perguntas de campanha podem ter tipos diferentes de "stars";
+ *  perguntas legacy (evaluation_questions) são sempre "stars". */
+async function fetchQuestionTypeMap(): Promise<Map<string, string>> {
+  const { data } = await supabase
+    .from("evaluation_campaign_questions")
+    .select("id, question_type");
+  const map = new Map<string, string>();
+  (data || []).forEach((q: any) => map.set(q.id, q.question_type || "stars"));
+  return map;
 }
 
 export const useCustomerEvaluations = (filters?: { startDate?: string; endDate?: string }) => {
@@ -59,10 +78,24 @@ export const useCustomerEvaluations = (filters?: { startDate?: string; endDate?:
         query = query.lte("evaluation_date", `${filters.endDate}T23:59:59.999`);
       }
 
-      const { data, error } = await query;
+      const [{ data, error }, typeMap] = await Promise.all([
+        query,
+        fetchQuestionTypeMap(),
+      ]);
 
       if (error) throw error;
-      return data as EvaluationWithAnswers[];
+
+      // Enriquece cada answer com question_type para que TODOS os relatórios
+      // possam excluir respostas de múltipla escolha / texto dos cálculos.
+      const enriched = (data || []).map((e: any) => ({
+        ...e,
+        evaluation_answers: (e.evaluation_answers || []).map((a: any) => ({
+          ...a,
+          question_type: typeMap.get(a.question_id) || "stars",
+        })),
+      }));
+
+      return enriched as EvaluationWithAnswers[];
     },
   });
 };
