@@ -37,13 +37,17 @@ export function CompletedExecutionsDialog({ open, onOpenChange, date, status = "
     queryKey: ["status-executions", status, visibleUserId, date],
     enabled: !!visibleUserId && open,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("checklist_executions")
-        .select("id, score, started_at, completed_at, checklists(name, sector), checklist_operators(name)")
+        .select("id, status, score, started_at, completed_at, checklists(name, sector), checklist_operators(name)")
         .eq("user_id", visibleUserId!)
-        .eq("execution_date", date)
-        .eq("status", status)
-        .order(cfg.orderField, { ascending: true, nullsFirst: false });
+        .eq("execution_date", date);
+      if (status === "nao_iniciado") {
+        q = q.in("status", ["pendente", "nao_iniciado", "em_andamento"]);
+      } else {
+        q = q.eq("status", status);
+      }
+      const { data, error } = await q.order(cfg.orderField, { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data || [];
     },
@@ -79,9 +83,14 @@ export function CompletedExecutionsDialog({ open, onOpenChange, date, status = "
                     <p className="font-medium truncate">{exec.checklists?.name || "Checklist"}</p>
                     <p className="text-xs text-muted-foreground truncate">
                       {exec.checklists?.sector || "—"} · {exec.checklist_operators?.name || "—"}
+                      {exec.started_at && (
+                        <> · iniciado {format(new Date(exec.started_at), "HH:mm", { locale: ptBR })}</>
+                      )}
                     </p>
                   </div>
-                  <Badge variant="outline" className="shrink-0">Não iniciado</Badge>
+                  <Badge variant="outline" className="shrink-0">
+                    {exec.status === "em_andamento" ? "Em andamento" : "Não iniciado"}
+                  </Badge>
                 </div>
               ))}
             </div>

@@ -1,24 +1,26 @@
-# Tornar card "Não Iniciados" clicável
+# Corrigir contagem e listagem de "Não Iniciados"
 
-## Objetivo
+## Diagnóstico
 
-Permitir que ao clicar no card **"Não Iniciados"** seja aberto um dialog listando os checklists que ainda não foram iniciados no dia (mesma UX dos cards "Concluídos" e "Atrasados").
+No banco, hoje existem **3 checklists em `em_andamento` + 1 `concluido`**, mas o painel mostra "Não Iniciados: 0". Dois problemas:
 
-## Mudanças
+1. **Métrica errada após remoção do card "Em Andamento":** o hook conta apenas `pendente`/`nao_iniciado` no card "Não Iniciados". Como o card "Em Andamento" foi removido em iteração anterior, os 3 checklists `em_andamento` ficaram invisíveis no painel — o usuário os enxerga como "não iniciados ainda" porque ninguém os finalizou.
+2. **Dialog filtra status fixo `"nao_iniciado"`:** mesmo se a métrica fosse correta, o dialog ignora `pendente` e `em_andamento`.
 
-### 1. `src/components/pdv/checklists/CompletedExecutionsDialog.tsx`
-- Ampliar o tipo `ExecStatus` para `"concluido" | "atrasado" | "nao_iniciado"`.
-- Adicionar entrada em `STATUS_CONFIG`:
-  - `nao_iniciado`: `title = "Checklists não iniciados"`, `orderField = "scheduled_time"` (com fallback para `created_at` se a coluna não existir).
-- Atualizar texto de estado vazio para incluir o caso "Nenhum checklist não iniciado neste dia."
-- Para `nao_iniciado`, ocultar timestamp (não há `started_at`/`completed_at`) e ocultar o accordion de itens (não há respostas) — renderizar apenas a linha do checklist com setor/operador/horário agendado, sem `AccordionTrigger` expansível.
+## Solução
 
-### 2. `src/components/pdv/checklists/DashboardPanel.tsx`
-- Adicionar estado `notStartedDialogOpen`.
-- Tornar o `MetricCard` "Não Iniciados" clicável passando `onClick={() => setNotStartedDialogOpen(true)}`.
-- Renderizar um terceiro `<CompletedExecutionsDialog>` com `status="nao_iniciado"`.
+Tratar como **"Pendentes do dia"** tudo que ainda não foi concluído nem caiu em atraso: `pendente`, `nao_iniciado` e `em_andamento`.
 
-## Notas
+### Mudanças
 
-- Sem mudanças de banco; usa o mesmo filtro `status` na query existente.
-- Mantém o padrão de UX e cores neutras já adotado no painel.
+1. `src/hooks/use-checklist-dashboard.ts` (linha 36)
+   - Incluir `em_andamento` no cálculo de `naoIniciado`.
+
+2. `src/components/pdv/checklists/CompletedExecutionsDialog.tsx`
+   - Quando `status === "nao_iniciado"`, trocar o `.eq("status", ...)` por `.in("status", ["pendente", "nao_iniciado", "em_andamento"])`.
+   - Renderizar badge dinâmica por linha ("Não iniciado" / "Em andamento") usando `exec.status`.
+   - Manter ordenação por `created_at`.
+
+3. (Opcional, sem alteração de label) Renomear o título da métrica de "Não Iniciados" para "Pendentes" — **NÃO** será feito agora para não introduzir mudança visual sem pedido explícito.
+
+Sem alterações de banco.

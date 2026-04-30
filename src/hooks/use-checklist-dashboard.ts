@@ -33,7 +33,7 @@ export function useChecklistDashboard(filters?: DashboardFilters) {
       const total = execs.length;
       const concluido = execs.filter((e: any) => e.status === "concluido").length;
       const atrasado = execs.filter((e: any) => e.status === "atrasado").length;
-      const naoIniciado = execs.filter((e: any) => e.status === "pendente" || e.status === "nao_iniciado").length;
+      const naoIniciado = execs.filter((e: any) => e.status === "pendente" || e.status === "nao_iniciado" || e.status === "em_andamento").length;
       const emAndamento = execs.filter((e: any) => e.status === "em_andamento").length;
       const avgScore = concluido > 0
         ? Math.round(execs.filter((e: any) => e.score != null).reduce((s: number, e: any) => s + e.score, 0) / concluido)
