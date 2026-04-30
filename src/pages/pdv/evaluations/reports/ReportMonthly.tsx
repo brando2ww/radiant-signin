@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DashboardMetricCard } from "@/components/pdv/DashboardMetricCard";
 import {
-  useCustomerEvaluations, useEvaluationStats, useExportEvaluations,
+  useCustomerEvaluations, useEvaluationStats, useExportEvaluations, isStarsAnswer,
 } from "@/hooks/use-customer-evaluations";
 import { useEvaluationQuestionTexts, useAllTimeCustomerWhatsapps } from "@/hooks/use-evaluation-report-helpers";
 import { NpsDonut } from "@/components/evaluations/reports/NpsDonut";
