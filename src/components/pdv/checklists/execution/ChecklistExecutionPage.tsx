@@ -135,7 +135,7 @@ export function ChecklistExecutionPage({ executionId, userId, onBack, onComplete
           <Button
             className="w-full"
             size="lg"
-            disabled={!allRequiredDone || completing || data.status === "concluido"}
+            disabled={completing || data.status === "concluido"}
             onClick={handleComplete}
           >
             {completing ? (
