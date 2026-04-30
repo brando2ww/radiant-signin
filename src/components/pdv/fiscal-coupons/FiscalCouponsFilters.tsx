@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import type { DateRange } from "react-day-picker";
 import type { FiscalCouponsFilter } from "@/hooks/use-fiscal-coupons";
 
@@ -19,9 +19,9 @@ export function FiscalCouponsFilters({ filter, onChange }: Props) {
     <div className="flex flex-wrap items-end gap-3">
       <div className="min-w-[260px]">
         <label className="text-xs text-muted-foreground mb-1 block">Período</label>
-        <DateRangePicker
-          value={range}
-          onChange={(r) => onChange({ ...filter, startDate: r?.from, endDate: r?.to })}
+        <DatePickerWithRange
+          date={range}
+          setDate={(r) => onChange({ ...filter, startDate: r?.from, endDate: r?.to })}
         />
       </div>
 
