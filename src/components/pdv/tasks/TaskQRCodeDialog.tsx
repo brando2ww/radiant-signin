@@ -35,7 +35,7 @@ export function TaskQRCodeDialog({ open, onOpenChange }: Props) {
             <QRCodeSVG value={url} size={200} />
           </div>
           <p className="text-xs text-muted-foreground text-center">
-            Imprima e cole na cozinha. A equipe escaneia para ver e marcar as tarefas do dia.
+            Imprima e cole em local visível. Cada colaborador digita o PIN e vê apenas os checklists do próprio setor. Líderes e gestores enxergam todos.
           </p>
           <Button variant="outline" size="sm" onClick={copy} className="w-full">
             <Copy className="h-4 w-4 mr-2" /> Copiar Link
