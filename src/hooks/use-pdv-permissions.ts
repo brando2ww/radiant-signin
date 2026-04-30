@@ -101,10 +101,10 @@ function defaultAllowed(role: AppRole, action: PDVPermissionAction): boolean {
 
 export function usePDVPermissions() {
   const { user } = useAuth();
-  const { establishmentOwnerId } = useEstablishmentId();
+  const { visibleUserId } = useEstablishmentId();
   const { role } = useUserRole();
   const queryClient = useQueryClient();
-  const ownerId = establishmentOwnerId || user?.id || null;
+  const ownerId = visibleUserId || user?.id || null;
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["pdv-action-permissions", ownerId],
