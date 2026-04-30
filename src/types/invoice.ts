@@ -45,6 +45,10 @@ export interface EditableInvoiceItem extends ParsedInvoiceItem {
     ingredientId?: string;
     newIngredientData?: NewIngredientData;
   };
+  /** Auto-suggested ingredient ids ranked from best to worst (top 3) */
+  suggestedIngredientIds?: string[];
+  /** Whether the link was set automatically by the matching engine */
+  autoMatched?: boolean;
 }
 
 export interface EditableInvoiceData {
