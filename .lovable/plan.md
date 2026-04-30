@@ -1,58 +1,47 @@
 ## Problema
 
-Mesmo com a "Taxa de serviço" desativada nas configurações do PDV (`pdv_settings.enable_service_fee = false`), o `PaymentDialog` continua exibindo:
-- O **switch** "Taxa de serviço (10%)" (sempre ligado por padrão).
-- A **linha "Taxa de serviço"** no resumo de totais quando o operador deixa o switch ligado.
-- Adiciona 10% ao **TOTAL** cobrado.
+Ao tentar adicionar um item pelo PaymentDialog do caixa (botão "Adicionar item à comanda"), aparece o toast:
 
-A configuração global está sendo ignorada — é controlada apenas por estado local `serviceFeeEnabled` que começa em `true`.
+> **Erro ao adicionar item: Comanda não aceita novos itens (status: em_cobranca)**
+
+A comanda foi travada como `em_cobranca` quando o operador abriu o pagamento. O front-end já permite essa edição (em `use-pdv-comandas.ts` linha 267 a lista permitida inclui `em_cobranca`), mas um **trigger de banco** bloqueia o INSERT antes que ele chegue.
 
 ## Causa raiz
 
-`src/components/pdv/cashier/PaymentDialog.tsx`:
-- Linha 154: `const [serviceFeeEnabled, setServiceFeeEnabled] = useState(true);` — hardcoded, ignora `settings`.
-- Linha 298: cálculo usa percentual fixo `0.1` em vez de `service_fee_percentage` das settings.
-- Linhas 1371-1383: Switch sempre renderizado.
-- Linhas 1400-1405 e 1228: linha "Taxa de serviço" e "Novo total" também usam `0.1` fixo.
+Na migration `20260430191212_f9d34a86-2cb3-4272-8ae2-018a6cf08eab.sql`, linhas 556-571, o trigger `pdv_block_items_when_awaiting_payment` rejeita inserts em `pdv_comanda_items` quando a comanda está em qualquer um destes status:
 
-`use-pdv-settings.ts` já expõe os campos certos:
-```ts
-enable_service_fee: boolean;
-service_fee_percentage: number;
+```sql
+IF v_status IN ('aguardando_pagamento','em_cobranca','fechada','cancelada') THEN
+  RAISE EXCEPTION 'Comanda não aceita novos itens (status: %)', v_status;
+END IF;
 ```
 
-## Correção
+Isso conflita com a regra de negócio do caixa, que precisa poder corrigir o pedido (adicionar/remover itens) enquanto está no PaymentDialog. Apenas `fechada` e `cancelada` deveriam permanecer bloqueadas.
 
-### `src/components/pdv/cashier/PaymentDialog.tsx`
+## Correção (1 migração)
 
-1. **Inicializar `serviceFeeEnabled` a partir das settings** (com efeito que reage a settings carregando após o mount):
-   ```ts
-   const serviceFeeAllowed = settings?.enable_service_fee ?? true;
-   const serviceFeeRate = (settings?.service_fee_percentage ?? 10) / 100;
-   const [serviceFeeEnabled, setServiceFeeEnabled] = useState(true);
-   useEffect(() => {
-     // Quando as settings carregarem, alinhar o estado local
-     if (!serviceFeeAllowed) setServiceFeeEnabled(false);
-   }, [serviceFeeAllowed]);
-   ```
+Recriar a função do trigger para bloquear apenas estados terminais:
 
-2. **Substituir o `0.1` fixo** pelo `serviceFeeRate`:
-   - Linha 298: `const serviceFeeAmount = serviceFeeEnabled && serviceFeeAllowed ? (subtotal - discountAmount) * serviceFeeRate : 0;`
-   - Linha 1228 (cálculo do "Novo total" no estágio de confirmação do desconto): trocar `* 0.1` por `* serviceFeeRate` e somar apenas se `serviceFeeEnabled && serviceFeeAllowed`.
+```sql
+CREATE OR REPLACE FUNCTION public.pdv_block_items_when_awaiting_payment()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_status text;
+BEGIN
+  SELECT status INTO v_status FROM public.pdv_comandas WHERE id = NEW.comanda_id;
+  IF v_status IN ('fechada','cancelada') THEN
+    RAISE EXCEPTION 'Comanda não aceita novos itens (status: %)', v_status;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+```
 
-3. **Ocultar o Switch** quando `!serviceFeeAllowed` (linhas 1371-1383): envolver o bloco em `{serviceFeeAllowed && (...)}` e atualizar o label para usar a porcentagem real (`Taxa de serviço ({settings?.service_fee_percentage ?? 10}%)`).
-
-4. **A linha do total** (1400-1405) já usa `serviceFeeAmount > 0` como guarda, então some automaticamente quando desativado.
-
-### Sem migração
-
-Nenhuma alteração de schema — `pdv_settings.enable_service_fee` e `service_fee_percentage` já existem.
+O trigger continua existindo (mesmo nome) — apenas `aguardando_pagamento` e `em_cobranca` deixam de ser bloqueados. Front-end e RLS já restringem quem pode chamar essa rota (apenas operadores do caixa) — a guarda continua sendo aplicada nas camadas certas.
 
 ## Resultado esperado
 
-- Configuração com `enable_service_fee = false` → switch some, taxa de serviço some do resumo, total não inclui 10%.
-- Configuração com `enable_service_fee = true` e `service_fee_percentage = 12` → switch aparece com label "Taxa de serviço (12%)" e o cálculo usa 12% em vez de 10%.
+Adicionar e remover itens funcionam normalmente no PaymentDialog do caixa, mesmo após a comanda estar `em_cobranca`. Comandas `fechada`/`cancelada` continuam imutáveis.
 
 ## Arquivos editados
 
-- `src/components/pdv/cashier/PaymentDialog.tsx`
+- Nova migration aplicando o `CREATE OR REPLACE FUNCTION` acima.
