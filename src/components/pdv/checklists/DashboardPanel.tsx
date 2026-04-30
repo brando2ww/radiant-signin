@@ -243,15 +243,24 @@ export function DashboardPanel({ onNavigate, onQrOpen, onSendReport, onGenerateD
 
       {/* Alerts */}
       <AlertsPanel alerts={alerts} onAcknowledge={(id) => acknowledgeAlert({ alertId: id })} />
+
+      <CompletedExecutionsDialog
+        open={completedDialogOpen}
+        onOpenChange={setCompletedDialogOpen}
+        date={date}
+      />
     </div>
   );
 }
 
-function MetricCard({ title, value, total, icon: Icon, color, loading }: any) {
+function MetricCard({ title, value, total, icon: Icon, color, loading, onClick }: any) {
   if (loading) return <Card><CardContent className="py-4"><Skeleton className="h-12 w-full" /></CardContent></Card>;
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
-    <Card>
+    <Card
+      onClick={onClick}
+      className={onClick ? "cursor-pointer hover:bg-muted/40 transition-colors" : undefined}
+    >
       <CardContent className="py-3 space-y-2">
         <div className="flex items-center gap-2">
           <Icon className={`h-6 w-6 ${color}`} />
