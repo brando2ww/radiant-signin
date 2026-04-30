@@ -201,6 +201,12 @@ export function PaymentDialog({
   const [addItemQty, setAddItemQty] = useState("1");
   const [addItemNotes, setAddItemNotes] = useState("");
 
+  // Limpa o set de remoções otimistas quando o dialog fecha,
+  // evitando vazamento entre aberturas consecutivas.
+  useEffect(() => {
+    if (!open) setOptimisticallyRemoved(new Set());
+  }, [open]);
+
   // Comandas envolvidas neste pagamento (1 ou várias)
   const involvedComandas: Comanda[] = table
     ? tableComandas
