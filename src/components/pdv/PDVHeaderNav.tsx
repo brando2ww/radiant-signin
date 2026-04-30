@@ -113,6 +113,7 @@ const sectionItems: Section[] = [
       { title: "Pedidos de Compra", url: "/pdv/compras/pedidos", icon: ShoppingBag },
       { title: "Lista de Compras", url: "/pdv/compras/lista", icon: PackageSearch },
       { title: "Notas Fiscais", url: "/pdv/notas-fiscais", icon: Receipt },
+      { title: "Cupons Fiscais", url: "/pdv/cupons-fiscais", icon: Receipt },
       { title: "Relatórios", url: "/pdv/relatorios", icon: BarChart3 },
       { title: "Configurações", url: "/pdv/configuracoes", icon: Settings },
       { title: "Clientes", url: "/pdv/clientes", icon: UserCheck },
