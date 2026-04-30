@@ -4,13 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, GripVertical, Search, Loader2, Boxes, X } from "lucide-react";
+import { Plus, Trash2, GripVertical, Search, Loader2, Boxes, X, Package } from "lucide-react";
 import {
   usePDVProductOptions,
   type PDVProductOption,
   type PDVOptionItemRecipeRef,
 } from "@/hooks/use-pdv-product-options";
 import { usePDVIngredients } from "@/hooks/use-pdv-ingredients";
+import { usePDVProducts } from "@/hooks/use-pdv-products";
 import { usePDVOptionRecipes } from "@/hooks/use-pdv-option-recipes";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Badge } from "@/components/ui/badge";
