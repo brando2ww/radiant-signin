@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { buildPaymentSnapshot } from "@/lib/financial/build-payment-snapshot";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -182,10 +183,28 @@ export function usePDVFinancialTransactions(filters?: TransactionFilters) {
     mutationFn: async (transaction: Omit<PDVFinancialTransaction, 'id' | 'user_id' | 'created_at' | 'updated_at'>) => {
       if (!user) throw new Error("Usuário não autenticado");
 
+      // Snapshot de taxa por forma de pagamento (apenas se for entrada/recebimento)
+      let feeColumns: Record<string, number> = {
+        gross_amount: Number(transaction.amount) || 0,
+        fee_percentage_applied: 0,
+        fee_fixed_applied: 0,
+        fee_amount: 0,
+        net_amount: Number(transaction.amount) || 0,
+      };
+      if (transaction.transaction_type === 'receivable' && transaction.payment_method) {
+        const snap = await buildPaymentSnapshot(
+          user.id,
+          transaction.payment_method,
+          Number(transaction.amount) || 0,
+        );
+        feeColumns = snap.columns as any;
+      }
+
       const { data, error } = await supabase
         .from("pdv_financial_transactions")
         .insert([{
           ...transaction,
+          ...feeColumns,
           user_id: user.id,
           due_date: transaction.due_date ? format(new Date(transaction.due_date), "yyyy-MM-dd") : undefined,
           payment_date: transaction.payment_date ? format(new Date(transaction.payment_date), "yyyy-MM-dd") : null,
@@ -258,14 +277,32 @@ export function usePDVFinancialTransactions(filters?: TransactionFilters) {
       payment_method?: string;
       bank_account_id?: string;
     }) => {
+      // Buscar o registro para conhecer tipo + valor e gerar snapshot de taxa
+      const { data: existing } = await supabase
+        .from("pdv_financial_transactions")
+        .select("amount, transaction_type")
+        .eq("id", id)
+        .single();
+
+      const updatePayload: any = {
+        status: 'paid',
+        payment_date: format(payment_date, "yyyy-MM-dd"),
+        payment_method,
+        bank_account_id,
+      };
+
+      if (existing && existing.transaction_type === 'receivable' && payment_method && user) {
+        const snap = await buildPaymentSnapshot(
+          user.id,
+          payment_method,
+          Number(existing.amount) || 0,
+        );
+        Object.assign(updatePayload, snap.columns);
+      }
+
       const { data, error } = await supabase
         .from("pdv_financial_transactions")
-        .update({
-          status: 'paid',
-          payment_date: format(payment_date, "yyyy-MM-dd"),
-          payment_method,
-          bank_account_id,
-        })
+        .update(updatePayload)
         .eq("id", id)
         .select()
         .single();
