@@ -26,12 +26,6 @@ interface FinancialTabProps {
   isSubmitting?: boolean;
 }
 
-const paymentMethods = [
-  { key: "cash", label: "Dinheiro" },
-  { key: "credit", label: "Crédito" },
-  { key: "debit", label: "Débito" },
-  { key: "pix", label: "PIX" },
-];
 
 export function FinancialTab({ defaultValues, onSave, isSubmitting }: FinancialTabProps) {
   const form = useForm<FinancialFormValues>({
