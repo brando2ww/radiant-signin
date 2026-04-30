@@ -265,6 +265,21 @@ export function TableDetailsDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ChangeTableDialog
+        open={changeTableOpen}
+        onOpenChange={setChangeTableOpen}
+        sourceTable={table}
+        onChanged={() => onOpenChange(false)}
+      />
+
+      <OperationHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        sourceId={table.current_order_id ?? table.id}
+        targetId={table.id}
+        title={`Histórico — ${formatTableLabel(table.table_number)}`}
+      />
     </>
   );
 }
