@@ -22,6 +22,7 @@ export interface EvaluationAnswer {
   score: number;
   created_at?: string;
   comment?: string | null;
+  selected_options?: unknown;
 }
 
 export interface EvaluationWithAnswers extends CustomerEvaluation {
@@ -43,7 +44,8 @@ export const useCustomerEvaluations = (filters?: { startDate?: string; endDate?:
             id,
             question_id,
             score,
-            comment
+            comment,
+            selected_options
           )
         `)
         // nps_comment is included via * selector
@@ -336,7 +338,8 @@ export const useEvaluationById = (id: string) => {
             id,
             question_id,
             score,
-            comment
+            comment,
+            selected_options
           )
         `)
         .eq("id", id)

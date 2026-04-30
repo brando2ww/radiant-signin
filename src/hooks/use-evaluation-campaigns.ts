@@ -228,7 +228,8 @@ export const useCampaignResponses = (campaignId: string) => {
             id,
             question_id,
             score,
-            comment
+            comment,
+            selected_options
           )
         `)
         .eq("campaign_id", campaignId)
@@ -236,23 +237,37 @@ export const useCampaignResponses = (campaignId: string) => {
 
       if (error) throw error;
 
-      // Fetch questions for this campaign to map question_id -> question_text
+      // Fetch questions for this campaign to map question_id -> { text, type, options }
       const { data: questions } = await supabase
         .from("evaluation_campaign_questions")
-        .select("id, question_text")
+        .select("id, question_text, question_type, options")
         .eq("campaign_id", campaignId);
 
-      const questionMap = new Map((questions || []).map(q => [q.id, q.question_text]));
+      const questionMap = new Map(
+        (questions || []).map((q: any) => {
+          let opts: string[] | null = null;
+          if (Array.isArray(q.options)) opts = q.options.map(String);
+          else if (typeof q.options === "string" && q.options.trim()) {
+            try { const p = JSON.parse(q.options); if (Array.isArray(p)) opts = p.map(String); } catch { /* ignore */ }
+          }
+          return [q.id, { text: q.question_text, type: q.question_type || "stars", options: opts }];
+        })
+      );
 
-      // Enrich answers with question_text
+      // Enrich answers with question_text + question_type + options
       return (data || []).map(response => ({
         ...response,
-        evaluation_answers: ((response.evaluation_answers as any[]) || []).map((answer: any) => ({
-          ...answer,
-          evaluation_campaign_questions: {
-            question_text: questionMap.get(answer.question_id) || "Pergunta não encontrada",
-          },
-        })),
+        evaluation_answers: ((response.evaluation_answers as any[]) || []).map((answer: any) => {
+          const q = questionMap.get(answer.question_id);
+          return {
+            ...answer,
+            question_type: q?.type || "stars",
+            question_options: q?.options || null,
+            evaluation_campaign_questions: {
+              question_text: q?.text || "Pergunta não encontrada",
+            },
+          };
+        }),
       }));
     },
     enabled: !!campaignId,

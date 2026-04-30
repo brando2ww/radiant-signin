@@ -6,7 +6,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar, MessageSquare, Star, User } from "lucide-react";
 import { formatPhoneForWhatsApp } from "@/lib/whatsapp-message";
-import { useEvaluationQuestionTexts } from "@/hooks/use-evaluation-report-helpers";
+import { useEvaluationQuestionInfo } from "@/hooks/use-evaluation-report-helpers";
+import { AnswerValue } from "@/components/evaluations/AnswerValue";
 import type { EvaluationWithAnswers } from "@/hooks/use-customer-evaluations";
 
 interface ClientDetailDialogProps {
@@ -26,7 +27,7 @@ interface ClientDetailDialogProps {
 }
 
 export default function ClientDetailDialog({ open, onOpenChange, client }: ClientDetailDialogProps) {
-  const { data: questionTexts } = useEvaluationQuestionTexts();
+  const { data: questionInfo } = useEvaluationQuestionInfo();
 
   if (!client) return null;
 
@@ -101,9 +102,12 @@ export default function ClientDetailDialog({ open, onOpenChange, client }: Clien
           </h4>
 
           {client.evaluations.map((ev) => {
+            const starAnswers = ev.evaluation_answers.filter(
+              (a) => (questionInfo?.get(a.question_id)?.type || "stars") === "stars"
+            );
             const avgScore =
-              ev.evaluation_answers.length > 0
-                ? ev.evaluation_answers.reduce((s, a) => s + a.score, 0) / ev.evaluation_answers.length
+              starAnswers.length > 0
+                ? starAnswers.reduce((s, a) => s + a.score, 0) / starAnswers.length
                 : null;
 
             return (
@@ -138,30 +142,22 @@ export default function ClientDetailDialog({ open, onOpenChange, client }: Clien
                 {/* Per-question answers */}
                 {ev.evaluation_answers.length > 0 ? (
                   <div className="space-y-2">
-                    {ev.evaluation_answers.map((answer) => (
-                      <div key={answer.id} className="space-y-1.5 rounded-md border border-border/60 bg-background p-2.5">
-                        <p className="text-sm font-medium leading-snug">
-                          {questionTexts?.get(answer.question_id) || "Pergunta não encontrada"}
-                        </p>
-                        <div className="flex items-center gap-0.5">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star
-                              key={s}
-                              className={`h-4 w-4 ${
-                                s <= answer.score ? "text-amber-500 fill-amber-500" : "text-muted-foreground/20"
-                              }`}
-                            />
-                          ))}
-                          <span className="ml-2 text-sm text-muted-foreground">{answer.score}/5</span>
+                    {ev.evaluation_answers.map((answer) => {
+                      const info = questionInfo?.get(answer.question_id);
+                      return (
+                        <div key={answer.id} className="space-y-1.5 rounded-md border border-border/60 bg-background p-2.5">
+                          <p className="text-sm font-medium leading-snug">
+                            {info?.text || "Pergunta não encontrada"}
+                          </p>
+                          <AnswerValue
+                            questionType={info?.type}
+                            score={answer.score}
+                            selectedOptions={answer.selected_options}
+                            comment={answer.comment}
+                          />
                         </div>
-                        {answer.comment && (
-                          <div className="flex items-start gap-1.5 text-xs bg-muted/50 p-2 rounded mt-1">
-                            <MessageSquare className="h-3 w-3 shrink-0 mt-0.5 text-muted-foreground" />
-                            <span>{answer.comment}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground">Sem respostas para esta avaliação.</p>

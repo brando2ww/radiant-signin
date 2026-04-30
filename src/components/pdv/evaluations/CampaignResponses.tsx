@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Star, MessageSquare, Search, ChevronLeft, ChevronRight, User, Phone, Calendar } from "lucide-react";
 import { useCampaignResponses } from "@/hooks/use-evaluation-campaigns";
+import { AnswerValue } from "@/components/evaluations/AnswerValue";
 
 interface Props {
   campaignId: string;
@@ -45,7 +46,9 @@ export function CampaignResponses({ campaignId }: Props) {
 
   const getAvgScore = (answers: any[]) => {
     if (!answers || answers.length === 0) return 0;
-    return answers.reduce((s: number, a: any) => s + a.score, 0) / answers.length;
+    const stars = answers.filter((a: any) => (a.question_type || "stars") === "stars");
+    if (stars.length === 0) return 0;
+    return stars.reduce((s: number, a: any) => s + a.score, 0) / stars.length;
   };
 
   const getNpsBadge = (nps: number | null) => {
@@ -68,7 +71,13 @@ export function CampaignResponses({ campaignId }: Props) {
         <Card>
           <CardContent className="pt-4 text-center">
             <p className="text-2xl font-bold flex items-center justify-center gap-1">
-              {(responses.flatMap((r) => (r.evaluation_answers as any[]).map((a: any) => a.score)).reduce((a: number, b: number) => a + b, 0) / Math.max(responses.flatMap((r) => (r.evaluation_answers as any[]).map((a: any) => a.score)).length, 1)).toFixed(1)}
+              {(() => {
+                const stars = responses.flatMap((r) =>
+                  (r.evaluation_answers as any[]).filter((a: any) => (a.question_type || "stars") === "stars")
+                );
+                const total = stars.reduce((a: number, b: any) => a + b.score, 0);
+                return (total / Math.max(stars.length, 1)).toFixed(1);
+              })()}
               <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
             </p>
             <p className="text-xs text-muted-foreground">Média geral</p>
@@ -184,23 +193,12 @@ export function CampaignResponses({ campaignId }: Props) {
                       <p className="text-sm font-medium">
                         {answer.evaluation_campaign_questions?.question_text || "Pergunta não encontrada"}
                       </p>
-                      <div className="flex items-center gap-0.5">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star
-                            key={s}
-                            className={`h-4 w-4 ${
-                              s <= answer.score ? "text-amber-500 fill-amber-500" : "text-muted-foreground/20"
-                            }`}
-                          />
-                        ))}
-                        <span className="ml-2 text-sm text-muted-foreground">{answer.score}/5</span>
-                      </div>
-                      {answer.comment && (
-                        <div className="flex items-start gap-1.5 text-sm bg-muted/50 p-2 rounded mt-1">
-                          <MessageSquare className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground" />
-                          <span>{answer.comment}</span>
-                        </div>
-                      )}
+                      <AnswerValue
+                        questionType={answer.question_type}
+                        score={answer.score}
+                        selectedOptions={answer.selected_options}
+                        comment={answer.comment}
+                      />
                     </div>
                   ))}
                 </div>
