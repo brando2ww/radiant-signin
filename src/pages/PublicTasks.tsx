@@ -27,6 +27,7 @@ interface ScheduleItem {
   maxDuration: number;
   executionId: string | null;
   executionStatus: string | null;
+  isStandalone?: boolean;
 }
 
 export default function PublicTasks() {
@@ -151,9 +152,14 @@ export default function PublicTasks() {
           </div>
         ) : schedules.length === 0 ? (
           <Card>
-            <CardContent className="py-12 text-center text-muted-foreground text-sm">
+            <CardContent className="py-12 text-center text-muted-foreground text-sm space-y-2">
               <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              Nenhum checklist atribuído para hoje.
+              <p>Nenhum checklist disponível para você hoje.</p>
+              {operator.access_level !== "gestor" && operator.access_level !== "lider" && (
+                <p className="text-xs">
+                  Você está vinculado ao setor <strong>{operator.sector}</strong>. Se precisa ver outros setores, peça ao gestor para ajustar seu nível de acesso.
+                </p>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -165,11 +171,15 @@ export default function PublicTasks() {
                   <CardContent className="py-4 flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm">{item.checklistName}</p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <Badge variant="outline" className="text-[10px]">{item.sector}</Badge>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> {item.shift} — {item.startTime}
-                        </span>
+                        {item.isStandalone ? (
+                          <Badge variant="secondary" className="text-[10px]">Avulso</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> {item.shift} — {item.startTime}
+                          </span>
+                        )}
                       </div>
                     </div>
                     {item.executionStatus && (

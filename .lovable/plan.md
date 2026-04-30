@@ -1,96 +1,57 @@
-## Objetivo
+## Diagnóstico
 
-1. Permitir, dentro de **Opções do Produto** no PDV, dois tipos de item:
-   - **Insumo** (já existe): item ligado a um `pdv_ingredient` via receita.
-   - **Produto** (novo): item ligado a um `pdv_product` cadastrado, usado como adicional/upsell. Ao selecionar esta opção em uma comanda, o produto vinculado é considerado para estoque, fiscal e roteamento de cozinha.
-2. Quando o produto PDV estiver **vinculado ao delivery** (`shared_products` / `delivery_products.source_pdv_product_id`), **toda alteração** feita no cadastro PDV (campos básicos, preços, imagem, disponibilidade, **opções e itens de opção**) deve refletir automaticamente no cardápio do delivery.
+A tela `/tarefas/:userId` (acessada via PIN/QR) decide quais checklists a pessoa vê em `src/hooks/use-checklist-execution.ts → fetchAssignedSchedules`:
 
----
+```ts
+const isManager = accessLevel === "lider" || accessLevel === "gestor";
+if (isManager) return true; // vê todos os schedules do dia
+// senão filtra por assigned_operator_id → assigned_sector → checklists.sector
+```
 
-## Parte 1 — Opções do produto: dois tipos de item
+O cadastro de operador (`OperatorDrawer.tsx`) tem somente 3 valores possíveis para `access_level`:
 
-### Banco de dados
-A coluna `pdv_product_option_items.linked_product_id` já existe. Adicionar:
-- `item_kind text` em `pdv_product_option_items` com valores `'ingredient' | 'product'` (default `'ingredient'`).
-- Constraint: `item_kind = 'product'` exige `linked_product_id NOT NULL`; `item_kind = 'ingredient'` permite receita via `pdv_option_item_recipes`.
-- Trigger: ao consumir uma opção do tipo `product` em comanda, debitar estoque do produto vinculado (reaproveitar lógica de composição/recipes já existente do produto-alvo).
+- `operador` — só executa
+- `lider` — executa e acompanha
+- `gestor` — acesso total
 
-### UI — `PDVProductOptionsManager.tsx`
-No bloco "novo item" e nos itens existentes, exibir um seletor de tipo:
-- **Insumo**: mantém Popover atual com busca em `pdv_ingredients` + quantidade da receita.
-- **Produto**: novo Popover com busca em `pdv_products` (mesmo tenant). Ao selecionar:
-  - preenche `name` com o nome do produto,
-  - sugere `price_adjustment` igual ao `price_salon` do produto (editável),
-  - mostra badge "Produto vinculado: X" com botão de remover.
-- Badge visual no card do item indicando o tipo (Insumo / Produto).
+A Louise é "gerente" no sentido humano, mas no cadastro de **Operador de Checklist** ela provavelmente está como `operador` (default ao criar) com setor `salao`. Com isso ela só enxerga checklists do setor salão (ex.: "Abertura de Salão"). Não é bug de RLS nem de schedule — é o `access_level` dela que não é `gestor`/`lider`.
 
-### Hook
-Estender `usePDVProductOptions` (createItem/updateItem) para aceitar `item_kind` e `linked_product_id`.
+Confirmação rápida via SQL (faço durante a implementação):
 
-### Pedido (consumo)
-- `AddItemDialog` / `ProductOptionSelector`: já lê `linked_product` via join — manter UI igual.
-- Backend de baixa de estoque (`pdv_comanda_items` triggers / RPC de comanda): se item da opção for `kind='product'`, descontar receita do `linked_product_id` em vez do recipe do option_item.
+```sql
+SELECT name, sector, access_level, is_active
+FROM checklist_operators
+WHERE name ILIKE '%louise%';
+```
 
----
+## O que vou fazer
 
-## Parte 2 — Sincronização PDV → Delivery
+### 1. Corrigir cadastro da Louise (e similares)
+Atualizar o `access_level` da Louise para `gestor` (ela é gerente). Faço isso via migration pontual após confirmar o registro com SELECT.
 
-### Modelo de espelhamento
-Estender as tabelas do delivery para rastrear origem PDV:
-- `delivery_product_options.source_pdv_option_id uuid` (nullable, unique por `user_id`).
-- `delivery_product_option_items.source_pdv_option_item_id uuid` (nullable, unique por `user_id`).
-- `delivery_product_option_items.linked_product_id uuid` referenciando `delivery_products(id)` para o caso "Produto" (resolvido via `shared_products` ou clone automático no delivery).
+### 2. Tornar o nível visível na UI de Operadores
+Em `src/components/pdv/checklists/OperatorsManager.tsx` e nos cards (`OperatorCard.tsx`), exibir um **badge claro** com o nível ("Operador" / "Líder" / "Gestor") e o setor. Hoje o nível fica escondido — o gestor cadastra como "operador" sem perceber.
 
-### Trigger de sincronização (Postgres)
-Criar triggers `AFTER INSERT/UPDATE/DELETE` em:
-- `pdv_products` → atualiza o `delivery_products` correspondente (via `source_pdv_product_id`) com nome, descrição, imagem, `is_available`, `preparation_time`, `serves`, e `base_price = price_delivery ?? price_salon`.
-- `pdv_product_options` → upsert/delete em `delivery_product_options` (mapeando por `source_pdv_option_id`); cria a opção no produto delivery espelho se ainda não existir.
-- `pdv_product_option_items` → upsert/delete em `delivery_product_option_items`; quando `item_kind='product'`, garante que o `linked_product_id` (PDV) também esteja compartilhado para o delivery (clone preguiçoso) e grava a referência espelhada.
+### 3. Aviso ao criar/editar operador
+No `OperatorDrawer.tsx`, deixar o seletor de nível mais explícito (já existe, mas com cópia ambígua). Adicionar uma **dica visual** ao lado do nome: "Quem deve ver TODOS os checklists? Marque como Gestor."
 
-Cada trigger checa se `EXISTS (SELECT 1 FROM delivery_products WHERE source_pdv_product_id = NEW.product_id AND user_id = NEW.user_id_via_lookup)` antes de propagar — assim, produtos não compartilhados não geram efeito colateral.
+### 4. Pequeno ajuste defensivo no filtro
+Em `fetchAssignedSchedules`, normalizar o `access_level` (trim + lowercase) antes de comparar, para evitar regressões caso o valor venha com espaço/caixa diferente. Sem mudar a regra: `lider` e `gestor` continuam vendo tudo.
 
-### Frontend
-- Em `useShareToDelivery`: ao compartilhar pela primeira vez, popular também `delivery_product_options` + items a partir das opções existentes do produto PDV (chamada de uma RPC `delivery_clone_options_from_pdv(p_pdv_product_id)`).
-- `ShareToDeliveryDialog`: exibir aviso "As alterações futuras no PDV serão refletidas automaticamente no delivery."
-- Em `Delivery / Personalization` e `delivery_products` UI: badge "Sincronizado do PDV" e bloqueio de edição manual dos campos espelhados (com botão "Desvincular" que apaga `source_pdv_product_id`).
+### 5. Mensagem na tela pública
+Em `PublicTasks.tsx`, quando o operador for `operador` e a lista vier vazia, mostrar texto explicativo:
 
-### Conflito / desvinculação
-- Coluna `delivery_products.sync_enabled boolean default true`. Toggle por produto na tela do delivery.
-- Quando `sync_enabled = false`, triggers ignoram esse produto.
+> "Nenhum checklist atribuído ao seu setor (X) hoje. Se você é responsável por outros setores, peça ao gestor para alterar seu nível de acesso."
 
----
+## Arquivos afetados
 
-## Detalhes técnicos
+- `src/hooks/use-checklist-execution.ts` — normalizar `accessLevel`
+- `src/pages/PublicTasks.tsx` — mensagem contextual
+- `src/components/pdv/checklists/OperatorsManager.tsx` / `team/OperatorCard.tsx` — badge de nível
+- `src/components/pdv/checklists/team/OperatorDrawer.tsx` — dica visual
+- 1 migration SQL pontual para promover a Louise a `gestor`
 
-### Migrations
-1. `ALTER TABLE pdv_product_option_items ADD COLUMN item_kind text NOT NULL DEFAULT 'ingredient' CHECK (item_kind IN ('ingredient','product'))`.
-2. CHECK: `(item_kind = 'product' AND linked_product_id IS NOT NULL) OR item_kind = 'ingredient'`.
-3. `ALTER TABLE delivery_product_options ADD COLUMN source_pdv_option_id uuid` + índice único `(user_id, source_pdv_option_id)`.
-4. `ALTER TABLE delivery_product_option_items ADD COLUMN source_pdv_option_item_id uuid, ADD COLUMN linked_product_id uuid REFERENCES delivery_products(id), ADD COLUMN item_kind text DEFAULT 'ingredient'`.
-5. `ALTER TABLE delivery_products ADD COLUMN sync_enabled boolean DEFAULT true`.
-6. Functions + triggers de sincronização (PL/pgSQL) com `SECURITY DEFINER` e `search_path=public`.
-7. RPC `delivery_clone_options_from_pdv(uuid)` — cria opções/itens espelhados na primeira partilha.
-
-### Arquivos frontend a editar
-- `src/hooks/use-pdv-product-options.ts` — aceitar `item_kind`, `linked_product_id`, retornar `linked_product` (já há join).
-- `src/components/pdv/PDVProductOptionsManager.tsx` — novo seletor "Tipo do item" (Insumo / Produto) com Popover de busca em produtos.
-- `src/hooks/use-share-to-delivery.ts` — após insert, chamar RPC `delivery_clone_options_from_pdv`.
-- `src/components/pdv/ShareToDeliveryDialog.tsx` — texto sobre auto-sync.
-- `src/components/delivery/...` — badge "Sincronizado do PDV" + toggle `sync_enabled`.
-- `src/integrations/supabase/types.ts` — regenerado.
-
-### Compatibilidade
-- Itens de opção existentes mantêm `item_kind='ingredient'` (default).
-- `delivery_products` já compartilhados serão sincronizados retroativamente em uma migração one-shot que copia opções do PDV-origem para o delivery espelho.
-
----
-
-## Critérios de aceitação
-- Em **Opções**, o usuário escolhe entre "Insumo" e "Produto" para cada item; ambos coexistem na mesma opção.
-- Adicionar uma opção do tipo "Produto" em uma comanda baixa o estoque do produto vinculado (não duplica baixa).
-- Editar nome/preço/imagem/disponibilidade de um produto PDV compartilhado atualiza imediatamente o `delivery_products` correspondente.
-- Adicionar/editar/remover opções e itens de opção no PDV propaga para o delivery em segundos.
-- Produto delivery compartilhado mostra badge e bloqueia edição manual; toggle "Sincronizar com PDV" permite desligar.
-- Auditoria: nenhuma propagação ocorre em produtos com `sync_enabled=false` ou sem `source_pdv_product_id`.
+## Fora de escopo
+Não vou alterar a regra "líder vê tudo" agora — embora discutível (líder normalmente é de um setor), mexer nisso pode quebrar outros operadores. Se quiser que líder veja só o próprio setor + agregado da equipe, abro como tarefa separada.
 
 Aprove para implementar.

@@ -63,49 +63,57 @@ export function useChecklistExecution(userId: string) {
       const dayOfWeek = today.getDay(); // 0=Sun
       const todayStr = today.toISOString().split("T")[0];
 
-      // Leaders/managers see everything
-      const isManager = accessLevel === "lider" || accessLevel === "gestor";
+      // Leaders/managers see everything (normalize defensively)
+      const lvl = (accessLevel || "").trim().toLowerCase();
+      const isManager = lvl === "lider" || lvl === "gestor";
 
-      // Get schedules for this user
+      // 1) Schedules for this user
       const { data: schedules, error } = await supabase
         .from("checklist_schedules")
-        .select("*, checklists(id, name, sector)")
+        .select("*, checklists(id, name, sector, is_active)")
         .eq("user_id", userId)
         .eq("is_active", true);
 
       if (error) throw error;
 
-      // Filter by day of week and sector/operator assignment
-      const filtered = (schedules || []).filter((s: any) => {
+      const filteredSchedules = (schedules || []).filter((s: any) => {
+        if (s.checklists && s.checklists.is_active === false) return false;
         const days = (s.days_of_week as number[]) || [];
         if (!days.includes(dayOfWeek)) return false;
 
         if (isManager) return true;
-
-        // Operator-specific assignment wins
         if (s.assigned_operator_id) return s.assigned_operator_id === operatorId;
-
-        // Sector-specific assignment
         if (s.assigned_sector) return s.assigned_sector === operatorSector;
-
-        // No explicit assignment: fall back to checklist's own sector
         const checklistSector = s.checklists?.sector;
         if (checklistSector) return checklistSector === operatorSector;
-
-        // Truly unassigned + no checklist sector: deny (avoid cross-sector leakage)
         return false;
       });
 
-      // Check existing executions for today
+      // 2) Standalone (unscheduled) active checklists — visible to managers always,
+      //    and to regular operators when sector matches.
+      const { data: allChecklists } = await supabase
+        .from("checklists")
+        .select("id, name, sector, is_active")
+        .eq("user_id", userId)
+        .eq("is_active", true);
+
+      const scheduledIds = new Set((schedules || []).map((s: any) => s.checklist_id));
+      const standalone = (allChecklists || []).filter((c: any) => {
+        if (scheduledIds.has(c.id)) return false;
+        if (isManager) return true;
+        return c.sector === operatorSector;
+      });
+
+      // 3) Today executions (covers both scheduled + standalone)
       const { data: existingExecs } = await supabase
         .from("checklist_executions")
         .select("id, checklist_id, schedule_id, status, started_at")
         .eq("user_id", userId)
         .eq("execution_date", todayStr);
 
-      return filtered.map((s: any) => {
+      const fromSchedules = filteredSchedules.map((s: any) => {
         const exec = (existingExecs || []).find(
-          (e: any) => e.schedule_id === s.id || e.checklist_id === s.checklist_id
+          (e: any) => e.schedule_id === s.id
         );
         return {
           scheduleId: s.id,
@@ -117,8 +125,29 @@ export function useChecklistExecution(userId: string) {
           maxDuration: s.max_duration_minutes,
           executionId: exec?.id || null,
           executionStatus: (exec?.status as ExecutionStatus) || null,
+          isStandalone: false,
         };
       });
+
+      const fromStandalone = standalone.map((c: any) => {
+        const exec = (existingExecs || []).find(
+          (e: any) => e.checklist_id === c.id && e.schedule_id === null
+        );
+        return {
+          scheduleId: `standalone:${c.id}`,
+          checklistId: c.id,
+          checklistName: c.name,
+          sector: c.sector || "cozinha",
+          shift: "Avulso",
+          startTime: "—",
+          maxDuration: 60,
+          executionId: exec?.id || null,
+          executionStatus: (exec?.status as ExecutionStatus) || null,
+          isStandalone: true,
+        };
+      });
+
+      return [...fromSchedules, ...fromStandalone];
     },
     [userId]
   );
@@ -127,15 +156,18 @@ export function useChecklistExecution(userId: string) {
   const startExecution = useCallback(
     async (checklistId: string, scheduleId: string, operatorId: string) => {
       const todayStr = new Date().toISOString().split("T")[0];
+      const isStandalone = !scheduleId || scheduleId.startsWith("standalone:");
+      const realScheduleId = isStandalone ? null : scheduleId;
 
       // Check if already exists
-      const { data: existing } = await supabase
+      const existingQuery = supabase
         .from("checklist_executions")
         .select("id")
         .eq("checklist_id", checklistId)
-        .eq("schedule_id", scheduleId)
-        .eq("execution_date", todayStr)
-        .maybeSingle();
+        .eq("execution_date", todayStr);
+      const { data: existing } = realScheduleId
+        ? await existingQuery.eq("schedule_id", realScheduleId).maybeSingle()
+        : await existingQuery.is("schedule_id", null).eq("operator_id", operatorId).maybeSingle();
 
       if (existing) return existing.id;
 
@@ -144,7 +176,7 @@ export function useChecklistExecution(userId: string) {
         .from("checklist_executions")
         .insert({
           checklist_id: checklistId,
-          schedule_id: scheduleId,
+          schedule_id: realScheduleId,
           operator_id: operatorId,
           user_id: userId,
           execution_date: todayStr,
