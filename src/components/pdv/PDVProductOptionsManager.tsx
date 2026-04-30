@@ -466,7 +466,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
             const baseItem = baseOpt?.items.find((i) => i.id === draftItem.id);
             if (baseItem) {
               const itemChanges: Record<string, unknown> = {};
-              (["name", "price_adjustment", "is_available"] as const).forEach((k) => {
+              (["name", "price_adjustment", "is_available", "item_kind", "linked_product_id"] as const).forEach((k) => {
                 if ((draftItem as any)[k] !== (baseItem as any)[k])
                   itemChanges[k] = (draftItem as any)[k];
               });
