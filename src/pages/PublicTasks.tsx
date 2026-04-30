@@ -171,11 +171,15 @@ export default function PublicTasks() {
                   <CardContent className="py-4 flex items-center gap-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm">{item.checklistName}</p>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <Badge variant="outline" className="text-[10px]">{item.sector}</Badge>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> {item.shift} — {item.startTime}
-                        </span>
+                        {item.isStandalone ? (
+                          <Badge variant="secondary" className="text-[10px]">Avulso</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> {item.shift} — {item.startTime}
+                          </span>
+                        )}
                       </div>
                     </div>
                     {item.executionStatus && (
