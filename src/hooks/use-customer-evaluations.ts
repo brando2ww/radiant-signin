@@ -51,10 +51,10 @@ export const useCustomerEvaluations = (filters?: { startDate?: string; endDate?:
         .order("evaluation_date", { ascending: false });
 
       if (filters?.startDate) {
-        query = query.gte("evaluation_date", filters.startDate);
+        query = query.gte("evaluation_date", `${filters.startDate}T00:00:00`);
       }
       if (filters?.endDate) {
-        query = query.lte("evaluation_date", filters.endDate);
+        query = query.lte("evaluation_date", `${filters.endDate}T23:59:59.999`);
       }
 
       const { data, error } = await query;
@@ -370,10 +370,10 @@ export const useExportEvaluations = () => {
         .order("evaluation_date", { ascending: false });
 
       if (filters?.startDate) {
-        query = query.gte("evaluation_date", filters.startDate);
+        query = query.gte("evaluation_date", `${filters.startDate}T00:00:00`);
       }
       if (filters?.endDate) {
-        query = query.lte("evaluation_date", filters.endDate);
+        query = query.lte("evaluation_date", `${filters.endDate}T23:59:59.999`);
       }
 
       const { data, error } = await query;
