@@ -97,6 +97,10 @@ export default function PDVSettings() {
         <TabsContent value="integrations">
           <IntegrationsTab />
         </TabsContent>
+
+        <TabsContent value="permissions">
+          <PermissionsTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
