@@ -448,6 +448,8 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
               option_id: realOptionId,
               name: draftItem.name,
               price_adjustment: draftItem.price_adjustment,
+              item_kind: (draftItem as any).item_kind || "ingredient",
+              linked_product_id: (draftItem as any).linked_product_id ?? null,
             } as any);
             realItemId = (result as any).id;
             itemIdMap.set(draftItem.id, realItemId);
