@@ -71,7 +71,13 @@ export function CampaignResponses({ campaignId }: Props) {
         <Card>
           <CardContent className="pt-4 text-center">
             <p className="text-2xl font-bold flex items-center justify-center gap-1">
-              {(responses.flatMap((r) => (r.evaluation_answers as any[]).map((a: any) => a.score)).reduce((a: number, b: number) => a + b, 0) / Math.max(responses.flatMap((r) => (r.evaluation_answers as any[]).map((a: any) => a.score)).length, 1)).toFixed(1)}
+              {(() => {
+                const stars = responses.flatMap((r) =>
+                  (r.evaluation_answers as any[]).filter((a: any) => (a.question_type || "stars") === "stars")
+                );
+                const total = stars.reduce((a: number, b: any) => a + b.score, 0);
+                return (total / Math.max(stars.length, 1)).toFixed(1);
+              })()}
               <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
             </p>
             <p className="text-xs text-muted-foreground">Média geral</p>
