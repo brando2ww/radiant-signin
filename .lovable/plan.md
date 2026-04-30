@@ -1,26 +1,51 @@
-# Corrigir contagem e listagem de "Não Iniciados"
+## Problema
 
-## Diagnóstico
+No diálogo de cobrança (`src/components/pdv/cashier/PaymentDialog.tsx`), ao clicar em **Confirmar** na etapa de autorização do desconto, o sistema mostra o toast "Desconto aplicado", porém grava o valor como **R$ 0,00** — efetivamente sem desconto algum.
 
-No banco, hoje existem **3 checklists em `em_andamento` + 1 `concluido`**, mas o painel mostra "Não Iniciados: 0". Dois problemas:
+## Causa raiz
 
-1. **Métrica errada após remoção do card "Em Andamento":** o hook conta apenas `pendente`/`nao_iniciado` no card "Não Iniciados". Como o card "Em Andamento" foi removido em iteração anterior, os 3 checklists `em_andamento` ficaram invisíveis no painel — o usuário os enxerga como "não iniciados ainda" porque ninguém os finalizou.
-2. **Dialog filtra status fixo `"nao_iniciado"`:** mesmo se a métrica fosse correta, o dialog ignora `pendente` e `em_andamento`.
+A variável `previewAmount` (linha 274) só calcula o valor do desconto enquanto `discountStage === "typing"`:
 
-## Solução
+```ts
+const previewAmount = discountStage === "typing"
+  ? (discountTypeChosen === "percent" ? (subtotal * pct) / 100 : valor)
+  : 0;
+```
 
-Tratar como **"Pendentes do dia"** tudo que ainda não foi concluído nem caiu em atraso: `pendente`, `nao_iniciado` e `em_andamento`.
+Mas o fluxo é:
+1. Operador digita o valor (`stage = "typing"`).
+2. Clica em **"Aplicar desconto"** → `setDiscountStage("confirming")` (linha 1174).
+3. Na tela de confirmação digita motivo + senha + clica **"Confirmar"** (linha 1334).
+4. Nesse momento, `stage === "confirming"` → `previewAmount === 0` → `setAppliedDiscount({ amount: 0, ... })`.
 
-### Mudanças
+Resultado: o desconto fica zerado independentemente do que foi digitado.
 
-1. `src/hooks/use-checklist-dashboard.ts` (linha 36)
-   - Incluir `em_andamento` no cálculo de `naoIniciado`.
+## Correção
 
-2. `src/components/pdv/checklists/CompletedExecutionsDialog.tsx`
-   - Quando `status === "nao_iniciado"`, trocar o `.eq("status", ...)` por `.in("status", ["pendente", "nao_iniciado", "em_andamento"])`.
-   - Renderizar badge dinâmica por linha ("Não iniciado" / "Em andamento") usando `exec.status`.
-   - Manter ordenação por `created_at`.
+Calcular o valor do desconto a partir de `discountValue` + `discountTypeChosen` no momento do `onClick` do botão Confirmar, sem depender de `previewAmount`. O mais limpo é extrair o cálculo em uma função/`useMemo`:
 
-3. (Opcional, sem alteração de label) Renomear o título da métrica de "Não Iniciados" para "Pendentes" — **NÃO** será feito agora para não introduzir mudança visual sem pedido explícito.
+```ts
+const computedDiscountAmount = (() => {
+  const v = parseFloat(discountValue) || 0;
+  if (v <= 0) return 0;
+  return discountTypeChosen === "percent"
+    ? (subtotal * v) / 100
+    : v;
+})();
+```
 
-Sem alterações de banco.
+E então:
+- Substituir `previewAmount` (usado em UI da etapa "typing") para reusar `computedDiscountAmount` quando `stage === "typing"`.
+- No `onClick` do Confirmar (linha 1334), usar `computedDiscountAmount` em vez de `previewAmount`.
+- Manter a checagem `previewExceedsSubtotal` baseada em `computedDiscountAmount`.
+
+## Arquivos alterados
+
+- `src/components/pdv/cashier/PaymentDialog.tsx` — extrair cálculo do valor do desconto e usar no handler "Confirmar" para que o `appliedDiscount.amount` reflita o valor digitado em qualquer estágio.
+
+## Validação após implementação
+
+1. Abrir cobrança de uma comanda com subtotal conhecido (ex.: R$ 100).
+2. Aplicar desconto de 10% → confirmar → total deve cair para R$ 90 (ou R$ 99 com taxa).
+3. Aplicar desconto fixo de R$ 15 → confirmar → total deve refletir o abate.
+4. Verificar no caixa/movimento que o `amount` gravado é o valor com desconto.
