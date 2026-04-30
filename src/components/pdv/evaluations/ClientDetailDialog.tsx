@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar, MessageSquare, Star, User } from "lucide-react";
 import { formatPhoneForWhatsApp } from "@/lib/whatsapp-message";
+import { useEvaluationQuestionTexts } from "@/hooks/use-evaluation-report-helpers";
 import type { EvaluationWithAnswers } from "@/hooks/use-customer-evaluations";
 
 interface ClientDetailDialogProps {
@@ -25,18 +26,27 @@ interface ClientDetailDialogProps {
 }
 
 export default function ClientDetailDialog({ open, onOpenChange, client }: ClientDetailDialogProps) {
+  const { data: questionTexts } = useEvaluationQuestionTexts();
+
   if (!client) return null;
 
   const npsColor = {
-    promoter: "text-green-600",
-    neutral: "text-yellow-600",
-    detractor: "text-red-600",
+    promoter: "text-emerald-600",
+    neutral: "text-amber-600",
+    detractor: "text-destructive",
     none: "text-muted-foreground",
   }[client.npsCategory];
 
   const handleWhatsApp = () => {
     const phone = formatPhoneForWhatsApp(client.whatsapp);
     window.open(`https://wa.me/${phone}`, "_blank");
+  };
+
+  const getNpsBadge = (nps: number | null) => {
+    if (nps === null || nps === undefined) return null;
+    if (nps >= 9) return <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-200">NPS {nps}</Badge>;
+    if (nps >= 7) return <Badge className="bg-amber-500/15 text-amber-700 border-amber-200">NPS {nps}</Badge>;
+    return <Badge className="bg-red-500/15 text-red-700 border-red-200">NPS {nps}</Badge>;
   };
 
   return (
@@ -83,9 +93,9 @@ export default function ClientDetailDialog({ open, onOpenChange, client }: Clien
           Enviar mensagem
         </Button>
 
-        {/* Timeline */}
-        <div className="flex-1 overflow-y-auto space-y-3 pr-1" style={{ maxHeight: 300 }}>
-          <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-1">
+        {/* Detailed evaluations */}
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1 -mx-1 px-1">
+          <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-1 sticky top-0 bg-background py-1">
             <Calendar className="h-4 w-4" />
             {client.totalEvaluations} avaliação{client.totalEvaluations !== 1 ? "ões" : ""}
           </h4>
@@ -95,49 +105,66 @@ export default function ClientDetailDialog({ open, onOpenChange, client }: Clien
               ev.evaluation_answers.length > 0
                 ? ev.evaluation_answers.reduce((s, a) => s + a.score, 0) / ev.evaluation_answers.length
                 : null;
-            const comments = ev.evaluation_answers.filter((a) => a.comment).map((a) => a.comment!);
 
             return (
               <div
                 key={ev.id}
-                className="border border-border rounded-lg p-3 space-y-2 bg-muted/30"
+                className="border border-border rounded-lg p-3 space-y-3 bg-muted/20"
               >
-                <div className="flex items-center justify-between text-sm">
+                {/* Header: date + badges */}
+                <div className="flex items-center justify-between text-sm gap-2 flex-wrap">
                   <span className="text-muted-foreground">
                     {format(new Date(ev.evaluation_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </span>
                   <div className="flex items-center gap-2">
                     {avgScore !== null && (
                       <Badge variant="outline" className="gap-1">
-                        <Star className="h-3 w-3" />
+                        <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
                         {avgScore.toFixed(1)}
                       </Badge>
                     )}
-                    {ev.nps_score !== null && (
-                      <Badge
-                        className={
-                          ev.nps_score >= 9
-                            ? "bg-green-500/20 text-green-700 border-green-300"
-                            : ev.nps_score >= 7
-                              ? "bg-yellow-500/20 text-yellow-700 border-yellow-300"
-                              : "bg-red-500/20 text-red-700 border-red-300"
-                        }
-                      >
-                        NPS {ev.nps_score}
-                      </Badge>
-                    )}
+                    {getNpsBadge(ev.nps_score)}
                   </div>
                 </div>
 
-                {comments.length > 0 && (
-                  <div className="space-y-1">
-                    {comments.map((c, i) => (
-                      <p key={i} className="text-xs text-muted-foreground flex items-start gap-1">
-                        <MessageSquare className="h-3 w-3 mt-0.5 shrink-0" />
-                        {c}
-                      </p>
+                {/* General NPS comment */}
+                {ev.nps_comment && (
+                  <div className="flex items-start gap-1.5 text-sm bg-muted/50 p-2 rounded">
+                    <MessageSquare className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground" />
+                    <span>{ev.nps_comment}</span>
+                  </div>
+                )}
+
+                {/* Per-question answers */}
+                {ev.evaluation_answers.length > 0 ? (
+                  <div className="space-y-2">
+                    {ev.evaluation_answers.map((answer) => (
+                      <div key={answer.id} className="space-y-1.5 rounded-md border border-border/60 bg-background p-2.5">
+                        <p className="text-sm font-medium leading-snug">
+                          {questionTexts?.get(answer.question_id) || "Pergunta não encontrada"}
+                        </p>
+                        <div className="flex items-center gap-0.5">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className={`h-4 w-4 ${
+                                s <= answer.score ? "text-amber-500 fill-amber-500" : "text-muted-foreground/20"
+                              }`}
+                            />
+                          ))}
+                          <span className="ml-2 text-sm text-muted-foreground">{answer.score}/5</span>
+                        </div>
+                        {answer.comment && (
+                          <div className="flex items-start gap-1.5 text-xs bg-muted/50 p-2 rounded mt-1">
+                            <MessageSquare className="h-3 w-3 shrink-0 mt-0.5 text-muted-foreground" />
+                            <span>{answer.comment}</span>
+                          </div>
+                        )}
+                      </div>
                     ))}
                   </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Sem respostas para esta avaliação.</p>
                 )}
               </div>
             );
