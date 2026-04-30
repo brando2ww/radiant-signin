@@ -8,7 +8,7 @@ import { Search, ThumbsUp, Minus, ThumbsDown, Eye } from "lucide-react";
 import ClientDetailDialog from "@/components/pdv/evaluations/ClientDetailDialog";
 import type { EvaluationWithAnswers } from "@/hooks/use-customer-evaluations";
 
-export type NpsCategory = "promoters" | "neutrals" | "detractors";
+export type NpsCategory = "promoters" | "neutrals" | "detractors" | "all";
 
 interface Props {
   category: NpsCategory | null;
@@ -20,6 +20,7 @@ const categoryConfig = {
   promoters: { label: "Promotores", icon: ThumbsUp, color: "text-emerald-600", scoreLabel: "NPS ≥ 9" },
   neutrals: { label: "Neutros", icon: Minus, color: "text-amber-600", scoreLabel: "NPS 7-8" },
   detractors: { label: "Detratores", icon: ThumbsDown, color: "text-destructive", scoreLabel: "NPS ≤ 6" },
+  all: { label: "Todas as Respostas", icon: Eye, color: "text-foreground", scoreLabel: "Todas" },
 };
 
 export default function NPSDetailDialog({ category, evaluations, onClose }: Props) {
