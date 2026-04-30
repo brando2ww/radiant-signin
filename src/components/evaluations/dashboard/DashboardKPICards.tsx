@@ -15,7 +15,7 @@ interface Props {
   uniqueCustomers: number;
   totalCoupons: number;
   redeemedCoupons: number;
-  onNpsClick?: (category: "promoters" | "neutrals" | "detractors") => void;
+  onNpsClick?: (category: "promoters" | "neutrals" | "detractors" | "all") => void;
 }
 
 export default function DashboardKPICards({
@@ -104,7 +104,7 @@ export default function DashboardKPICards({
 
       {/* Row 3: Funnel metrics */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        <Card>
+        <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => onNpsClick?.("all")}>
           <CardContent className="pt-4 pb-3">
             <div className="flex items-center gap-2 mb-1">
               <Users className="h-4 w-4 text-muted-foreground" />
