@@ -40,6 +40,7 @@ export default function NPSDetailDialog({ category, evaluations, onClose }: Prop
   const filtered = useMemo(() => {
     if (!category) return [];
     const list = evaluations.filter(e => {
+      if (category === "all") return true;
       if (e.nps_score == null) return false;
       if (category === "promoters") return e.nps_score >= 9;
       if (category === "neutrals") return e.nps_score >= 7 && e.nps_score <= 8;
