@@ -99,7 +99,7 @@ export default function ReportMonthly() {
     ? Math.round((stats.promoters / (stats.promoters + stats.detractors + stats.neutrals)) * 100)
     : 0;
 
-  const allScores = (evaluations || []).flatMap(e => e.evaluation_answers.map(a => a.score));
+  const allScores = (evaluations || []).flatMap(e => e.evaluation_answers.filter(isStarsAnswer).map(a => a.score));
   const scoreDistribution = [1, 2, 3, 4, 5].map(score => ({
     nota: `${score} ★`,
     quantidade: allScores.filter(s => s === score).length,
