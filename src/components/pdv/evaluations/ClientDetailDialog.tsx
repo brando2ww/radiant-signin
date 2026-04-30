@@ -27,7 +27,7 @@ interface ClientDetailDialogProps {
 }
 
 export default function ClientDetailDialog({ open, onOpenChange, client }: ClientDetailDialogProps) {
-  const { data: questionTexts } = useEvaluationQuestionTexts();
+  const { data: questionInfo } = useEvaluationQuestionInfo();
 
   if (!client) return null;
 
