@@ -33,7 +33,9 @@ export function Step5FinalReview({ data }: Step5FinalReviewProps) {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            Existem {noneCount} produto(s) sem vinculação ao estoque. Eles serão registrados mas não afetarão o inventário.
+            Existem {noneCount} item(ns) sem vinculação. Volte ao passo "Produtos" e vincule
+            cada item a um insumo do estoque ou marque-o para ser criado como novo. A importação
+            só pode ser confirmada quando todos os itens tiverem destino.
           </AlertDescription>
         </Alert>
       )}
