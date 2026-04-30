@@ -44,7 +44,8 @@ export const useCustomerEvaluations = (filters?: { startDate?: string; endDate?:
             id,
             question_id,
             score,
-            comment
+            comment,
+            selected_options
           )
         `)
         // nps_comment is included via * selector
