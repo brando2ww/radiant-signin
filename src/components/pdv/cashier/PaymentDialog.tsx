@@ -1867,7 +1867,13 @@ export function PaymentDialog({
             onClick={(e) => {
               e.preventDefault();
               if (!itemToRemove) return;
-              removeItem(itemToRemove.id);
+              const id = itemToRemove.id;
+              setOptimisticallyRemoved((prev) => {
+                const next = new Set(prev);
+                next.add(id);
+                return next;
+              });
+              removeItem(id);
               setItemToRemove(null);
             }}
           >
