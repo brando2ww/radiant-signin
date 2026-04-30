@@ -31,6 +31,7 @@ export function DashboardPanel({ onNavigate, onQrOpen, onGenerateDaily, isGenera
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [completedDialogOpen, setCompletedDialogOpen] = useState(false);
   const [overdueDialogOpen, setOverdueDialogOpen] = useState(false);
+  const [notStartedDialogOpen, setNotStartedDialogOpen] = useState(false);
   const {
     metrics, completionChart, shiftComparison, alerts, unacknowledgedAlerts,
     acknowledgeAlert, criticalTasks, timeline, teamHighlights,
