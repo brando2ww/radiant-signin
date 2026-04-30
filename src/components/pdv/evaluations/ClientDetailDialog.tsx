@@ -6,7 +6,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar, MessageSquare, Star, User } from "lucide-react";
 import { formatPhoneForWhatsApp } from "@/lib/whatsapp-message";
-import { useEvaluationQuestionTexts } from "@/hooks/use-evaluation-report-helpers";
+import { useEvaluationQuestionInfo } from "@/hooks/use-evaluation-report-helpers";
+import { AnswerValue } from "@/components/evaluations/AnswerValue";
 import type { EvaluationWithAnswers } from "@/hooks/use-customer-evaluations";
 
 interface ClientDetailDialogProps {
