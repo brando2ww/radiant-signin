@@ -254,6 +254,12 @@ export function DashboardPanel({ onNavigate, onQrOpen, onGenerateDaily, isGenera
         date={date}
         status="atrasado"
       />
+      <CompletedExecutionsDialog
+        open={notStartedDialogOpen}
+        onOpenChange={setNotStartedDialogOpen}
+        date={date}
+        status="nao_iniciado"
+      />
     </div>
   );
 }
