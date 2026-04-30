@@ -156,15 +156,18 @@ export function useChecklistExecution(userId: string) {
   const startExecution = useCallback(
     async (checklistId: string, scheduleId: string, operatorId: string) => {
       const todayStr = new Date().toISOString().split("T")[0];
+      const isStandalone = !scheduleId || scheduleId.startsWith("standalone:");
+      const realScheduleId = isStandalone ? null : scheduleId;
 
       // Check if already exists
-      const { data: existing } = await supabase
+      const existingQuery = supabase
         .from("checklist_executions")
         .select("id")
         .eq("checklist_id", checklistId)
-        .eq("schedule_id", scheduleId)
-        .eq("execution_date", todayStr)
-        .maybeSingle();
+        .eq("execution_date", todayStr);
+      const { data: existing } = realScheduleId
+        ? await existingQuery.eq("schedule_id", realScheduleId).maybeSingle()
+        : await existingQuery.is("schedule_id", null).eq("operator_id", operatorId).maybeSingle();
 
       if (existing) return existing.id;
 
@@ -173,7 +176,7 @@ export function useChecklistExecution(userId: string) {
         .from("checklist_executions")
         .insert({
           checklist_id: checklistId,
-          schedule_id: scheduleId,
+          schedule_id: realScheduleId,
           operator_id: operatorId,
           user_id: userId,
           execution_date: todayStr,
