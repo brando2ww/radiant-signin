@@ -12,6 +12,8 @@ export interface PDVOptionItemRecipeRef {
   ingredient_unit?: string;
 }
 
+export type PDVOptionItemKind = "ingredient" | "product";
+
 export interface PDVProductOptionItem {
   id: string;
   option_id: string;
@@ -19,6 +21,7 @@ export interface PDVProductOptionItem {
   price_adjustment: number;
   is_available: boolean;
   order_position: number;
+  item_kind: PDVOptionItemKind;
   linked_product_id?: string | null;
   linked_product?: PDVProduct | null;
   recipes?: PDVOptionItemRecipeRef[];
@@ -149,10 +152,10 @@ export function usePDVProductOptions(productId?: string) {
   });
 
   const createItem = useMutation({
-    mutationFn: async (data: { option_id: string; name: string; price_adjustment?: number; linked_product_id?: string | null }) => {
+    mutationFn: async (data: { option_id: string; name: string; price_adjustment?: number; linked_product_id?: string | null; item_kind?: PDVOptionItemKind }) => {
       const { data: result, error } = await supabase
         .from("pdv_product_option_items")
-        .insert(data)
+        .insert(data as any)
         .select()
         .single();
       if (error) throw error;
@@ -165,7 +168,7 @@ export function usePDVProductOptions(productId?: string) {
   });
 
   const updateItem = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; name?: string; price_adjustment?: number; is_available?: boolean; linked_product_id?: string | null }) => {
+    mutationFn: async ({ id, ...updates }: { id: string; name?: string; price_adjustment?: number; is_available?: boolean; linked_product_id?: string | null; item_kind?: PDVOptionItemKind }) => {
       const { error } = await supabase
         .from("pdv_product_option_items")
         .update(updates)

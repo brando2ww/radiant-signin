@@ -64,7 +64,7 @@ export function ShareToDeliveryDialog({
         <DialogHeader>
           <DialogTitle>Enviar para Delivery</DialogTitle>
           <DialogDescription>
-            Selecione a categoria e confirme o preço para compartilhar este produto com o delivery.
+            Selecione a categoria e confirme o preço para compartilhar este produto com o delivery. As alterações futuras feitas no PDV (dados básicos, opções e itens) serão refletidas automaticamente no cardápio do delivery.
           </DialogDescription>
         </DialogHeader>
 
