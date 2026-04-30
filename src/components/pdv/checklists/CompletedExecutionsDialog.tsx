@@ -69,10 +69,22 @@ export function CompletedExecutionsDialog({ open, onOpenChange, date, status = "
             </div>
           ) : !executions || executions.length === 0 ? (
             <p className="text-sm text-muted-foreground py-10 text-center">
-              {status === "concluido"
-                ? "Nenhum checklist concluído neste dia."
-                : "Nenhum checklist em atraso neste dia."}
+              {cfg.emptyText}
             </p>
+          ) : status === "nao_iniciado" ? (
+            <div className="divide-y border rounded-md">
+              {executions.map((exec: any) => (
+                <div key={exec.id} className="flex items-center justify-between gap-3 p-3">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{exec.checklists?.name || "Checklist"}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {exec.checklists?.sector || "—"} · {exec.checklist_operators?.name || "—"}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="shrink-0">Não iniciado</Badge>
+                </div>
+              ))}
+            </div>
           ) : (
             <Accordion type="multiple" className="w-full">
               {executions.map((exec: any) => (
