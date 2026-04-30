@@ -1380,17 +1380,19 @@ export function PaymentDialog({
                   )}
                 </div>
 
-                {/* Service Fee Toggle */}
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="service-fee" className="text-sm cursor-pointer">
-                    Taxa de serviço (10%)
-                  </Label>
-                  <Switch
-                    id="service-fee"
-                    checked={serviceFeeEnabled}
-                    onCheckedChange={setServiceFeeEnabled}
-                  />
-                </div>
+                {/* Service Fee Toggle — só aparece se ativado nas configurações */}
+                {serviceFeeAllowed && (
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="service-fee" className="text-sm cursor-pointer">
+                      Taxa de serviço ({serviceFeePercentage}%)
+                    </Label>
+                    <Switch
+                      id="service-fee"
+                      checked={serviceFeeEnabled}
+                      onCheckedChange={setServiceFeeEnabled}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
 
