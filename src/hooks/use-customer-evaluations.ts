@@ -224,10 +224,10 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
   
   evaluations.forEach(e => {
     const day = new Date(e.evaluation_date).getDay();
+    const starsAnswers = e.evaluation_answers.filter(isStarsAnswer);
+    if (starsAnswers.length === 0) return;
     weekdayData[day].count++;
-    const avgScore = e.evaluation_answers.length > 0
-      ? e.evaluation_answers.reduce((sum, a) => sum + a.score, 0) / e.evaluation_answers.length
-      : 0;
+    const avgScore = starsAnswers.reduce((sum, a) => sum + a.score, 0) / starsAnswers.length;
     weekdayData[day].totalScore += avgScore;
   });
 
@@ -237,21 +237,24 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     avgScore: d.count > 0 ? d.totalScore / d.count : 0,
   }));
 
-  // Avaliações negativas recentes (últimas 24h com nota < 3)
+  // Avaliações negativas recentes (últimas 24h com nota < 3) — somente notas reais
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const recentNegative = evaluations.filter(e => {
     const evalDate = new Date(e.evaluation_date);
-    const avgScore = e.evaluation_answers.length > 0
-      ? e.evaluation_answers.reduce((sum, a) => sum + a.score, 0) / e.evaluation_answers.length
-      : 0;
+    const starsAnswers = e.evaluation_answers.filter(isStarsAnswer);
+    if (starsAnswers.length === 0) return false;
+    const avgScore = starsAnswers.reduce((sum, a) => sum + a.score, 0) / starsAnswers.length;
     return evalDate >= yesterday && avgScore < 3;
-  }).map(e => ({
-    ...e,
-    avgScore: e.evaluation_answers.length > 0
-      ? e.evaluation_answers.reduce((sum, a) => sum + a.score, 0) / e.evaluation_answers.length
-      : 0,
-  }));
+  }).map(e => {
+    const starsAnswers = e.evaluation_answers.filter(isStarsAnswer);
+    return {
+      ...e,
+      avgScore: starsAnswers.length > 0
+        ? starsAnswers.reduce((sum, a) => sum + a.score, 0) / starsAnswers.length
+        : 0,
+    };
+  });
 
   // Clientes VIP (recorrentes)
   const customerFrequency = new Map<string, { count: number; evaluations: any[] }>();
