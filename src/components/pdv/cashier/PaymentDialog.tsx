@@ -1335,7 +1335,7 @@ export function PaymentDialog({
                             previewExceedsSubtotal
                           }
                           onClick={() => {
-                            const amt = previewAmount;
+                            const amt = computedDiscountAmount;
                             const pct = subtotal > 0 ? (amt / subtotal) * 100 : 0;
                             setAppliedDiscount({
                               type: discountTypeChosen as DiscountType,
