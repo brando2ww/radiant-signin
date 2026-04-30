@@ -138,7 +138,7 @@ export default function NPSDetailDialog({ category, evaluations, onClose }: Prop
                           {e.customer_whatsapp}
                         </a>
                       </TableCell>
-                      <TableCell className={`text-center font-bold ${config.color}`}>{e.nps_score}</TableCell>
+                      <TableCell className={`text-center font-bold ${config.color}`}>{e.nps_score ?? "—"}</TableCell>
                       <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
                         {e.nps_comment || "—"}
                       </TableCell>
