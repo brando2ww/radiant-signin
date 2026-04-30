@@ -133,8 +133,8 @@ export function TransferItemsDialog({
     try {
       await transferItems({
         itemIds: items.map((i) => i.id),
-        targetComandaId,
-        sourceComandaId: sourceComanda.id,
+        targetKind: "comanda",
+        targetId: targetComandaId,
       });
       const fromLabel = sourceTable
         ? formatTableLabel(sourceTable.table_number)

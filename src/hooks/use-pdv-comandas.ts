@@ -394,72 +394,40 @@ export function usePDVComandas() {
     },
   });
 
-  // Transfer items to another comanda (atomic batch)
+  // Transfer items to another comanda or table (uses RPC pdv_transfer_items, supports partial qty)
   const transferItemsMutation = useMutation({
     mutationFn: async ({
       itemIds,
-      targetComandaId,
-      sourceComandaId,
+      targetKind = "comanda",
+      targetId,
+      qtyMap,
+      reason,
     }: {
       itemIds: string[];
-      targetComandaId: string;
-      sourceComandaId: string;
+      targetKind?: "comanda" | "table";
+      targetId: string;
+      qtyMap?: Record<string, number>;
+      reason?: string | null;
+      // backward-compat (callers passing targetComandaId/sourceComandaId)
+      targetComandaId?: string;
+      sourceComandaId?: string;
     }) => {
       if (!itemIds.length) throw new Error("Nenhum item selecionado");
-      if (targetComandaId === sourceComandaId)
-        throw new Error("Origem e destino não podem ser iguais");
-
-      // 1. Validar comanda destino
-      const { data: target, error: targetErr } = await supabase
-        .from("pdv_comandas")
-        .select("id,status")
-        .eq("id", targetComandaId)
-        .maybeSingle();
-      if (targetErr) throw targetErr;
-      if (!target) throw new Error("Comanda destino não encontrada");
-      if (
-        ["em_cobranca", "aguardando_pagamento", "fechada", "cancelada"].includes(
-          (target as any).status,
-        )
-      )
-        throw new Error("Comanda destino não está disponível para receber itens");
-
-      // 2. Validar comanda origem (não permitir mover de comanda em cobrança)
-      const { data: source, error: sourceErr } = await supabase
-        .from("pdv_comandas")
-        .select("id,status")
-        .eq("id", sourceComandaId)
-        .maybeSingle();
-      if (sourceErr) throw sourceErr;
-      if (
-        source &&
-        ["em_cobranca", "aguardando_pagamento"].includes((source as any).status)
-      )
-        throw new Error("Comanda origem está em cobrança — não é possível mover itens");
-
-      // 3. Update atômico via .in()
-      const { error } = await supabase
-        .from("pdv_comanda_items")
-        .update({ comanda_id: targetComandaId })
-        .in("id", itemIds);
+      const { data, error } = await supabase.rpc("pdv_transfer_items", {
+        p_item_ids: itemIds,
+        p_qty_map: (qtyMap ?? {}) as any,
+        p_target_kind: targetKind,
+        p_target_id: targetId,
+        p_reason: reason ?? null,
+      });
       if (error) throw error;
-
-      // 4. Log
-      if (user?.id) {
-        await logActivityDirect(user.id, "update", "transaction", targetComandaId, {
-          action: "comanda_item_transfer",
-          source_comanda_id: sourceComandaId,
-          target_comanda_id: targetComandaId,
-          item_ids: itemIds,
-          count: itemIds.length,
-        });
-      }
-
-      return { itemIds, targetComandaId, sourceComandaId };
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pdv-comanda-items"] });
       queryClient.invalidateQueries({ queryKey: ["pdv-comandas"] });
+      queryClient.invalidateQueries({ queryKey: ["pdv-tables"] });
+      queryClient.invalidateQueries({ queryKey: ["pdv-orders"] });
     },
     onError: (error) => {
       toast.error("Erro ao transferir item: " + error.message);

@@ -23,6 +23,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { TableComandasSection } from "./TableComandasSection";
 import { formatBRL } from "@/lib/format";
+import { ActionMenu } from "./operations/ActionMenu";
+import { ChangeTableDialog } from "./operations/ChangeTableDialog";
+import { OperationHistoryDialog } from "./operations/OperationHistoryDialog";
+import { usePDVPermissions } from "@/hooks/use-pdv-permissions";
 
 interface Comanda {
   id: string;
@@ -79,20 +83,33 @@ export function TableDetailsDialog({
   isCreatingComanda,
 }: TableDetailsDialogProps) {
   const [deleteDialog, setDeleteDialog] = useState(false);
+  const [changeTableOpen, setChangeTableOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const { can } = usePDVPermissions();
 
   if (!table) return null;
 
   const statusConfig = STATUS_CONFIG[table.status] || STATUS_CONFIG.livre;
   const isOccupied = table.status !== "livre";
+  const isAwaitingPayment = table.status === "pendente_pagamento" || table.status === "pediu_conta";
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <DialogTitle>{formatTableLabel(table.table_number)}</DialogTitle>
-              <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+                {isOccupied && (
+                  <ActionMenu
+                    contextLabel={formatTableLabel(table.table_number)}
+                    onChangeTable={can("change_table") ? () => setChangeTableOpen(true) : undefined}
+                    onHistory={() => setHistoryOpen(true)}
+                  />
+                )}
+              </div>
             </div>
           </DialogHeader>
 
@@ -248,6 +265,21 @@ export function TableDetailsDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ChangeTableDialog
+        open={changeTableOpen}
+        onOpenChange={setChangeTableOpen}
+        sourceTable={table}
+        onChanged={() => onOpenChange(false)}
+      />
+
+      <OperationHistoryDialog
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        sourceId={table.current_order_id ?? table.id}
+        targetId={table.id}
+        title={`Histórico — ${formatTableLabel(table.table_number)}`}
+      />
     </>
   );
 }
