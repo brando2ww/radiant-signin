@@ -9,6 +9,7 @@ import { PDVTransactionFilters } from "@/components/pdv/financial/PDVTransaction
 import { PDVTransactionList } from "@/components/pdv/financial/PDVTransactionList";
 import { PDVTransactionDialog } from "@/components/pdv/financial/PDVTransactionDialog";
 import { MarkAsPaidDialog } from "@/components/pdv/financial/MarkAsPaidDialog";
+import { PaymentFeesReport } from "@/components/pdv/financial/PaymentFeesReport";
 import type { PDVFinancialTransaction } from "@/hooks/use-pdv-financial-transactions";
 
 export default function FinancialTransactions() {
@@ -84,6 +85,8 @@ export default function FinancialTransactions() {
       </div>
 
       <FinancialStatsCards stats={stats} />
+
+      <PaymentFeesReport />
 
       <Card>
         <CardHeader>
