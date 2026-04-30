@@ -193,23 +193,12 @@ export function CampaignResponses({ campaignId }: Props) {
                       <p className="text-sm font-medium">
                         {answer.evaluation_campaign_questions?.question_text || "Pergunta não encontrada"}
                       </p>
-                      <div className="flex items-center gap-0.5">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star
-                            key={s}
-                            className={`h-4 w-4 ${
-                              s <= answer.score ? "text-amber-500 fill-amber-500" : "text-muted-foreground/20"
-                            }`}
-                          />
-                        ))}
-                        <span className="ml-2 text-sm text-muted-foreground">{answer.score}/5</span>
-                      </div>
-                      {answer.comment && (
-                        <div className="flex items-start gap-1.5 text-sm bg-muted/50 p-2 rounded mt-1">
-                          <MessageSquare className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground" />
-                          <span>{answer.comment}</span>
-                        </div>
-                      )}
+                      <AnswerValue
+                        questionType={answer.question_type}
+                        score={answer.score}
+                        selectedOptions={answer.selected_options}
+                        comment={answer.comment}
+                      />
                     </div>
                   ))}
                 </div>
