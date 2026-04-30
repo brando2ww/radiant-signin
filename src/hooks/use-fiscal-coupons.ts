@@ -66,16 +66,16 @@ export interface FiscalCouponsFilter {
 }
 
 export function useFiscalCoupons(filter: FiscalCouponsFilter = {}) {
-  const { establishmentId } = useEstablishmentId();
+  const { visibleUserId } = useEstablishmentId();
 
   return useQuery({
-    queryKey: ["fiscal-coupons", establishmentId, filter],
-    enabled: !!establishmentId,
+    queryKey: ["fiscal-coupons", visibleUserId, filter],
+    enabled: !!visibleUserId,
     queryFn: async (): Promise<FiscalCoupon[]> => {
       let q = supabase
         .from("pdv_nfce_emissions")
         .select("*")
-        .eq("user_id", establishmentId!)
+        .eq("user_id", visibleUserId!)
         .order("data_emissao", { ascending: false })
         .limit(500);
 
