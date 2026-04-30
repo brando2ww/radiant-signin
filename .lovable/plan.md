@@ -1,57 +1,33 @@
-## Diagnóstico
+## Objetivo
 
-A tela `/tarefas/:userId` (acessada via PIN/QR) decide quais checklists a pessoa vê em `src/hooks/use-checklist-execution.ts → fetchAssignedSchedules`:
+No painel de Dashboard dos Checklists (`/pdv/tarefas` → aba Dashboard), o card **"Concluídos"** passa a ser clicável. Ao clicar, abrirá um dialog mostrando todas as execuções concluídas do dia selecionado, com a possibilidade de expandir cada uma para ver as respostas item por item (incluindo valor preenchido, observações e fotos).
 
-```ts
-const isManager = accessLevel === "lider" || accessLevel === "gestor";
-if (isManager) return true; // vê todos os schedules do dia
-// senão filtra por assigned_operator_id → assigned_sector → checklists.sector
-```
+## Mudanças
 
-O cadastro de operador (`OperatorDrawer.tsx`) tem somente 3 valores possíveis para `access_level`:
+### 1. `src/components/pdv/checklists/DashboardPanel.tsx`
+- Adicionar prop `onClick` opcional ao `MetricCard` (com hover/cursor-pointer quando presente).
+- Passar `onClick` apenas no card "Concluídos" para abrir o novo dialog.
+- Adicionar estado local `completedDialogOpen` e renderizar `<CompletedExecutionsDialog date={date} open={...} onOpenChange={...} />`.
 
-- `operador` — só executa
-- `lider` — executa e acompanha
-- `gestor` — acesso total
+### 2. Novo componente `src/components/pdv/checklists/CompletedExecutionsDialog.tsx`
+- Dialog (não-modal, padrão do projeto) com título "Checklists concluídos — {data formatada pt-BR}".
+- Busca via Supabase: `checklist_executions` filtrando `user_id = visibleUserId`, `execution_date = date` e `status = 'concluido'`, com joins em `checklists(name, sector)` e `checklist_operators(name)`.
+- Lista usando `Accordion` (já disponível em `@/components/ui/accordion`):
+  - **Header de cada item**: nome do checklist, setor, operador, horário de conclusão (HH:mm pt-BR), badge com score `X/100`.
+  - **Conteúdo expandido**: lista dos `checklist_execution_items` da execução com join em `checklist_items(title, item_type, is_critical, requires_photo, sort_order)` ordenados por `sort_order`. Para cada item exibe:
+    - título + ícone check (verde) ou X (cinza) conforme `completed_at`;
+    - valor renderizado conforme `item_type` (checkbox sim/não, número, texto, seleção, foto via `<img>` quando `value` for URL ou `evidence_url`);
+    - observações (`notes`) se houver;
+    - badges "Crítico" / "Foto obrigatória" quando aplicável.
+- Estado vazio: "Nenhum checklist concluído neste dia.".
+- Skeleton durante loading.
 
-A Louise é "gerente" no sentido humano, mas no cadastro de **Operador de Checklist** ela provavelmente está como `operador` (default ao criar) com setor `salao`. Com isso ela só enxerga checklists do setor salão (ex.: "Abertura de Salão"). Não é bug de RLS nem de schedule — é o `access_level` dela que não é `gestor`/`lider`.
+### 3. Detalhes técnicos
+- Usar `useEstablishmentId` para obter `visibleUserId`.
+- Buscar itens de execução via uma query lazy por execução (carregada só quando o accordion abre) usando `useQuery` por `executionId` para evitar carregar tudo de uma vez.
+- Datas formatadas com `date-fns` + `ptBR` locale (regra do projeto).
+- Cores e estilos seguindo tokens padrão (sem cores customizadas).
 
-Confirmação rápida via SQL (faço durante a implementação):
-
-```sql
-SELECT name, sector, access_level, is_active
-FROM checklist_operators
-WHERE name ILIKE '%louise%';
-```
-
-## O que vou fazer
-
-### 1. Corrigir cadastro da Louise (e similares)
-Atualizar o `access_level` da Louise para `gestor` (ela é gerente). Faço isso via migration pontual após confirmar o registro com SELECT.
-
-### 2. Tornar o nível visível na UI de Operadores
-Em `src/components/pdv/checklists/OperatorsManager.tsx` e nos cards (`OperatorCard.tsx`), exibir um **badge claro** com o nível ("Operador" / "Líder" / "Gestor") e o setor. Hoje o nível fica escondido — o gestor cadastra como "operador" sem perceber.
-
-### 3. Aviso ao criar/editar operador
-No `OperatorDrawer.tsx`, deixar o seletor de nível mais explícito (já existe, mas com cópia ambígua). Adicionar uma **dica visual** ao lado do nome: "Quem deve ver TODOS os checklists? Marque como Gestor."
-
-### 4. Pequeno ajuste defensivo no filtro
-Em `fetchAssignedSchedules`, normalizar o `access_level` (trim + lowercase) antes de comparar, para evitar regressões caso o valor venha com espaço/caixa diferente. Sem mudar a regra: `lider` e `gestor` continuam vendo tudo.
-
-### 5. Mensagem na tela pública
-Em `PublicTasks.tsx`, quando o operador for `operador` e a lista vier vazia, mostrar texto explicativo:
-
-> "Nenhum checklist atribuído ao seu setor (X) hoje. Se você é responsável por outros setores, peça ao gestor para alterar seu nível de acesso."
-
-## Arquivos afetados
-
-- `src/hooks/use-checklist-execution.ts` — normalizar `accessLevel`
-- `src/pages/PublicTasks.tsx` — mensagem contextual
-- `src/components/pdv/checklists/OperatorsManager.tsx` / `team/OperatorCard.tsx` — badge de nível
-- `src/components/pdv/checklists/team/OperatorDrawer.tsx` — dica visual
-- 1 migration SQL pontual para promover a Louise a `gestor`
-
-## Fora de escopo
-Não vou alterar a regra "líder vê tudo" agora — embora discutível (líder normalmente é de um setor), mexer nisso pode quebrar outros operadores. Se quiser que líder veja só o próprio setor + agregado da equipe, abro como tarefa separada.
-
-Aprove para implementar.
+## Fora do escopo
+- Não altera lógica de cálculo de métricas nem o banco.
+- Não adiciona edição/reabertura de checklists concluídos (apenas visualização).
