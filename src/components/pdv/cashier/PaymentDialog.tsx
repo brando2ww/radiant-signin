@@ -192,6 +192,16 @@ export function PaymentDialog({
   const { emitNFCe, isEmitting } = useNFCeEmission();
   const { settings } = usePDVSettings();
 
+  // Configuração global da taxa de serviço (vem das pdv_settings)
+  const serviceFeeAllowed = settings?.enable_service_fee ?? true;
+  const serviceFeePercentage = Number(settings?.service_fee_percentage ?? 10);
+  const serviceFeeRate = serviceFeePercentage / 100;
+
+  // Quando o estabelecimento desativa a taxa, força o switch local em off.
+  useEffect(() => {
+    if (!serviceFeeAllowed) setServiceFeeEnabled(false);
+  }, [serviceFeeAllowed]);
+
   // Edição do pedido (correção pelo caixa)
   const [itemToRemove, setItemToRemove] = useState<ComandaItem | null>(null);
   // IDs removidos otimisticamente — garante que o item suma do Resumo
