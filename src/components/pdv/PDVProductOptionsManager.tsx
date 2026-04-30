@@ -619,10 +619,30 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
           <CardContent className="space-y-2">
             {option.items.map((item) => {
               const linkedRecipe = item.recipes && item.recipes[0];
+              const isProductKind = (item as any).item_kind === "product";
+              const linkedProductId = (item as any).linked_product_id as string | null | undefined;
+              const linkedProduct = linkedProductId
+                ? pdvProducts.find((p) => p.id === linkedProductId)
+                : null;
               return (
                 <div key={item.id} className="space-y-1">
                   <div className="flex items-center gap-2 py-1">
                     <GripVertical className="h-4 w-4 text-muted-foreground" />
+                    <Badge
+                      variant="outline"
+                      className="gap-1 shrink-0"
+                      title={isProductKind ? "Produto vinculado" : "Insumo / receita"}
+                    >
+                      {isProductKind ? (
+                        <>
+                          <Package className="h-3 w-3" /> Produto
+                        </>
+                      ) : (
+                        <>
+                          <Boxes className="h-3 w-3" /> Insumo
+                        </>
+                      )}
+                    </Badge>
                     <Input
                       value={item.name}
                       onChange={(e) =>
@@ -640,74 +660,147 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                       placeholder="+ R$"
                       className="w-24 h-8"
                     />
-                    <Popover
-                      modal
-                      open={ingredientPopoverOpen === item.id}
-                      onOpenChange={(open) => {
-                        setIngredientPopoverOpen(open ? item.id : null);
-                        if (!open) setIngredientSearch("");
-                      }}
-                    >
-                      <PopoverTrigger asChild>
-                        <Button
-                          type="button"
-                          variant={linkedRecipe ? "secondary" : "ghost"}
-                          size="icon"
-                          className="h-8 w-8"
-                          title={
-                            linkedRecipe ? "Trocar insumo vinculado" : "Vincular insumo"
-                          }
-                        >
-                          <Boxes className="h-3.5 w-3.5" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-72 p-2" align="end">
-                        <div className="space-y-2">
-                          <div className="relative">
-                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                            <Input
-                              placeholder="Buscar insumo..."
-                              value={ingredientSearch}
-                              onChange={(e) => setIngredientSearch(e.target.value)}
-                              className="pl-7 h-8 text-xs"
-                              autoFocus
-                            />
-                          </div>
-                          <ScrollArea className="h-48">
-                            <div className="space-y-1">
-                              {filteredIngredients.slice(0, 30).map((ing) => (
-                                <button
-                                  key={ing.id}
-                                  type="button"
-                                  onClick={() =>
-                                    handleLinkIngredient(option.id, item.id, ing)
-                                  }
-                                  className="w-full text-left p-2 rounded text-xs hover:bg-accent transition-colors"
-                                >
-                                  <p className="font-medium">{ing.name}</p>
-                                  <p className="text-muted-foreground">
-                                    Estoque: {ing.current_stock} {ing.unit}
-                                  </p>
-                                </button>
-                              ))}
-                              {filteredIngredients.length === 0 && (
-                                <p className="text-xs text-muted-foreground text-center py-4">
-                                  Nenhum insumo encontrado
-                                </p>
-                              )}
+
+                    {!isProductKind && (
+                      <Popover
+                        modal
+                        open={ingredientPopoverOpen === item.id}
+                        onOpenChange={(open) => {
+                          setIngredientPopoverOpen(open ? item.id : null);
+                          if (!open) setIngredientSearch("");
+                        }}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant={linkedRecipe ? "secondary" : "ghost"}
+                            size="icon"
+                            className="h-8 w-8"
+                            title={
+                              linkedRecipe ? "Trocar insumo vinculado" : "Vincular insumo"
+                            }
+                          >
+                            <Boxes className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72 p-2" align="end">
+                          <div className="space-y-2">
+                            <div className="relative">
+                              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                              <Input
+                                placeholder="Buscar insumo..."
+                                value={ingredientSearch}
+                                onChange={(e) => setIngredientSearch(e.target.value)}
+                                className="pl-7 h-8 text-xs"
+                                autoFocus
+                              />
                             </div>
-                          </ScrollArea>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                    {linkedRecipe && (
+                            <ScrollArea className="h-48">
+                              <div className="space-y-1">
+                                {filteredIngredients.slice(0, 30).map((ing) => (
+                                  <button
+                                    key={ing.id}
+                                    type="button"
+                                    onClick={() =>
+                                      handleLinkIngredient(option.id, item.id, ing)
+                                    }
+                                    className="w-full text-left p-2 rounded text-xs hover:bg-accent transition-colors"
+                                  >
+                                    <p className="font-medium">{ing.name}</p>
+                                    <p className="text-muted-foreground">
+                                      Estoque: {ing.current_stock} {ing.unit}
+                                    </p>
+                                  </button>
+                                ))}
+                                {filteredIngredients.length === 0 && (
+                                  <p className="text-xs text-muted-foreground text-center py-4">
+                                    Nenhum insumo encontrado
+                                  </p>
+                                )}
+                              </div>
+                            </ScrollArea>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+
+                    {isProductKind && (
+                      <Popover
+                        modal
+                        open={productPopoverOpen === item.id}
+                        onOpenChange={(open) => {
+                          setProductPopoverOpen(open ? item.id : null);
+                          if (!open) setProductSearch("");
+                        }}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="Trocar produto vinculado"
+                          >
+                            <Package className="h-3.5 w-3.5" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72 p-2" align="end">
+                          <div className="space-y-2">
+                            <div className="relative">
+                              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                              <Input
+                                placeholder="Buscar produto..."
+                                value={productSearch}
+                                onChange={(e) => setProductSearch(e.target.value)}
+                                className="pl-7 h-8 text-xs"
+                                autoFocus
+                              />
+                            </div>
+                            <ScrollArea className="h-48">
+                              <div className="space-y-1">
+                                {filteredProducts(productId).slice(0, 30).map((p) => (
+                                  <button
+                                    key={p.id}
+                                    type="button"
+                                    onClick={() =>
+                                      handleLinkProductToItem(option.id, item.id, {
+                                        id: p.id,
+                                        name: p.name,
+                                        price: Number(p.price_salon) || 0,
+                                      })
+                                    }
+                                    className="w-full text-left p-2 rounded text-xs hover:bg-accent transition-colors"
+                                  >
+                                    <p className="font-medium">{p.name}</p>
+                                    <p className="text-muted-foreground">
+                                      {p.category}
+                                    </p>
+                                  </button>
+                                ))}
+                                {filteredProducts(productId).length === 0 && (
+                                  <p className="text-xs text-muted-foreground text-center py-4">
+                                    Nenhum produto encontrado
+                                  </p>
+                                )}
+                              </div>
+                            </ScrollArea>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+
+                    {(linkedRecipe || isProductKind) && (
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8 text-muted-foreground"
-                        onClick={() => handleUnlinkIngredient(option.id, item.id)}
-                        title="Desvincular insumo"
+                        onClick={() =>
+                          isProductKind
+                            ? handleUnlinkProduct(option.id, item.id)
+                            : handleUnlinkIngredient(option.id, item.id)
+                        }
+                        title={isProductKind ? "Desvincular produto" : "Desvincular insumo"}
                       >
                         <X className="h-3.5 w-3.5" />
                       </Button>
@@ -728,7 +821,7 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  {linkedRecipe && (
+                  {!isProductKind && linkedRecipe && (
                     <div className="ml-7 flex items-center gap-2 p-2 rounded bg-muted/50 text-xs">
                       <Badge variant="outline" className="gap-1">
                         <Boxes className="h-3 w-3" />
@@ -751,6 +844,17 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                       />
                       <span className="text-muted-foreground">
                         {linkedRecipe.ingredient_unit}
+                      </span>
+                    </div>
+                  )}
+                  {isProductKind && (
+                    <div className="ml-7 flex items-center gap-2 p-2 rounded bg-muted/50 text-xs">
+                      <Badge variant="outline" className="gap-1">
+                        <Package className="h-3 w-3" />
+                        {linkedProduct ? linkedProduct.name : "Produto vinculado"}
+                      </Badge>
+                      <span className="text-muted-foreground">
+                        usa receita e fiscal do produto
                       </span>
                     </div>
                   )}
