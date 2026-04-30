@@ -152,9 +152,14 @@ export default function PublicTasks() {
           </div>
         ) : schedules.length === 0 ? (
           <Card>
-            <CardContent className="py-12 text-center text-muted-foreground text-sm">
+            <CardContent className="py-12 text-center text-muted-foreground text-sm space-y-2">
               <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-40" />
-              Nenhum checklist atribuído para hoje.
+              <p>Nenhum checklist disponível para você hoje.</p>
+              {operator.access_level !== "gestor" && operator.access_level !== "lider" && (
+                <p className="text-xs">
+                  Você está vinculado ao setor <strong>{operator.sector}</strong>. Se precisa ver outros setores, peça ao gestor para ajustar seu nível de acesso.
+                </p>
+              )}
             </CardContent>
           </Card>
         ) : (
