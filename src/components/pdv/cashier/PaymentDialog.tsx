@@ -224,9 +224,12 @@ export function PaymentDialog({
       : [];
 
   // Fallback para Balcão (comanda virtual sem registro real em pdv_comandas)
-  const displayItems: ComandaItem[] = liveItemsForPayment.length > 0
+  const rawDisplayItems: ComandaItem[] = liveItemsForPayment.length > 0
     ? liveItemsForPayment
     : (isTablePayment ? tableItems : items);
+  const displayItems: ComandaItem[] = rawDisplayItems.filter(
+    (it) => !optimisticallyRemoved.has(it.id),
+  );
 
   const liveSubtotal = displayItems.reduce(
     (sum, it) => sum + Number(it.subtotal || 0),
