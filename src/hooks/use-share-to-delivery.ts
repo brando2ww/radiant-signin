@@ -71,6 +71,16 @@ export const useShareToDelivery = () => {
         .single();
 
       if (error) throw error;
+
+      // Clonar opções/itens do PDV para o produto recém-criado no delivery
+      try {
+        await supabase.rpc("delivery_clone_options_from_pdv" as any, {
+          p_pdv_product_id: product.id,
+        });
+      } catch (e) {
+        console.warn("[useShareToDelivery] falha ao clonar opções", e);
+      }
+
       return data;
     },
     onSuccess: () => {
