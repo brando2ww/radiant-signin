@@ -152,6 +152,8 @@ export function PaymentDialog({
     authorizedBy?: string;
   } | null>(null);
   const [serviceFeeEnabled, setServiceFeeEnabled] = useState(true);
+  // Settings carregam um pouco depois do mount; quando vierem com taxa
+  // desativada, sincronizamos o estado local para refletir a configuração.
   
   // Split payment
   const [splitEnabled, setSplitEnabled] = useState(false);
@@ -189,6 +191,16 @@ export function PaymentDialog({
   const { products: productsList } = usePDVProducts();
   const { emitNFCe, isEmitting } = useNFCeEmission();
   const { settings } = usePDVSettings();
+
+  // Configuração global da taxa de serviço (vem das pdv_settings)
+  const serviceFeeAllowed = settings?.enable_service_fee ?? true;
+  const serviceFeePercentage = Number(settings?.service_fee_percentage ?? 10);
+  const serviceFeeRate = serviceFeePercentage / 100;
+
+  // Quando o estabelecimento desativa a taxa, força o switch local em off.
+  useEffect(() => {
+    if (!serviceFeeAllowed) setServiceFeeEnabled(false);
+  }, [serviceFeeAllowed]);
 
   // Edição do pedido (correção pelo caixa)
   const [itemToRemove, setItemToRemove] = useState<ComandaItem | null>(null);
@@ -295,7 +307,7 @@ export function PaymentDialog({
   const previewExceedsSubtotal = computedDiscountAmount > subtotal && subtotal > 0;
 
   // Calculate service fee (10%)
-  const serviceFeeAmount = serviceFeeEnabled ? (subtotal - discountAmount) * 0.1 : 0;
+  const serviceFeeAmount = serviceFeeEnabled && serviceFeeAllowed ? (subtotal - discountAmount) * serviceFeeRate : 0;
 
   // Final total
   const total = Math.max(0, subtotal - discountAmount + serviceFeeAmount);
@@ -1225,7 +1237,7 @@ export function PaymentDialog({
                           {formatCurrency(
                             Math.max(
                               0,
-                              subtotal - computedDiscountAmount + (serviceFeeEnabled ? (subtotal - computedDiscountAmount) * 0.1 : 0),
+                              subtotal - computedDiscountAmount + (serviceFeeEnabled && serviceFeeAllowed ? (subtotal - computedDiscountAmount) * serviceFeeRate : 0),
                             ),
                           )}
                         </span>
@@ -1368,17 +1380,19 @@ export function PaymentDialog({
                   )}
                 </div>
 
-                {/* Service Fee Toggle */}
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="service-fee" className="text-sm cursor-pointer">
-                    Taxa de serviço (10%)
-                  </Label>
-                  <Switch
-                    id="service-fee"
-                    checked={serviceFeeEnabled}
-                    onCheckedChange={setServiceFeeEnabled}
-                  />
-                </div>
+                {/* Service Fee Toggle — só aparece se ativado nas configurações */}
+                {serviceFeeAllowed && (
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="service-fee" className="text-sm cursor-pointer">
+                      Taxa de serviço ({serviceFeePercentage}%)
+                    </Label>
+                    <Switch
+                      id="service-fee"
+                      checked={serviceFeeEnabled}
+                      onCheckedChange={setServiceFeeEnabled}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
 
