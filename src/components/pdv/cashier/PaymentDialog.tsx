@@ -192,11 +192,20 @@ export function PaymentDialog({
 
   // Edição do pedido (correção pelo caixa)
   const [itemToRemove, setItemToRemove] = useState<ComandaItem | null>(null);
+  // IDs removidos otimisticamente — garante que o item suma do Resumo
+  // imediatamente, mesmo no fallback de Balcão (props snapshot).
+  const [optimisticallyRemoved, setOptimisticallyRemoved] = useState<Set<string>>(new Set());
   const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [addItemQty, setAddItemQty] = useState("1");
   const [addItemNotes, setAddItemNotes] = useState("");
+
+  // Limpa o set de remoções otimistas quando o dialog fecha,
+  // evitando vazamento entre aberturas consecutivas.
+  useEffect(() => {
+    if (!open) setOptimisticallyRemoved(new Set());
+  }, [open]);
 
   // Comandas envolvidas neste pagamento (1 ou várias)
   const involvedComandas: Comanda[] = table
@@ -221,9 +230,12 @@ export function PaymentDialog({
       : [];
 
   // Fallback para Balcão (comanda virtual sem registro real em pdv_comandas)
-  const displayItems: ComandaItem[] = liveItemsForPayment.length > 0
+  const rawDisplayItems: ComandaItem[] = liveItemsForPayment.length > 0
     ? liveItemsForPayment
     : (isTablePayment ? tableItems : items);
+  const displayItems: ComandaItem[] = rawDisplayItems.filter(
+    (it) => !optimisticallyRemoved.has(it.id),
+  );
 
   const liveSubtotal = displayItems.reduce(
     (sum, it) => sum + Number(it.subtotal || 0),
@@ -1855,7 +1867,13 @@ export function PaymentDialog({
             onClick={(e) => {
               e.preventDefault();
               if (!itemToRemove) return;
-              removeItem(itemToRemove.id);
+              const id = itemToRemove.id;
+              setOptimisticallyRemoved((prev) => {
+                const next = new Set(prev);
+                next.add(id);
+                return next;
+              });
+              removeItem(id);
               setItemToRemove(null);
             }}
           >

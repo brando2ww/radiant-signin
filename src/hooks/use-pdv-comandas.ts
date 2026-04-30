@@ -384,13 +384,36 @@ export function usePDVComandas() {
 
       if (error) throw error;
     },
+    onMutate: async (id: string) => {
+      // Atualização otimista: remove o item de todas as queries de items em cache
+      // para que a UI reflita a remoção instantaneamente, sem esperar o refetch.
+      await queryClient.cancelQueries({ queryKey: ["pdv-comanda-items"] });
+      const snapshots = queryClient.getQueriesData<ComandaItem[]>({
+        queryKey: ["pdv-comanda-items"],
+      });
+      snapshots.forEach(([key, data]) => {
+        if (Array.isArray(data)) {
+          queryClient.setQueryData(
+            key,
+            data.filter((it) => it.id !== id),
+          );
+        }
+      });
+      return { snapshots };
+    },
+    onError: (error, _id, ctx) => {
+      // Rollback: restaura snapshots se o delete falhar no servidor
+      ctx?.snapshots?.forEach(([key, data]) => {
+        queryClient.setQueryData(key, data);
+      });
+      toast.error("Erro ao remover item: " + error.message);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pdv-comanda-items"] });
-      queryClient.invalidateQueries({ queryKey: ["pdv-comandas"] });
       toast.success("Item removido!");
     },
-    onError: (error) => {
-      toast.error("Erro ao remover item: " + error.message);
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["pdv-comanda-items"] });
+      queryClient.invalidateQueries({ queryKey: ["pdv-comandas"] });
     },
   });
 
