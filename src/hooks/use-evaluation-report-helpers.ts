@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface EvaluationQuestionInfo {
+  text: string;
+  type: string;
+  options: string[] | null;
+}
+
 export function useEvaluationQuestionTexts() {
   return useQuery({
     queryKey: ["evaluation-question-texts"],
@@ -8,7 +14,7 @@ export function useEvaluationQuestionTexts() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Não autenticado");
 
-      // Fetch from evaluation_questions (legacy)
+      // Fetch from evaluation_questions (legacy — always stars)
       const { data: legacyQ } = await supabase
         .from("evaluation_questions")
         .select("id, question_text")
@@ -17,11 +23,22 @@ export function useEvaluationQuestionTexts() {
       // Fetch from evaluation_campaign_questions
       const { data: campQ } = await supabase
         .from("evaluation_campaign_questions")
-        .select("id, question_text");
+        .select("id, question_text, question_type, options");
 
-      const map = new Map<string, string>();
-      (legacyQ || []).forEach(q => map.set(q.id, q.question_text));
-      (campQ || []).forEach(q => map.set(q.id, q.question_text));
+      const map = new Map<string, EvaluationQuestionInfo>();
+      (legacyQ || []).forEach((q: any) =>
+        map.set(q.id, { text: q.question_text, type: "stars", options: null })
+      );
+      (campQ || []).forEach((q: any) => {
+        const opts = Array.isArray(q.options)
+          ? q.options.map(String)
+          : (typeof q.options === "string" ? (() => { try { const p = JSON.parse(q.options); return Array.isArray(p) ? p.map(String) : null; } catch { return null; } })() : null);
+        map.set(q.id, {
+          text: q.question_text,
+          type: q.question_type || "stars",
+          options: opts,
+        });
+      });
       return map;
     },
   });
