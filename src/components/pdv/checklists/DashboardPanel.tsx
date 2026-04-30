@@ -245,6 +245,13 @@ export function DashboardPanel({ onNavigate, onQrOpen, onGenerateDaily, isGenera
         open={completedDialogOpen}
         onOpenChange={setCompletedDialogOpen}
         date={date}
+        status="concluido"
+      />
+      <CompletedExecutionsDialog
+        open={overdueDialogOpen}
+        onOpenChange={setOverdueDialogOpen}
+        date={date}
+        status="atrasado"
       />
     </div>
   );
