@@ -82,9 +82,10 @@ export function CompletedExecutionsDialog({ open, onOpenChange, date, status = "
                         <p className="font-medium truncate">{exec.checklists?.name || "Checklist"}</p>
                         <p className="text-xs text-muted-foreground truncate">
                           {exec.checklists?.sector || "—"} · {exec.checklist_operators?.name || "—"}
-                          {exec.completed_at && (
-                            <> · {format(new Date(exec.completed_at), "HH:mm", { locale: ptBR })}</>
-                          )}
+                          {(() => {
+                            const ts = status === "concluido" ? exec.completed_at : (exec.started_at || exec.completed_at);
+                            return ts ? <> · {format(new Date(ts), "HH:mm", { locale: ptBR })}</> : null;
+                          })()}
                         </p>
                       </div>
                       {exec.score != null && (
