@@ -1237,7 +1237,7 @@ export function PaymentDialog({
                           {formatCurrency(
                             Math.max(
                               0,
-                              subtotal - computedDiscountAmount + (serviceFeeEnabled ? (subtotal - computedDiscountAmount) * 0.1 : 0),
+                              subtotal - computedDiscountAmount + (serviceFeeEnabled && serviceFeeAllowed ? (subtotal - computedDiscountAmount) * serviceFeeRate : 0),
                             ),
                           )}
                         </span>
