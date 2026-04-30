@@ -270,14 +270,17 @@ export function PaymentDialog({
   // Durante "typing"/"confirming" o operador ainda não decidiu, então o total fica intacto
   const discountAmount = appliedDiscount?.amount ?? 0;
 
+  // Valor calculado do desconto a partir do que está digitado (independe do stage).
+  // Necessário porque o operador clica "Confirmar" quando o stage já mudou para "confirming".
+  const computedDiscountAmount = (() => {
+    const v = parseFloat(discountValue) || 0;
+    if (v <= 0) return 0;
+    return discountTypeChosen === "percent" ? (subtotal * v) / 100 : v;
+  })();
   // Preview enquanto digita (não afeta o total mostrado)
-  const previewAmount = discountStage === "typing"
-    ? (discountTypeChosen === "percent"
-        ? (subtotal * (parseFloat(discountValue) || 0)) / 100
-        : parseFloat(discountValue) || 0)
-    : 0;
+  const previewAmount = discountStage === "typing" ? computedDiscountAmount : 0;
   const previewPercent = subtotal > 0 ? (previewAmount / subtotal) * 100 : 0;
-  const previewExceedsSubtotal = previewAmount > subtotal && subtotal > 0;
+  const previewExceedsSubtotal = computedDiscountAmount > subtotal && subtotal > 0;
 
   // Calculate service fee (10%)
   const serviceFeeAmount = serviceFeeEnabled ? (subtotal - discountAmount) * 0.1 : 0;
