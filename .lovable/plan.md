@@ -1,112 +1,144 @@
+## Objetivo
 
-# Gerenciamento de Cupons Fiscais (NFC-e)
+Implementar troca de mesa, transferências de consumo entre mesas/comandas (todas as direções), pagamento parcial por item **executado exclusivamente pelo caixa**, fluxo "garçom encerra atendimento → caixa cobra", permissões granulares por perfil e auditoria — disponíveis no Salão, Mesas, Comandas, Caixa e Garçom (mobile/PWA), com sincronização realtime.
 
-Atualmente o sistema já emite NFC-e (edge function `emit-nfce`) e armazena cada emissão na tabela `pdv_nfce_emissions`, mas **não existe nenhuma tela** para o usuário visualizar, filtrar, baixar ou reprocessar esses cupons. A página `/pdv/notas-fiscais` cuida apenas das NF-e de **entrada** (compras de fornecedores).
+## Regra central de pagamento (NOVA)
 
-Este plano cria um módulo dedicado para os cupons **emitidos** (saída), com listagem, filtros, detalhamento, ações (DANFE, XML, cancelamento, reenvio, consulta de status) e indicadores.
+- **Garçom nunca cobra**, nem total nem parcial. Garçom apenas:
+  1. Lança itens.
+  2. **Encerra o atendimento** da mesa/comanda (ação "Pedir conta / Encerrar"), opcionalmente marcando os itens que devem ser cobrados juntos (separação de conta).
+- **Caixa é o único** que executa pagamento (total ou parcial).
+- **A comanda/mesa só desaparece da tela quando o caixa finaliza o pagamento integral.** Encerrar pelo garçom apenas muda o status para `aguardando_pagamento` e envia para a fila do caixa — segue visível para todos com status claro.
 
----
+## O que já existe (reuso)
 
-## 1. Nova rota e navegação
+- `transferItems` (em `use-pdv-comandas.ts`) move itens entre comandas via update do `comanda_id`.
+- `TransferItemsDialog` em `src/components/pdv/transfer/`, usado em `Salon.tsx`, `Comandas.tsx` e `GarcomComandaDetalhe.tsx`.
+- `PaymentDialog` (caixa) já suporta modo "Por produto" (parcial) com `paid_quantity` e lock atômico via `pdv_lock_comanda_items`.
+- `pdv_orders.status` já tem `pendente_pagamento` / `aguardando_pagamento` e o fluxo "fechar mesa → PaymentDialog" já existe (memória `comandas-system`).
+- `usePDVComandasRealtime` já invalida caches de mesas/comandas/orders.
+- `establishment_users.role` + `useUserRole` controlam rotas; faltam permissões granulares por ação.
 
-- **Rota:** `/pdv/cupons-fiscais` (separada de `/pdv/notas-fiscais` que continua sendo NF-e de entrada).
-- Adicionar item no `PDVHeaderNav.tsx`: **"Cupons Fiscais"** (ícone `ReceiptText`), abaixo de "Notas Fiscais".
-- Liberar acesso em `use-user-role.ts` para os mesmos perfis que hoje acessam Notas Fiscais (owner, admin, gerente, financeiro).
-- Registrar a rota em `src/pages/PDV.tsx` apontando para um novo `pages/pdv/FiscalCoupons.tsx`.
+## Banco de dados (migration)
 
-## 2. Banco de dados (migração)
+1. **Enum `pdv_permission_action`** e tabela `pdv_action_permissions` (config por owner × role × action):
+   - Ações: `change_table`, `transfer_table_to_table`, `transfer_comanda_to_comanda`, `transfer_table_to_comanda`, `transfer_comanda_to_table`, `close_attendance` (encerrar atendimento), `cancel_item`, `cancel_paid_item`, `apply_discount`, `remove_service_fee`, `view_history`, `process_payment` (somente caixa/gerente/proprietário por padrão), `refund_payment`.
+   - **`process_payment` nunca habilita para `garcom`** (constraint na função de defaults).
+   - RLS: select para membros do estabelecimento; update apenas owner/gerente.
+   - Função `has_pdv_action(_user_id, _action) returns boolean` (security definer): resolve owner via `establishment_users`, lê a linha por role, com defaults seguros.
 
-A tabela `pdv_nfce_emissions` já existe com os campos necessários (`status`, `chave_acesso`, `numero`, `serie`, `protocolo_autorizacao`, `valor_total`, `customer_*`, `forma_pagamento`, `danfe_pdf_url`, `xml_url`, `nuvem_fiscal_id`, `error_payload`, `data_emissao`, `data_autorizacao`, etc).
+2. **`pdv_action_audit_log`**: `actor_user_id`, `actor_role`, `action`, `source_type/id`, `target_type/id`, `payload jsonb`, `reason`, `created_at`. RLS de leitura para membros; insert via `log_pdv_action(...)` (security definer).
 
-Adições mínimas (migração):
+3. **Estados de comanda/order** (sem mudar tipos, só convenção + colunas auxiliares):
+   - `pdv_comandas`: adicionar `closed_by_user_id uuid`, `closed_at timestamptz`, `close_reason text`. Status `aguardando_pagamento` já existe.
+   - `pdv_orders`: adicionar `closed_by_user_id`, `closed_at`, `service_fee_paid numeric default 0` (controla taxa já cobrada para não duplicar no fechamento).
+   - Garçom encerrar = setar `status='aguardando_pagamento'`, registrar `closed_by_user_id/closed_at`, **sem liberar a mesa** e **sem remover da listagem**. Caixa finaliza pagamento → aí sim libera mesa/order conforme fluxo atual.
 
-- Coluna `cancellation_reason text` (motivo do cancelamento informado pelo usuário).
-- Coluna `cancelled_at timestamptz` e `cancellation_protocol text`.
-- Coluna `last_status_check_at timestamptz` (para botão "Consultar status").
-- Índices: `(user_id, data_emissao desc)` e `(user_id, status)` para acelerar a listagem.
-- Conferir/garantir RLS: SELECT/UPDATE para o owner (`user_id = auth.uid()`) e membros (`is_establishment_member(user_id)`).
+4. **RPC `pdv_close_attendance(p_comanda_id uuid, p_close_whole_table boolean, p_reason text)`** (security definer):
+   - Valida permissão `close_attendance` e que a comanda tem itens.
+   - Marca a comanda `status='aguardando_pagamento'` + autoria. Se `p_close_whole_table=true`, faz o mesmo em todas as comandas do `order_id` e marca o order como `pendente_pagamento`.
+   - Insere log de auditoria.
+   - **Não toca `pdv_tables.status` nem libera mesa.**
 
-## 3. Edge functions complementares
+5. **RPC `pdv_change_table(p_source_table_id, p_target_table_id, p_reason)`** (security definer, transactional):
+   - Valida mesmo owner, source ocupada, target livre, permissão `change_table`.
+   - Move `current_order_id` para target, atualiza `pdv_orders.table_id`, libera source. Mantém comandas/itens. Loga.
 
-Hoje só existe `emit-nfce`. Criar três novas funções (todas com `verify_jwt = false` validando JWT no código, padrão do projeto, usando `NUVEM_FISCAL_CLIENT_ID/SECRET` já configurados):
+6. **RPC `pdv_transfer_items(p_item_ids, p_target_kind, p_target_id, p_qty_map jsonb, p_reason)`** (security definer, atômica) — substitui o update direto atual:
+   - `p_target_kind`: `comanda` ou `table` (se table, usa/abre `pdv_orders` e a comanda alvo).
+   - Bloqueia transferência de itens com `paid_quantity >= quantity`, `status='cancelado'` ou `charging_session_id` ativo.
+   - Suporta **transferência parcial por quantidade** (`p_qty_map`: `{item_id: qty}`): se `qty < restante`, faz split (cria item-irmão com `qty`, ajusta o original; preserva `unit_price`, `modifiers`, `notes`, `created_by`, descontos).
+   - Recalcula subtotais via trigger existente. Loga.
 
-1. **`cancel-nfce`** — recebe `{ emission_id, justificativa }` (mín. 15 caracteres, exigência da SEFAZ). Chama `POST /nfce/{id}/cancelamento` na Nuvem Fiscal, atualiza linha para `status='cancelada'`, grava `cancellation_reason`, `cancellation_protocol`, `cancelled_at`.
-2. **`check-nfce-status`** — recebe `{ emission_id }`. Chama `GET /nfce/{id}` na Nuvem Fiscal, atualiza `status`, `chave_acesso`, `protocolo_autorizacao`, `data_autorizacao`, `rejection_reason`. Útil para cupons "pendentes" que ficaram em processamento assíncrono.
-3. **`resend-nfce`** — para cupons `rejeitada`: reusa o `items_snapshot` e demais dados da linha original, cria nova linha de emissão (mantendo referência via coluna `parent_emission_id uuid` adicionada na migração) e chama o mesmo fluxo do `emit-nfce`.
+7. **RPC `pdv_split_comanda_item(p_item_id, p_qty)`**: helper para o split (usado também pelo modo parcial do caixa quando o cliente quer pagar fração).
 
-Todas retornam JSON com CORS padrão.
+## Backend (edge functions)
 
-## 4. Hooks
+Nenhuma necessária — toda lógica fica em RPCs no banco. O processamento de pagamento parcial já está no `use-pdv-payments` (somente o caixa o aciona).
 
-Em `src/hooks/`:
+## Frontend
 
-- `use-fiscal-coupons.ts` — listagem com filtros (período, status, número, chave, CPF, forma de pagamento, valor mín/máx) usando React Query + Supabase. Paginação por cursor (`data_emissao`).
-- `use-fiscal-coupon-detail.ts` — busca uma emissão por id (com `items_snapshot`).
-- `use-cancel-nfce.ts`, `use-check-nfce-status.ts`, `use-resend-nfce.ts` — wrappers de `supabase.functions.invoke` espelhando o padrão de `use-nfce-emission.ts`.
-- `use-fiscal-coupons-summary.ts` — agrega no período: totais por status, valor bruto autorizado, quantidade de cupons cancelados/rejeitados.
+### Hooks novos
+- `src/hooks/use-pdv-permissions.ts`: query da tabela + helper `can(action)` com defaults espelhados.
+- `src/hooks/use-pdv-action-audit.ts`: lista por mesa/comanda, paginado.
+- `src/hooks/use-pdv-table-change.ts`: chama RPC `pdv_change_table`.
+- `src/hooks/use-pdv-close-attendance.ts`: chama RPC `pdv_close_attendance`.
+- Atualizar `use-pdv-comandas.ts`: trocar `transferItems` para a nova RPC com suporte a destino mesa e qty parcial.
 
-## 5. Componentes de UI
+### Componentes novos (`src/components/pdv/operations/`)
+- `ChangeTableDialog.tsx`: lista mesas livres + motivo. RPC `pdv_change_table`.
+- `TransferItemsDialog.tsx` (refator do existente): slider de quantidade por item, tabs Mesa/Comanda no destino, busca por número/nome/cliente, suporta origem mesa (todas as comandas).
+- `CloseAttendanceDialog.tsx`: confirmação "Encerrar atendimento" — opção "Encerrar mesa inteira" ou apenas a comanda; mensagem clara: "Aguardará cobrança no caixa. A mesa não será liberada até o pagamento."
+- `OperationHistoryDialog.tsx`: histórico/auditoria da mesa/comanda.
+- `ActionMenu.tsx` (3-dot): "Trocar mesa", "Transferir consumo", "Encerrar atendimento", "Ver histórico" — todas gated por `usePDVPermissions`. **Não há ação de pagar fora do caixa.**
 
-Pasta nova: `src/components/pdv/fiscal-coupons/`.
+### Configuração (Admin)
+- `src/components/pdv/settings/PermissionsTab.tsx`: matriz roles × ações (`allowed`, `requires_reason`). `process_payment` aparece desabilitada/locked para `garcom` (UI proíbe marcar). Item de menu "Permissões" em `PDVHeaderNav.tsx` para `proprietario`/`gerente`.
 
-- **`FiscalCouponsHeader.tsx`** — cards de KPI no topo: Autorizadas (qtd e valor), Pendentes, Rejeitadas, Canceladas, Valor total emitido no período (usar `formatBRL`).
-- **`FiscalCouponsFilters.tsx`** — DateRangePicker (com `ptBR`), Select de status (`autorizada | pendente | rejeitada | cancelada`), Select de ambiente (`producao | homologacao`), Select de forma de pagamento, busca textual (número/chave/CPF/cliente).
-- **`FiscalCouponsTable.tsx`** — tabela: Nº/Série, Data, Cliente (CPF/nome), Forma pgto, Valor, Status (badge colorido por status usando classes do tema, sem cor custom), Ambiente, Ações (menu ⋮).
-- **`FiscalCouponMenu.tsx`** — dropdown com: "Ver detalhes", "Baixar DANFE (PDF)", "Baixar XML", "Consultar status", "Reenviar" (apenas se rejeitada), "Cancelar" (apenas se autorizada e dentro de 30 minutos), "Copiar chave de acesso".
-- **`FiscalCouponDetailDialog.tsx`** — Dialog (não-modal, padrão do projeto) com abas:
-  - **Resumo:** dados gerais, status, protocolo, datas, totais, link do DANFE/XML, motivo de rejeição se houver.
-  - **Itens:** tabela renderizando `items_snapshot` (produto, qtd, unitário, NCM, CFOP, subtotal).
-  - **Pagamento:** forma, parcelas, valor pago, troco, serviço, desconto.
-  - **Cliente:** CPF, nome, email.
-  - **Vínculos:** comanda/mesa/pedido relacionado (com link para a comanda).
-- **`CancelNFCeDialog.tsx`** — Dialog para cancelamento: textarea obrigatório (mín. 15, máx. 255 chars), aviso sobre prazo de 30 min, confirmação. Chama `use-cancel-nfce`.
+### Integração na UI
 
-## 6. Página principal
+- **`TableDetailsDialog.tsx`**: substituir bloco de botões por `ActionMenu`. Para garçom/gerente, "Encerrar atendimento" substitui qualquer ação de cobrar. Status visível: Ocupada / Aguardando pagamento.
+- **`ComandaDetailsDialog.tsx`**: mesmo, com Encerrar atendimento, Transferir consumo, Histórico, Trocar de mesa.
+- **`Cashier.tsx` + `SalonQueuePanel.tsx`**: a fila do caixa **inclui** mesas/comandas com `aguardando_pagamento` em destaque (badge "Aguardando cobrança • Encerrado por <garçom>"). Só essa tela permite abrir `PaymentDialog` (full ou parcial).
+- **`Salon.tsx`**: mesas com comanda em `aguardando_pagamento` ficam visíveis com badge específico, **continuam ocupando a mesa** até o caixa finalizar.
+- **Garçom mobile** (`GarcomMesaDetalhe.tsx`, `GarcomComandaDetalhe.tsx`):
+  - Botões grandes: "Trocar mesa", "Transferir consumo", "Encerrar atendimento", "Histórico". **Nenhum botão de pagamento.**
+  - Após "Encerrar atendimento", a comanda fica visível em modo somente leitura com selo "Aguardando pagamento no caixa". Garçom não pode lançar mais itens nessa comanda (validação no banco também: trigger ou check em RPC de adicionar item).
+  - `BottomTabBar.tsx`: aba "Encerradas" lista comandas que o garçom encerrou e ainda aguardam o caixa, para acompanhamento.
 
-`src/pages/pdv/FiscalCoupons.tsx`:
-- Layout `min-h-[calc(100vh-3.5rem)] flex-1` (padrão de tela cheia do projeto).
-- Header com título "Cupons Fiscais" + botão "Atualizar" e botão "Exportar CSV" (gera CSV no cliente com a lista filtrada).
-- `<FiscalCouponsHeader />` (KPIs).
-- `<FiscalCouponsFilters />`.
-- `<FiscalCouponsTable />` com paginação.
-- Dialogs: `FiscalCouponDetailDialog`, `CancelNFCeDialog` controlados via estado.
+### UX e regras
+- Itens visualmente segmentados em **Pendentes / Pagos / Cancelados**.
+- Card-resumo financeiro fixo: Total, Pago, Restante, Taxa de serviço, Descontos.
+- Itens pagos: trava transferência/edição/cancelamento (UI + validação no banco). Estorno apenas com `refund_payment`.
+- Taxa/desconto proporcional via `src/lib/financial/proration.ts` (`prorateServiceFee`, `prorateDiscount`) — usados pelo `PaymentDialog` no caixa.
+- Datas/valores via `formatBRL` e `date-fns/locale ptBR`.
 
-## 7. Integrações pontuais
+## Permissões padrão
 
-- **Cashier / PaymentDialog:** após emitir NFC-e com sucesso, exibir link "Ver no painel de cupons" levando para `/pdv/cupons-fiscais?emission_id={id}` (a página já abre o detalhe se receber o param).
-- **Comandas / Mesas:** no histórico da comanda, mostrar badge "Cupom #123 (autorizado)" linkando para o detalhe.
+```
+proprietario / gerente: tudo true
+caixa: change_table, transfer_*, process_payment, refund_payment, cancel_paid_item, remove_service_fee, apply_discount, view_history = true
+garcom: change_table, transfer_*, close_attendance, cancel_item (próprio, não pago), view_history = true
+        process_payment, refund_payment, cancel_paid_item, remove_service_fee = FALSE (locked na UI)
+```
 
-## 8. Permissões e proteção de rota
+## Auditoria
 
-- Reutilizar `RoleRoute` (já em uso para `notas-fiscais`).
-- Acessível por: owner, admin, gerente, financeiro. Garçom e cozinha **não** acessam.
-- Cancelamento e reenvio exigem perfil owner/admin/gerente (verificar via `useUserRole`).
+Toda ação chama `log_pdv_action(...)`. Telas de Histórico em mesa/comanda; página global `/pdv/auditoria-operacional` filtrável por usuário/data/ação, gated por `view_history`.
 
-## 9. QA / pontos de atenção
+## Realtime
 
-- Datas exibidas em pt-BR via `date-fns/locale/ptBR`.
-- Valores via `formatBRL`.
-- Badges de status usando tokens do tema (`bg-muted`, `text-foreground`, `border-primary`) — sem cores customizadas.
-- Action menu seguindo padrão do projeto (dropdown ⋮ posicionado relativo ao trigger).
-- DANFE/XML: links abrem em nova aba (`target="_blank"`).
-- Cancelamento: validar prazo de 30 min na UI antes de habilitar o botão.
-- O `items_snapshot` é JSON — tipar como `Array<{ product_name; quantity; unit_price; subtotal; ncm?; cfop?; ... }>`.
+`usePDVComandasRealtime`: adicionar listener para mudanças em `pdv_comandas.status` e `pdv_orders.status` para que a tela do caixa receba imediatamente comandas encerradas pelo garçom, e o garçom veja sumir da listagem assim que o caixa finaliza o pagamento. Listener para `pdv_action_audit_log` para histórico aberto.
 
-## 10. Resumo de arquivos
+## Arquivos
 
-**Migração:** 1 arquivo SQL com colunas (`cancellation_reason`, `cancelled_at`, `cancellation_protocol`, `last_status_check_at`, `parent_emission_id`) + índices.
+Criar:
+- `supabase/migrations/<ts>_pdv_operations.sql` (enum, tabelas, RLS, RPCs `pdv_change_table`, `pdv_transfer_items`, `pdv_split_comanda_item`, `pdv_close_attendance`, `has_pdv_action`, `log_pdv_action`).
+- `src/hooks/use-pdv-permissions.ts`, `use-pdv-action-audit.ts`, `use-pdv-table-change.ts`, `use-pdv-close-attendance.ts`.
+- `src/lib/financial/proration.ts`.
+- `src/components/pdv/operations/ChangeTableDialog.tsx`, `TransferItemsDialog.tsx` (novo, substitui o de `transfer/`), `CloseAttendanceDialog.tsx`, `OperationHistoryDialog.tsx`, `ActionMenu.tsx`.
+- `src/components/pdv/settings/PermissionsTab.tsx`.
+- `src/pages/garcom/GarcomEncerradas.tsx` (+ rota).
 
-**Edge functions novas:** `cancel-nfce/index.ts`, `check-nfce-status/index.ts`, `resend-nfce/index.ts`.
+Editar:
+- `src/hooks/use-pdv-comandas.ts` (RPC `pdv_transfer_items` + bloqueio de adicionar item se `aguardando_pagamento`).
+- `src/hooks/use-pdv-comandas-realtime.ts` (listeners adicionais).
+- `src/components/pdv/TableDetailsDialog.tsx`, `ComandaDetailsDialog.tsx` (ActionMenu, sem botão de pagar).
+- `src/components/pdv/cashier/PaymentDialog.tsx` (nada a remover; pode ler `service_fee_paid` para evitar duplicar taxa).
+- `src/components/pdv/cashier/SalonQueuePanel.tsx` / `Cashier.tsx` (destaque para `aguardando_pagamento` com origem garçom).
+- `src/pages/pdv/Salon.tsx`, `Comandas.tsx`, `Settings.tsx`.
+- `src/pages/garcom/GarcomMesaDetalhe.tsx`, `GarcomComandaDetalhe.tsx`, `Garcom.tsx`, `src/components/garcom/BottomTabBar.tsx`.
+- `src/hooks/use-user-role.ts` (rota auditoria).
 
-**Frontend novo:**
-- `src/pages/pdv/FiscalCoupons.tsx`
-- `src/hooks/use-fiscal-coupons.ts`, `use-fiscal-coupon-detail.ts`, `use-cancel-nfce.ts`, `use-check-nfce-status.ts`, `use-resend-nfce.ts`, `use-fiscal-coupons-summary.ts`
-- `src/components/pdv/fiscal-coupons/` (6 componentes listados acima)
+## Critérios de aceite
 
-**Frontend editado:**
-- `src/components/pdv/PDVHeaderNav.tsx` (novo item de menu)
-- `src/hooks/use-user-role.ts` (libera rota)
-- `src/pages/PDV.tsx` (registra rota)
-- `src/components/pdv/payment/PaymentDialog.tsx` (link para o painel após emissão)
+- Garçom **nunca** processa pagamento. Botões de cobrar não existem fora do Caixa.
+- Garçom encerra atendimento → comanda/mesa fica `aguardando_pagamento` e **continua visível** para o caixa.
+- Mesa só é liberada / comanda só some quando o **caixa** finaliza o pagamento integral.
+- Pagamento parcial por item/qty disponível **apenas no caixa**, com taxa/desconto proporcionais e sem duplicar valores no fechamento.
+- Troca de mesa e transferências (mesa↔mesa, comanda↔comanda, mesa↔comanda) funcionam e respeitam permissões.
+- Itens pagos protegidos contra transferência/edição/cancelamento.
+- Toda ação registrada em auditoria.
+- Sincronização realtime entre garçom, salão e caixa.
 
-Aprove o plano para eu implementar a migração, as edge functions e a interface.
+Aprove para implementar.
