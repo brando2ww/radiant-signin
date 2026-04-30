@@ -129,8 +129,8 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     return age;
   };
 
-  // Calcular média geral de satisfação (1-5)
-  const allScores = evaluations.flatMap(e => e.evaluation_answers.map(a => a.score));
+  // Calcular média geral de satisfação (1-5) — apenas perguntas tipo "stars"
+  const allScores = evaluations.flatMap(e => e.evaluation_answers.filter(isStarsAnswer).map(a => a.score));
   const avgSatisfaction = allScores.length > 0 
     ? allScores.reduce((sum, score) => sum + score, 0) / allScores.length
     : 0;
@@ -180,9 +180,9 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     // Pular se idade inválida
     if (age === null) return;
     
-    const avgScore = e.evaluation_answers.length > 0
-      ? e.evaluation_answers.reduce((sum, a) => sum + a.score, 0) / e.evaluation_answers.length
-      : 0;
+    const starsAnswers = e.evaluation_answers.filter(isStarsAnswer);
+    if (starsAnswers.length === 0) return;
+    const avgScore = starsAnswers.reduce((sum, a) => sum + a.score, 0) / starsAnswers.length;
     
     let index = -1;
     if (age >= 18 && age <= 25) index = 0;
