@@ -152,6 +152,8 @@ export function PaymentDialog({
     authorizedBy?: string;
   } | null>(null);
   const [serviceFeeEnabled, setServiceFeeEnabled] = useState(true);
+  // Settings carregam um pouco depois do mount; quando vierem com taxa
+  // desativada, sincronizamos o estado local para refletir a configuração.
   
   // Split payment
   const [splitEnabled, setSplitEnabled] = useState(false);
