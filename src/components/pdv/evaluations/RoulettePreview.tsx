@@ -47,15 +47,21 @@ export function RoulettePreview({ prizes, size = 200, primaryColor, secondaryCol
 
     const midAngleDeg = s.startDeg + s.deg / 2;
     const midAngleRad = ((midAngleDeg - 90) * Math.PI) / 180;
-    const textR = r * 0.58;
+    // Position text along the radius, at ~62% of the radius (sweet spot of the slice)
+    const textR = r * 0.62;
     const tx = r + textR * Math.cos(midAngleRad);
     const ty = r + textR * Math.sin(midAngleRad);
 
-    let textRotation = midAngleDeg;
+    // Align text radially (reads from center → edge), flip on the left half so it stays upright
+    let textRotation = midAngleDeg - 90;
     const needsFlip = midAngleDeg > 90 && midAngleDeg < 270;
     if (needsFlip) textRotation += 180;
 
-    const fontSize = Math.max(7, Math.min(11, equalDeg / 4));
+    const fontSize = Math.max(8, Math.min(12, equalDeg / 3.5));
+
+    // Truncate long names so they don't overflow the slice
+    const maxChars = Math.max(8, Math.floor(equalDeg / 2.2));
+    const label = s.name.length > maxChars ? s.name.slice(0, maxChars - 1) + "…" : s.name;
 
     return (
       <g key={s.id}>
@@ -72,7 +78,7 @@ export function RoulettePreview({ prizes, size = 200, primaryColor, secondaryCol
           fontFamily="system-ui, sans-serif"
           style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9))" }}
         >
-          {s.name}
+          {label}
         </text>
       </g>
     );
