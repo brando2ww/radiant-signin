@@ -71,25 +71,28 @@ export function SpinWheel({ prizes, onResult, disabled, primaryColor, secondaryC
     const largeArc = s.deg > 180 ? 1 : 0;
     const path = `M ${r} ${r} L ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} Z`;
 
-    // Text along the mid-angle, radially from center outward
+    // Position text along the spoke (radial line), reading from center outward
     const midAngleDeg = s.startDeg + s.deg / 2;
     const midAngleRad = ((midAngleDeg - 90) * Math.PI) / 180;
 
-    // Position text at ~58% of radius
-    const textR = r * 0.58;
+    // Position text at ~62% of radius (center of the readable area)
+    const textR = r * 0.62;
     const tx = r + textR * Math.cos(midAngleRad);
     const ty = r + textR * Math.sin(midAngleRad);
 
-    // Rotate text to align radially (pointing outward)
-    // Text reads from center → edge
-    let textRotation = midAngleDeg;
-    // If in bottom half, flip so text is never upside down
+    // Align text along the radius (reads from center → edge).
+    // Flip 180° on the left half so text never appears upside down.
+    let textRotation = midAngleDeg - 90;
     const needsFlip = midAngleDeg > 90 && midAngleDeg < 270;
     if (needsFlip) {
       textRotation += 180;
     }
 
-    const fontSize = Math.max(10, Math.min(15, s.deg / 4));
+    const fontSize = Math.max(11, Math.min(15, s.deg / 3.5));
+
+    // Truncate very long labels to fit inside the segment
+    const maxChars = Math.max(8, Math.floor(s.deg / 2.2));
+    const label = s.name.length > maxChars ? s.name.slice(0, maxChars - 1) + "…" : s.name;
 
     return (
       <g key={s.id}>
@@ -106,7 +109,7 @@ export function SpinWheel({ prizes, onResult, disabled, primaryColor, secondaryC
           fontFamily="system-ui, sans-serif"
           style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.9))" }}
         >
-          {s.name}
+          {label}
         </text>
       </g>
     );

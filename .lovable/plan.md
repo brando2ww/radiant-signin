@@ -1,58 +1,29 @@
 ## Problema
 
-Na visualização de detalhes de uma avaliação (tanto no Dashboard → ClientDetailDialog quanto em Campanhas → Respostas → CampaignResponses), todas as respostas estão sendo mostradas como estrelas de 1 a 5, mesmo quando a pergunta original era do tipo **Escolha única** (`single_choice`), **Múltipla escolha** (`multiple_choice`) ou outro tipo que não seja estrelas.
+Os textos dos prêmios na roleta (`SpinWheel`) estão sendo desenhados **perpendicularmente ao raio** do segmento, ou seja, atravessando a fatia de um lado para o outro. Isso faz com que cada label fique "deitado" sobre a borda da fatia, dificultando a leitura — especialmente quando há vários prêmios pequenos como na imagem enviada.
 
-Isso acontece porque:
-- Os componentes renderizam sempre o bloco de 5 estrelas baseado em `answer.score`.
-- Não buscam `question_type` da pergunta nem `selected_options` da resposta.
-- A coluna `evaluation_answers.selected_options` (Json) já existe no banco e guarda a opção/opções escolhidas, mas nunca é lida.
+## Causa
 
-## Objetivo
+Em `src/components/public-evaluation/SpinWheel.tsx` (linhas 83-90), a rotação do texto é feita com:
 
-Renderizar cada resposta de acordo com o tipo da pergunta:
-- `stars` (padrão / NPS por pergunta) → manter as 5 estrelas atuais.
-- `single_choice` → mostrar a opção escolhida como um Badge/texto.
-- `multiple_choice` → mostrar a lista das opções escolhidas como Badges.
-- (qualquer outro tipo futuro com texto livre cai num fallback de texto).
+```ts
+let textRotation = midAngleDeg; // tangencial à circunferência
+```
 
-## Arquivos a alterar
+O ideal em uma roleta de prêmios é que o texto fique **alinhado ao raio** (lendo do centro para a borda), não tangencial.
 
-### 1. `src/hooks/use-evaluation-report-helpers.ts`
-- Atualizar `useEvaluationQuestionTexts` para retornar não só o texto, mas também `question_type` e `options` de cada pergunta.
-- Renomear o retorno para um Map de `question_id → { text, type, options }` (mantendo retrocompatibilidade onde for usado só o texto).
+## Correção proposta
 
-### 2. `src/hooks/use-customer-evaluations.ts`
-- Adicionar `selected_options` ao SELECT de `evaluation_answers` em `useCustomerEvaluations` e em `useExportEvaluations`.
-- Estender a interface `EvaluationAnswer` com `selected_options?: string[] | null`.
-- Para cálculos de média (NPS médio, avgScore por avaliação) ignorar respostas onde `score` é 0 e `selected_options` está preenchido (assim escolhas não distorcem a média de estrelas).
+Em `src/components/public-evaluation/SpinWheel.tsx`:
 
-### 3. `src/hooks/use-evaluation-campaigns.ts`
-- Em `useCampaignResponses`: incluir `selected_options` no select de answers, e enriquecer cada answer também com `question_type` e `options` (vindos de `evaluation_campaign_questions`).
-
-### 4. `src/components/pdv/evaluations/ClientDetailDialog.tsx`
-- Substituir o bloco fixo de 5 estrelas por um renderer condicional `<AnswerValue answer={answer} question={...} />`:
-  - `stars` → 5 estrelas + `score/5`.
-  - `single_choice` → 1 Badge com a opção (`selected_options[0]` ou fallback `score` se vazio).
-  - `multiple_choice` → várias Badges com cada item de `selected_options`.
-- Ajustar o cálculo de `avgScore` no header de cada avaliação para considerar apenas respostas do tipo `stars`.
-
-### 5. `src/components/pdv/evaluations/CampaignResponses.tsx`
-- Mesma troca do bloco de estrelas pelo renderer condicional, usando `answer.question_type`, `answer.options` e `answer.selected_options` agora disponíveis.
-- Ajustar o cálculo de "Média geral" e "Média" da tabela para considerar apenas respostas do tipo `stars`.
-
-### 6. (Opcional) Pequeno componente compartilhado
-- Criar `src/components/evaluations/AnswerValue.tsx` com a lógica de renderização condicional, reutilizado pelos dois pontos acima, evitando duplicar código.
-
-## Detalhes técnicos
-
-- `selected_options` é `Json | null` no Postgres. Tratar como `string[]` ao ler, com guarda `Array.isArray(...)`.
-- Quando `question_type !== "stars"` e `selected_options` vazio, exibir "—" em vez de 0 estrelas.
-- Sem mudanças de schema necessárias — todas as colunas já existem.
-- Sem mudanças no fluxo público de envio (`PublicEvaluation.tsx` já grava `selected_options` corretamente via `useSubmitCampaignEvaluation`).
+1. **Mudar a rotação do texto para `midAngleDeg - 90`**, alinhando o texto ao longo da linha radial (lendo do centro em direção à borda).
+2. **Manter o flip de 180°** para os segmentos do lado esquerdo (90° < mid < 270°) para que o texto nunca apareça de cabeça para baixo.
+3. **Mover o texto um pouco mais para fora** (de 58% → ~62% do raio), aproveitando o eixo radial mais longo.
+4. **Aumentar levemente o tamanho mínimo da fonte** (de 10 → 11) e ajustar o divisor (`s.deg / 3.5` em vez de `/4`) para melhor legibilidade.
+5. **Truncar nomes muito longos** com `…` baseado no tamanho do segmento, evitando que o texto vaze para fora da fatia.
 
 ## Resultado esperado
 
-Ao abrir os detalhes de uma avaliação (Dashboard ou Campanhas → Respostas), cada pergunta aparecerá com a resposta exata dada pelo cliente:
-- Estrelas reais quando for pergunta de estrelas.
-- Texto/Badge da opção escolhida em single/multiple choice.
-- Comentários continuam aparecendo abaixo como hoje.
+Cada nome de prêmio aparecerá disposto ao longo do raio da fatia, lendo naturalmente do centro para a borda, exatamente como em uma roleta de prêmios tradicional — fácil de ler em qualquer quantidade de segmentos.
+
+Nenhuma outra parte do componente é afetada (animação, sorteio, cores e ponteiro permanecem iguais).
