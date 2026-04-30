@@ -22,6 +22,7 @@ export interface EvaluationAnswer {
   score: number;
   created_at?: string;
   comment?: string | null;
+  selected_options?: unknown;
 }
 
 export interface EvaluationWithAnswers extends CustomerEvaluation {
