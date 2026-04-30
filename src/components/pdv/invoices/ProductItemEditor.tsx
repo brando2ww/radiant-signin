@@ -36,11 +36,14 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
   const getItemStatusColor = () => {
     switch (item.linkAction.type) {
       case 'link':
-        return 'border-l-4 border-l-green-500';
+        return 'border-l-4 border-l-primary';
       case 'create':
-        return 'border-l-4 border-l-yellow-500';
+        return 'border-l-4 border-l-secondary';
       default:
-        return 'border-l-4 border-l-muted';
+        if (item.suggestedIngredientIds && item.suggestedIngredientIds.length > 0) {
+          return 'border-l-4 border-l-muted-foreground';
+        }
+        return 'border-l-4 border-l-destructive';
     }
   };
 
