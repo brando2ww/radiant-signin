@@ -187,22 +187,32 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
   };
 
   const handleAddItem = (optionId: string) => {
+    const kind = newItemKinds[optionId] || "ingredient";
     const name = newItemNames[optionId]?.trim();
     if (!name) return;
     const price = Number(newItemPrices[optionId] || 0);
     const ing = newItemIngredients[optionId];
-    const recipes: PDVOptionItemRecipeRef[] = ing
-      ? [
-          {
-            id: `tmp-${ing.id}`,
-            ingredient_id: ing.id,
-            quantity: 1,
-            unit: ing.unit,
-            ingredient_name: ing.name,
-            ingredient_unit: ing.unit,
-          },
-        ]
-      : [];
+    const prod = newItemProducts[optionId];
+
+    if (kind === "product" && !prod) {
+      toast.warning("Selecione o produto vinculado");
+      return;
+    }
+
+    const recipes: PDVOptionItemRecipeRef[] =
+      kind === "ingredient" && ing
+        ? [
+            {
+              id: `tmp-${ing.id}`,
+              ingredient_id: ing.id,
+              quantity: 1,
+              unit: ing.unit,
+              ingredient_name: ing.name,
+              ingredient_unit: ing.unit,
+            },
+          ]
+        : [];
+
     setDraft((prev) =>
       prev.map((o) =>
         o.id === optionId
@@ -217,6 +227,8 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                   price_adjustment: price,
                   is_available: true,
                   order_position: o.items.length,
+                  item_kind: kind,
+                  linked_product_id: kind === "product" ? prod!.id : null,
                   recipes,
                   _isNew: true,
                 } as DraftItem,
@@ -228,6 +240,8 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
     setNewItemNames((prev) => ({ ...prev, [optionId]: "" }));
     setNewItemPrices((prev) => ({ ...prev, [optionId]: "" }));
     setNewItemIngredients((prev) => ({ ...prev, [optionId]: null }));
+    setNewItemProducts((prev) => ({ ...prev, [optionId]: null }));
+    setNewItemKinds((prev) => ({ ...prev, [optionId]: "ingredient" }));
   };
 
   const handleSelectNewItemIngredient = (
@@ -240,8 +254,48 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
     setIngredientSearch("");
   };
 
+  const handleSelectNewItemProduct = (
+    optionId: string,
+    product: { id: string; name: string; price: number },
+  ) => {
+    setNewItemProducts((prev) => ({ ...prev, [optionId]: product }));
+    setNewItemNames((prev) => ({ ...prev, [optionId]: product.name }));
+    setNewItemPrices((prev) => ({ ...prev, [optionId]: String(product.price) }));
+    setNewItemKinds((prev) => ({ ...prev, [optionId]: "product" }));
+    setNewItemProductPopoverOpen(null);
+    setProductSearch("");
+  };
+
   const handleClearNewItemIngredient = (optionId: string) => {
     setNewItemIngredients((prev) => ({ ...prev, [optionId]: null }));
+  };
+
+  const handleClearNewItemProduct = (optionId: string) => {
+    setNewItemProducts((prev) => ({ ...prev, [optionId]: null }));
+    setNewItemKinds((prev) => ({ ...prev, [optionId]: "ingredient" }));
+  };
+
+  const handleLinkProductToItem = (
+    optionId: string,
+    itemId: string,
+    product: { id: string; name: string; price: number },
+  ) => {
+    updateDraftItem(optionId, itemId, {
+      item_kind: "product",
+      linked_product_id: product.id,
+      name: product.name,
+      price_adjustment: product.price,
+      recipes: [],
+    } as any);
+    setProductPopoverOpen(null);
+    setProductSearch("");
+  };
+
+  const handleUnlinkProduct = (optionId: string, itemId: string) => {
+    updateDraftItem(optionId, itemId, {
+      item_kind: "ingredient",
+      linked_product_id: null,
+    } as any);
   };
 
   const handleDeleteOption = (optionId: string) => {
