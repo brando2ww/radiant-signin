@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { useEvaluationCampaigns } from "@/hooks/use-evaluation-campaigns";
-import { useCustomerEvaluations, useEvaluationStats, useExportEvaluations, EvaluationWithAnswers } from "@/hooks/use-customer-evaluations";
+import { useCustomerEvaluations, useEvaluationStats, useExportEvaluations, EvaluationWithAnswers, isStarsAnswer } from "@/hooks/use-customer-evaluations";
 import { useEvaluationQuestionTexts } from "@/hooks/use-evaluation-report-helpers";
 import { useDashboardCoupons, useBirthdayCount } from "@/hooks/use-dashboard-stats";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,9 +80,11 @@ export default function EvaluationsDashboard() {
   const criteriaStats = useMemo(() => {
     if (!evaluations || !questionTexts) return [];
 
+    // Apenas perguntas tipo "stars" entram no NPS por critério.
     const map = new Map<string, { scores: number[] }>();
     evaluations.forEach(e => {
       e.evaluation_answers.forEach(a => {
+        if (!isStarsAnswer(a)) return;
         if (!map.has(a.question_id)) map.set(a.question_id, { scores: [] });
         map.get(a.question_id)!.scores.push(a.score);
       });

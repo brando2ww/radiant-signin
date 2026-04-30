@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DashboardMetricCard } from "@/components/pdv/DashboardMetricCard";
-import { useCustomerEvaluations, useExportEvaluations } from "@/hooks/use-customer-evaluations";
+import { useCustomerEvaluations, useExportEvaluations, isStarsAnswer } from "@/hooks/use-customer-evaluations";
 import { useEvaluationQuestionTexts, useAllTimeCustomerWhatsapps } from "@/hooks/use-evaluation-report-helpers";
 import { NpsDonut } from "@/components/evaluations/reports/NpsDonut";
 import { NpsPerQuestion } from "@/components/evaluations/reports/NpsPerQuestion";
@@ -57,7 +57,7 @@ export default function ReportWeekly() {
   const calcStats = (evals: typeof currentEvals) => {
     if (!evals || evals.length === 0) return { total: 0, avgSat: 0, nps: 0, promoters: 0, detractors: 0, neutrals: 0 };
     const total = evals.length;
-    const allScores = evals.flatMap(e => e.evaluation_answers.map(a => a.score));
+    const allScores = evals.flatMap(e => e.evaluation_answers.filter(isStarsAnswer).map(a => a.score));
     const avgSat = allScores.length > 0 ? allScores.reduce((s, v) => s + v, 0) / allScores.length : 0;
     const npsScores = evals.filter(e => e.nps_score !== null).map(e => e.nps_score!);
     const promoters = npsScores.filter(s => s >= 9).length;
@@ -96,7 +96,7 @@ export default function ReportWeekly() {
     return days.map(day => {
       const dayStr = format(day, "yyyy-MM-dd");
       const dayEvals = allEvals.filter(e => e.evaluation_date.startsWith(dayStr));
-      const scores = dayEvals.flatMap(e => e.evaluation_answers.map(a => a.score));
+      const scores = dayEvals.flatMap(e => e.evaluation_answers.filter(isStarsAnswer).map(a => a.score));
       const avg = scores.length > 0 ? scores.reduce((s, v) => s + v, 0) / scores.length : 0;
       return { data: format(day, "dd/MM"), satisfação: Number(avg.toFixed(2)) };
     });

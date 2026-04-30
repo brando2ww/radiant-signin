@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
-import { EvaluationWithAnswers } from "@/hooks/use-customer-evaluations";
+import { EvaluationWithAnswers, isStarsAnswer } from "@/hooks/use-customer-evaluations";
 import { useMemo } from "react";
 
 interface Props {
@@ -13,6 +13,7 @@ export function NpsPerQuestion({ evaluations, questionTexts }: Props) {
     const questionMap = new Map<string, number[]>();
     evaluations.forEach(e => {
       e.evaluation_answers.forEach(a => {
+        if (!isStarsAnswer(a)) return;
         if (!questionMap.has(a.question_id)) questionMap.set(a.question_id, []);
         questionMap.get(a.question_id)!.push(a.score);
       });

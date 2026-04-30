@@ -23,10 +23,29 @@ export interface EvaluationAnswer {
   created_at?: string;
   comment?: string | null;
   selected_options?: unknown;
+  /** Tipo da pergunta — apenas "stars" entra nos cálculos numéricos.
+   *  Outros tipos (multiple_choice, single_choice, text...) NÃO. */
+  question_type?: string;
 }
 
 export interface EvaluationWithAnswers extends CustomerEvaluation {
   evaluation_answers: EvaluationAnswer[];
+}
+
+/** Helper canônico: respostas que contam como "nota" para médias / NPS por pergunta. */
+export const isStarsAnswer = (a: { question_type?: string }) =>
+  (a?.question_type || "stars") === "stars";
+
+/** Carrega o map { question_id -> question_type }.
+ *  Apenas perguntas de campanha podem ter tipos diferentes de "stars";
+ *  perguntas legacy (evaluation_questions) são sempre "stars". */
+async function fetchQuestionTypeMap(): Promise<Map<string, string>> {
+  const { data } = await supabase
+    .from("evaluation_campaign_questions")
+    .select("id, question_type");
+  const map = new Map<string, string>();
+  (data || []).forEach((q: any) => map.set(q.id, q.question_type || "stars"));
+  return map;
 }
 
 export const useCustomerEvaluations = (filters?: { startDate?: string; endDate?: string }) => {
@@ -59,10 +78,24 @@ export const useCustomerEvaluations = (filters?: { startDate?: string; endDate?:
         query = query.lte("evaluation_date", `${filters.endDate}T23:59:59.999`);
       }
 
-      const { data, error } = await query;
+      const [{ data, error }, typeMap] = await Promise.all([
+        query,
+        fetchQuestionTypeMap(),
+      ]);
 
       if (error) throw error;
-      return data as EvaluationWithAnswers[];
+
+      // Enriquece cada answer com question_type para que TODOS os relatórios
+      // possam excluir respostas de múltipla escolha / texto dos cálculos.
+      const enriched = (data || []).map((e: any) => ({
+        ...e,
+        evaluation_answers: (e.evaluation_answers || []).map((a: any) => ({
+          ...a,
+          question_type: typeMap.get(a.question_id) || "stars",
+        })),
+      }));
+
+      return enriched as EvaluationWithAnswers[];
     },
   });
 };
@@ -96,8 +129,8 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     return age;
   };
 
-  // Calcular média geral de satisfação (1-5)
-  const allScores = evaluations.flatMap(e => e.evaluation_answers.map(a => a.score));
+  // Calcular média geral de satisfação (1-5) — apenas perguntas tipo "stars"
+  const allScores = evaluations.flatMap(e => e.evaluation_answers.filter(isStarsAnswer).map(a => a.score));
   const avgSatisfaction = allScores.length > 0 
     ? allScores.reduce((sum, score) => sum + score, 0) / allScores.length
     : 0;
@@ -147,9 +180,9 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     // Pular se idade inválida
     if (age === null) return;
     
-    const avgScore = e.evaluation_answers.length > 0
-      ? e.evaluation_answers.reduce((sum, a) => sum + a.score, 0) / e.evaluation_answers.length
-      : 0;
+    const starsAnswers = e.evaluation_answers.filter(isStarsAnswer);
+    if (starsAnswers.length === 0) return;
+    const avgScore = starsAnswers.reduce((sum, a) => sum + a.score, 0) / starsAnswers.length;
     
     let index = -1;
     if (age >= 18 && age <= 25) index = 0;
@@ -191,10 +224,10 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
   
   evaluations.forEach(e => {
     const day = new Date(e.evaluation_date).getDay();
+    const starsAnswers = e.evaluation_answers.filter(isStarsAnswer);
+    if (starsAnswers.length === 0) return;
     weekdayData[day].count++;
-    const avgScore = e.evaluation_answers.length > 0
-      ? e.evaluation_answers.reduce((sum, a) => sum + a.score, 0) / e.evaluation_answers.length
-      : 0;
+    const avgScore = starsAnswers.reduce((sum, a) => sum + a.score, 0) / starsAnswers.length;
     weekdayData[day].totalScore += avgScore;
   });
 
@@ -204,21 +237,24 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     avgScore: d.count > 0 ? d.totalScore / d.count : 0,
   }));
 
-  // Avaliações negativas recentes (últimas 24h com nota < 3)
+  // Avaliações negativas recentes (últimas 24h com nota < 3) — somente notas reais
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const recentNegative = evaluations.filter(e => {
     const evalDate = new Date(e.evaluation_date);
-    const avgScore = e.evaluation_answers.length > 0
-      ? e.evaluation_answers.reduce((sum, a) => sum + a.score, 0) / e.evaluation_answers.length
-      : 0;
+    const starsAnswers = e.evaluation_answers.filter(isStarsAnswer);
+    if (starsAnswers.length === 0) return false;
+    const avgScore = starsAnswers.reduce((sum, a) => sum + a.score, 0) / starsAnswers.length;
     return evalDate >= yesterday && avgScore < 3;
-  }).map(e => ({
-    ...e,
-    avgScore: e.evaluation_answers.length > 0
-      ? e.evaluation_answers.reduce((sum, a) => sum + a.score, 0) / e.evaluation_answers.length
-      : 0,
-  }));
+  }).map(e => {
+    const starsAnswers = e.evaluation_answers.filter(isStarsAnswer);
+    return {
+      ...e,
+      avgScore: starsAnswers.length > 0
+        ? starsAnswers.reduce((sum, a) => sum + a.score, 0) / starsAnswers.length
+        : 0,
+    };
+  });
 
   // Clientes VIP (recorrentes)
   const customerFrequency = new Map<string, { count: number; evaluations: any[] }>();
@@ -236,7 +272,7 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     .filter(([_, data]) => data.count > 1)
     .map(([phone, data]) => {
       const allScores = data.evaluations.flatMap(e => 
-        e.evaluation_answers.map((a: any) => a.score)
+        (e.evaluation_answers as any[]).filter(isStarsAnswer).map((a: any) => a.score)
       );
       const avgScore = allScores.length > 0
         ? allScores.reduce((sum: number, s: number) => sum + s, 0) / allScores.length
@@ -252,11 +288,12 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     })
     .sort((a, b) => b.evaluation_count - a.evaluation_count);
 
-  // Calcular média por pergunta
+  // Calcular média por pergunta — somente perguntas tipo "stars"
   const questionStats = new Map<string, { text: string; scores: number[] }>();
   
   evaluations.forEach(evaluation => {
     evaluation.evaluation_answers.forEach(answer => {
+      if (!isStarsAnswer(answer)) return;
       if (!questionStats.has(answer.question_id)) {
         questionStats.set(answer.question_id, {
           text: "Pergunta",
@@ -274,7 +311,7 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     total: data.scores.length,
   })).sort((a, b) => a.average - b.average);
 
-  // Evolução diária
+  // Evolução diária — apenas notas
   const dailyData = new Map<string, { date: string; scores: number[]; npsScores: number[] }>();
   
   evaluations.forEach(evaluation => {
@@ -283,7 +320,9 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
       dailyData.set(date, { date, scores: [], npsScores: [] });
     }
     const dayData = dailyData.get(date)!;
-    evaluation.evaluation_answers.forEach(answer => dayData.scores.push(answer.score));
+    evaluation.evaluation_answers.forEach(answer => {
+      if (isStarsAnswer(answer)) dayData.scores.push(answer.score);
+    });
     if (evaluation.nps_score !== null) {
       dayData.npsScores.push(evaluation.nps_score);
     }
@@ -330,23 +369,33 @@ export const useEvaluationById = (id: string) => {
   return useQuery({
     queryKey: ["evaluation", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("customer_evaluations")
-        .select(`
-          *,
-          evaluation_answers (
-            id,
-            question_id,
-            score,
-            comment,
-            selected_options
-          )
-        `)
-        .eq("id", id)
-        .single();
+      const [{ data, error }, typeMap] = await Promise.all([
+        supabase
+          .from("customer_evaluations")
+          .select(`
+            *,
+            evaluation_answers (
+              id,
+              question_id,
+              score,
+              comment,
+              selected_options
+            )
+          `)
+          .eq("id", id)
+          .single(),
+        fetchQuestionTypeMap(),
+      ]);
 
       if (error) throw error;
-      return data as EvaluationWithAnswers;
+      const enriched: any = {
+        ...data,
+        evaluation_answers: ((data as any)?.evaluation_answers || []).map((a: any) => ({
+          ...a,
+          question_type: typeMap.get(a.question_id) || "stars",
+        })),
+      };
+      return enriched as EvaluationWithAnswers;
     },
   });
 };
@@ -383,13 +432,19 @@ export const useExportEvaluations = () => {
 
       if (error) throw error;
 
+      // Carrega tipos para excluir múltipla escolha da Média Geral do CSV
+      const typeMap = await fetchQuestionTypeMap();
+
       // Criar CSV
       const csvRows = [];
       csvRows.push(["Data", "Nome", "WhatsApp", "Data Nascimento", "NPS", "Média Geral"].join(","));
 
       data.forEach((evaluation: any) => {
-        const avgScore = evaluation.evaluation_answers.length > 0
-          ? evaluation.evaluation_answers.reduce((sum: number, a: any) => sum + a.score, 0) / evaluation.evaluation_answers.length
+        const starsAnswers = (evaluation.evaluation_answers as any[]).filter(
+          (a) => (typeMap.get(a.question_id) || "stars") === "stars"
+        );
+        const avgScore = starsAnswers.length > 0
+          ? starsAnswers.reduce((sum: number, a: any) => sum + a.score, 0) / starsAnswers.length
           : 0;
 
         csvRows.push([

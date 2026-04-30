@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DashboardMetricCard } from "@/components/pdv/DashboardMetricCard";
-import { useCustomerEvaluations, useEvaluationStats, useExportEvaluations } from "@/hooks/use-customer-evaluations";
+import { useCustomerEvaluations, useEvaluationStats, useExportEvaluations, isStarsAnswer } from "@/hooks/use-customer-evaluations";
 import { useEvaluationQuestionTexts, useAllTimeCustomerWhatsapps } from "@/hooks/use-evaluation-report-helpers";
 import { NpsDonut } from "@/components/evaluations/reports/NpsDonut";
 import { NpsPerQuestion } from "@/components/evaluations/reports/NpsPerQuestion";
@@ -58,8 +58,9 @@ export default function ReportDaily() {
 
   const tableData = useMemo(() => {
     return (evaluations || []).map(e => {
-      const avg = e.evaluation_answers.length > 0
-        ? e.evaluation_answers.reduce((s, a) => s + a.score, 0) / e.evaluation_answers.length
+      const stars = e.evaluation_answers.filter(isStarsAnswer);
+      const avg = stars.length > 0
+        ? stars.reduce((s, a) => s + a.score, 0) / stars.length
         : 0;
       return { ...e, avgScore: avg };
     });
@@ -85,8 +86,9 @@ export default function ReportDaily() {
 
   const negativeAlerts = (evaluations || [])
     .map(e => {
-      const avg = e.evaluation_answers.length > 0
-        ? e.evaluation_answers.reduce((s, a) => s + a.score, 0) / e.evaluation_answers.length
+      const stars = e.evaluation_answers.filter(isStarsAnswer);
+      const avg = stars.length > 0
+        ? stars.reduce((s, a) => s + a.score, 0) / stars.length
         : 0;
       return { ...e, avgScore: avg };
     })
