@@ -272,7 +272,7 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     .filter(([_, data]) => data.count > 1)
     .map(([phone, data]) => {
       const allScores = data.evaluations.flatMap(e => 
-        e.evaluation_answers.map((a: any) => a.score)
+        (e.evaluation_answers as any[]).filter(isStarsAnswer).map((a: any) => a.score)
       );
       const avgScore = allScores.length > 0
         ? allScores.reduce((sum: number, s: number) => sum + s, 0) / allScores.length
@@ -288,11 +288,12 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     })
     .sort((a, b) => b.evaluation_count - a.evaluation_count);
 
-  // Calcular média por pergunta
+  // Calcular média por pergunta — somente perguntas tipo "stars"
   const questionStats = new Map<string, { text: string; scores: number[] }>();
   
   evaluations.forEach(evaluation => {
     evaluation.evaluation_answers.forEach(answer => {
+      if (!isStarsAnswer(answer)) return;
       if (!questionStats.has(answer.question_id)) {
         questionStats.set(answer.question_id, {
           text: "Pergunta",
@@ -310,7 +311,7 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
     total: data.scores.length,
   })).sort((a, b) => a.average - b.average);
 
-  // Evolução diária
+  // Evolução diária — apenas notas
   const dailyData = new Map<string, { date: string; scores: number[]; npsScores: number[] }>();
   
   evaluations.forEach(evaluation => {
@@ -319,7 +320,9 @@ export const useEvaluationStats = (startDate?: string, endDate?: string) => {
       dailyData.set(date, { date, scores: [], npsScores: [] });
     }
     const dayData = dailyData.get(date)!;
-    evaluation.evaluation_answers.forEach(answer => dayData.scores.push(answer.score));
+    evaluation.evaluation_answers.forEach(answer => {
+      if (isStarsAnswer(answer)) dayData.scores.push(answer.score);
+    });
     if (evaluation.nps_score !== null) {
       dayData.npsScores.push(evaluation.nps_score);
     }
