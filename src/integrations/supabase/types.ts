@@ -3327,7 +3327,12 @@ export type Database = {
           description: string
           document_number: string | null
           due_date: string
+          fee_amount: number
+          fee_fixed_applied: number
+          fee_percentage_applied: number
+          gross_amount: number | null
           id: string
+          net_amount: number | null
           notes: string | null
           payment_date: string | null
           payment_method: string | null
@@ -3347,7 +3352,12 @@ export type Database = {
           description: string
           document_number?: string | null
           due_date: string
+          fee_amount?: number
+          fee_fixed_applied?: number
+          fee_percentage_applied?: number
+          gross_amount?: number | null
           id?: string
+          net_amount?: number | null
           notes?: string | null
           payment_date?: string | null
           payment_method?: string | null
@@ -3367,7 +3377,12 @@ export type Database = {
           description?: string
           document_number?: string | null
           due_date?: string
+          fee_amount?: number
+          fee_fixed_applied?: number
+          fee_percentage_applied?: number
+          gross_amount?: number | null
           id?: string
+          net_amount?: number | null
           notes?: string | null
           payment_date?: string | null
           payment_method?: string | null
@@ -4420,6 +4435,45 @@ export type Database = {
           },
         ]
       }
+      pdv_payment_method_fees: {
+        Row: {
+          created_at: string
+          fee_fixed: number
+          fee_percentage: number
+          id: string
+          is_active: boolean
+          label: string
+          method_key: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          fee_fixed?: number
+          fee_percentage?: number
+          id?: string
+          is_active?: boolean
+          label: string
+          method_key: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          fee_fixed?: number
+          fee_percentage?: number
+          id?: string
+          is_active?: boolean
+          label?: string
+          method_key?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pdv_payments: {
         Row: {
           amount: number
@@ -4427,8 +4481,13 @@ export type Database = {
           cash_received: number | null
           change_amount: number | null
           created_at: string | null
+          fee_amount: number
+          fee_fixed_applied: number
+          fee_percentage_applied: number
+          gross_amount: number | null
           id: string
           installments: number | null
+          net_amount: number | null
           nsu: string | null
           order_id: string
           payment_method: string
@@ -4442,8 +4501,13 @@ export type Database = {
           cash_received?: number | null
           change_amount?: number | null
           created_at?: string | null
+          fee_amount?: number
+          fee_fixed_applied?: number
+          fee_percentage_applied?: number
+          gross_amount?: number | null
           id?: string
           installments?: number | null
+          net_amount?: number | null
           nsu?: string | null
           order_id: string
           payment_method: string
@@ -4457,8 +4521,13 @@ export type Database = {
           cash_received?: number | null
           change_amount?: number | null
           created_at?: string | null
+          fee_amount?: number
+          fee_fixed_applied?: number
+          fee_percentage_applied?: number
+          gross_amount?: number | null
           id?: string
           installments?: number | null
+          net_amount?: number | null
           nsu?: string | null
           order_id?: string
           payment_method?: string

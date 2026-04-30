@@ -8,6 +8,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { DollarSign, CreditCard, Save } from "lucide-react";
+import { PaymentMethodFeesManager } from "./PaymentMethodFeesManager";
 
 const financialSchema = z.object({
   enable_service_fee: z.boolean().optional(),
@@ -25,12 +26,6 @@ interface FinancialTabProps {
   isSubmitting?: boolean;
 }
 
-const paymentMethods = [
-  { key: "cash", label: "Dinheiro" },
-  { key: "credit", label: "Crédito" },
-  { key: "debit", label: "Débito" },
-  { key: "pix", label: "PIX" },
-];
 
 export function FinancialTab({ defaultValues, onSave, isSubmitting }: FinancialTabProps) {
   const form = useForm<FinancialFormValues>({
@@ -164,49 +159,10 @@ export function FinancialTab({ defaultValues, onSave, isSubmitting }: FinancialT
               )}
             />
 
-            <div className="space-y-4">
-              {paymentMethods.map((method, index) => (
-                <div key={method.key} className="rounded-lg border p-4 space-y-4">
-                  <FormField
-                    control={form.control}
-                    name={`accepted_payment_methods.${index}.enabled` as any}
-                    render={({ field }) => (
-                      <FormItem className="flex items-center justify-between">
-                        <FormLabel>{method.label}</FormLabel>
-                        <FormControl>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name={`accepted_payment_methods.${index}.fee_percentage` as any}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Taxa (%)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.01"
-                            {...field}
-                            onChange={(e) => field.onChange(parseFloat(e.target.value))}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Taxa adicional cobrada nesta forma de pagamento
-                        </FormDescription>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              ))}
-            </div>
           </CardContent>
         </Card>
+
+        <PaymentMethodFeesManager />
 
         <div className="flex justify-end">
           <Button type="submit" disabled={isSubmitting}>

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useEstablishmentId } from "@/hooks/use-establishment-id";
+import { buildPaymentSnapshot } from "@/lib/financial/build-payment-snapshot";
 import { toast } from "sonner";
 
 export type PaymentMethod =
@@ -158,8 +159,14 @@ export function usePDVPayments() {
         }
       }
 
-      // 2. If there's an order_id, insert payment record
+      // 2. If there's an order_id, insert payment record (com snapshot da taxa)
+      const ownerForFees = visibleUserId || user.id;
       if (orderId) {
+        const { columns: feeColumns } = await buildPaymentSnapshot(
+          ownerForFees,
+          method,
+          amount,
+        );
         const { error: paymentError } = await supabase
           .from("pdv_payments")
           .insert({
@@ -169,6 +176,7 @@ export function usePDVPayments() {
             cash_received: cashReceived || null,
             change_amount: changeAmount || null,
             installments: installments || 1,
+            ...feeColumns,
           });
 
         if (paymentError) {
@@ -394,8 +402,13 @@ export function usePDVPayments() {
         }
       }
 
-      // 3. Inserir registro em pdv_payments (se houver order_id)
+      // 3. Inserir registro em pdv_payments (se houver order_id) — com snapshot da taxa
       if (orderId) {
+        const { columns: feeColumns } = await buildPaymentSnapshot(
+          visibleUserId || user.id,
+          method,
+          amount,
+        );
         await supabase.from("pdv_payments").insert({
           order_id: orderId,
           payment_method: method,
@@ -403,6 +416,7 @@ export function usePDVPayments() {
           cash_received: cashReceived || null,
           change_amount: changeAmount || null,
           installments: installments || 1,
+          ...feeColumns,
         });
       }
 
