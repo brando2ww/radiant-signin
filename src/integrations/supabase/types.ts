@@ -2598,6 +2598,84 @@ export type Database = {
           },
         ]
       }
+      pdv_action_audit_log: {
+        Row: {
+          action: Database["public"]["Enums"]["pdv_permission_action"]
+          actor_role: Database["public"]["Enums"]["app_role"] | null
+          actor_user_id: string
+          created_at: string
+          id: string
+          owner_user_id: string
+          payload: Json | null
+          reason: string | null
+          source_id: string | null
+          source_type: string | null
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["pdv_permission_action"]
+          actor_role?: Database["public"]["Enums"]["app_role"] | null
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          owner_user_id: string
+          payload?: Json | null
+          reason?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["pdv_permission_action"]
+          actor_role?: Database["public"]["Enums"]["app_role"] | null
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          owner_user_id?: string
+          payload?: Json | null
+          reason?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
+      }
+      pdv_action_permissions: {
+        Row: {
+          action: Database["public"]["Enums"]["pdv_permission_action"]
+          allowed: boolean
+          created_at: string
+          id: string
+          owner_user_id: string
+          requires_reason: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["pdv_permission_action"]
+          allowed?: boolean
+          created_at?: string
+          id?: string
+          owner_user_id: string
+          requires_reason?: boolean
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["pdv_permission_action"]
+          allowed?: boolean
+          created_at?: string
+          id?: string
+          owner_user_id?: string
+          requires_reason?: boolean
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pdv_bank_accounts: {
         Row: {
           account_number: string | null
@@ -3119,6 +3197,8 @@ export type Database = {
       }
       pdv_comandas: {
         Row: {
+          close_reason: string | null
+          closed_by_user_id: string | null
           closed_by_waiter_at: string | null
           comanda_number: string
           created_at: string
@@ -3134,6 +3214,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          close_reason?: string | null
+          closed_by_user_id?: string | null
           closed_by_waiter_at?: string | null
           comanda_number: string
           created_at?: string
@@ -3149,6 +3231,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          close_reason?: string | null
+          closed_by_user_id?: string | null
           closed_by_waiter_at?: string | null
           comanda_number?: string
           created_at?: string
@@ -4317,6 +4401,7 @@ export type Database = {
           cancellation_reason: string | null
           cancelled_at: string | null
           closed_at: string | null
+          closed_by_user_id: string | null
           created_at: string | null
           customer_id: string | null
           customer_name: string | null
@@ -4328,6 +4413,7 @@ export type Database = {
           order_number: string
           paid_at: string | null
           service_fee: number | null
+          service_fee_paid: number
           source: string
           status: string
           subtotal: number | null
@@ -4340,6 +4426,7 @@ export type Database = {
           cancellation_reason?: string | null
           cancelled_at?: string | null
           closed_at?: string | null
+          closed_by_user_id?: string | null
           created_at?: string | null
           customer_id?: string | null
           customer_name?: string | null
@@ -4351,6 +4438,7 @@ export type Database = {
           order_number: string
           paid_at?: string | null
           service_fee?: number | null
+          service_fee_paid?: number
           source: string
           status?: string
           subtotal?: number | null
@@ -4363,6 +4451,7 @@ export type Database = {
           cancellation_reason?: string | null
           cancelled_at?: string | null
           closed_at?: string | null
+          closed_by_user_id?: string | null
           created_at?: string | null
           customer_id?: string | null
           customer_name?: string | null
@@ -4374,6 +4463,7 @@ export type Database = {
           order_number?: string
           paid_at?: string | null
           service_fee?: number | null
+          service_fee_paid?: number
           source?: string
           status?: string
           subtotal?: number | null
@@ -6859,6 +6949,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      has_pdv_action: {
+        Args: {
+          _action: Database["public"]["Enums"]["pdv_permission_action"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -6872,15 +6969,62 @@ export type Database = {
       }
       is_establishment_member: { Args: { owner_id: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
+      log_pdv_action: {
+        Args: {
+          _action: Database["public"]["Enums"]["pdv_permission_action"]
+          _payload: Json
+          _reason: string
+          _source_id: string
+          _source_type: string
+          _target_id: string
+          _target_type: string
+        }
+        Returns: string
+      }
+      pdv_change_table: {
+        Args: {
+          p_reason?: string
+          p_source_table_id: string
+          p_target_table_id: string
+        }
+        Returns: Json
+      }
+      pdv_close_attendance: {
+        Args: {
+          p_close_whole_table?: boolean
+          p_comanda_id: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
       pdv_lock_comanda_items: {
         Args: { p_item_ids: string[]; p_session_id: string }
         Returns: {
           locked_id: string
         }[]
       }
+      pdv_resolve_owner: { Args: { _user_id: string }; Returns: string }
+      pdv_split_comanda_item: {
+        Args: { p_item_id: string; p_qty: number }
+        Returns: string
+      }
+      pdv_transfer_items: {
+        Args: {
+          p_item_ids: string[]
+          p_qty_map: Json
+          p_reason?: string
+          p_target_id: string
+          p_target_kind: string
+        }
+        Returns: Json
+      }
       pdv_unlock_comanda_items: {
         Args: { p_item_ids: string[]; p_session_id: string }
         Returns: undefined
+      }
+      pdv_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
       }
     }
     Enums: {
@@ -6927,6 +7071,20 @@ export type Database = {
         | "sangria"
         | "suprimento"
         | "fechamento"
+      pdv_permission_action:
+        | "change_table"
+        | "transfer_table_to_table"
+        | "transfer_comanda_to_comanda"
+        | "transfer_table_to_comanda"
+        | "transfer_comanda_to_table"
+        | "close_attendance"
+        | "cancel_item"
+        | "cancel_paid_item"
+        | "apply_discount"
+        | "remove_service_fee"
+        | "view_history"
+        | "process_payment"
+        | "refund_payment"
       pdv_stock_movement_type:
         | "entrada"
         | "saida_venda"
@@ -7115,6 +7273,21 @@ export const Constants = {
         "sangria",
         "suprimento",
         "fechamento",
+      ],
+      pdv_permission_action: [
+        "change_table",
+        "transfer_table_to_table",
+        "transfer_comanda_to_comanda",
+        "transfer_table_to_comanda",
+        "transfer_comanda_to_table",
+        "close_attendance",
+        "cancel_item",
+        "cancel_paid_item",
+        "apply_discount",
+        "remove_service_fee",
+        "view_history",
+        "process_payment",
+        "refund_payment",
       ],
       pdv_stock_movement_type: [
         "entrada",
