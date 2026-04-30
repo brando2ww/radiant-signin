@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Star, MessageSquare, Search, ChevronLeft, ChevronRight, User, Phone, Calendar } from "lucide-react";
 import { useCampaignResponses } from "@/hooks/use-evaluation-campaigns";
+import { AnswerValue } from "@/components/evaluations/AnswerValue";
 
 interface Props {
   campaignId: string;
