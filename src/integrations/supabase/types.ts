@@ -3727,6 +3727,60 @@ export type Database = {
           },
         ]
       }
+      pdv_invoice_item_links: {
+        Row: {
+          created_at: string
+          id: string
+          ingredient_id: string
+          last_used_at: string
+          product_code: string | null
+          product_ean: string | null
+          supplier_cnpj: string | null
+          supplier_id: string | null
+          times_used: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ingredient_id: string
+          last_used_at?: string
+          product_code?: string | null
+          product_ean?: string | null
+          supplier_cnpj?: string | null
+          supplier_id?: string | null
+          times_used?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ingredient_id?: string
+          last_used_at?: string
+          product_code?: string | null
+          product_ean?: string | null
+          supplier_cnpj?: string | null
+          supplier_id?: string | null
+          times_used?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pdv_invoice_item_links_ingredient_id_fkey"
+            columns: ["ingredient_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_ingredients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pdv_invoice_item_links_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pdv_invoice_items: {
         Row: {
           cfop: string | null

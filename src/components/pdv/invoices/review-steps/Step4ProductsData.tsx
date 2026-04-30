@@ -1,7 +1,8 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Check, Plus } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, Check, Plus, Sparkles } from "lucide-react";
 import { EditableInvoiceData, EditableInvoiceItem } from "@/types/invoice";
 import { ProductItemEditor } from "../ProductItemEditor";
 
@@ -17,50 +18,78 @@ export function Step4ProductsData({ data, onUpdate }: Step4ProductsDataProps) {
     onUpdate({ items: updatedItems });
   };
 
-  const linkedCount = data.items.filter(i => i.linkAction.type === 'link').length;
-  const createCount = data.items.filter(i => i.linkAction.type === 'create').length;
-  const noneCount = data.items.filter(i => i.linkAction.type === 'none').length;
+  const linkedCount = data.items.filter((i) => i.linkAction.type === "link").length;
+  const createCount = data.items.filter((i) => i.linkAction.type === "create").length;
+  const noneCount = data.items.filter((i) => i.linkAction.type === "none").length;
+  const suggestPendingCount = data.items.filter(
+    (i) =>
+      i.linkAction.type === "none" &&
+      i.suggestedIngredientIds &&
+      i.suggestedIngredientIds.length > 0
+  ).length;
+  const noMatchCount = noneCount - suggestPendingCount;
 
-  const handleLinkAllPossible = () => {
-    // Esta função seria implementada para vincular automaticamente todos os itens possíveis
-    // Por ora, apenas um placeholder
+  const handleAcceptAllSuggestions = () => {
+    const updatedItems = data.items.map((item) => {
+      if (
+        item.linkAction.type === "none" &&
+        item.suggestedIngredientIds &&
+        item.suggestedIngredientIds.length > 0
+      ) {
+        return {
+          ...item,
+          linkAction: { type: "link" as const, ingredientId: item.suggestedIngredientIds[0] },
+        };
+      }
+      return item;
+    });
+    onUpdate({ items: updatedItems });
   };
 
-  const handleCreateAllNew = () => {
-    const updatedItems = data.items.map(item => ({
-      ...item,
-      linkAction: {
-        type: 'create' as const,
-        newIngredientData: {
-          name: item.productName,
-          code: item.productCode,
-          ean: item.productEan,
-          unit: item.unit,
-          min_stock: 0,
-          unit_cost: item.unitValue,
+  const handleCreateAllUnmatched = () => {
+    const updatedItems = data.items.map((item) => {
+      if (item.linkAction.type !== "none") return item;
+      return {
+        ...item,
+        linkAction: {
+          type: "create" as const,
+          newIngredientData: {
+            name: item.productName,
+            code: item.productCode,
+            ean: item.productEan,
+            unit: item.unit,
+            min_stock: 0,
+            unit_cost: item.unitValue,
+          },
         },
-      },
-    }));
+      };
+    });
     onUpdate({ items: updatedItems });
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold mb-4">Produtos da Nota Fiscal</h3>
+        <h3 className="text-lg font-semibold mb-1">Produtos da Nota Fiscal</h3>
         <p className="text-sm text-muted-foreground">
-          Edite os dados dos produtos e configure a vinculação com o estoque.
+          O sistema tentou vincular cada item ao seu estoque automaticamente. Revise antes de
+          confirmar.
         </p>
       </div>
 
       {/* Estatísticas */}
       <div className="flex gap-3 flex-wrap">
         <Badge variant="outline" className="gap-1">
-          Total: {data.items.length} itens
+          Total: {data.items.length}
         </Badge>
         {linkedCount > 0 && (
-          <Badge variant="outline" className="gap-1 border-green-500 text-green-700">
+          <Badge variant="outline" className="gap-1 border-primary text-primary">
             <Check className="h-3 w-3" /> {linkedCount} vinculado(s)
+          </Badge>
+        )}
+        {suggestPendingCount > 0 && (
+          <Badge variant="outline" className="gap-1">
+            <Sparkles className="h-3 w-3" /> {suggestPendingCount} sugestão(ões) a confirmar
           </Badge>
         )}
         {createCount > 0 && (
@@ -68,19 +97,38 @@ export function Step4ProductsData({ data, onUpdate }: Step4ProductsDataProps) {
             <Plus className="h-3 w-3" /> {createCount} novo(s)
           </Badge>
         )}
-        {noneCount > 0 && (
-          <Badge variant="outline" className="gap-1 text-muted-foreground">
-            <AlertCircle className="h-3 w-3" /> {noneCount} sem vinculação
+        {noMatchCount > 0 && (
+          <Badge variant="outline" className="gap-1 border-destructive text-destructive">
+            <AlertCircle className="h-3 w-3" /> {noMatchCount} sem vinculação
           </Badge>
         )}
       </div>
 
+      {noneCount > 0 && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Existem {noneCount} item(ns) sem vinculação. Você não poderá confirmar a importação
+            enquanto cada item não estiver vinculado a um insumo existente ou marcado para criar
+            como novo.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Ações em massa */}
-      <div className="flex gap-2">
-        <Button variant="outline" size="sm" onClick={handleCreateAllNew}>
-          <Plus className="h-4 w-4 mr-2" />
-          Criar Todos como Novos
-        </Button>
+      <div className="flex gap-2 flex-wrap">
+        {suggestPendingCount > 0 && (
+          <Button variant="outline" size="sm" onClick={handleAcceptAllSuggestions}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            Aceitar todas as sugestões ({suggestPendingCount})
+          </Button>
+        )}
+        {noneCount > 0 && (
+          <Button variant="outline" size="sm" onClick={handleCreateAllUnmatched}>
+            <Plus className="h-4 w-4 mr-2" />
+            Criar todos os sem vínculo como novos
+          </Button>
+        )}
       </div>
 
       {/* Lista de produtos */}
