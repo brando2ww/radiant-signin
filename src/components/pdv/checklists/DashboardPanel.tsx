@@ -29,6 +29,7 @@ interface DashboardPanelProps {
 
 export function DashboardPanel({ onNavigate, onQrOpen, onSendReport, onGenerateDaily, sendingReport, isGenerating }: DashboardPanelProps) {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [completedDialogOpen, setCompletedDialogOpen] = useState(false);
   const {
     metrics, completionChart, shiftComparison, alerts, unacknowledgedAlerts,
     acknowledgeAlert, criticalTasks, timeline, teamHighlights,
