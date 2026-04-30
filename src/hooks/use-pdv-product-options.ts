@@ -12,6 +12,8 @@ export interface PDVOptionItemRecipeRef {
   ingredient_unit?: string;
 }
 
+export type PDVOptionItemKind = "ingredient" | "product";
+
 export interface PDVProductOptionItem {
   id: string;
   option_id: string;
@@ -19,6 +21,7 @@ export interface PDVProductOptionItem {
   price_adjustment: number;
   is_available: boolean;
   order_position: number;
+  item_kind: PDVOptionItemKind;
   linked_product_id?: string | null;
   linked_product?: PDVProduct | null;
   recipes?: PDVOptionItemRecipeRef[];
