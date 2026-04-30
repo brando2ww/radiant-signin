@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useEstablishmentId } from "@/hooks/use-establishment-id";
 
-type ExecStatus = "concluido" | "atrasado";
+type ExecStatus = "concluido" | "atrasado" | "nao_iniciado";
 
 interface Props {
   open: boolean;
@@ -23,9 +23,10 @@ interface Props {
   status?: ExecStatus;
 }
 
-const STATUS_CONFIG: Record<ExecStatus, { title: string; orderField: string }> = {
-  concluido: { title: "Checklists concluídos", orderField: "completed_at" },
-  atrasado: { title: "Checklists em atraso", orderField: "started_at" },
+const STATUS_CONFIG: Record<ExecStatus, { title: string; orderField: string; emptyText: string }> = {
+  concluido: { title: "Checklists concluídos", orderField: "completed_at", emptyText: "Nenhum checklist concluído neste dia." },
+  atrasado: { title: "Checklists em atraso", orderField: "started_at", emptyText: "Nenhum checklist em atraso neste dia." },
+  nao_iniciado: { title: "Checklists não iniciados", orderField: "created_at", emptyText: "Nenhum checklist não iniciado neste dia." },
 };
 
 export function CompletedExecutionsDialog({ open, onOpenChange, date, status = "concluido" }: Props) {

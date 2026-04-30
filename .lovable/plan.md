@@ -1,20 +1,24 @@
-## Mudanças no Dashboard de Checklists (`src/components/pdv/checklists/DashboardPanel.tsx`)
+# Tornar card "Não Iniciados" clicável
 
-### 1. Remover botão "Relatório"
-Remover o `<Button>` da barra superior que dispara `onSendReport`. Também remover os imports/props não mais usados (`Send`, `onSendReport`, `sendingReport`) — manter compatibilidade do tipo da prop deixando-as opcionais e ignoradas, ou removendo de vez. Vou removê-las da assinatura.
+## Objetivo
 
-### 2. Remover card "Em Andamento"
-Remover o `MetricCard` correspondente (`metrics?.emAndamento`) do grid de cards de resumo. Ajustar o grid para `grid-cols-2 lg:grid-cols-4` para ficar bem distribuído (Concluídos, Atrasados, Não Iniciados, Saúde).
+Permitir que ao clicar no card **"Não Iniciados"** seja aberto um dialog listando os checklists que ainda não foram iniciados no dia (mesma UX dos cards "Concluídos" e "Atrasados").
 
-### 3. Card "Atrasados" clicável → dialog com checklists em atraso
-- Adicionar estado `overdueDialogOpen`.
-- Passar `onClick={() => setOverdueDialogOpen(true)}` no `MetricCard` "Atrasados".
-- Reaproveitar o componente `CompletedExecutionsDialog` generalizando-o:
-  - Renomear para `ExecutionsByStatusDialog` (mantém arquivo) ou criar novo `OverdueExecutionsDialog` reutilizando a mesma estrutura.
-  - Solução escolhida: **generalizar** o componente existente adicionando uma prop `status: "concluido" | "atrasado"` e título dinâmico ("Checklists concluídos" / "Checklists em atraso"). Atualizar o `DashboardPanel` para passar `status="concluido"` e `status="atrasado"` nas duas instâncias.
-- O conteúdo do dialog para "atrasado" mostra os mesmos campos (nome, setor, operador, horário agendado) e expande para ver os itens já respondidos (se houver) — útil para checar progresso pendente.
+## Mudanças
 
-### Detalhes técnicos
-- Manter ordenação por `started_at` quando status for `atrasado` (executions atrasadas geralmente têm `started_at` definido); fallback para `created_at` se necessário.
-- Reaproveitar `ExecutionItems` sem mudanças — funciona para qualquer execution_id.
-- Sem alterações de banco.
+### 1. `src/components/pdv/checklists/CompletedExecutionsDialog.tsx`
+- Ampliar o tipo `ExecStatus` para `"concluido" | "atrasado" | "nao_iniciado"`.
+- Adicionar entrada em `STATUS_CONFIG`:
+  - `nao_iniciado`: `title = "Checklists não iniciados"`, `orderField = "scheduled_time"` (com fallback para `created_at` se a coluna não existir).
+- Atualizar texto de estado vazio para incluir o caso "Nenhum checklist não iniciado neste dia."
+- Para `nao_iniciado`, ocultar timestamp (não há `started_at`/`completed_at`) e ocultar o accordion de itens (não há respostas) — renderizar apenas a linha do checklist com setor/operador/horário agendado, sem `AccordionTrigger` expansível.
+
+### 2. `src/components/pdv/checklists/DashboardPanel.tsx`
+- Adicionar estado `notStartedDialogOpen`.
+- Tornar o `MetricCard` "Não Iniciados" clicável passando `onClick={() => setNotStartedDialogOpen(true)}`.
+- Renderizar um terceiro `<CompletedExecutionsDialog>` com `status="nao_iniciado"`.
+
+## Notas
+
+- Sem mudanças de banco; usa o mesmo filtro `status` na query existente.
+- Mantém o padrão de UX e cores neutras já adotado no painel.
