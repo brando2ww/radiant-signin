@@ -14,6 +14,7 @@ import { useChecklistDashboard } from "@/hooks/use-checklist-dashboard";
 import { CompletionChart } from "./CompletionChart";
 import { ShiftComparison } from "./ShiftComparison";
 import { AlertsPanel } from "./AlertsPanel";
+import { CompletedExecutionsDialog } from "./CompletedExecutionsDialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
