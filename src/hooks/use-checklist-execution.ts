@@ -220,7 +220,7 @@ export function useChecklistExecution(userId: string) {
       photoUrl: string | null,
       isCompliant: boolean | null
     ) => {
-      await supabase
+      const { error } = await supabase
         .from("checklist_execution_items")
         .update({
           value: value as any,
@@ -229,6 +229,10 @@ export function useChecklistExecution(userId: string) {
           completed_at: new Date().toISOString(),
         })
         .eq("id", executionItemId);
+      if (error) {
+        console.error("[checklist] saveItemValue error:", error);
+        throw error;
+      }
     },
     []
   );
