@@ -14,17 +14,26 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useEstablishmentId } from "@/hooks/use-establishment-id";
 
+type ExecStatus = "concluido" | "atrasado";
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   date: string; // YYYY-MM-DD
+  status?: ExecStatus;
 }
 
-export function CompletedExecutionsDialog({ open, onOpenChange, date }: Props) {
+const STATUS_CONFIG: Record<ExecStatus, { title: string; orderField: string }> = {
+  concluido: { title: "Checklists concluídos", orderField: "completed_at" },
+  atrasado: { title: "Checklists em atraso", orderField: "started_at" },
+};
+
+export function CompletedExecutionsDialog({ open, onOpenChange, date, status = "concluido" }: Props) {
   const { visibleUserId } = useEstablishmentId();
+  const cfg = STATUS_CONFIG[status];
 
   const { data: executions, isLoading } = useQuery({
-    queryKey: ["completed-executions", visibleUserId, date],
+    queryKey: ["status-executions", status, visibleUserId, date],
     enabled: !!visibleUserId && open,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -32,8 +41,8 @@ export function CompletedExecutionsDialog({ open, onOpenChange, date }: Props) {
         .select("id, score, started_at, completed_at, checklists(name, sector), checklist_operators(name)")
         .eq("user_id", visibleUserId!)
         .eq("execution_date", date)
-        .eq("status", "concluido")
-        .order("completed_at", { ascending: true });
+        .eq("status", status)
+        .order(cfg.orderField, { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data || [];
     },
