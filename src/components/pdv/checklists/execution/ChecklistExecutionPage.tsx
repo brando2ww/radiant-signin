@@ -32,39 +32,51 @@ export function ChecklistExecutionPage({ executionId, userId, onBack, onComplete
     async (execItemId: string, value: any, photoUrl: string | null, isCompliant: boolean | null) => {
       await saveItemValue(execItemId, value, photoUrl, isCompliant);
 
-      // Update local state
+      // Update local state (functional update to avoid stale closure)
+      let savedItem: ChecklistItemData | undefined;
       setData((prev: any) => {
         if (!prev) return prev;
-        const items = prev.items.map((it: ChecklistItemData) =>
-          it.executionItemId === execItemId
-            ? { ...it, value, photo_url: photoUrl, is_compliant: isCompliant, completed_at: new Date().toISOString() }
-            : it
-        );
+        const items = prev.items.map((it: ChecklistItemData) => {
+          if (it.executionItemId !== execItemId) return it;
+          const updated = { ...it, value, photo_url: photoUrl, is_compliant: isCompliant, completed_at: new Date().toISOString() };
+          savedItem = updated;
+          return updated;
+        });
         return { ...prev, items };
       });
 
       // Auto-alert for out of range
-      if (isCompliant === false && !alertedItems.has(execItemId)) {
-        const item = data?.items?.find((i: any) => i.executionItemId === execItemId);
-        if (item) {
-          const alertType = item.item_type === "temperature" ? "temperatura_fora" as const : "item_critico" as const;
-          await createAlert(executionId, item.id, alertType, `${item.title}: valor ${value} fora da faixa (${item.min_value ?? "—"} a ${item.max_value ?? "—"})`);
-          setAlertedItems((prev) => new Set(prev).add(execItemId));
-          toast({ title: "⚠️ Alerta gerado", description: `${item.title} fora da faixa permitida`, variant: "destructive" });
-        }
+      if (isCompliant === false && !alertedItems.has(execItemId) && savedItem) {
+        const alertType = savedItem.item_type === "temperature" ? "temperatura_fora" as const : "item_critico" as const;
+        await createAlert(executionId, savedItem.id, alertType, `${savedItem.title}: valor ${value} fora da faixa (${savedItem.min_value ?? "—"} a ${savedItem.max_value ?? "—"})`);
+        setAlertedItems((prev) => new Set(prev).add(execItemId));
+        toast({ title: "⚠️ Alerta gerado", description: `${savedItem.title} fora da faixa permitida`, variant: "destructive" });
       }
     },
-    [saveItemValue, createAlert, executionId, data, alertedItems]
+    [saveItemValue, createAlert, executionId, alertedItems]
   );
 
   const handleComplete = async () => {
     setCompleting(true);
     try {
+      // Revalidate against server before completing to avoid stale local state
+      const fresh = await loadExecution(executionId);
+      setData(fresh);
+      const pending = fresh.items.filter((i) => i.is_required && i.completed_at == null);
+      if (pending.length > 0) {
+        toast({
+          title: "Itens obrigatórios pendentes",
+          description: pending.slice(0, 3).map((p) => `• ${p.title}`).join("\n") + (pending.length > 3 ? `\n+${pending.length - 3}...` : ""),
+          variant: "destructive",
+        });
+        return;
+      }
       const score = await completeExecution(executionId);
       toast({ title: `Checklist concluído! Nota: ${score}/100` });
       onComplete();
-    } catch {
-      toast({ title: "Erro ao concluir", variant: "destructive" });
+    } catch (err: any) {
+      console.error("[checklist] complete error:", err);
+      toast({ title: "Erro ao concluir", description: err?.message, variant: "destructive" });
     } finally {
       setCompleting(false);
     }
@@ -123,7 +135,7 @@ export function ChecklistExecutionPage({ executionId, userId, onBack, onComplete
           <Button
             className="w-full"
             size="lg"
-            disabled={!allRequiredDone || completing || data.status === "concluido"}
+            disabled={completing || data.status === "concluido"}
             onClick={handleComplete}
           >
             {completing ? (

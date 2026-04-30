@@ -8,6 +8,7 @@ import { Camera, Star, Loader2, AlertTriangle } from "lucide-react";
 import { TrainingStep } from "./TrainingStep";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export interface ChecklistItemData {
   id: string; // checklist_items.id
@@ -62,18 +63,39 @@ export function ExecutionItemRenderer({ item, onSave, userId, executionId }: Exe
   };
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
     setUploading(true);
-    const path = `${userId}/${executionId}/${item.id}.${file.name.split(".").pop()}`;
-    await supabase.storage.from("checklist-evidence").remove([path]);
-    const { error } = await supabase.storage.from("checklist-evidence").upload(path, file, { upsert: true });
-    if (!error) {
+    try {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `${userId}/${executionId}/${item.id}.${ext}`;
+      const { error } = await supabase.storage
+        .from("checklist-evidence")
+        .upload(path, file, { upsert: true, contentType: file.type || `image/${ext}` });
+      if (error) {
+        console.error("[checklist-evidence] upload error:", error);
+        toast.error(`Falha ao enviar foto: ${error.message}`);
+        return;
+      }
       const { data: urlData } = supabase.storage.from("checklist-evidence").getPublicUrl(path);
-      setPhotoUrl(urlData.publicUrl);
-      onSave(item.executionItemId, value, urlData.publicUrl, checkCompliance(value));
+      // cache-bust to force refresh
+      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      setPhotoUrl(publicUrl);
+      try {
+        await onSave(item.executionItemId, value, publicUrl, checkCompliance(value));
+      } catch (err: any) {
+        console.error("[checklist-evidence] save error:", err);
+        toast.error(`Foto enviada, mas falhou ao salvar: ${err?.message || "erro desconhecido"}`);
+      }
+    } catch (err: any) {
+      console.error("[checklist-evidence] unexpected error:", err);
+      toast.error(`Erro inesperado: ${err?.message || "tente novamente"}`);
+    } finally {
+      setUploading(false);
+      // reset so the same file can be reselected
+      input.value = "";
     }
-    setUploading(false);
   };
 
   const isOutOfRange =
