@@ -234,7 +234,7 @@ function CampaignRouletteCard({ campaign }: { campaign: any }) {
             <div className="sticky top-4 p-6 rounded-2xl bg-muted/30 border">
               <RoulettePreview
                 prizes={prizes}
-                size={220}
+                size={280}
                 primaryColor={wheelPrimary}
                 secondaryColor={wheelSecondary}
               />

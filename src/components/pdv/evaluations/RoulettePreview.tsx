@@ -47,21 +47,32 @@ export function RoulettePreview({ prizes, size = 200, primaryColor, secondaryCol
 
     const midAngleDeg = s.startDeg + s.deg / 2;
     const midAngleRad = ((midAngleDeg - 90) * Math.PI) / 180;
-    // Position text along the radius, at ~62% of the radius (sweet spot of the slice)
-    const textR = r * 0.62;
-    const tx = r + textR * Math.cos(midAngleRad);
-    const ty = r + textR * Math.sin(midAngleRad);
 
-    // Align text radially (reads from center → edge), flip on the left half so it stays upright
-    let textRotation = midAngleDeg - 90;
+    // Anchor the text just outside the center hole and let it grow toward the edge.
+    // This uses the full readable length of the slice instead of centering on a small point.
+    const innerR = r * 0.24;
+    const outerR = r * 0.96;
+    const usableLen = outerR - innerR;
+
+    // Determine whether to flip the text 180° (left half), so it always reads upright.
     const needsFlip = midAngleDeg > 90 && midAngleDeg < 270;
+
+    // For unflipped text, anchor at the inner radius and extend outward.
+    // For flipped text, anchor at the outer radius and extend inward (visually identical direction).
+    const anchorR = needsFlip ? outerR : innerR;
+    const tx = r + anchorR * Math.cos(midAngleRad);
+    const ty = r + anchorR * Math.sin(midAngleRad);
+
+    let textRotation = midAngleDeg - 90;
     if (needsFlip) textRotation += 180;
 
-    const fontSize = Math.max(8, Math.min(12, equalDeg / 3.5));
+    const fontSize = Math.max(9, Math.min(13, equalDeg / 3.2));
 
-    // Truncate long names so they don't overflow the slice
-    const maxChars = Math.max(8, Math.floor(equalDeg / 2.2));
-    const label = s.name.length > maxChars ? s.name.slice(0, maxChars - 1) + "…" : s.name;
+    // Truncate using both slice width AND radial length budget.
+    const charBudget = Math.floor(usableLen / (fontSize * 0.55));
+    const sliceBudget = Math.max(8, Math.floor(equalDeg / 2));
+    const maxChars = Math.min(charBudget, sliceBudget);
+    const label = s.name.length > maxChars ? s.name.slice(0, Math.max(3, maxChars - 1)) + "…" : s.name;
 
     return (
       <g key={s.id}>
@@ -69,7 +80,7 @@ export function RoulettePreview({ prizes, size = 200, primaryColor, secondaryCol
         <text
           x={tx}
           y={ty}
-          textAnchor="middle"
+          textAnchor="start"
           dominantBaseline="central"
           transform={`rotate(${textRotation}, ${tx}, ${ty})`}
           fill="white"

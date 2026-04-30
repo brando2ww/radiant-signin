@@ -1,20 +1,20 @@
-Vou corrigir a roleta que aparece em `/pdv/avaliacoes/cupons/roletas`, pois o ajuste anterior foi aplicado na roleta pública (`SpinWheel`), mas a tela do print usa outro componente: `RoulettePreview`.
+O texto está cortando porque está centralizado em um único ponto da fatia, e palavras longas como "01 Drink Sugestão" ultrapassam a borda da roleta. Vou corrigir mudando a forma como o texto é ancorado e aumentando o tamanho da prévia.
 
-Plano de alteração:
+Alterações:
 
-1. Atualizar `src/components/pdv/evaluations/RoulettePreview.tsx`
-   - Trocar a rotação atual do texto (`midAngleDeg`) para alinhamento radial (`midAngleDeg - 90`), igual ao comportamento corrigido na roleta pública.
-   - Manter o flip automático de 180° no lado esquerdo da roleta para impedir texto de cabeça para baixo.
-   - Ajustar a posição do texto para ficar mais ao centro útil da fatia, sem encostar demais no miolo nem na borda.
-   - Aplicar truncamento com reticências em nomes longos para evitar que invadam fatias vizinhas.
-   - Ajustar levemente o tamanho mínimo/máximo da fonte para melhorar leitura no preview pequeno de 220px.
+1. `src/components/pdv/evaluations/RoulettePreview.tsx` — reescrita do posicionamento do label
+   - Ancorar o texto logo após o miolo (24% do raio) com `textAnchor="start"`, deixando o texto crescer ao longo do raio em direção à borda. Isso aproveita praticamente todo o comprimento da fatia (~72% do raio) em vez de centralizá-lo em um ponto.
+   - No lado esquerdo da roleta (90°–270°), ancorar na borda externa (96% do raio) e aplicar flip de 180°, para o texto continuar lendo do centro para fora sem ficar de cabeça para baixo.
+   - Calcular truncamento com base em dois orçamentos:
+     - Orçamento radial: comprimento útil dividido pelo tamanho da fonte (≈0.55× por caractere).
+     - Orçamento angular: largura da fatia em graus.
+     - Usa o menor dos dois e adiciona reticências quando ultrapassar.
+   - Aumentar levemente a faixa de fonte (9–13px) para ficar mais legível.
 
-2. Manter consistência entre telas
-   - A mesma regra visual valerá para as duas áreas que usam `RoulettePreview`:
-     - `Cupons > Roletas`
-     - configuração de roleta por campanha, quando aplicável.
+2. `src/pages/pdv/evaluations/coupons/CouponsRoulettes.tsx` — aumentar o tamanho da prévia
+   - Trocar `size={220}` por `size={280}` para ganhar mais espaço para os labels.
 
-3. Não alterar dados dos prêmios
-   - Os nomes como “Petit Gateau”, “01 Drink Sugestão”, etc. continuarão vindo do cadastro; a mudança será apenas na renderização para ficarem legíveis.
+3. `src/components/pdv/evaluations/CampaignRoulette.tsx` — manter consistência
+   - Trocar `size={220}` por `size={280}` no preview da configuração de campanha.
 
-Após aprovado, implemento diretamente esse ajuste no componente de preview.
+Resultado esperado: nomes longos como "01 Drink Sugestão", "01 Harm. Espumante" e "01 Sequência" caberão dentro da fatia, sem cortar na borda da roleta.

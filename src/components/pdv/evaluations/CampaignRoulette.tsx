@@ -217,7 +217,7 @@ export function CampaignRoulette({ campaignId }: CampaignRouletteProps) {
             </CardHeader>
             <CardContent className="flex justify-center pb-6">
               <div className="p-4 rounded-2xl bg-muted/30 border">
-                <RoulettePreview prizes={prizes} size={220} primaryColor={wheelPrimary} secondaryColor={wheelSecondary} />
+                <RoulettePreview prizes={prizes} size={280} primaryColor={wheelPrimary} secondaryColor={wheelSecondary} />
               </div>
             </CardContent>
           </Card>
