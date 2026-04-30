@@ -50,7 +50,7 @@ export default function PublicTasks() {
   const loadSchedules = async (op: Operator) => {
     setLoading(true);
     try {
-      const data = await fetchAssignedSchedules(op.id, op.sector);
+      const data = await fetchAssignedSchedules(op.id, op.sector, op.access_level);
       setSchedules(data);
     } catch (e) {
       console.error(e);
@@ -137,6 +137,11 @@ export default function PublicTasks() {
           <h1 className="text-xl font-bold">Checklists do Dia</h1>
           <p className="text-sm text-muted-foreground">
             Olá, <strong>{operator.name}</strong> — Turno: {currentShift}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {operator.access_level === "gestor" || operator.access_level === "lider"
+              ? "Visão completa: todos os setores"
+              : `Setor: ${operator.sector}`}
           </p>
         </div>
 

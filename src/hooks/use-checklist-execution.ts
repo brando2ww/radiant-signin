@@ -58,10 +58,13 @@ export function useChecklistExecution(userId: string) {
 
   // Fetch schedules for today assigned to operator
   const fetchAssignedSchedules = useCallback(
-    async (operatorId: string, operatorSector: string) => {
+    async (operatorId: string, operatorSector: string, accessLevel?: string) => {
       const today = new Date();
       const dayOfWeek = today.getDay(); // 0=Sun
       const todayStr = today.toISOString().split("T")[0];
+
+      // Leaders/managers see everything
+      const isManager = accessLevel === "lider" || accessLevel === "gestor";
 
       // Get schedules for this user
       const { data: schedules, error } = await supabase
@@ -72,13 +75,24 @@ export function useChecklistExecution(userId: string) {
 
       if (error) throw error;
 
-      // Filter by day of week and assignment
+      // Filter by day of week and sector/operator assignment
       const filtered = (schedules || []).filter((s: any) => {
         const days = (s.days_of_week as number[]) || [];
         if (!days.includes(dayOfWeek)) return false;
-        if (s.assigned_operator_id && s.assigned_operator_id === operatorId) return true;
-        if (s.assigned_sector && s.assigned_sector === operatorSector) return true;
-        if (!s.assigned_operator_id && !s.assigned_sector) return true;
+
+        if (isManager) return true;
+
+        // Operator-specific assignment wins
+        if (s.assigned_operator_id) return s.assigned_operator_id === operatorId;
+
+        // Sector-specific assignment
+        if (s.assigned_sector) return s.assigned_sector === operatorSector;
+
+        // No explicit assignment: fall back to checklist's own sector
+        const checklistSector = s.checklists?.sector;
+        if (checklistSector) return checklistSector === operatorSector;
+
+        // Truly unassigned + no checklist sector: deny (avoid cross-sector leakage)
         return false;
       });
 
