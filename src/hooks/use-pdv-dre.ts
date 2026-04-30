@@ -56,7 +56,37 @@ export function usePDVDre(selectedMonth?: Date) {
       const grossRevenue = pdvSales + deliverySales;
       const totalDiscounts = pdvDiscounts + deliveryDiscounts;
       const totalCancellations = pdvCancellations + deliveryCancellations;
-      const deductions = totalDiscounts + totalCancellations;
+
+      // Taxas de meios de pagamento (snapshot por venda)
+      // 1) PDV — soma fee_amount de pdv_payments cujos pedidos sejam do dono e do mês
+      const pdvOrderIds = (pdvOrders || [])
+        .filter((o: any) => o.status === "closed")
+        .map((o: any) => o.id)
+        .filter(Boolean) as string[];
+      let paymentFees = 0;
+      if (pdvOrderIds.length > 0) {
+        const { data: pays } = await supabase
+          .from("pdv_payments")
+          .select("fee_amount")
+          .in("order_id", pdvOrderIds);
+        (pays || []).forEach((p: any) => {
+          paymentFees += Number(p.fee_amount || 0);
+        });
+      }
+      // 2) Recebimentos financeiros (contas a receber pagas no período)
+      const { data: receivedTx } = await supabase
+        .from("pdv_financial_transactions")
+        .select("fee_amount")
+        .eq("user_id", user.id)
+        .eq("transaction_type", "receivable")
+        .eq("status", "paid")
+        .gte("payment_date", ms)
+        .lte("payment_date", me);
+      (receivedTx || []).forEach((t: any) => {
+        paymentFees += Number(t.fee_amount || 0);
+      });
+
+      const deductions = totalDiscounts + totalCancellations + paymentFees;
       const netRevenue = grossRevenue - deductions;
 
       // CMV — from recipes + sold items
