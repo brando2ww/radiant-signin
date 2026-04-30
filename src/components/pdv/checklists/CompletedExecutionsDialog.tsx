@@ -57,7 +57,7 @@ export function CompletedExecutionsDialog({ open, onOpenChange, date, status = "
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Checklists concluídos</DialogTitle>
+          <DialogTitle>{cfg.title}</DialogTitle>
           <DialogDescription>{formattedDate}</DialogDescription>
         </DialogHeader>
 
@@ -68,7 +68,9 @@ export function CompletedExecutionsDialog({ open, onOpenChange, date, status = "
             </div>
           ) : !executions || executions.length === 0 ? (
             <p className="text-sm text-muted-foreground py-10 text-center">
-              Nenhum checklist concluído neste dia.
+              {status === "concluido"
+                ? "Nenhum checklist concluído neste dia."
+                : "Nenhum checklist em atraso neste dia."}
             </p>
           ) : (
             <Accordion type="multiple" className="w-full">
