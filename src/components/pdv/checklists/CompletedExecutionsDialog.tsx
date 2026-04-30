@@ -83,9 +83,14 @@ export function CompletedExecutionsDialog({ open, onOpenChange, date, status = "
                     <p className="font-medium truncate">{exec.checklists?.name || "Checklist"}</p>
                     <p className="text-xs text-muted-foreground truncate">
                       {exec.checklists?.sector || "—"} · {exec.checklist_operators?.name || "—"}
+                      {exec.started_at && (
+                        <> · iniciado {format(new Date(exec.started_at), "HH:mm", { locale: ptBR })}</>
+                      )}
                     </p>
                   </div>
-                  <Badge variant="outline" className="shrink-0">Não iniciado</Badge>
+                  <Badge variant="outline" className="shrink-0">
+                    {exec.status === "em_andamento" ? "Em andamento" : "Não iniciado"}
+                  </Badge>
                 </div>
               ))}
             </div>
