@@ -369,23 +369,33 @@ export const useEvaluationById = (id: string) => {
   return useQuery({
     queryKey: ["evaluation", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("customer_evaluations")
-        .select(`
-          *,
-          evaluation_answers (
-            id,
-            question_id,
-            score,
-            comment,
-            selected_options
-          )
-        `)
-        .eq("id", id)
-        .single();
+      const [{ data, error }, typeMap] = await Promise.all([
+        supabase
+          .from("customer_evaluations")
+          .select(`
+            *,
+            evaluation_answers (
+              id,
+              question_id,
+              score,
+              comment,
+              selected_options
+            )
+          `)
+          .eq("id", id)
+          .single(),
+        fetchQuestionTypeMap(),
+      ]);
 
       if (error) throw error;
-      return data as EvaluationWithAnswers;
+      const enriched: any = {
+        ...data,
+        evaluation_answers: ((data as any)?.evaluation_answers || []).map((a: any) => ({
+          ...a,
+          question_type: typeMap.get(a.question_id) || "stars",
+        })),
+      };
+      return enriched as EvaluationWithAnswers;
     },
   });
 };
