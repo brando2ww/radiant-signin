@@ -37,13 +37,17 @@ export function CompletedExecutionsDialog({ open, onOpenChange, date, status = "
     queryKey: ["status-executions", status, visibleUserId, date],
     enabled: !!visibleUserId && open,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("checklist_executions")
-        .select("id, score, started_at, completed_at, checklists(name, sector), checklist_operators(name)")
+        .select("id, status, score, started_at, completed_at, checklists(name, sector), checklist_operators(name)")
         .eq("user_id", visibleUserId!)
-        .eq("execution_date", date)
-        .eq("status", status)
-        .order(cfg.orderField, { ascending: true, nullsFirst: false });
+        .eq("execution_date", date);
+      if (status === "nao_iniciado") {
+        q = q.in("status", ["pendente", "nao_iniciado", "em_andamento"]);
+      } else {
+        q = q.eq("status", status);
+      }
+      const { data, error } = await q.order(cfg.orderField, { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data || [];
     },
