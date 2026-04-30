@@ -71,9 +71,16 @@ export function CampaignReports({ campaignId }: Props) {
     { name: "Detratores (0-6)", value: detractors, color: COLORS.detractor },
   ].filter((d) => d.value > 0);
 
+  // Apenas respostas de perguntas tipo "stars" (notas 1-5) entram nos cálculos numéricos.
+  // Perguntas de múltipla escolha / texto não têm score comparável.
+  const isStarsAnswer = (a: any) => (a.question_type || "stars") === "stars";
+  const isStarsQuestion = (q: any) => (q.question_type || "stars") === "stars";
+
   // --- General average ---
   const allScores = responses.flatMap((r) =>
-    (r.evaluation_answers as any[]).map((a: any) => a.score)
+    (r.evaluation_answers as any[])
+      .filter(isStarsAnswer)
+      .map((a: any) => a.score)
   );
   const avgGeneral = allScores.length > 0
     ? (allScores.reduce((s, v) => s + v, 0) / allScores.length)
@@ -81,22 +88,24 @@ export function CampaignReports({ campaignId }: Props) {
 
   const promoterRate = npsTotal > 0 ? Math.round((promoters / npsTotal) * 100) : 0;
 
-  // --- Average per question ---
-  const avgPerQuestion = (questions || []).map((q) => {
-    const scores: number[] = [];
-    responses.forEach((r) => {
-      const answers = r.evaluation_answers as any[];
-      if (!answers) return;
-      const ans = answers.find((a: any) => a.question_id === q.id);
-      if (ans) scores.push(ans.score);
+  // --- Average per question (somente perguntas de nota) ---
+  const avgPerQuestion = (questions || [])
+    .filter(isStarsQuestion)
+    .map((q) => {
+      const scores: number[] = [];
+      responses.forEach((r) => {
+        const answers = r.evaluation_answers as any[];
+        if (!answers) return;
+        const ans = answers.find((a: any) => a.question_id === q.id && isStarsAnswer(a));
+        if (ans) scores.push(ans.score);
+      });
+      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+      return {
+        name: q.question_text.length > 35 ? q.question_text.slice(0, 35) + "…" : q.question_text,
+        media: parseFloat(avg.toFixed(1)),
+        fill: avg >= 4 ? COLORS.promoter : avg >= 3 ? COLORS.neutral : COLORS.detractor,
+      };
     });
-    const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-    return {
-      name: q.question_text.length > 35 ? q.question_text.slice(0, 35) + "…" : q.question_text,
-      media: parseFloat(avg.toFixed(1)),
-      fill: avg >= 4 ? COLORS.promoter : avg >= 3 ? COLORS.neutral : COLORS.detractor,
-    };
-  });
 
   // --- Score distribution ---
   const scoreDist = [1, 2, 3, 4, 5].map((star) => ({
