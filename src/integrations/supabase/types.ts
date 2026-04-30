@@ -4010,6 +4010,9 @@ export type Database = {
       pdv_nfce_emissions: {
         Row: {
           ambiente: string
+          cancellation_protocol: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
           cashier_session_id: string | null
           chave_acesso: string | null
           comanda_id: string | null
@@ -4025,10 +4028,12 @@ export type Database = {
           forma_pagamento: string | null
           id: string
           items_snapshot: Json | null
+          last_status_check_at: string | null
           numero: number | null
           nuvem_fiscal_id: string | null
           order_id: string | null
           parcelas: number | null
+          parent_emission_id: string | null
           protocolo_autorizacao: string | null
           rejection_reason: string | null
           serie: string | null
@@ -4043,6 +4048,9 @@ export type Database = {
         }
         Insert: {
           ambiente?: string
+          cancellation_protocol?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           cashier_session_id?: string | null
           chave_acesso?: string | null
           comanda_id?: string | null
@@ -4058,10 +4066,12 @@ export type Database = {
           forma_pagamento?: string | null
           id?: string
           items_snapshot?: Json | null
+          last_status_check_at?: string | null
           numero?: number | null
           nuvem_fiscal_id?: string | null
           order_id?: string | null
           parcelas?: number | null
+          parent_emission_id?: string | null
           protocolo_autorizacao?: string | null
           rejection_reason?: string | null
           serie?: string | null
@@ -4076,6 +4086,9 @@ export type Database = {
         }
         Update: {
           ambiente?: string
+          cancellation_protocol?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
           cashier_session_id?: string | null
           chave_acesso?: string | null
           comanda_id?: string | null
@@ -4091,10 +4104,12 @@ export type Database = {
           forma_pagamento?: string | null
           id?: string
           items_snapshot?: Json | null
+          last_status_check_at?: string | null
           numero?: number | null
           nuvem_fiscal_id?: string | null
           order_id?: string | null
           parcelas?: number | null
+          parent_emission_id?: string | null
           protocolo_autorizacao?: string | null
           rejection_reason?: string | null
           serie?: string | null
@@ -4107,7 +4122,15 @@ export type Database = {
           valor_total?: number
           xml_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pdv_nfce_emissions_parent_emission_id_fkey"
+            columns: ["parent_emission_id"]
+            isOneToOne: false
+            referencedRelation: "pdv_nfce_emissions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pdv_notifications: {
         Row: {
