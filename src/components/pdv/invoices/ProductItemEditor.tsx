@@ -201,6 +201,8 @@ export function ProductItemEditor({ item, onUpdate }: ProductItemEditorProps) {
           itemUnit={item.unit}
           itemUnitCost={item.unitValue}
           linkAction={item.linkAction}
+          suggestedIngredientIds={item.suggestedIngredientIds}
+          autoMatched={item.autoMatched}
           onLinkChange={handleLinkActionChange}
         />
       </div>
