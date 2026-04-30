@@ -533,6 +533,13 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
     i.name.toLowerCase().includes(ingredientSearch.toLowerCase()),
   );
 
+  const filteredProducts = (excludeId?: string) =>
+    pdvProducts.filter(
+      (p) =>
+        p.id !== excludeId &&
+        p.name.toLowerCase().includes(productSearch.toLowerCase()),
+    );
+
   return (
     <div className="space-y-4 pb-20">
       <div className="flex gap-2">
