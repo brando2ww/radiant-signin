@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   CheckCircle2, Clock, AlertTriangle, XCircle, Activity,
   Plus, UserPlus, ListChecks, Trophy, TrendingDown, AlertOctagon,
-  QrCode, Send, RefreshCw,
+  QrCode, RefreshCw,
 } from "lucide-react";
 import { useChecklistDashboard } from "@/hooks/use-checklist-dashboard";
 import { CompletionChart } from "./CompletionChart";
