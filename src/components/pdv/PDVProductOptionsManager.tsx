@@ -868,103 +868,222 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
                 </div>
               );
             })}
-            <div className="flex gap-2 pt-2 border-t">
-              <Input
-                placeholder="Nome do item"
-                className="flex-1"
-                value={newItemNames[option.id] || ""}
-                onChange={(e) =>
-                  setNewItemNames((prev) => ({ ...prev, [option.id]: e.target.value }))
-                }
-                onKeyDown={(e) =>
-                  e.key === "Enter" && (e.preventDefault(), handleAddItem(option.id))
-                }
-              />
-              <CurrencyInput
-                value={newItemPrices[option.id] || ""}
-                onChange={(v) =>
-                  setNewItemPrices((prev) => ({ ...prev, [option.id]: v }))
-                }
-                placeholder="+ R$"
-                className="w-28"
-              />
-              <Popover
-                modal
-                open={newItemPopoverOpen === option.id}
-                onOpenChange={(open) => {
-                  setNewItemPopoverOpen(open ? option.id : null);
-                  if (!open) setIngredientSearch("");
-                }}
-              >
-                <PopoverTrigger asChild>
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center gap-2">
+                <Label className="text-xs text-muted-foreground">Tipo:</Label>
+                <Select
+                  value={newItemKinds[option.id] || "ingredient"}
+                  onValueChange={(v) => {
+                    setNewItemKinds((prev) => ({ ...prev, [option.id]: v as any }));
+                    if (v === "ingredient") {
+                      setNewItemProducts((prev) => ({ ...prev, [option.id]: null }));
+                    } else {
+                      setNewItemIngredients((prev) => ({ ...prev, [option.id]: null }));
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-40 h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ingredient">
+                      <span className="inline-flex items-center gap-1">
+                        <Boxes className="h-3 w-3" /> Insumo / Receita
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="product">
+                      <span className="inline-flex items-center gap-1">
+                        <Package className="h-3 w-3" /> Produto cadastrado
+                      </span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {newItemProducts[option.id] && (
+                  <Badge variant="secondary" className="gap-1 text-xs">
+                    <Package className="h-3 w-3" />
+                    {newItemProducts[option.id]?.name}
+                    <button
+                      type="button"
+                      onClick={() => handleClearNewItemProduct(option.id)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <Input
+                  placeholder={
+                    (newItemKinds[option.id] || "ingredient") === "product"
+                      ? "Nome (preenche ao escolher produto)"
+                      : "Nome do item"
+                  }
+                  className="flex-1"
+                  value={newItemNames[option.id] || ""}
+                  onChange={(e) =>
+                    setNewItemNames((prev) => ({ ...prev, [option.id]: e.target.value }))
+                  }
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && (e.preventDefault(), handleAddItem(option.id))
+                  }
+                />
+                <CurrencyInput
+                  value={newItemPrices[option.id] || ""}
+                  onChange={(v) =>
+                    setNewItemPrices((prev) => ({ ...prev, [option.id]: v }))
+                  }
+                  placeholder="+ R$"
+                  className="w-28"
+                />
+
+                {(newItemKinds[option.id] || "ingredient") === "ingredient" ? (
+                  <Popover
+                    modal
+                    open={newItemPopoverOpen === option.id}
+                    onOpenChange={(open) => {
+                      setNewItemPopoverOpen(open ? option.id : null);
+                      if (!open) setIngredientSearch("");
+                    }}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant={newItemIngredients[option.id] ? "secondary" : "ghost"}
+                        size="icon"
+                        className="h-9 w-9 shrink-0"
+                        title={
+                          newItemIngredients[option.id]
+                            ? `Insumo: ${newItemIngredients[option.id]?.name}`
+                            : "Vincular insumo"
+                        }
+                      >
+                        <Boxes className="h-3.5 w-3.5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-2" align="end">
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            placeholder="Buscar insumo..."
+                            value={ingredientSearch}
+                            onChange={(e) => setIngredientSearch(e.target.value)}
+                            className="pl-7 h-8 text-xs"
+                            autoFocus
+                          />
+                        </div>
+                        <ScrollArea className="h-48">
+                          <div className="space-y-1">
+                            {filteredIngredients.slice(0, 30).map((ing) => (
+                              <button
+                                key={ing.id}
+                                type="button"
+                                onClick={() =>
+                                  handleSelectNewItemIngredient(option.id, ing)
+                                }
+                                className="w-full text-left p-2 rounded text-xs hover:bg-accent transition-colors"
+                              >
+                                <p className="font-medium">{ing.name}</p>
+                                <p className="text-muted-foreground">
+                                  Estoque: {ing.current_stock} {ing.unit}
+                                </p>
+                              </button>
+                            ))}
+                            {filteredIngredients.length === 0 && (
+                              <p className="text-xs text-muted-foreground text-center py-4">
+                                Nenhum insumo encontrado
+                              </p>
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <Popover
+                    modal
+                    open={newItemProductPopoverOpen === option.id}
+                    onOpenChange={(open) => {
+                      setNewItemProductPopoverOpen(open ? option.id : null);
+                      if (!open) setProductSearch("");
+                    }}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant={newItemProducts[option.id] ? "secondary" : "default"}
+                        size="icon"
+                        className="h-9 w-9 shrink-0"
+                        title={
+                          newItemProducts[option.id]
+                            ? `Produto: ${newItemProducts[option.id]?.name}`
+                            : "Selecionar produto cadastrado"
+                        }
+                      >
+                        <Package className="h-3.5 w-3.5" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-2" align="end">
+                      <div className="space-y-2">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            placeholder="Buscar produto..."
+                            value={productSearch}
+                            onChange={(e) => setProductSearch(e.target.value)}
+                            className="pl-7 h-8 text-xs"
+                            autoFocus
+                          />
+                        </div>
+                        <ScrollArea className="h-48">
+                          <div className="space-y-1">
+                            {filteredProducts(productId).slice(0, 30).map((p) => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() =>
+                                  handleSelectNewItemProduct(option.id, {
+                                    id: p.id,
+                                    name: p.name,
+                                    price: Number(p.price_salon) || 0,
+                                  })
+                                }
+                                className="w-full text-left p-2 rounded text-xs hover:bg-accent transition-colors"
+                              >
+                                <p className="font-medium">{p.name}</p>
+                                <p className="text-muted-foreground">{p.category}</p>
+                              </button>
+                            ))}
+                            {filteredProducts(productId).length === 0 && (
+                              <p className="text-xs text-muted-foreground text-center py-4">
+                                Nenhum produto encontrado
+                              </p>
+                            )}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
+
+                {newItemIngredients[option.id] && (
                   <Button
                     type="button"
-                    variant={newItemIngredients[option.id] ? "secondary" : "ghost"}
+                    variant="ghost"
                     size="icon"
-                    className="h-9 w-9 shrink-0"
-                    title={
-                      newItemIngredients[option.id]
-                        ? `Insumo: ${newItemIngredients[option.id]?.name}`
-                        : "Vincular insumo"
-                    }
+                    className="h-9 w-9 shrink-0 text-muted-foreground"
+                    onClick={() => handleClearNewItemIngredient(option.id)}
+                    title="Remover insumo selecionado"
                   >
-                    <Boxes className="h-3.5 w-3.5" />
+                    <X className="h-3.5 w-3.5" />
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-72 p-2" align="end">
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        placeholder="Buscar insumo..."
-                        value={ingredientSearch}
-                        onChange={(e) => setIngredientSearch(e.target.value)}
-                        className="pl-7 h-8 text-xs"
-                        autoFocus
-                      />
-                    </div>
-                    <ScrollArea className="h-48">
-                      <div className="space-y-1">
-                        {filteredIngredients.slice(0, 30).map((ing) => (
-                          <button
-                            key={ing.id}
-                            type="button"
-                            onClick={() =>
-                              handleSelectNewItemIngredient(option.id, ing)
-                            }
-                            className="w-full text-left p-2 rounded text-xs hover:bg-accent transition-colors"
-                          >
-                            <p className="font-medium">{ing.name}</p>
-                            <p className="text-muted-foreground">
-                              Estoque: {ing.current_stock} {ing.unit}
-                            </p>
-                          </button>
-                        ))}
-                        {filteredIngredients.length === 0 && (
-                          <p className="text-xs text-muted-foreground text-center py-4">
-                            Nenhum insumo encontrado
-                          </p>
-                        )}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              {newItemIngredients[option.id] && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 shrink-0 text-muted-foreground"
-                  onClick={() => handleClearNewItemIngredient(option.id)}
-                  title="Remover insumo selecionado"
-                >
-                  <X className="h-3.5 w-3.5" />
+                )}
+                <Button type="button" size="sm" onClick={() => handleAddItem(option.id)}>
+                  <Plus className="h-3.5 w-3.5" />
                 </Button>
-              )}
-              <Button type="button" size="sm" onClick={() => handleAddItem(option.id)}>
-                <Plus className="h-3.5 w-3.5" />
-              </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
