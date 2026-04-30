@@ -1,94 +1,112 @@
-# Taxas por forma de pagamento + valor líquido automático
 
-Hoje o sistema só guarda `payment_method` (texto) em `pdv_payments` e `pdv_financial_transactions`, sem percentual de taxa, sem taxa fixa e sem valor líquido. A aba "Financeiro" das configurações do PDV tem campos de taxa por método, mas não são usados nos cálculos. Vou criar uma estrutura dedicada, persistir o snapshot da taxa em cada transação e propagar ao Caixa, Financeiro, DRE e relatórios.
+# Gerenciamento de Cupons Fiscais (NFC-e)
 
-## 1. Banco de dados (migração)
+Atualmente o sistema já emite NFC-e (edge function `emit-nfce`) e armazena cada emissão na tabela `pdv_nfce_emissions`, mas **não existe nenhuma tela** para o usuário visualizar, filtrar, baixar ou reprocessar esses cupons. A página `/pdv/notas-fiscais` cuida apenas das NF-e de **entrada** (compras de fornecedores).
 
-**Nova tabela `pdv_payment_method_fees`** (catálogo configurável):
-- `id`, `user_id` (dono do estabelecimento), `method_key` (ex: `credit`, `pix`, `debit`, `cash`, `ifood`, ou customizado), `label`, `fee_percentage` (numeric, default 0), `fee_fixed` (numeric, default 0), `is_active` (bool), `notes` (text), `created_at`, `updated_at`.
-- Unique `(user_id, method_key)`.
-- RLS: dono + `is_establishment_member(user_id)` para SELECT; INSERT/UPDATE/DELETE só para o dono.
-- Seed automático na primeira leitura (no hook): Crédito 3%, Débito 1%, Pix 1%, Dinheiro 0%, iFood 25%.
+Este plano cria um módulo dedicado para os cupons **emitidos** (saída), com listagem, filtros, detalhamento, ações (DANFE, XML, cancelamento, reenvio, consulta de status) e indicadores.
 
-**Snapshot da taxa nas transações** (colunas novas, todas nullable para retrocompatibilidade):
-- `pdv_payments`: `gross_amount`, `fee_percentage_applied`, `fee_fixed_applied`, `fee_amount`, `net_amount`.
-- `pdv_financial_transactions`: mesmas 5 colunas.
-- Backfill inicial: `gross_amount = amount`, `net_amount = amount`, taxas zero para registros existentes.
+---
 
-Regra: `amount` continua representando o **bruto** (compatibilidade total). Alterar `pdv_payment_method_fees` depois **não** recalcula histórico — leitura sempre vem das colunas snapshot.
+## 1. Nova rota e navegação
 
-## 2. Camada de cálculo (frontend)
+- **Rota:** `/pdv/cupons-fiscais` (separada de `/pdv/notas-fiscais` que continua sendo NF-e de entrada).
+- Adicionar item no `PDVHeaderNav.tsx`: **"Cupons Fiscais"** (ícone `ReceiptText`), abaixo de "Notas Fiscais".
+- Liberar acesso em `use-user-role.ts` para os mesmos perfis que hoje acessam Notas Fiscais (owner, admin, gerente, financeiro).
+- Registrar a rota em `src/pages/PDV.tsx` apontando para um novo `pages/pdv/FiscalCoupons.tsx`.
 
-Novo `src/lib/financial/payment-fees.ts`:
-- `calculateNetAmount(gross, { fee_percentage, fee_fixed })` → `{ gross, feePercentageAmount, feeFixedAmount, feeTotal, net }`.
-- Fórmula: `net = gross - (gross * fee% / 100) - fee_fixed` (nunca negativo).
-- `applyFeeFromCatalog(gross, methodKey, fees[])` resolve a taxa ativa do método; se inativa/inexistente, usa zero.
+## 2. Banco de dados (migração)
 
-Novo hook `src/hooks/use-payment-method-fees.ts`:
-- `usePaymentMethodFees()`, `useUpsertPaymentMethodFee`, `useDeletePaymentMethodFee`, `useTogglePaymentMethodFee`.
-- Resolve `establishment_owner_id` via `use-establishment-id`.
+A tabela `pdv_nfce_emissions` já existe com os campos necessários (`status`, `chave_acesso`, `numero`, `serie`, `protocolo_autorizacao`, `valor_total`, `customer_*`, `forma_pagamento`, `danfe_pdf_url`, `xml_url`, `nuvem_fiscal_id`, `error_payload`, `data_emissao`, `data_autorizacao`, etc).
 
-## 3. Configurações administrativas
+Adições mínimas (migração):
 
-Substituir a seção "Métodos de Pagamento Aceitos" do `FinancialTab.tsx` por um CRUD completo:
-- Tabela com colunas: Método, Label, % Taxa, Taxa Fixa (BRL), Ativo (toggle), Observações, Ações (⋮: Editar / Excluir).
-- Botão "Adicionar forma de pagamento" abrindo dialog para método personalizado (ex: Vale-refeição, Voucher).
-- Inputs com `CurrencyInput` para taxa fixa e máscara `%` para percentual.
-- Preview ao vivo: "Venda de R$ 100 → líquido R$ 97,00".
-- Acesso restrito a admin (guards já existentes em SettingsPage).
+- Coluna `cancellation_reason text` (motivo do cancelamento informado pelo usuário).
+- Coluna `cancelled_at timestamptz` e `cancellation_protocol text`.
+- Coluna `last_status_check_at timestamptz` (para botão "Consultar status").
+- Índices: `(user_id, data_emissao desc)` e `(user_id, status)` para acelerar a listagem.
+- Conferir/garantir RLS: SELECT/UPDATE para o owner (`user_id = auth.uid()`) e membros (`is_establishment_member(user_id)`).
 
-## 4. Captura do snapshot nas vendas
+## 3. Edge functions complementares
 
-Pontos que passam a calcular e persistir bruto/taxa/líquido antes do `INSERT`:
-- `src/hooks/use-pdv-payments.ts` — todos os 5 inserts em `pdv_payments` (linhas ~167, 194, 304, 401, 478).
-- `src/hooks/use-pdv-financial-transactions.ts` — `createTransaction` e `markAsPaid`.
-- `PDVTransactionDialog.tsx`, `MarkAsPaidDialog.tsx` (financial e bills): preview do líquido sob o campo Valor.
-- `PaymentDialog.tsx` do caixa: ao lado de cada método selecionado, "Líquido: R$ X (taxa Y% + R$ Z fixo)".
+Hoje só existe `emit-nfce`. Criar três novas funções (todas com `verify_jwt = false` validando JWT no código, padrão do projeto, usando `NUVEM_FISCAL_CLIENT_ID/SECRET` já configurados):
 
-## 5. Caixa, Financeiro, DRE e Relatórios
+1. **`cancel-nfce`** — recebe `{ emission_id, justificativa }` (mín. 15 caracteres, exigência da SEFAZ). Chama `POST /nfce/{id}/cancelamento` na Nuvem Fiscal, atualiza linha para `status='cancelada'`, grava `cancellation_reason`, `cancellation_protocol`, `cancelled_at`.
+2. **`check-nfce-status`** — recebe `{ emission_id }`. Chama `GET /nfce/{id}` na Nuvem Fiscal, atualiza `status`, `chave_acesso`, `protocolo_autorizacao`, `data_autorizacao`, `rejection_reason`. Útil para cupons "pendentes" que ficaram em processamento assíncrono.
+3. **`resend-nfce`** — para cupons `rejeitada`: reusa o `items_snapshot` e demais dados da linha original, cria nova linha de emissão (mantendo referência via coluna `parent_emission_id uuid` adicionada na migração) e chama o mesmo fluxo do `emit-nfce`.
 
-- `CashierStatement.tsx`, `CloseCashierDialog.tsx`, `CashierSummaryFooter.tsx`: somar bruto, taxas e líquido; exibir 3 totais e quebra por método.
-- `FinancialTransactions.tsx`: nova coluna "Líquido" e total no rodapé (filtro por método já existe).
-- `CashFlow.tsx`: usar `net_amount` para saldo realizado, manter bruto numa coluna auxiliar.
-- `DRE.tsx`: nova linha "(-) Taxas de meios de pagamento" entre Receita Bruta e Receita Líquida.
-- `PaymentMethodChart.tsx`: tooltip com bruto vs líquido.
-- Novo bloco "Taxas por período" dentro de `CashierStatement` (ou seção em `FinancialTransactions`): tabela por período × método com Bruto / % / Taxa fixa / Taxa total / Líquido + linha de totais.
+Todas retornam JSON com CORS padrão.
 
-## 6. Critérios de aceite cobertos
+## 4. Hooks
 
-- Admin configura sem código → CRUD em Configurações.
-- Cada método tem sua taxa → tabela com unique `(user_id, method_key)`.
-- Cálculo automático e snapshot por transação.
-- Histórico imutável diante de alterações futuras.
-- Suporte a % e taxa fixa simultâneos.
-- Relatórios e DRE com bruto, taxas e líquido + comparativo por método.
+Em `src/hooks/`:
 
-## Detalhes técnicos
+- `use-fiscal-coupons.ts` — listagem com filtros (período, status, número, chave, CPF, forma de pagamento, valor mín/máx) usando React Query + Supabase. Paginação por cursor (`data_emissao`).
+- `use-fiscal-coupon-detail.ts` — busca uma emissão por id (com `items_snapshot`).
+- `use-cancel-nfce.ts`, `use-check-nfce-status.ts`, `use-resend-nfce.ts` — wrappers de `supabase.functions.invoke` espelhando o padrão de `use-nfce-emission.ts`.
+- `use-fiscal-coupons-summary.ts` — agrega no período: totais por status, valor bruto autorizado, quantidade de cupons cancelados/rejeitados.
 
-```text
-Venda credit R$100, taxa 3% + R$0,50:
-  gross_amount             = 100.00
-  fee_percentage_applied   = 3
-  fee_fixed_applied        = 0.50
-  fee_amount               = 3.50
-  net_amount               = 96.50
-```
+## 5. Componentes de UI
 
-Migração resumida:
-```sql
-CREATE TABLE pdv_payment_method_fees (...);
-ALTER TABLE pdv_payments
-  ADD COLUMN gross_amount numeric,
-  ADD COLUMN fee_percentage_applied numeric DEFAULT 0,
-  ADD COLUMN fee_fixed_applied numeric DEFAULT 0,
-  ADD COLUMN fee_amount numeric DEFAULT 0,
-  ADD COLUMN net_amount numeric;
--- mesmas colunas em pdv_financial_transactions
-UPDATE pdv_payments SET gross_amount = amount, net_amount = amount WHERE gross_amount IS NULL;
-```
+Pasta nova: `src/components/pdv/fiscal-coupons/`.
 
-## Fora do escopo
+- **`FiscalCouponsHeader.tsx`** — cards de KPI no topo: Autorizadas (qtd e valor), Pendentes, Rejeitadas, Canceladas, Valor total emitido no período (usar `formatBRL`).
+- **`FiscalCouponsFilters.tsx`** — DateRangePicker (com `ptBR`), Select de status (`autorizada | pendente | rejeitada | cancelada`), Select de ambiente (`producao | homologacao`), Select de forma de pagamento, busca textual (número/chave/CPF/cliente).
+- **`FiscalCouponsTable.tsx`** — tabela: Nº/Série, Data, Cliente (CPF/nome), Forma pgto, Valor, Status (badge colorido por status usando classes do tema, sem cor custom), Ambiente, Ações (menu ⋮).
+- **`FiscalCouponMenu.tsx`** — dropdown com: "Ver detalhes", "Baixar DANFE (PDF)", "Baixar XML", "Consultar status", "Reenviar" (apenas se rejeitada), "Cancelar" (apenas se autorizada e dentro de 30 minutos), "Copiar chave de acesso".
+- **`FiscalCouponDetailDialog.tsx`** — Dialog (não-modal, padrão do projeto) com abas:
+  - **Resumo:** dados gerais, status, protocolo, datas, totais, link do DANFE/XML, motivo de rejeição se houver.
+  - **Itens:** tabela renderizando `items_snapshot` (produto, qtd, unitário, NCM, CFOP, subtotal).
+  - **Pagamento:** forma, parcelas, valor pago, troco, serviço, desconto.
+  - **Cliente:** CPF, nome, email.
+  - **Vínculos:** comanda/mesa/pedido relacionado (com link para a comanda).
+- **`CancelNFCeDialog.tsx`** — Dialog para cancelamento: textarea obrigatório (mín. 15, máx. 255 chars), aviso sobre prazo de 30 min, confirmação. Chama `use-cancel-nfce`.
 
-- Recálculo retroativo de transações antigas (regra explícita do pedido).
-- Aplicação de taxas no checkout do delivery público (apenas registro/relatórios do lado do lojista nesta entrega).
-- Repasse de taxa de adquirente por bandeira/parcela (apenas por método nesta versão).
+## 6. Página principal
+
+`src/pages/pdv/FiscalCoupons.tsx`:
+- Layout `min-h-[calc(100vh-3.5rem)] flex-1` (padrão de tela cheia do projeto).
+- Header com título "Cupons Fiscais" + botão "Atualizar" e botão "Exportar CSV" (gera CSV no cliente com a lista filtrada).
+- `<FiscalCouponsHeader />` (KPIs).
+- `<FiscalCouponsFilters />`.
+- `<FiscalCouponsTable />` com paginação.
+- Dialogs: `FiscalCouponDetailDialog`, `CancelNFCeDialog` controlados via estado.
+
+## 7. Integrações pontuais
+
+- **Cashier / PaymentDialog:** após emitir NFC-e com sucesso, exibir link "Ver no painel de cupons" levando para `/pdv/cupons-fiscais?emission_id={id}` (a página já abre o detalhe se receber o param).
+- **Comandas / Mesas:** no histórico da comanda, mostrar badge "Cupom #123 (autorizado)" linkando para o detalhe.
+
+## 8. Permissões e proteção de rota
+
+- Reutilizar `RoleRoute` (já em uso para `notas-fiscais`).
+- Acessível por: owner, admin, gerente, financeiro. Garçom e cozinha **não** acessam.
+- Cancelamento e reenvio exigem perfil owner/admin/gerente (verificar via `useUserRole`).
+
+## 9. QA / pontos de atenção
+
+- Datas exibidas em pt-BR via `date-fns/locale/ptBR`.
+- Valores via `formatBRL`.
+- Badges de status usando tokens do tema (`bg-muted`, `text-foreground`, `border-primary`) — sem cores customizadas.
+- Action menu seguindo padrão do projeto (dropdown ⋮ posicionado relativo ao trigger).
+- DANFE/XML: links abrem em nova aba (`target="_blank"`).
+- Cancelamento: validar prazo de 30 min na UI antes de habilitar o botão.
+- O `items_snapshot` é JSON — tipar como `Array<{ product_name; quantity; unit_price; subtotal; ncm?; cfop?; ... }>`.
+
+## 10. Resumo de arquivos
+
+**Migração:** 1 arquivo SQL com colunas (`cancellation_reason`, `cancelled_at`, `cancellation_protocol`, `last_status_check_at`, `parent_emission_id`) + índices.
+
+**Edge functions novas:** `cancel-nfce/index.ts`, `check-nfce-status/index.ts`, `resend-nfce/index.ts`.
+
+**Frontend novo:**
+- `src/pages/pdv/FiscalCoupons.tsx`
+- `src/hooks/use-fiscal-coupons.ts`, `use-fiscal-coupon-detail.ts`, `use-cancel-nfce.ts`, `use-check-nfce-status.ts`, `use-resend-nfce.ts`, `use-fiscal-coupons-summary.ts`
+- `src/components/pdv/fiscal-coupons/` (6 componentes listados acima)
+
+**Frontend editado:**
+- `src/components/pdv/PDVHeaderNav.tsx` (novo item de menu)
+- `src/hooks/use-user-role.ts` (libera rota)
+- `src/pages/PDV.tsx` (registra rota)
+- `src/components/pdv/payment/PaymentDialog.tsx` (link para o painel após emissão)
+
+Aprove o plano para eu implementar a migração, as edge functions e a interface.
