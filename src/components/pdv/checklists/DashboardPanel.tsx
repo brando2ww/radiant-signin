@@ -14,6 +14,7 @@ import { useChecklistDashboard } from "@/hooks/use-checklist-dashboard";
 import { CompletionChart } from "./CompletionChart";
 import { ShiftComparison } from "./ShiftComparison";
 import { AlertsPanel } from "./AlertsPanel";
+import { CompletedExecutionsDialog } from "./CompletedExecutionsDialog";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ interface DashboardPanelProps {
 
 export function DashboardPanel({ onNavigate, onQrOpen, onSendReport, onGenerateDaily, sendingReport, isGenerating }: DashboardPanelProps) {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [completedDialogOpen, setCompletedDialogOpen] = useState(false);
   const {
     metrics, completionChart, shiftComparison, alerts, unacknowledgedAlerts,
     acknowledgeAlert, criticalTasks, timeline, teamHighlights,
@@ -69,7 +71,7 @@ export function DashboardPanel({ onNavigate, onQrOpen, onSendReport, onGenerateD
 
       {/* Summary cards */}
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
-        <MetricCard title="Concluídos" value={metrics?.concluido ?? 0} total={total} icon={CheckCircle2} color="text-green-600" loading={metricsLoading} />
+        <MetricCard title="Concluídos" value={metrics?.concluido ?? 0} total={total} icon={CheckCircle2} color="text-green-600" loading={metricsLoading} onClick={() => setCompletedDialogOpen(true)} />
         <MetricCard title="Em Andamento" value={metrics?.emAndamento ?? 0} total={total} icon={Activity} color="text-blue-600" loading={metricsLoading} />
         <MetricCard title="Atrasados" value={metrics?.atrasado ?? 0} total={total} icon={AlertTriangle} color="text-orange-600" loading={metricsLoading} />
         <MetricCard title="Não Iniciados" value={metrics?.naoIniciado ?? 0} total={total} icon={XCircle} color="text-muted-foreground" loading={metricsLoading} />
@@ -241,15 +243,24 @@ export function DashboardPanel({ onNavigate, onQrOpen, onSendReport, onGenerateD
 
       {/* Alerts */}
       <AlertsPanel alerts={alerts} onAcknowledge={(id) => acknowledgeAlert({ alertId: id })} />
+
+      <CompletedExecutionsDialog
+        open={completedDialogOpen}
+        onOpenChange={setCompletedDialogOpen}
+        date={date}
+      />
     </div>
   );
 }
 
-function MetricCard({ title, value, total, icon: Icon, color, loading }: any) {
+function MetricCard({ title, value, total, icon: Icon, color, loading, onClick }: any) {
   if (loading) return <Card><CardContent className="py-4"><Skeleton className="h-12 w-full" /></CardContent></Card>;
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
-    <Card>
+    <Card
+      onClick={onClick}
+      className={onClick ? "cursor-pointer hover:bg-muted/40 transition-colors" : undefined}
+    >
       <CardContent className="py-3 space-y-2">
         <div className="flex items-center gap-2">
           <Icon className={`h-6 w-6 ${color}`} />
