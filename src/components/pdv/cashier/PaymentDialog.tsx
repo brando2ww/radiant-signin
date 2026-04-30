@@ -307,7 +307,7 @@ export function PaymentDialog({
   const previewExceedsSubtotal = computedDiscountAmount > subtotal && subtotal > 0;
 
   // Calculate service fee (10%)
-  const serviceFeeAmount = serviceFeeEnabled ? (subtotal - discountAmount) * 0.1 : 0;
+  const serviceFeeAmount = serviceFeeEnabled && serviceFeeAllowed ? (subtotal - discountAmount) * serviceFeeRate : 0;
 
   // Final total
   const total = Math.max(0, subtotal - discountAmount + serviceFeeAmount);
