@@ -1205,7 +1205,7 @@ export function PaymentDialog({
 
                         <span className="text-muted-foreground">Será descontado:</span>
                         <span className="text-right font-semibold text-emerald-700 dark:text-emerald-400">
-                          -{formatCurrency(previewAmount)}
+                          -{formatCurrency(computedDiscountAmount)}
                         </span>
 
                         <span className="text-muted-foreground">Novo total:</span>
@@ -1213,7 +1213,7 @@ export function PaymentDialog({
                           {formatCurrency(
                             Math.max(
                               0,
-                              subtotal - previewAmount + (serviceFeeEnabled ? (subtotal - previewAmount) * 0.1 : 0),
+                              subtotal - computedDiscountAmount + (serviceFeeEnabled ? (subtotal - computedDiscountAmount) * 0.1 : 0),
                             ),
                           )}
                         </span>
