@@ -23,6 +23,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { TableComandasSection } from "./TableComandasSection";
 import { formatBRL } from "@/lib/format";
+import { ActionMenu } from "./operations/ActionMenu";
+import { ChangeTableDialog } from "./operations/ChangeTableDialog";
+import { OperationHistoryDialog } from "./operations/OperationHistoryDialog";
+import { usePDVPermissions } from "@/hooks/use-pdv-permissions";
 
 interface Comanda {
   id: string;
