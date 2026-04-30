@@ -338,7 +338,8 @@ export const useEvaluationById = (id: string) => {
             id,
             question_id,
             score,
-            comment
+            comment,
+            selected_options
           )
         `)
         .eq("id", id)
