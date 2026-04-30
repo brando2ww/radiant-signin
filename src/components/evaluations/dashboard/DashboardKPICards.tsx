@@ -15,7 +15,7 @@ interface Props {
   uniqueCustomers: number;
   totalCoupons: number;
   redeemedCoupons: number;
-  onNpsClick?: (category: "promoters" | "neutrals" | "detractors") => void;
+  onNpsClick?: (category: "promoters" | "neutrals" | "detractors" | "all") => void;
 }
 
 export default function DashboardKPICards({
