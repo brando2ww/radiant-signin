@@ -18,7 +18,7 @@ export function usePDVDre(selectedMonth?: Date) {
       // PDV orders
       const { data: pdvOrders } = await supabase
         .from("pdv_orders")
-        .select("total, discount, status, cancelled_at")
+        .select("id, total, discount, status, cancelled_at")
         .eq("user_id", user.id)
         .gte("created_at", ms)
         .lte("created_at", me + "T23:59:59");
@@ -152,6 +152,7 @@ export function usePDVDre(selectedMonth?: Date) {
         grossRevenue,
         totalDiscounts,
         totalCancellations,
+        paymentFees,
         deductions,
         netRevenue,
         cmv,
