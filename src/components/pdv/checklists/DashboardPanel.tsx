@@ -31,6 +31,7 @@ export function DashboardPanel({ onNavigate, onQrOpen, onGenerateDaily, isGenera
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [completedDialogOpen, setCompletedDialogOpen] = useState(false);
   const [overdueDialogOpen, setOverdueDialogOpen] = useState(false);
+  const [notStartedDialogOpen, setNotStartedDialogOpen] = useState(false);
   const {
     metrics, completionChart, shiftComparison, alerts, unacknowledgedAlerts,
     acknowledgeAlert, criticalTasks, timeline, teamHighlights,
@@ -71,7 +72,7 @@ export function DashboardPanel({ onNavigate, onQrOpen, onGenerateDaily, isGenera
       <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Concluídos" value={metrics?.concluido ?? 0} total={total} icon={CheckCircle2} color="text-green-600" loading={metricsLoading} onClick={() => setCompletedDialogOpen(true)} />
         <MetricCard title="Atrasados" value={metrics?.atrasado ?? 0} total={total} icon={AlertTriangle} color="text-orange-600" loading={metricsLoading} onClick={() => setOverdueDialogOpen(true)} />
-        <MetricCard title="Não Iniciados" value={metrics?.naoIniciado ?? 0} total={total} icon={XCircle} color="text-muted-foreground" loading={metricsLoading} />
+        <MetricCard title="Não Iniciados" value={metrics?.naoIniciado ?? 0} total={total} icon={XCircle} color="text-muted-foreground" loading={metricsLoading} onClick={() => setNotStartedDialogOpen(true)} />
         <HealthCard pct={healthPct} level={healthLevel} loading={metricsLoading} />
       </div>
 
@@ -252,6 +253,12 @@ export function DashboardPanel({ onNavigate, onQrOpen, onGenerateDaily, isGenera
         onOpenChange={setOverdueDialogOpen}
         date={date}
         status="atrasado"
+      />
+      <CompletedExecutionsDialog
+        open={notStartedDialogOpen}
+        onOpenChange={setNotStartedDialogOpen}
+        date={date}
+        status="nao_iniciado"
       />
     </div>
   );
