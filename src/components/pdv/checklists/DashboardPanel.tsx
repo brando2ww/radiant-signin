@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   CheckCircle2, Clock, AlertTriangle, XCircle, Activity,
   Plus, UserPlus, ListChecks, Trophy, TrendingDown, AlertOctagon,
-  QrCode, Send, RefreshCw,
+  QrCode, RefreshCw,
 } from "lucide-react";
 import { useChecklistDashboard } from "@/hooks/use-checklist-dashboard";
 import { CompletionChart } from "./CompletionChart";
@@ -27,9 +27,10 @@ interface DashboardPanelProps {
   isGenerating?: boolean;
 }
 
-export function DashboardPanel({ onNavigate, onQrOpen, onSendReport, onGenerateDaily, sendingReport, isGenerating }: DashboardPanelProps) {
+export function DashboardPanel({ onNavigate, onQrOpen, onGenerateDaily, isGenerating }: DashboardPanelProps) {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [completedDialogOpen, setCompletedDialogOpen] = useState(false);
+  const [overdueDialogOpen, setOverdueDialogOpen] = useState(false);
   const {
     metrics, completionChart, shiftComparison, alerts, unacknowledgedAlerts,
     acknowledgeAlert, criticalTasks, timeline, teamHighlights,
@@ -51,9 +52,6 @@ export function DashboardPanel({ onNavigate, onQrOpen, onSendReport, onGenerateD
           <Button variant="outline" size="sm" onClick={onQrOpen}>
             <QrCode className="h-4 w-4 mr-1" /> QR Code
           </Button>
-          <Button variant="outline" size="sm" onClick={onSendReport} disabled={sendingReport}>
-            <Send className={`h-4 w-4 mr-1 ${sendingReport ? "animate-pulse" : ""}`} /> Relatório
-          </Button>
           <Button variant="outline" size="sm" onClick={onGenerateDaily} disabled={isGenerating}>
             <RefreshCw className={`h-4 w-4 mr-1 ${isGenerating ? "animate-spin" : ""}`} /> Gerar Tarefas
           </Button>
@@ -70,10 +68,9 @@ export function DashboardPanel({ onNavigate, onQrOpen, onSendReport, onGenerateD
       </div>
 
       {/* Summary cards */}
-      <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         <MetricCard title="Concluídos" value={metrics?.concluido ?? 0} total={total} icon={CheckCircle2} color="text-green-600" loading={metricsLoading} onClick={() => setCompletedDialogOpen(true)} />
-        <MetricCard title="Em Andamento" value={metrics?.emAndamento ?? 0} total={total} icon={Activity} color="text-blue-600" loading={metricsLoading} />
-        <MetricCard title="Atrasados" value={metrics?.atrasado ?? 0} total={total} icon={AlertTriangle} color="text-orange-600" loading={metricsLoading} />
+        <MetricCard title="Atrasados" value={metrics?.atrasado ?? 0} total={total} icon={AlertTriangle} color="text-orange-600" loading={metricsLoading} onClick={() => setOverdueDialogOpen(true)} />
         <MetricCard title="Não Iniciados" value={metrics?.naoIniciado ?? 0} total={total} icon={XCircle} color="text-muted-foreground" loading={metricsLoading} />
         <HealthCard pct={healthPct} level={healthLevel} loading={metricsLoading} />
       </div>
@@ -248,6 +245,13 @@ export function DashboardPanel({ onNavigate, onQrOpen, onSendReport, onGenerateD
         open={completedDialogOpen}
         onOpenChange={setCompletedDialogOpen}
         date={date}
+        status="concluido"
+      />
+      <CompletedExecutionsDialog
+        open={overdueDialogOpen}
+        onOpenChange={setOverdueDialogOpen}
+        date={date}
+        status="atrasado"
       />
     </div>
   );

@@ -14,17 +14,26 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { useEstablishmentId } from "@/hooks/use-establishment-id";
 
+type ExecStatus = "concluido" | "atrasado";
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   date: string; // YYYY-MM-DD
+  status?: ExecStatus;
 }
 
-export function CompletedExecutionsDialog({ open, onOpenChange, date }: Props) {
+const STATUS_CONFIG: Record<ExecStatus, { title: string; orderField: string }> = {
+  concluido: { title: "Checklists concluídos", orderField: "completed_at" },
+  atrasado: { title: "Checklists em atraso", orderField: "started_at" },
+};
+
+export function CompletedExecutionsDialog({ open, onOpenChange, date, status = "concluido" }: Props) {
   const { visibleUserId } = useEstablishmentId();
+  const cfg = STATUS_CONFIG[status];
 
   const { data: executions, isLoading } = useQuery({
-    queryKey: ["completed-executions", visibleUserId, date],
+    queryKey: ["status-executions", status, visibleUserId, date],
     enabled: !!visibleUserId && open,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -32,8 +41,8 @@ export function CompletedExecutionsDialog({ open, onOpenChange, date }: Props) {
         .select("id, score, started_at, completed_at, checklists(name, sector), checklist_operators(name)")
         .eq("user_id", visibleUserId!)
         .eq("execution_date", date)
-        .eq("status", "concluido")
-        .order("completed_at", { ascending: true });
+        .eq("status", status)
+        .order(cfg.orderField, { ascending: true, nullsFirst: false });
       if (error) throw error;
       return data || [];
     },
@@ -48,7 +57,7 @@ export function CompletedExecutionsDialog({ open, onOpenChange, date }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Checklists concluídos</DialogTitle>
+          <DialogTitle>{cfg.title}</DialogTitle>
           <DialogDescription>{formattedDate}</DialogDescription>
         </DialogHeader>
 
@@ -59,7 +68,9 @@ export function CompletedExecutionsDialog({ open, onOpenChange, date }: Props) {
             </div>
           ) : !executions || executions.length === 0 ? (
             <p className="text-sm text-muted-foreground py-10 text-center">
-              Nenhum checklist concluído neste dia.
+              {status === "concluido"
+                ? "Nenhum checklist concluído neste dia."
+                : "Nenhum checklist em atraso neste dia."}
             </p>
           ) : (
             <Accordion type="multiple" className="w-full">
@@ -71,9 +82,10 @@ export function CompletedExecutionsDialog({ open, onOpenChange, date }: Props) {
                         <p className="font-medium truncate">{exec.checklists?.name || "Checklist"}</p>
                         <p className="text-xs text-muted-foreground truncate">
                           {exec.checklists?.sector || "—"} · {exec.checklist_operators?.name || "—"}
-                          {exec.completed_at && (
-                            <> · {format(new Date(exec.completed_at), "HH:mm", { locale: ptBR })}</>
-                          )}
+                          {(() => {
+                            const ts = status === "concluido" ? exec.completed_at : (exec.started_at || exec.completed_at);
+                            return ts ? <> · {format(new Date(ts), "HH:mm", { locale: ptBR })}</> : null;
+                          })()}
                         </p>
                       </div>
                       {exec.score != null && (
