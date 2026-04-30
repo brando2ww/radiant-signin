@@ -64,17 +64,25 @@ export function PDVProductOptionsManager({ productId, onDirtyChange }: Props) {
     updateItem,
   } = usePDVProductOptions(productId);
   const { ingredients } = usePDVIngredients();
+  const { products: pdvProducts = [] } = usePDVProducts();
   const { upsertRecipe, removeByOptionItem } = usePDVOptionRecipes();
 
   const [newOptionName, setNewOptionName] = useState("");
   const [newItemNames, setNewItemNames] = useState<Record<string, string>>({});
   const [newItemPrices, setNewItemPrices] = useState<Record<string, string>>({});
+  const [newItemKinds, setNewItemKinds] = useState<Record<string, "ingredient" | "product">>({});
   const [newItemIngredients, setNewItemIngredients] = useState<
     Record<string, { id: string; name: string; unit: string } | null>
   >({});
+  const [newItemProducts, setNewItemProducts] = useState<
+    Record<string, { id: string; name: string; price: number } | null>
+  >({});
   const [newItemPopoverOpen, setNewItemPopoverOpen] = useState<string | null>(null);
+  const [newItemProductPopoverOpen, setNewItemProductPopoverOpen] = useState<string | null>(null);
   const [ingredientPopoverOpen, setIngredientPopoverOpen] = useState<string | null>(null);
+  const [productPopoverOpen, setProductPopoverOpen] = useState<string | null>(null);
   const [ingredientSearch, setIngredientSearch] = useState("");
+  const [productSearch, setProductSearch] = useState("");
   const [draft, setDraft] = useState<DraftOption[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const baselineRef = useRef<DraftOption[]>([]);
